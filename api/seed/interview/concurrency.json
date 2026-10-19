@@ -1,0 +1,461 @@
+{
+ "slug": "concurrency",
+ "name": "Concurrency and multithreading",
+ "category": "Computer science",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a process and a thread?",
+    "answer": "A process is an independent running program with its own memory space, while threads are smaller execution units inside a process that share that memory. Threads are useful when tasks need to share data quickly, but they also make bugs from shared state more likely. Processes isolate failures better, but communication between them is usually heavier.",
+    "real_world": "This matters when choosing between a web server with worker threads and one that forks separate processes. A crash in one process is usually contained, while a bad thread can corrupt shared state in the whole process.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can shared memory between threads be both an advantage and a risk?"
+   },
+   {
+    "question": "What does it mean for code to be thread-safe?",
+    "answer": "Thread-safe code behaves correctly when accessed by multiple threads at the same time. Usually that means it avoids race conditions by using synchronization, immutability, or thread-local state. A function can be thread-safe even if it is not reentrant, but it must not depend on unsafe shared mutable data without protection.",
+    "real_world": "A cache, counter, or in-memory session store often needs to be thread-safe because several requests may update it concurrently. Without this, data can be lost or become inconsistent under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a shared counter thread-safe?"
+   },
+   {
+    "question": "What is a race condition?",
+    "answer": "A race condition happens when the result depends on the timing or interleaving of threads. This usually appears when two or more threads read and write shared data without proper synchronization. The bug may not happen every time, which makes it especially hard to reproduce.",
+    "real_world": "A classic production issue is two requests trying to decrement inventory at the same time and both succeeding when only one item was available. The code looks fine in testing, but fails under real concurrency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a race condition different from a deadlock?"
+   },
+   {
+    "question": "What is a mutex or lock used for?",
+    "answer": "A mutex protects a critical section so only one thread can enter it at a time. It is used when shared mutable data must be updated safely. The trade-off is reduced concurrency, because threads may have to wait, and careless locking can create deadlocks.",
+    "real_world": "Teams use locks around shared maps, counters, or queues when several worker threads update them. Without a lock, a read-modify-write sequence can be interrupted and produce wrong results.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a common mistake people make when using locks?"
+   },
+   {
+    "question": "What is a deadlock?",
+    "answer": "A deadlock happens when two or more threads are each waiting for a resource held by another, so none can make progress. It often occurs when locks are acquired in different orders or when a thread holds one lock while waiting for another. Preventing deadlocks usually means using a consistent lock order or reducing the number of locks held at once.",
+    "real_world": "This can freeze a service even though CPU usage looks low, because all worker threads are blocked waiting on each other. In production, it can look like a random outage that only happens under certain request patterns.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you avoid deadlock when a function needs two locks?"
+   },
+   {
+    "question": "What is the difference between concurrency and parallelism?",
+    "answer": "Concurrency means dealing with multiple tasks in overlapping time; parallelism means literally executing tasks at the same time. You can have concurrency on one core by switching between tasks, and you can have parallelism on multiple cores. Concurrency is about structure, while parallelism is about speedup through simultaneous execution.",
+    "real_world": "A UI app can stay responsive with concurrency even if only one core is available. A CPU-heavy job, like image processing, usually needs parallelism to finish faster.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of concurrency without parallelism?"
+   },
+   {
+    "question": "When would you use a thread pool?",
+    "answer": "A thread pool is useful when you need to run many short tasks without creating a new thread for each one. Reusing threads reduces overhead and gives you a way to limit the number of tasks running at once. It is a common choice for servers and background work, but not ideal for long blocking tasks if it starves the pool.",
+    "real_world": "Web servers often use a fixed-size pool to handle incoming requests. If every request spawned a new thread, memory and scheduling overhead could become a problem quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problem can happen if tasks in the pool block for a long time?"
+   },
+   {
+    "question": "What is the difference between a synchronous and an asynchronous operation?",
+    "answer": "A synchronous operation blocks until it finishes, while an asynchronous operation starts work and lets the caller continue, usually with a callback, future, or promise. Async is useful when waiting on I/O so the thread is not stuck idle. It does not automatically make code faster; it mainly improves responsiveness and resource usage.",
+    "real_world": "This matters in networked applications where waiting for a database or API response is common. Async code can keep a server handling other requests instead of tying up threads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is async different from multithreading?"
+   },
+   {
+    "question": "What is a condition variable used for?",
+    "answer": "A condition variable lets a thread wait until some condition becomes true, usually while holding a lock. It is commonly used when one thread produces data and another consumes it, or when a thread needs to wait for a state change. The waiting thread must recheck the condition after waking up because wakeups can happen for reasons other than the condition becoming true.",
+    "real_world": "This is common in producer-consumer queues, where workers sleep until new jobs arrive. It avoids busy-waiting, which would waste CPU.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why should you check the condition in a loop instead of using a single if?"
+   },
+   {
+    "question": "What is a critical section, and why do you need to protect it?",
+    "answer": "A critical section is the part of code that accesses shared mutable state and must not be executed by more than one thread at a time. If two threads enter it together, they can corrupt data or observe inconsistent state. You protect it with synchronization so the update behaves like one indivisible action. The main trade-off is safety versus throughput, because locking reduces how much work can happen at once.",
+    "real_world": "This comes up any time multiple requests update the same balance, counter, or cache entry. Without protection, totals drift or records get overwritten under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide which data needs to be in the critical section?"
+   },
+   {
+    "question": "What is a semaphore, and how is it different from a mutex?",
+    "answer": "A semaphore is a synchronization tool that controls access to a limited number of permits. A mutex is usually used to provide exclusive ownership of a shared resource, while a semaphore can allow multiple threads to enter up to a set limit. That makes semaphores useful for bounding concurrency, like limiting how many workers use a connection pool. A mutex is about mutual exclusion; a semaphore is about counting access.",
+    "real_world": "Teams use semaphores to keep a service from opening too many database connections or spawning too many expensive jobs at once.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a semaphore instead of a simple lock?"
+   },
+   {
+    "question": "What is a thread-safe collection or data structure?",
+    "answer": "A thread-safe collection can be used by multiple threads without external synchronization causing corruption or undefined behavior. It may use internal locking, atomic operations, or copy-on-write techniques to keep its state consistent. Thread-safe does not mean every operation is free of contention, only that the data structure behaves correctly under concurrent use. You still need to think about compound actions, like check-then-act sequences.",
+    "real_world": "This matters when several worker threads push tasks into a shared queue or update a shared map. A non-thread-safe structure can fail intermittently, which is hard to reproduce.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can a thread-safe collection still be unsafe to use without caution?"
+   },
+   {
+    "question": "What does atomic mean in multithreading?",
+    "answer": "An atomic operation happens as one uninterruptible step from the point of view of other threads. Other threads see either the old value or the new value, but not a half-finished update. Atomics are useful for counters, flags, and simple coordination where a full lock would be heavier than needed. They are not a replacement for locks when you need to update several related values together.",
+    "real_world": "A service might use an atomic flag to tell many threads to stop accepting new work during shutdown. Without atomic visibility, some threads may keep running longer than expected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is an atomic increment different from `counter += 1` in a multithreaded program?"
+   },
+   {
+    "question": "What is a thread join, and why would you use it?",
+    "answer": "Joining a thread means waiting for that thread to finish before continuing. It is how a program makes sure background work is complete before using its result or exiting cleanly. If you do not join, the main thread may end early or continue before shared data is ready. Joining is also useful for handling errors or collecting return values from worker threads, depending on the language.",
+    "real_world": "A batch job may start several workers and then join them before writing a final report. Without joining, the report could be generated before all workers finish.",
+    "code_lang": "python",
+    "code": "import threading\n\ndef work():\n    print('done')\n\n t = threading.Thread(target=work)\nt.start()\nt.join()\nprint('all finished')",
+    "follow_up": "What is the difference between joining a thread and detaching it?"
+   },
+   {
+    "question": "What is a daemon thread, and when is it a bad idea to use one?",
+    "answer": "A daemon thread is a background thread that does not keep the program alive if all non-daemon threads are done. It is useful for best-effort work such as monitoring or cleanup that can be abandoned at shutdown. It is a bad idea for important tasks that must finish, because the thread can be stopped when the process exits. That means buffered output, writes, or cleanup may be lost.",
+    "real_world": "People sometimes use daemon threads for logging or sending analytics and then lose events when the service stops. For anything durable, you usually want an orderly shutdown instead.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How should a program shut down background work cleanly?"
+   },
+   {
+    "question": "What is a producer-consumer problem?",
+    "answer": "It is a pattern where one set of threads produces work and another set consumes it, usually through a shared queue. The queue decouples the two sides so producers can run ahead a little without directly calling consumers. This is useful when work arrives faster than it can be processed or when the producer and consumer have different speeds. The main concern is making the queue safe and deciding what to do when it becomes full or empty.",
+    "real_world": "A web server often uses producers for incoming requests and consumers for database or image-processing work. If the queue is not bounded, memory can grow without limit during traffic spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is a bounded queue often better than an unbounded one?"
+   },
+   {
+    "question": "What is a thread-local variable?",
+    "answer": "A thread-local variable gives each thread its own separate copy of a value. That avoids sharing when data is only needed per thread, such as request context, random generators, or scratch buffers. It reduces locking because threads do not contend on the same object. The trade-off is that you must be careful not to assume one thread’s data is visible to another.",
+    "real_world": "Frameworks often store request IDs or user context in thread-local storage for logging. If the value leaks between reused worker threads, logs can point to the wrong request.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would thread-local state be a poor design choice?"
+   },
+   {
+    "question": "What is the difference between immutable and mutable data in concurrent code?",
+    "answer": "Immutable data cannot be changed after it is created, so it is naturally easier to share across threads safely. Mutable data can change, which means you need synchronization if multiple threads can see or update it. Immutability reduces locking and whole classes of bugs, but sometimes you need mutation for performance or practicality. A common pattern is to share immutable snapshots and replace them atomically when state changes.",
+    "real_world": "Configuration objects and lookup tables are often made immutable so worker threads can read them without locks. This lowers contention and makes behavior more predictable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does immutability simplify reasoning about races?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you choose between using a lock and using an atomic operation for shared state?",
+    "answer": "Use an atomic operation for a small, well-defined update like incrementing a counter or swapping a reference, because it is usually cheaper and simpler. Use a lock when the update spans multiple variables or requires an invariant across several steps. The trade-off is that locks are more flexible but can block, contend, and deadlock if used poorly. Atomics are fast but only solve narrow problems.",
+    "real_world": "A request counter can usually be an atomic increment, but updating a user's balance and transaction history together needs a lock or another coordination mechanism. Choosing the wrong one often shows up as rare corruption under load.",
+    "code_lang": "java",
+    "code": "AtomicInteger count = new AtomicInteger();\ncount.incrementAndGet();\n\nsynchronized (lock) {\n  balance -= amount;\n  history.add(txn);\n}",
+    "follow_up": "What can go wrong if you use atomics for a compound update?"
+   },
+   {
+    "question": "What is a thread pool starvation problem, and how does it happen?",
+    "answer": "Thread pool starvation happens when all worker threads are occupied by tasks that cannot finish because they are waiting for other tasks from the same pool. This is common when code submits nested work and then blocks waiting for it. The fix is to avoid blocking inside pool tasks, use a separate pool for dependent work, or design the flow to be asynchronous. It matters because the system can look healthy but stop making progress.",
+    "real_world": "A web service may freeze during traffic spikes because request handlers submit database work to the same limited executor and then wait for it. In production, this looks like timeouts and a full queue rather than a crash.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect thread pool starvation in production?"
+   },
+   {
+    "question": "What is the purpose of a read-write lock, and when is it a bad choice?",
+    "answer": "A read-write lock allows multiple readers to hold the lock concurrently while still giving writers exclusive access. It can improve throughput when reads are frequent and writes are rare. It is a bad choice when reads are short and contention is low, because the extra bookkeeping can cost more than a simple mutex. It can also become writer-starving depending on the implementation.",
+    "real_world": "Configuration caches and in-memory indexes often have many readers and few writes, so read-write locks can help. But in a service with frequent updates, a simple mutex may be faster and easier to reason about.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether a read-write lock is actually helping?"
+   },
+   {
+    "question": "What is false sharing, and why can it hurt multithreaded performance?",
+    "answer": "False sharing happens when different threads update different variables that happen to live on the same CPU cache line. The threads are not logically sharing data, but the cache line keeps bouncing between cores, causing slowdowns. The fix is to reduce shared writes, separate hot fields, or pad/aligned data where appropriate. This is a performance issue, not a correctness issue.",
+    "real_world": "Counters per worker thread can scale badly if they sit next to each other in memory. Teams often discover this only after profiling a system that should have scaled linearly but does not.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs in a profile or benchmark suggest false sharing?"
+   },
+   {
+    "question": "Why is starting a new thread per request often a bad idea in server code?",
+    "answer": "Creating threads has overhead in memory, scheduling, and context switching, and too many threads can reduce throughput instead of improving it. A thread-per-request model also makes it easy to overload the system because each blocked request consumes a thread. Thread pools or async I/O usually give better control over concurrency and resource usage. The main trade-off is simplicity versus scalability.",
+    "real_world": "A service may work fine in staging with low traffic and then collapse in production when thousands of requests create thousands of threads. The symptoms are high memory use, long scheduler delays, and poor tail latency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would a dedicated thread still be the right choice?"
+   },
+   {
+    "question": "What is the difference between blocking and non-blocking concurrency, and why does it matter?",
+    "answer": "Blocking means a thread waits and cannot do other work while it is waiting for an operation to finish. Non-blocking approaches let the thread keep running and usually resume work through callbacks, futures, or event loops. Non-blocking designs can improve scalability for I/O-heavy systems, but they are harder to read and debug. Blocking code is often simpler and fine when the number of concurrent tasks is limited.",
+    "real_world": "A chat server or API gateway may use non-blocking I/O to handle many connections efficiently. A batch job or internal tool may be easier to write and maintain with blocking calls.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of bugs become more common in non-blocking code?"
+   },
+   {
+    "question": "How do you safely shut down concurrent work in a real application?",
+    "answer": "You usually need a coordinated shutdown: stop accepting new work, signal running tasks to finish or cancel, and wait with a timeout for cleanup. Tasks should check for cancellation or interruption at safe points and release resources in finally blocks or equivalent cleanup paths. The trade-off is between fast shutdown and graceful completion of in-flight work. Without a plan, you get leaked work, partial writes, or hung processes.",
+    "real_world": "During deployment, a service should stop taking traffic before its worker threads are killed. Otherwise, requests can be dropped midway and create inconsistent external state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle tasks that ignore cancellation?"
+   },
+   {
+    "question": "How do you test concurrent code so that bugs are more likely to show up?",
+    "answer": "Use stress tests, repeat runs, and schedulers that increase interleavings, because many concurrency bugs are timing-dependent and will not appear in one normal test run. Keep tests small and deterministic where possible, but also run long randomized tests in CI or pre-release. You should assert invariants, not exact ordering, unless ordering is the contract. Logging and timeouts help, but they should not be the only safety net.",
+    "real_world": "A lock-free queue may pass unit tests yet fail under heavy parallel load once a week. Teams often catch this only with soak tests or randomized concurrency testing before a release.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What invariants would you test for in a concurrent queue?"
+   },
+   {
+    "question": "How do you decide whether to use threads, async tasks, or separate processes for a workload?",
+    "answer": "Use threads when the work needs shared memory and the bottleneck is often waiting, but the code still benefits from straightforward shared-state access. Use async tasks for high I/O concurrency when you want many in-flight operations without tying up an OS thread per task. Use separate processes when you need isolation, crash containment, or true parallelism without shared-memory contention, but accept higher overhead for communication.",
+    "real_world": "A web service might use async for network calls, a small thread pool for blocking libraries, and separate worker processes for CPU-heavy image processing. Picking the wrong model often shows up as either poor latency, excessive context switching, or hard-to-debug shared-state bugs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs in production tell you that you chose the wrong concurrency model?"
+   },
+   {
+    "question": "What is a data race, and how is it different from a logical race condition?",
+    "answer": "A data race happens when two threads access the same memory location concurrently and at least one access is a write without proper synchronization. A logical race condition is broader: the code may be correctly synchronized at the memory level but still produce the wrong outcome because the order of operations matters. Data races are usually undefined or inconsistent behavior; logical races are about incorrect sequencing.",
+    "real_world": "A balance check and withdrawal can be synchronized individually yet still overdraw an account if the check and update are not done as one atomic operation. Teams often misdiagnose this as a locking bug when the real issue is broken business logic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect a data race in code review or testing?"
+   },
+   {
+    "question": "What is a deadlock-prevention strategy you would use in a codebase with multiple locks?",
+    "answer": "The most common strategy is to impose a global lock ordering and always acquire locks in that order. That prevents circular wait, which is one of the necessary conditions for deadlock. Other practical strategies are to keep lock scopes small, avoid holding one lock while calling unknown code, and use timeouts only as a recovery signal, not as the main correctness mechanism.",
+    "real_world": "In services that manage multiple shared caches or account records, deadlocks often appear only under load because different request paths acquire the same locks in different orders. A consistent ordering rule is easy to enforce and much easier to debug than intermittent hangs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you refactor code that currently acquires locks in inconsistent order?"
+   },
+   {
+    "question": "When would you prefer a concurrent queue over protecting a normal queue with a lock?",
+    "answer": "A concurrent queue is a good choice when the queue itself is the shared structure and you want the implementation to handle contention efficiently. It often reduces the amount of custom synchronization code and can scale better under many producers or consumers. A normal queue plus a lock can still be fine if contention is low, the critical section is tiny, or you need to group multiple operations atomically.",
+    "real_world": "Logging, job dispatch, and event pipelines often use queues as the handoff point between threads. A plain locked queue may become a bottleneck or a source of subtle bugs when multiple producers start pushing heavily.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What trade-offs do you lose when you replace a locked structure with a built-in concurrent one?"
+   },
+   {
+    "question": "What is a thread-safe singleton, and what can go wrong with a lazy implementation?",
+    "answer": "A thread-safe singleton guarantees that only one instance is created even if multiple threads try to initialize it at the same time. A lazy implementation can fail if two threads observe that the instance is missing and both create one, or if one thread sees a partially constructed object. The fix depends on the language, but the idea is to use safe initialization semantics or explicit synchronization around creation.",
+    "real_world": "Configuration clients, metrics registries, and expensive connection managers are often written as singletons. Bugs usually show up as duplicate connections, duplicated metrics, or rare startup failures under concurrent load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make lazy initialization safe without adding heavy contention on every access?"
+   },
+   {
+    "question": "What is a compare-and-swap loop, and why is it useful in concurrent code?",
+    "answer": "A compare-and-swap loop repeatedly reads a shared value, computes a new value, and tries to update it only if the value has not changed since it was read. If another thread wins the race, the loop retries with the latest value. It is useful for lock-free updates on simple shared state, but it can spin under contention and becomes harder to reason about when the update is more than a simple state change.",
+    "real_world": "Counters, request budgets, and small state machines are often implemented this way to avoid lock contention. In production, though, a hot CAS loop can burn CPU when many threads compete for the same variable.",
+    "code_lang": "java",
+    "code": "int prev, next;\ndo {\n  prev = counter.get();\n  next = prev + 1;\n} while (!counter.compareAndSet(prev, next));",
+    "follow_up": "When would you stop using CAS and switch to a lock or a different design?"
+   },
+   {
+    "question": "How do you safely publish an object to other threads?",
+    "answer": "Safe publication means other threads see the object after it is fully constructed and its state is visible consistently. Common ways include storing it into a properly synchronized or volatile field, publishing it through thread-safe collections, or returning it after construction in a context that provides the needed memory guarantees. Without safe publication, another thread may see stale or partially initialized state.",
+    "real_world": "This shows up when a service builds a cache or configuration object at startup and then hands it to request threads. The code may work in tests but fail sporadically under load because readers observe old values or missing fields.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What language features or patterns do you rely on for safe publication?"
+   },
+   {
+    "question": "What is a thread interruption or cancellation signal, and how should code respond to it?",
+    "answer": "It is a cooperative signal that asks a running task to stop, rather than forcibly killing it. Well-behaved code checks for the signal at reasonable points, cleans up resources, and exits promptly or propagates the cancellation upward. It should not swallow the signal and continue as if nothing happened, because that can make shutdowns and timeouts unreliable.",
+    "real_world": "Request timeouts, shutdown hooks, and user-initiated cancellations all depend on tasks responding quickly. Long-running loops or blocking operations that ignore cancellation are a common reason deployments hang during shutdown.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should code do if it receives cancellation while holding a resource or partial result?"
+   },
+   {
+    "question": "What causes contention, and how do you reduce it without just adding more threads?",
+    "answer": "Contention happens when multiple threads spend time waiting on the same shared resource, such as a lock, cache line, or queue. Adding more threads often makes it worse by increasing waiting and context switching. Common fixes are to reduce shared state, shard hot data, shorten critical sections, batch work, or redesign the ownership model so fewer threads touch the same resource.",
+    "real_world": "A metrics counter, a session map, or a synchronized cache can become the bottleneck long before the CPU is fully used. Teams often see throughput flatten or latency spike as traffic grows because every request hits the same shared point.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you measure whether the bottleneck is lock contention versus CPU work?"
+   },
+   {
+    "question": "How would you debug a production issue where a service is healthy at low traffic but times out under load because of threading?",
+    "answer": "I would first look for symptoms of queue buildup, lock contention, and thread pool saturation rather than assuming a network problem. Then I would inspect thread dumps, latency histograms, and resource metrics to see where requests are blocked and whether work is piling up behind a shared dependency. The fix is usually to reduce contention, separate blocking and non-blocking work, or change backpressure so the system sheds load instead of timing out everything.",
+    "real_world": "This pattern often appears after a new feature adds synchronous I/O inside a request path or a shared lock around a hot cache. Under light testing it looks fine, but once concurrency rises, the whole service degrades in a cascading way.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What specific signals would you look for in a thread dump or profiler?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain the ABA problem in lock-free algorithms and when it actually matters?",
+    "answer": "ABA happens when a thread reads value A, another thread changes it to B and back to A, and the first thread's compare-and-swap succeeds even though the state changed underneath it. It matters when identity or ownership matters, like stacks, free lists, and memory reclamation, not just when the raw value matches. Common mitigations are version tags, hazard pointers, epoch-based reclamation, or using garbage-collected references where reclamation is not immediate. The trade-off is extra metadata, memory barriers, or delayed reuse of memory.",
+    "real_world": "A classic production failure is a lock-free free-list reusing nodes quickly under load, causing sporadic corruption that only appears at high churn. Teams often fix it by adding tagged pointers or switching to an epoch reclamation scheme.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do hazard pointers and epoch-based reclamation differ in cost and guarantees?"
+   },
+   {
+    "question": "What does a memory model give you, and why do advanced concurrent bugs often come from getting it wrong rather than from missing locks?",
+    "answer": "A memory model defines which reads and writes are allowed to be reordered and when one thread is guaranteed to observe another thread's writes. Without a happens-before relationship, code can look correct in source but still fail because compilers and CPUs reorder operations or keep values in caches. That is why acquire-release, sequential consistency, and fences matter in lock-free code and in publication patterns. The trade-off is between stronger ordering, which is easier to reason about, and weaker ordering, which can scale better but is easier to misuse.",
+    "real_world": "A common incident is a readiness flag becoming visible before the data it is supposed to protect, so consumers see partially initialized state only on some CPU architectures. These bugs may never reproduce on a developer laptop and then appear in ARM-based production fleets.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give a concrete example of acquire-release being sufficient where sequential consistency is unnecessary?"
+   },
+   {
+    "question": "What is lock convoys or lock convoying, and how is it different from ordinary contention?",
+    "answer": "A lock convoy happens when many threads repeatedly line up behind a lock, and once scheduling gets involved, the handoff itself becomes the bottleneck. Unlike simple contention, throughput can collapse because the next lock owner may be descheduled, causing everyone else to wait even if the critical section is short. It is often triggered by blocking inside the critical section, oversubscription, or unfair scheduling. Fixes include shortening the critical section, partitioning the lock, avoiding blocking while holding it, or using a design with less shared state.",
+    "real_world": "In production this shows up as CPUs not fully utilized while request latency spikes, because worker threads spend time parked and waking rather than doing useful work. It is especially painful in runtimes where lock handoff can interact badly with the OS scheduler.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell from profiling whether you have a convoy problem versus a long critical section?"
+   },
+   {
+    "question": "How do spurious wakeups and lost wakeups differ, and what pattern prevents both classes of bugs?",
+    "answer": "A spurious wakeup is when a waiting thread wakes without the condition becoming true; a lost wakeup is when the signal happens but the waiter misses it because the condition and waiting were not coordinated correctly. The standard pattern is to protect the shared predicate with a mutex and wait in a loop that rechecks the predicate after waking. The signal should happen after updating the predicate while holding the same lock or using an equivalent synchronization relationship. The key idea is that you wait for a state, not for a notification.",
+    "real_world": "Teams often see this as rare hangs in queue consumers after a refactor that moved the condition check outside the lock. It passes tests for months and then one timing window under load leaves workers asleep forever.",
+    "code_lang": "python",
+    "code": "with cond:\n    while not ready:\n        cond.wait()\n    item = queue.pop(0)\n\nwith cond:\n    queue.append(x)\n    ready = True\n    cond.notify()",
+    "follow_up": "Why is using if instead of while around condition waits incorrect even if your platform rarely has spurious wakeups?"
+   },
+   {
+    "question": "What is priority inversion, and how would you recognize and mitigate it in a real system?",
+    "answer": "Priority inversion is when a high-priority thread is blocked on a lock held by a lower-priority thread, while medium-priority threads keep running and prevent the low-priority holder from making progress. The result is that the highest-priority work misses deadlines even though it is ready except for that lock. Mitigations include priority inheritance or ceilings where available, reducing shared locks across priority classes, shortening critical sections, and avoiding blocking operations while holding locks. This matters most in real-time or latency-critical systems.",
+    "real_world": "This is a classic cause of deadline misses in embedded and audio systems, but it also appears in backend services with scheduler classes or CPU pinning. A low-priority maintenance thread holding a shared lock can stall user-facing traffic unexpectedly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If your platform does not support priority inheritance, what architectural changes would you make?"
+   },
+   {
+    "question": "What is work stealing, and why can it outperform a single shared global queue for fine-grained parallel work?",
+    "answer": "With work stealing, each worker keeps a local deque for tasks and mostly pushes and pops locally, while idle workers steal from others. That reduces contention on a single shared queue and improves cache locality because related tasks often stay on the same worker. It works well for recursive divide-and-conquer and uneven task sizes, but stealing has overhead and can hurt when tasks are very large or require strict ordering. The design trade-off is complexity versus much better scalability for many small tasks.",
+    "real_world": "Fork-join runtimes use this to keep cores busy when task trees are irregular, like parallel parsing or graph processing. A single central queue often becomes the bottleneck long before CPU is saturated.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of workloads perform poorly with work stealing despite its lower contention?"
+   },
+   {
+    "question": "How would you reason about granularity when parallelizing work, and where is the crossover point where more tasks stop helping?",
+    "answer": "You want each task to do enough useful work to amortize scheduling, synchronization, and cache effects. If tasks are too small, overhead dominates; if they are too large, you get poor load balance and idle cores. The crossover depends on runtime, hardware, and memory behavior, so in practice you measure queueing overhead, steal rates, cache misses, and end-to-end throughput rather than relying on a fixed threshold. Good designs batch small units, cap fan-out, and sometimes adapt chunk size dynamically.",
+    "real_world": "Teams often over-parallelize loops and get slower code because they turn a cache-friendly scan into a storm of tiny scheduled tasks. On busy servers this also increases tail latency by injecting more runnable work than the machine can efficiently execute.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you collect to choose a chunk size in a production batch job?"
+   },
+   {
+    "question": "What is a wait-free algorithm, and how is it meaningfully different from lock-free and obstruction-free guarantees?",
+    "answer": "Wait-free means every operation completes in a bounded number of its own steps regardless of what other threads do. Lock-free is weaker: the system as a whole makes progress, but an individual thread may starve. Obstruction-free is weaker still: a thread makes progress only if it runs in isolation long enough. The stronger the guarantee, the harder the algorithm is to design and the higher the constant factors often are, so many systems choose lock-free rather than wait-free.",
+    "real_world": "This distinction matters in systems with tail-latency or real-time constraints, where average throughput is not enough. A lock-free queue may benchmark well but still let one unlucky thread miss its deadline indefinitely.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where wait-free semantics are worth the extra implementation complexity?"
+   },
+   {
+    "question": "Why do some supposedly parallel programs get slower on NUMA machines, and what would you change?",
+    "answer": "On NUMA hardware, memory access is not uniform: a core can access local memory faster than memory attached to another socket. If threads frequently touch remote memory or bounce shared cache lines across sockets, latency rises and bandwidth drops, so adding threads can reduce throughput. Fixes include partitioning data per NUMA node, pinning threads, allocating memory near the workers that use it, reducing cross-socket sharing, and merging less often. The main trade-off is between locality and programming complexity.",
+    "real_world": "A service can scale from 8 to 16 cores on one socket and then regress badly when it starts spanning sockets. The root cause is often a shared queue or hash table that forces every worker to touch the same remote memory.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect that NUMA effects, not lock contention, are causing the slowdown?"
+   },
+   {
+    "question": "What can go wrong with double-checked locking, and when is it actually safe?",
+    "answer": "The problem is that checking without synchronization can observe a partially initialized object if the language or runtime allows construction and publication to be reordered. It is only safe when the language memory model explicitly supports it with the right synchronization, such as a properly ordered volatile or equivalent mechanism for the reference, plus no unsafe publication inside initialization. Even then, many teams prefer simpler initialization patterns because they are easier to audit. The performance win is often negligible unless initialization is expensive and frequently contended.",
+    "real_world": "This bug tends to appear as impossible null fields or half-built objects only under load and only on some platforms. It is notorious because the code looks obviously correct in code review until you reason about reordering.",
+    "code_lang": "java",
+    "code": "class Lazy {\n  private static volatile Foo inst;\n  static Foo get() {\n    if (inst == null) {\n      synchronized (Lazy.class) {\n        if (inst == null) inst = new Foo();\n      }\n    }\n    return inst;\n  }\n}",
+    "follow_up": "What simpler alternatives would you choose if lazy initialization is required?"
+   },
+   {
+    "question": "How do fairness and scheduling policy affect lock behavior and throughput under heavy contention?",
+    "answer": "A fair lock tends to reduce starvation by handing ownership to waiters in order, but it usually lowers throughput because it defeats locality and causes more context switching. An unfair lock can let the current or recently running thread reacquire the lock cheaply, which often wins on throughput but can produce long tail latency for unlucky threads. Under heavy contention, the scheduler and lock policy interact: a fair lock can create a convoy, while an unfair one can hide it but worsen variance. I usually optimize for tail latency or throughput based on the SLA, not just average time.",
+    "real_world": "In production, teams sometimes switch to a fair lock to fix starvation and then see total QPS drop because every handoff forces a parked thread to wake and run. The reverse also happens: a throughput-optimized lock looks fine in benchmarks but causes p99 request latency spikes under bursty load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you measure whether a fairness change helped overall system behavior rather than just one microbenchmark?"
+   },
+   {
+    "question": "What is a memory fence, and when do you need one even if your code already uses atomic operations?",
+    "answer": "A fence constrains reordering and visibility of memory operations across threads; it is about ordering, not mutual exclusion. Some atomic operations only guarantee atomicity for one variable, while the algorithm may need acquire/release or stronger ordering between multiple reads and writes. You need fences or correctly ordered atomics when publishing data, implementing lock-free structures, or talking to devices or shared memory where plain compiler or CPU reordering breaks assumptions. The mistake is assuming atomic increment alone also makes surrounding state changes visible in the order you intended.",
+    "real_world": "A common incident is a flag becoming visible before the data it is supposed to protect, so another thread reads 'ready' and then sees stale fields. This often appears only on weaker memory-order hardware or after a compiler upgrade.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you explain acquire and release semantics with a simple producer-consumer handoff?"
+   },
+   {
+    "question": "What is the difference between spinning, yielding, and parking a thread, and how do you choose between them?",
+    "answer": "Spinning burns CPU while repeatedly checking a condition, so it works only when the wait is expected to be extremely short and the core would otherwise go idle. Yielding is merely a hint to the scheduler and is not a reliable waiting strategy because the same thread may run again immediately. Parking or blocking gives up the CPU and is better for longer waits, but wakeup latency and context-switch cost are higher. The choice depends on expected wait time, core saturation, and whether you are in a runtime that already uses adaptive spinning.",
+    "real_world": "A spin loop can look fast in a benchmark on an unloaded machine, then melt CPU in production when the holder gets descheduled or preempted. Conversely, parking too aggressively can tank throughput in a low-latency handoff path because every wait pays scheduler overhead.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What production signals would tell you that a spin-based optimization has become harmful?"
+   },
+   {
+    "question": "Why can oversubscribing CPU-bound threads make a system slower even when every core stays busy?",
+    "answer": "If the workload is CPU-bound, having significantly more runnable threads than cores mostly increases context switching, cache thrash, TLB churn, and scheduler overhead. It also hurts locality because the working set bounces between cores and shared caches. Throughput often plateaus around the number of useful hardware execution contexts and then declines, while tail latency gets worse because threads wait in run queues. More threads help only if they hide blocking or if the workload has enough stalls that another runnable task can use the core productively.",
+    "real_world": "A common production mistake is raising worker counts after seeing high CPU, which increases run-queue length and makes request latency worse without increasing completed work. On containerized systems this gets trickier because CPU quotas can make apparent 'available cores' misleading.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tune worker counts differently for CPU-bound work versus mixed I/O and CPU work?"
+   },
+   {
+    "question": "Can you walk through why a lock-free algorithm might still perform worse than a well-designed locked one?",
+    "answer": "Lock-free only guarantees progress properties; it does not guarantee low latency, fairness, or better throughput. Under contention, compare-and-swap retries can waste a lot of CPU, generate cache-line ping-pong, and amplify coherence traffic, while a simple lock may serialize work more cheaply. Lock-free code also tends to be harder to compose and often needs memory reclamation schemes that add overhead and complexity. I choose it when blocking is unacceptable or contention patterns favor it, not as a default performance optimization.",
+    "real_world": "Teams sometimes replace a mutex-protected queue with a lock-free one and then see throughput drop because producers and consumers hammer the same cache line with failed CAS retries. The bug surface also expands: reclamation mistakes can produce rare crashes long after the benchmark looked good.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What memory reclamation problem shows up in lock-free data structures, and how would you address it?"
+   },
+   {
+    "question": "What is safe memory reclamation in concurrent data structures, and why is freeing removed nodes so tricky?",
+    "answer": "Removing a node from a shared structure does not mean no other thread still holds a reference to it. If you free it immediately, a racing reader can dereference reclaimed memory and corrupt state or crash. Safe reclamation schemes delay reuse until readers are known to be past the hazard point, using techniques like hazard pointers, epochs, or RCU-style grace periods depending on the environment. The trade-off is between reader overhead, reclamation latency, memory growth, and implementation complexity.",
+    "real_world": "This matters in production when a lock-free cache or queue passes tests but occasionally segfaults under peak load because a reader used a node after another thread retired it. On the other side, epoch-based reclamation can keep memory elevated during long pauses because retired objects cannot be reclaimed yet.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you compare hazard pointers and epoch-based reclamation for a read-heavy structure?"
+   },
+   {
+    "question": "How do barriers work, and what kinds of failures or performance problems do they introduce in parallel programs?",
+    "answer": "A barrier is a rendezvous point where each participant waits until all required parties arrive, after which they all continue to the next phase. The failure mode is that one slow, blocked, or failed participant stalls everyone, so the barrier amplifies stragglers and can turn a local problem into a global stop. It also adds synchronization cost and can destroy pipelining if phases are imbalanced. Barriers work well for bulk-synchronous algorithms, but they are a poor fit when work per step is irregular or participants may be cancelled.",
+    "real_world": "In iterative simulations or parallel batch stages, one worker hitting a page fault or remote data path can hold every other core idle at the barrier. In distributed systems, the same pattern shows up as stage-wide delays caused by a few slow tasks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you replace a barrier with if you wanted better tolerance for uneven task durations?"
+   },
+   {
+    "question": "What is RCU, and when is it a better fit than traditional locking?",
+    "answer": "Read-copy-update lets readers proceed with little or no blocking by reading an old version while writers publish a new version and defer reclamation until pre-existing readers are gone. It is a strong fit for read-mostly data where reads must be extremely cheap and slightly stale views are acceptable. The trade-offs are more complex writes, deferred cleanup, and algorithms that must tolerate versioned data rather than in-place mutation. It is not a general replacement for locks, especially when writes are frequent or readers need a consistent multi-object transaction.",
+    "real_world": "Kernel routing tables and other read-heavy metadata often use RCU because read-side lock overhead would dominate. In application code, a configuration snapshot or feature-flag map can use the same idea so requests read without contending on every lookup.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is RCU different from simply swapping an immutable snapshot behind an atomic pointer?"
+   },
+   {
+    "question": "Suppose a queue protected by a single lock scales poorly; what sharding strategies would you consider, and what new problems do they create?",
+    "answer": "I would consider partitioning by key, per-producer or per-consumer queues, or multiple shards with a balancing policy so independent operations stop contending on one lock. That usually improves throughput by reducing hot spots and cache-line bouncing, but it introduces skew: one hot key or shard can still bottleneck while others are idle. It also complicates ordering, fairness, work rebalancing, and observability because there is no single queue length that tells the whole story. The design depends on whether you need global ordering or just per-key ordering.",
+    "real_world": "Message processing systems often shard by customer or account to preserve per-entity order while letting many workers run in parallel. The common incident is a single noisy tenant saturating one shard and creating latency outliers even though overall utilization looks fine.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect and mitigate shard skew in a live system?"
+   },
+   {
+    "question": "What happens here, and why is it a concurrency bug even though each individual operation looks harmless?",
+    "answer": "The increment is not atomic as a whole: it reads the current value, computes a new one, and writes it back. Multiple threads can interleave those steps and lose updates, so the final value is often less than expected. The bug matters because it can stay invisible in low-contention tests and then corrupt counters, quotas, or IDs under load. The fix is to use an atomic increment or protect the whole read-modify-write sequence with synchronization.",
+    "real_world": "This shows up in rate limiters, metrics, and inventory counters where counts drift under traffic and nobody trusts the numbers anymore.",
+    "code_lang": "java",
+    "code": "int x = 0;\nThread t1 = new Thread(() -> { for (int i = 0; i < 100000; i++) x++; });\nThread t2 = new Thread(() -> { for (int i = 0; i < 100000; i++) x++; });\nt1.start(); t2.start();\nt1.join(); t2.join();\nSystem.out.println(x);",
+    "follow_up": "Why would marking x as volatile not fix this bug?"
+   }
+  ]
+ }
+}

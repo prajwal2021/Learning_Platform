@@ -1,0 +1,485 @@
+{
+ "slug": "auth-oauth-jwt",
+ "name": "Authentication and authorization (OAuth 2.0, OIDC, JWT, sessions)",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between authentication and authorization?",
+    "answer": "Authentication answers “who are you?”; authorization answers “what are you allowed to do?” You authenticate a user with a password, token, or external login, then authorize access to specific resources or actions based on roles, scopes, or permissions. Mixing them up causes security bugs, like treating a logged-in user as allowed to do everything.",
+    "real_world": "A support agent may be authenticated into the admin portal but still only be authorized to view tickets, not delete users. Bugs often happen when teams check only that someone is logged in.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you enforce authorization in an API after the user is authenticated?"
+   },
+   {
+    "question": "What problem does OAuth 2.0 solve?",
+    "answer": "OAuth 2.0 lets a user grant one application limited access to another service without sharing their password with the app. It is mainly an authorization framework, not an authentication protocol. The key idea is scoped delegated access, like allowing a photo app to read your contacts but not post on your behalf unless you explicitly allow that.",
+    "real_world": "This is common when a SaaS product connects to Google Drive or GitHub. The app should receive limited tokens instead of collecting the user’s account password.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where do access tokens and refresh tokens fit in OAuth 2.0?"
+   },
+   {
+    "question": "What is OpenID Connect, and how is it different from OAuth 2.0?",
+    "answer": "OpenID Connect, or OIDC, is an authentication layer built on top of OAuth 2.0. OAuth 2.0 by itself tells an app what it can access, while OIDC adds a standard way to verify the user’s identity and get profile information. In OIDC, the ID token is the main signal that the user authenticated.",
+    "real_world": "If you only use OAuth access tokens to identify users, you can end up with a fragile login flow. Teams use OIDC when they want “Sign in with Google” or enterprise SSO.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is an ID token used for, and how is it different from an access token?"
+   },
+   {
+    "question": "What is a JWT?",
+    "answer": "A JWT, or JSON Web Token, is a compact token format that is usually signed so the receiver can verify it was not modified. It often contains claims like user ID, issuer, audience, and expiration. A JWT is not automatically encrypted, so anyone who has it can usually read the claims unless a separate encryption scheme is used.",
+    "real_world": "JWTs are common for stateless API authentication, where the server does not want to look up session state on every request. A common mistake is putting sensitive data inside the token because it is only signed, not hidden.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does the expiration claim matter for JWTs?"
+   },
+   {
+    "question": "What is the difference between a session cookie and a JWT for login state?",
+    "answer": "A session cookie usually points to server-side session data, while a JWT often carries the authentication data inside the token itself. Sessions are easy to revoke centrally and keep sensitive state on the server; JWTs are easier to scale across services because verification can be stateless. The trade-off is that JWT revocation is harder unless you add extra checks or short expirations.",
+    "real_world": "A web app with a traditional server-rendered backend often uses sessions because logout and forced sign-out are straightforward. A distributed API system may prefer JWTs to avoid shared session storage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose server-side sessions over JWTs?"
+   },
+   {
+    "question": "What are access tokens and refresh tokens used for?",
+    "answer": "An access token is sent to an API to prove the caller has permission to access a resource, usually for a short time. A refresh token is used to get a new access token without asking the user to log in again. Refresh tokens should be protected carefully because they typically last longer and can be used to mint fresh access tokens.",
+    "real_world": "Mobile and single-page apps often keep access tokens short-lived so stolen tokens expire quickly. If a refresh token leaks, an attacker may keep renewing access until the token is revoked.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why should a refresh token usually not be sent to every API request?"
+   },
+   {
+    "question": "What does the 'Bearer' part in an Authorization header mean?",
+    "answer": "Bearer means whoever possesses the token can use it, with no extra proof of identity built into the token itself. That makes bearer tokens simple to use, but also risky if they are stolen from logs, browser storage, or insecure transport. Because of that, they should only be sent over HTTPS and stored carefully.",
+    "real_world": "If a bearer token is copied from browser developer tools or exposed in a log, an attacker can replay it until it expires. This is why teams pay attention to token storage and transport.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you reduce the risk if a bearer token is leaked?"
+   },
+   {
+    "question": "Why do we send authentication tokens over HTTPS?",
+    "answer": "HTTPS encrypts traffic in transit so attackers on the network cannot read or modify tokens easily. Without HTTPS, a session cookie or bearer token can be stolen by anyone who can intercept the connection. HTTPS also helps protect against tampering that could break login flows or inject malicious responses.",
+    "real_world": "In production, missing HTTPS can lead to account takeover during public Wi-Fi or on compromised networks. Teams often enforce HTTPS everywhere before handling any login or payment traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Does HTTPS solve all token theft problems?"
+   },
+   {
+    "question": "What is the 'audience' claim in a token used for?",
+    "answer": "The audience claim identifies which service the token is meant for. A backend should reject a token if it was issued for a different API, even if the token is otherwise valid. This prevents one token from being reused against the wrong service.",
+    "real_world": "In systems with multiple microservices, a token meant for the billing API should not automatically work on the user-profile API. Audience checks help stop accidental or malicious token reuse across services.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What other token claims are commonly checked besides audience?"
+   },
+   {
+    "question": "What are some common mistakes beginners make with authentication and authorization?",
+    "answer": "A common mistake is storing passwords in plain text instead of hashing them with a strong password hashing algorithm. Another is trusting the client to enforce permissions instead of checking them on the server for every protected action. Beginners also often confuse login tokens with authorization, or keep long-lived tokens in unsafe places like local storage without understanding the risks.",
+    "real_world": "These mistakes show up as account takeovers, privilege escalation, or tokens leaking through XSS and logs. A secure design checks identity and permissions on the backend every time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely store and validate a user password on the server?"
+   },
+   {
+    "question": "What is the difference between an authorization code flow and the implicit flow in OAuth 2.0?",
+    "answer": "The authorization code flow sends the user back with a short-lived code, which the app exchanges server-to-server for tokens. That keeps tokens out of the browser redirect and is safer for apps that can keep a client secret or use PKCE. The implicit flow returned tokens directly in the browser, which exposed them more easily and is generally not recommended for new apps.",
+    "real_world": "A single-page app or mobile app usually uses authorization code flow with PKCE so it can log users in without exposing tokens in URLs or browser history. Older systems may still have implicit flow and need migration.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is PKCE and why does it matter for public clients?"
+   },
+   {
+    "question": "What is PKCE and why is it used?",
+    "answer": "PKCE adds a one-time proof step to the OAuth authorization code flow. The client creates a verifier and sends only a derived challenge up front, then later proves it knows the original verifier when exchanging the code. This protects public clients, like mobile apps and SPAs, from code interception because a stolen code is not enough to get tokens.",
+    "real_world": "This matters when an authorization code could be intercepted by another app on the device or by a malicious browser extension. PKCE is now standard for mobile and browser-based login flows.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if an attacker steals only the authorization code?"
+   },
+   {
+    "question": "What is the purpose of the `state` parameter in an OAuth login request?",
+    "answer": "`state` is an opaque value the client sends and then checks when the provider redirects back. It helps prevent CSRF and lets the app match the callback to the original login attempt. If the returned `state` does not match, the client should reject the response.",
+    "real_world": "Without checking `state`, a user could be tricked into linking the wrong account or completing a login the app did not start. Teams also use it to restore the page the user was on after authentication.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is `state` different from `nonce` in OpenID Connect?"
+   },
+   {
+    "question": "What is the `nonce` claim in OpenID Connect used for?",
+    "answer": "`nonce` is used to tie an ID token to the browser authentication request that created it. The client sends a random nonce in the request and later checks that the same value appears in the ID token. This helps prevent replay of an old token in login flows.",
+    "real_world": "This matters for browser sign-in flows where an attacker might try to reuse a token from another session. It is especially important when validating ID tokens on the client side.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where do you validate the `nonce`, and what do you compare it against?"
+   },
+   {
+    "question": "Why are JWTs usually signed, and what does that signature actually give you?",
+    "answer": "The signature lets the receiver verify that the token was issued by a trusted party and was not changed. It does not hide the contents of the token; a JWT is usually only base64-encoded, not encrypted. So you use signatures for integrity and authenticity, not confidentiality.",
+    "real_world": "Teams sometimes put sensitive data in JWTs assuming they are secret, then discover anyone who gets the token can decode the claims. For sensitive data, keep it on the server or use encrypted tokens if needed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should your server do if a JWT signature verifies but the token is expired?"
+   },
+   {
+    "question": "What is the `exp` claim in a JWT, and how should a server use it?",
+    "answer": "`exp` is the expiration time, after which the token should be treated as invalid. The server should check it on every request that relies on the token and reject expired tokens even if the signature is valid. Short-lived access tokens reduce the damage if a token is stolen.",
+    "real_world": "This matters when leaked tokens are found in logs or browser storage. If expiration is not enforced, an old token can keep working long after the user logs out or changes password.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle clock skew when checking expiration?"
+   },
+   {
+    "question": "When would you use a server-side session instead of a JWT for login state?",
+    "answer": "Use a server-side session when you want easy revocation, small cookies, and centralized control over login state. The browser stores only a session id, while the server stores the actual session data. JWTs are more self-contained, but revoking them early is harder unless you add extra infrastructure.",
+    "real_world": "This is common in traditional web apps where logout, admin forced sign-out, and session tracking matter more than stateless scaling. Sessions are also simpler when you do not need multiple services to validate the same token format.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the trade-offs of storing sessions in Redis versus in your application server memory?"
+   },
+   {
+    "question": "How does cookie-based authentication usually protect against CSRF?",
+    "answer": "Browsers attach cookies automatically, so the server needs an extra CSRF defense for state-changing requests. Common defenses are SameSite cookie settings, a synchronizer token, or checking the Origin or Referer header where appropriate. The key idea is proving the request came from your app, not just from a browser that has the cookie.",
+    "real_world": "This matters for actions like changing an email address or transferring money, where an attacker could trick a logged-in user into submitting a form. Stateless APIs that use `Authorization` headers are usually less exposed to classic CSRF.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does SameSite help, and when is it not enough?"
+   },
+   {
+    "question": "What is the difference between authentication in an app and identity federation with an external provider?",
+    "answer": "Authentication in the app means the app itself verifies who the user is and manages login. Identity federation means the app trusts another system, like Google or an enterprise identity provider, to authenticate the user and then accepts that result. Federation reduces password handling in your app and centralizes login policy, but it adds reliance on the external provider.",
+    "real_world": "This comes up when a company wants employees to log in with SSO instead of separate app passwords. It also reduces account creation friction for consumer apps that support social login.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What information does your app need to validate from the external provider before creating a local user session?"
+   },
+   {
+    "question": "What is a refresh token, and why should it be handled more carefully than an access token?",
+    "answer": "A refresh token is used to obtain new access tokens without making the user log in again. It usually lasts longer and can often be used to keep a session alive, so it is higher value if stolen. Because of that, apps should store it securely, send it only to the token endpoint, and rotate or revoke it when possible.",
+    "real_world": "If refresh tokens leak from a browser or mobile device, an attacker can keep minting new access tokens even after the user changes some settings. Teams often add rotation and server-side revocation tracking to limit this risk.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is token rotation, and what problem does it solve?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you validate a JWT on the server without calling the identity provider every time?",
+    "answer": "You verify the token’s signature with the issuer’s public key, then check the standard claims you rely on: issuer, expiration, and audience. For RS256 or similar algorithms, that lets your API validate tokens locally and avoid a network hop on each request. The trade-off is revocation is harder, because a valid signed token can still be accepted until it expires unless you add extra checks.",
+    "real_world": "This comes up when an API starts scaling and token introspection becomes a bottleneck. Teams often switch to local JWT verification to reduce latency, then need a plan for logout, key rotation, and compromised tokens.",
+    "code_lang": "python",
+    "code": "from jwt import decode\nclaims = decode(token, public_key, algorithms=['RS256'], audience='api', issuer='https://idp')\nuser_id = claims['sub']",
+    "follow_up": "How do you handle signing key rotation without breaking existing tokens?"
+   },
+   {
+    "question": "When would you choose opaque tokens with introspection instead of self-contained JWT access tokens?",
+    "answer": "Opaque tokens are better when the authorization server wants central control over token validity, revocation, and policy changes. The resource server calls back to the issuer to validate the token, so changes like revoking a user or disabling a client can take effect immediately. The cost is extra latency, tighter dependency on the auth server, and more moving parts during outages.",
+    "real_world": "This is common in regulated systems where immediate revocation matters more than pure request performance. It also helps when the token should not expose claims to every service that receives it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure modes do you need to plan for if introspection is unavailable?"
+   },
+   {
+    "question": "How do you decide what claims belong in a JWT versus what should stay in your database?",
+    "answer": "Put only data the API needs for authorization decisions and routing, and keep it stable for the token lifetime. Claims like subject, issuer, roles, or tenant can be useful; large profile data, mutable permissions, or sensitive information usually should not be embedded. Bigger tokens increase bandwidth and header size, and stale embedded data can create authorization bugs.",
+    "real_world": "A common production issue is stuffing group lists or user metadata into tokens and then wondering why permissions lag behind admin changes. It also creates problems when tokens hit proxy or header size limits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you keep role changes from taking too long to apply if roles are in the token?"
+   },
+   {
+    "question": "What is the practical difference between 401 Unauthorized and 403 Forbidden in an API?",
+    "answer": "A 401 means the request is missing valid authentication or the credentials are no longer acceptable. A 403 means the server knows who you are, but you are not allowed to perform the action. The distinction matters because clients can react differently: retry login or refresh a token for 401, but show an access-denied state for 403.",
+    "real_world": "This shows up in API debugging when a frontend keeps prompting users to log in even though the real issue is missing permission. Clear status codes save a lot of time during integration.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Should the response body differ between 401 and 403, and why?"
+   },
+   {
+    "question": "How do you implement logout correctly if you use JWT access tokens?",
+    "answer": "You usually cannot revoke a stateless access token immediately without extra server-side state. Common approaches are short-lived access tokens, refresh-token revocation, a denylist for specific tokens, or switching to opaque tokens for centralized validation. The right choice depends on how quickly you need logout to take effect and how much state you are willing to manage.",
+    "real_world": "This matters in apps where an employee leaves and their access must stop quickly. A short-lived access token plus refresh-token invalidation is often a practical balance.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you add a denylist, how do you avoid turning every request into a database lookup?"
+   },
+   {
+    "question": "How do session cookies and bearer tokens differ in how the browser sends them, and why does that matter?",
+    "answer": "Cookies are attached automatically by the browser according to domain and path rules, while bearer tokens are usually added explicitly by the client in an Authorization header. Automatic cookie sending makes browser sessions convenient but also exposes them to CSRF unless you add protections. Header-based tokens avoid that browser behavior, but now the client code must store and attach the token safely.",
+    "real_world": "Teams often move an SPA from cookie auth to header auth to reduce CSRF concerns, then run into token storage and XSS risks. The transport choice changes the attack surface, not just the implementation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What storage options are safest for browser-based access tokens?"
+   },
+   {
+    "question": "What should a backend do if it receives a token signed with an unexpected algorithm or issuer?",
+    "answer": "Reject it outright. The server should pin allowed algorithms and validate that the issuer matches the identity provider it trusts; otherwise, you risk algorithm confusion or accepting tokens from the wrong authority. This is part of treating token verification as an allowlist problem, not a best-effort parse.",
+    "real_world": "This matters when multiple identity providers exist across environments or when libraries accept too much by default. Misconfiguration here can become a cross-tenant or cross-environment security bug.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What other claims or headers do you treat as trust boundaries during verification?"
+   },
+   {
+    "question": "How do refresh token rotation and reuse detection help security?",
+    "answer": "With rotation, every refresh grants a new refresh token and invalidates the previous one. If an old refresh token is seen again, that suggests theft or replay, so the server can revoke the whole token family or session. This reduces the damage from a stolen refresh token, which is more sensitive than an access token because it can mint new access tokens.",
+    "real_world": "This is used in mobile and web apps where refresh tokens live a long time. It gives security teams a way to detect token theft instead of silently letting an attacker keep refreshing forever.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What state do you need on the server to support rotation safely?"
+   },
+   {
+    "question": "How do you enforce authorization in a backend without scattering permission checks all over the codebase?",
+    "answer": "Put the coarse-grained checks at the boundary, such as middleware, filters, or route guards, and keep business-specific checks close to the domain logic. A good pattern is to derive a principal or permission context once from the token or session, then make decisions based on that context. This avoids inconsistent checks and makes it easier to test who can access what.",
+    "real_world": "Teams often start with ad hoc `if user.role == ...` checks in handlers, then later miss one path during a feature launch. Centralizing the policy reduces drift between endpoints.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you model row-level or tenant-level authorization in that approach?"
+   },
+   {
+    "question": "How would you debug a login flow where users authenticate successfully but still get 401s on API calls?",
+    "answer": "First check whether the client is actually sending the token or cookie on the failing request. Then verify the server is validating the same issuer, audience, and signing keys that the login flow produced, and confirm clock skew and expiration are not causing false failures. If the token is present and valid, the issue is often a proxy stripping headers, a cookie scope problem, or the API looking at the wrong authentication mechanism.",
+    "real_world": "This is a common integration bug after a frontend, API gateway, or identity provider change. Logging the token presence, auth scheme, and claim validation failure usually narrows it down quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What logs or metrics would you add to catch this problem earlier in production?"
+   },
+   {
+    "question": "How do you handle role-based access control versus more fine-grained permission checks in a backend?",
+    "answer": "Roles are a coarse grouping of permissions, which makes them easy to reason about and manage. Fine-grained permissions are better when access depends on resource ownership, tenant, or action-specific rules, but they are harder to keep consistent. In practice, many systems use roles for broad access and then enforce object-level checks in the service layer. The key is to centralize the policy so you do not duplicate authorization logic in every handler.",
+    "real_world": "A SaaS app may give all support agents the same role, but only allow them to view accounts in their assigned region. If you rely on roles alone, you end up overexposing data or writing ad hoc checks in controllers.",
+    "code_lang": "python",
+    "code": "def can_edit(user, doc):\n    if user.role == 'admin':\n        return True\n    return doc.owner_id == user.id\n",
+    "follow_up": "How would you test that authorization logic thoroughly?"
+   },
+   {
+    "question": "When would you use cookie-based sessions instead of stateless tokens for a web app?",
+    "answer": "Use server-side sessions when you want easy revocation, small browser storage, and simple state that changes often. Sessions also make it easier to rotate privileges immediately because the server looks up the latest state on each request. Stateless tokens are better when you need horizontal scale without shared session storage or when multiple services need to validate the same token independently. The trade-off is that sessions add server-side state, while tokens push more responsibility into token lifetime and revocation design.",
+    "real_world": "An admin dashboard with low latency requirements and frequent privilege changes often works better with sessions. If an employee is removed from a team, the server can invalidate the session immediately instead of waiting for a token to expire.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the scaling and revocation trade-offs of storing sessions in Redis?"
+   },
+   {
+    "question": "What is token introspection, and when would you use it in an API gateway or microservices setup?",
+    "answer": "Token introspection is a server-to-authorization-server lookup that tells you whether a token is active and what metadata it carries. It is useful when you need immediate revocation, opaque tokens, or a central policy point. The downside is extra network latency and a dependency on the identity provider being available for every check. For high-throughput systems, teams often cache results briefly or validate JWTs locally instead.",
+    "real_world": "An API gateway handling regulated data may introspect tokens so that revoking a user session takes effect right away. Without that, a stolen token might stay usable until its expiry time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you cache introspection results without making revocation ineffective?"
+   },
+   {
+    "question": "How do you think about token expiration versus session timeout in a real system?",
+    "answer": "Token expiration is the cryptographic or server-enforced limit on how long a credential can be accepted. Session timeout is usually a product policy about user inactivity or total login duration, which may be shorter or longer than the token lifetime. You want access tokens short-lived to reduce theft impact, and refresh or session state to control how long a user can stay logged in. The right balance depends on security requirements and how often users need seamless access.",
+    "real_world": "A banking app may expire access tokens quickly but keep the session alive only while the user is active. That reduces exposure if a device is stolen, while still avoiding constant logins during a normal workflow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement idle timeout and absolute timeout separately?"
+   },
+   {
+    "question": "What can go wrong if your backend trusts claims like email or roles directly from a token?",
+    "answer": "A token is only trustworthy if it is issued by the expected issuer, intended for your API, and validated correctly. Even then, claims can become stale if the user’s role or email changes after the token was issued. For important authorization decisions, you should treat token claims as an input and confirm sensitive state against your source of truth when needed. This is especially important for long-lived tokens or admin actions.",
+    "real_world": "A user might be removed from an organization, but an old token still says they are an org admin. If your API only checks the token, they may keep access until the token expires.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which claims are safe to trust directly, and which should be checked against the database?"
+   },
+   {
+    "question": "How do you prevent a stolen refresh token from being reused across multiple devices or sessions?",
+    "answer": "Use refresh token rotation so each refresh response returns a new refresh token and invalidates the previous one. Then detect reuse of an already-rotated token and revoke the whole token family or session. This limits the damage from token theft because an attacker cannot keep using the same refresh token after the legitimate client has advanced. You also want secure storage and short lifetimes for the refresh token itself.",
+    "real_world": "If a mobile app backup leaks a refresh token, rotation can help you notice when that token is replayed from another device. Without reuse detection, the attacker may keep minting new access tokens silently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What server-side state do you need to support refresh token rotation?"
+   },
+   {
+    "question": "How do SameSite, HttpOnly, and Secure flags change how a login cookie behaves?",
+    "answer": "HttpOnly prevents JavaScript from reading the cookie, which reduces the impact of XSS stealing a session cookie. Secure ensures the browser only sends it over HTTPS. SameSite controls whether the browser sends the cookie in cross-site requests, which is important for CSRF protection but can affect legitimate cross-site flows. These flags do not replace good app design, but they are important layers of defense.",
+    "real_world": "A bug report that a cookie is missing on a cross-site redirect often turns out to be SameSite behavior, not a backend issue. Security teams also rely on HttpOnly to limit the blast radius of an XSS problem.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can SameSite create for OAuth login redirects?"
+   },
+   {
+    "question": "How do you debug a situation where JWT validation passes locally but fails in production behind a proxy or gateway?",
+    "answer": "First compare the exact token and validation parameters between environments: issuer, audience, algorithm, clock skew, and key source. Then inspect whether the proxy is altering the Authorization header, stripping cookies, or terminating TLS in a way that changes what the backend sees. Production failures often come from configuration drift, stale signing keys, or differences in time synchronization. Logging the failure reason at the validation boundary usually narrows it quickly.",
+    "real_world": "A team may test with one identity provider tenant locally but point production at another, or rotate keys in one environment only. Another common issue is a gateway that forwards a truncated header or blocks the auth header entirely.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What diagnostics would you add to make auth failures easier to trace without leaking secrets?"
+   },
+   {
+    "question": "How do you decide whether to put an authorization decision in the API gateway or in the service itself?",
+    "answer": "The gateway is good for coarse checks like whether the request has a valid token or matches a broad route-level policy. The service should still enforce business-critical authorization because it knows the resource state and can prevent bypasses from other internal callers. Putting everything in the gateway creates a single point of policy, but it is easy to miss object-level rules. A layered approach is safer: gateway for perimeter checks, service for final authority.",
+    "real_world": "If only the gateway checks permissions, a direct internal call from another service can skip them. Teams often discover this after a new background job or internal integration accidentally gains too much access.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you avoid duplicating policy logic between the gateway and services?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you walk me through how JWKS key rotation actually works in a verifier, and what failure modes you plan for in production?",
+    "answer": "A verifier caches the issuer's JWKS by `kid`, validates signature and issuer metadata, and refreshes keys when it sees an unknown `kid` or the cache expires. The main failure modes are stale caches during rotation, outages on the JWKS endpoint, and stampedes where many instances refetch at once. Good implementations keep old keys for overlap, use bounded cache TTLs, single-flight refresh, and fail closed on signature mismatch while avoiding turning every request into a network call. You also need to pin issuer configuration so a compromised discovery document cannot silently redirect key fetches.",
+    "real_world": "A common incident is a provider rotating signing keys and one AZ continuing to use a stale cache, causing intermittent 401s only for some users. Another is a bad deploy that retries JWKS fetches per request and overloads both your API and the identity provider.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if the token has a `kid` that is not in cache and the JWKS endpoint is temporarily unavailable?"
+   },
+   {
+    "question": "How would you design authorization for microservices so services can make decisions locally without every call turning into a database lookup?",
+    "answer": "The usual pattern is coarse identity and stable entitlements in the token, with service-local policy evaluation and a small, cacheable lookup for anything dynamic. Tokens should carry only what changes slowly enough to tolerate staleness; revocation-sensitive facts like account suspension or document ownership often need a fast side check. This keeps p99 latency down and avoids a central auth database on the hot path, but you accept some inconsistency window unless you add introspection or event-driven invalidation. The boundary is architectural: identity provider proves who the caller is, each service owns resource-level authorization.",
+    "real_world": "Teams often put all permissions into tokens, then discover a role change takes minutes to take effect because old tokens are still valid. The opposite mistake is querying a central permissions store on every internal RPC and creating a cross-service outage when that store slows down.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which authorization facts would you never put into a token?"
+   },
+   {
+    "question": "What is the confused deputy problem in OAuth, and how do you prevent it in backends that accept tokens from multiple clients or providers?",
+    "answer": "It happens when a backend accepts a token that was validly issued, but not meant for that backend or that client path, and then acts with more privilege than intended. Prevention is strict validation of issuer, audience, authorized party when relevant, token type, and expected grant context; don't treat any valid bearer token as interchangeable. Backends should also separate user tokens from service tokens and avoid token exchange shortcuts that blur those boundaries. In multi-tenant systems, tenant context must be bound as well, not inferred from a request parameter alone.",
+    "real_world": "A classic production bug is an API accepting an ID token or a token meant for a different resource server because signature validation passes. Another is mobile and web clients sharing an API, where a token minted for one client is replayed against another path with different trust assumptions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish and validate a user-delegated token versus a machine-to-machine token?"
+   },
+   {
+    "question": "How do you handle clock skew and time-based claims like `iat`, `nbf`, and `exp` in a distributed system without creating security holes?",
+    "answer": "You validate against a trusted server clock, allow a small skew window, and keep access token lifetimes short enough that a few seconds of leeway does not materially change risk. `exp` is usually mandatory, `nbf` is useful when tokens may be minted slightly ahead of use, and `iat` is mostly for sanity checks and age limits rather than exact equality. The failure mode is either rejecting good tokens because nodes drift, or accepting old tokens too long because the skew window became your real lifetime. NTP discipline and observability around token age distributions matter more than clever claim logic.",
+    "real_world": "During container host time drift, one cluster can start rejecting freshly issued tokens while another still accepts them, which looks like random auth failure. The opposite incident is a verifier configured with a very large skew that effectively extends token validity far beyond policy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Would you ever reject a token purely because `iat` is too far in the past or future?"
+   },
+   {
+    "question": "What are the trade-offs between encrypting a token and just signing it, and when does JWE actually make sense?",
+    "answer": "A signature gives integrity and issuer authenticity; encryption adds confidentiality for the claims in transit and at rest in logs or browsers. In many backends, JWE adds key management and CPU cost without solving the main problem, because the API still needs the plaintext claims after decrypting. It makes sense when intermediaries must not read token contents, when tokens carry regulated data, or when you need nested tokens across trust boundaries. Most of the time, the better answer is to keep sensitive data out of tokens entirely.",
+    "real_world": "Teams sometimes switch to JWE after discovering access tokens in logs, but the real fix is log scrubbing and smaller claims. On high-throughput gateways, decrypting every token can become a measurable latency and CPU tax compared with verifying signatures only.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you did use JWE, how would you rotate encryption keys without breaking active sessions?"
+   },
+   {
+    "question": "Suppose you need immediate revocation for a small set of high-risk actions, but you still want scalable stateless access tokens for everything else. How would you design that?",
+    "answer": "Use short-lived access tokens for normal calls, then require a stronger, fresher proof for sensitive operations such as money movement or admin changes. That proof can be a recent reauthentication marker, token introspection only on those endpoints, or a one-time transaction token bound to the action. This narrows the expensive revocation check to a tiny slice of traffic while keeping the common path stateless and fast. The key trade-off is user friction versus the blast radius of stolen but still-valid tokens.",
+    "real_world": "A payments system may allow browsing with a cached JWT but require a fresh step-up check before changing a payout destination. That avoids putting every read request through a central revocation store just to protect a handful of write paths.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement step-up authentication in a way services can verify consistently?"
+   },
+   {
+    "question": "What is token binding or proof-of-possession in practice, and why is it not the default even though bearer tokens are replayable?",
+    "answer": "With bearer tokens, anyone who gets the token can replay it; proof-of-possession adds a cryptographic demonstration that the caller also holds a private key or client secret tied to the token. In practice that means the token contains or references a key, and each request includes a signed proof over request data. It reduces replay from logs, browser storage theft, or intermediary leakage, but it is harder to deploy because clients must manage keys, proxies can interfere, and interoperability is worse than plain bearer tokens. So most systems reserve it for higher-risk clients or internal service-to-service calls.",
+    "real_world": "In mobile or service meshes, PoP can materially reduce the value of a leaked access token. On the open web, the operational complexity often outweighs the benefit, especially when many clients are third-party or browser-based.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you use mTLS-bound or sender-constrained tokens, and where would you avoid them?"
+   },
+   {
+    "question": "How do you prevent session fixation in a modern web backend, especially when you mix anonymous sessions with authenticated sessions?",
+    "answer": "You issue a new session identifier at authentication time and any privilege elevation, instead of reusing the anonymous session ID. If you need to preserve cart or CSRF state, copy the data to the new session and invalidate the old one server-side. Also set cookie scope narrowly and make sure alternate login entry points cannot attach an authenticated identity to an attacker-chosen session. The bug matters because fixation bypasses password secrecy entirely: the attacker only needs the victim to log into a session the attacker already knows.",
+    "real_world": "This shows up when a site creates a guest session for everyone and, after login, just adds `user_id` to that same record. If an attacker can plant or predict that session ID before login, they inherit the victim's authenticated session.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What additional risks appear if your session store is eventually consistent across regions?"
+   },
+   {
+    "question": "If you had to support login across multiple regions with region-local session stores, how would you handle failover and consistency without breaking security?",
+    "answer": "The cleanest option is either globally replicated session state with clear consistency guarantees or region-scoped sessions plus reauthentication on failover. If you allow asynchronous replication, design for duplicate logout, delayed revocation, and refresh races, and make session mutation idempotent with versioning. Sticky routing helps latency, but you still need a story for region evacuation and clients hitting a different region after DNS or load-balancer changes. Security-wise, fail closed on ambiguous session state for privileged actions, even if you allow softer behavior for low-risk reads.",
+    "real_world": "A real incident is a user logging out in one region while another region still accepts the old session for seconds or minutes. Another is session refresh occurring in two regions at once, causing one side to overwrite newer expiry or device metadata.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your design change if you used refresh tokens plus short-lived access tokens instead of server-side sessions?"
+   },
+   {
+    "question": "What are the subtle security and interoperability issues around redirect URIs in OAuth, especially for mobile apps and multi-tenant SaaS?",
+    "answer": "Redirect URI validation needs exact matching or a very constrained pattern, because broad wildcards and partial matching create code interception and open-redirect paths. Mobile adds custom-scheme collisions and app-link/universal-link edge cases, while multi-tenant SaaS tempts people to encode tenant choice in hostnames or callback paths too loosely. You should register explicit callbacks, bind them to the right client, and validate post-login routing separately from the OAuth redirect. Treat any user-controlled continuation URL as untrusted even after a successful OAuth response.",
+    "real_world": "A common breach pattern is allowing `https://*.example.com/callback` and later discovering a forgotten subdomain takeover. Another is a mobile app using a generic custom scheme that another app can claim, intercepting the authorization code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely support per-tenant subdomains without opening redirect URI wildcard issues?"
+   },
+   {
+    "question": "How would you validate an ID token differently from an access token in a backend that talks to multiple identity providers?",
+    "answer": "I treat them as different artifacts with different trust rules. For an ID token, I verify issuer, signature, audience/client binding, expiry, and OIDC-specific claims, and I only use it to establish the user’s identity for the client it was issued to. For an access token, I validate it according to the API’s contract and only trust claims the authorization server is supposed to assert for resource access. A common mistake is accepting an ID token at an API because it looks like a JWT; that can break audience isolation and let the wrong party’s token through.",
+    "real_world": "This shows up in systems where a frontend gets both tokens and accidentally sends the ID token to APIs. It often works in one environment and becomes a security incident when another provider or client is added.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If your API accepts tokens from more than one issuer, how do you prevent claim collisions and ambiguous subject identities?"
+   },
+   {
+    "question": "How do you design subject identity so a user can be linked safely across multiple issuers, tenants, or identity providers?",
+    "answer": "I never key users by email because it can change, be reassigned, or be unverified in some providers. I use a stable issuer-scoped identifier such as the pair of issuer and subject, and if I need account linking I make that an explicit application-level process. In multi-tenant systems I also include tenant context in the principal because the same human may have different rights in different tenants. The trade-off is more mapping complexity, but it avoids account takeover through identity collisions.",
+    "real_world": "Teams get burned when they merge accounts by email and later enable enterprise SSO; a contractor can end up mapped to the wrong internal account after an email rename or domain migration.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if a customer wants seamless account linking across Google login and enterprise SAML/OIDC?"
+   },
+   {
+    "question": "How would you scale server-side sessions in a high-traffic backend without turning the session store into a bottleneck?",
+    "answer": "Keep session payloads small, store only what changes infrequently, and treat the session store like a latency-sensitive dependency. I’d use a shared in-memory store or database with eviction and persistence behavior understood up front, plus local caching only for non-security-critical derived data. Avoid write amplification by not touching the session on every request unless sliding expiration is required, and shard by session ID if needed. The key trade-off is revocability and central control versus an extra network hop and a hard dependency on the store.",
+    "real_world": "A common incident is every API call extending TTL and causing a write storm during peak traffic. Another is a cache outage turning login state into a full-site outage because every request blocks on session lookup.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle session invalidation across regions during a failover?"
+   },
+   {
+    "question": "What are the practical pitfalls of sliding sessions or rolling expiration in production?",
+    "answer": "Sliding expiration improves UX, but it can create unbounded session lifetime unless you also enforce an absolute maximum age. It also increases write load because activity extends the session, and concurrent requests can race so one request refreshes while another sees an old value and overwrites it. You need clear semantics for idle timeout, absolute timeout, and reauthentication thresholds for sensitive actions. If you get it wrong, users either get unexpectedly logged out or sessions stay valid far longer than policy intended.",
+    "real_world": "This matters in web apps with lots of background requests; a dashboard polling every few seconds can keep a session alive forever unless you separate active use from incidental traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement sliding expiration without rewriting the session on every request?"
+   },
+   {
+    "question": "How would you secure machine-to-machine authentication differently from user login in OAuth-based systems?",
+    "answer": "For service-to-service auth, I prefer narrowly scoped access tokens issued to confidential clients and I avoid dragging user-centric concepts like ID tokens or browser redirects into the design. Client authentication needs stronger controls such as private key based methods or managed secret distribution, and token lifetimes are usually short because automation can refresh them easily. I also separate client identity from workload identity; knowing which app called is different from knowing which deployment instance or cluster called. The trade-off is extra operational complexity for much better containment when a credential leaks.",
+    "real_world": "In production, teams often start with one shared client secret across many services. When one container image leaks, every service can impersonate every other until all credentials are rotated.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you do workload identity in Kubernetes without distributing long-lived client secrets?"
+   },
+   {
+    "question": "What can go wrong with JWT verification libraries even if you think you’re doing standard validation?",
+    "answer": "The dangerous part is often configuration, not cryptography. If the library accepts tokens before you pin allowed algorithms, expected issuer, and audience, or if it auto-fetches keys from attacker-controlled locations, you can end up trusting the wrong token. Some libraries also deserialize claims loosely, so type mismatches or duplicated claims can behave differently across languages. I treat token parsing as untrusted input handling and make all trust boundaries explicit.",
+    "real_world": "A recurring incident pattern is a service accepting any token signed by a trusted provider, even if it was meant for a different API, because the library verified the signature and expiry but nobody enforced resource-specific constraints.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What checks would you make mandatory in a shared token verification middleware?"
+   },
+   {
+    "question": "How would you handle authorization data that changes frequently, like entitlements or account status, if your access tokens are cached and short-lived?",
+    "answer": "I keep fast-changing authorization state out of long-lived self-contained tokens, or I include only coarse grants and re-check sensitive conditions server-side. Short token lifetimes reduce staleness but don’t solve immediate changes like suspension, subscription downgrade, or legal hold. A common pattern is hybrid: validate the token locally for most requests, but consult a cache or policy service for high-risk actions or for attributes with tight freshness requirements. The trade-off is latency and complexity versus avoiding stale authorization decisions.",
+    "real_world": "This bites billing and admin systems: a user is disabled or loses a plan entitlement, but their token still carries an old role and can authorize actions for several minutes unless the backend has another freshness check.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you cache those external authorization checks without reintroducing the stale-data problem?"
+   },
+   {
+    "question": "Suppose you need to support both browser clients and native mobile apps. How would you structure login and token storage differently?",
+    "answer": "For browsers, I prefer a backend-managed session or tokens kept out of JavaScript when possible, because XSS and browser auto-send behavior dominate the threat model. For native apps, I assume the client will hold tokens and I rely on platform secure storage, short-lived access tokens, and refresh token protections like rotation and device scoping. I avoid forcing the same mechanism on both because the storage and replay risks are different. The architecture should follow the client’s attack surface, not just implementation convenience.",
+    "real_world": "Teams often unify on localStorage because it works for both web and mobile wrappers; then an XSS bug turns into account compromise for the web app while the mobile assumptions never really applied.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would change if the browser app is a pure SPA with no trusted backend of its own?"
+   },
+   {
+    "question": "How do you reason about cookie domain, path, and subdomain boundaries when designing authentication for a large web platform?",
+    "answer": "Cookie scope is part of your security boundary. A broadly scoped cookie, especially at a parent domain, may be sent to more applications than intended and increases the blast radius of XSS or subdomain compromise. I prefer the narrowest domain and path that fit the architecture, and I separate cookies for login, CSRF, and tenant or app context rather than reusing one universal cookie. The trade-off is more operational complexity around SSO, but much cleaner isolation between apps.",
+    "real_world": "A classic production problem is setting an auth cookie for the parent domain so every subdomain gets it; one lower-trust marketing app with an XSS then becomes a stepping stone into authenticated traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement cross-subdomain SSO without exposing a session cookie to every subdomain?"
+   },
+   {
+    "question": "If an authorization server or session store is partially down, how do you make fail-open versus fail-closed decisions for authentication systems?",
+    "answer": "For authentication and privilege-increasing operations, I default to fail closed because availability bugs should not become security bugs. But I separate online dependencies carefully: local JWT verification can continue through an auth-server outage, while refresh, login, introspection, or session lookups may need graceful degradation, retries, and backpressure. The right answer depends on operation criticality, cached trust material, and whether stale decisions are acceptable for a bounded period. You need explicit policy, because accidental fail-open often happens through timeout handling rather than deliberate design.",
+    "real_world": "A real incident is an introspection endpoint timing out and an API gateway treating timeout as success to avoid user-facing errors. Another is the opposite: a session store hiccup logs out every user at once because there is no degraded mode.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test those failure policies so a timeout or cache miss can’t silently change the security posture?"
+   }
+  ]
+ }
+}

@@ -1,0 +1,477 @@
+{
+ "slug": "algorithms",
+ "name": "Algorithms and complexity",
+ "category": "Computer science",
+ "levels": {
+  "basic": [
+   {
+    "question": "What does Big-O notation tell you about an algorithm?",
+    "answer": "Big-O describes how an algorithm’s time or space usage grows as input size increases. It focuses on the dominant trend and ignores constant factors and lower-order terms. This helps compare algorithms by scalability, not by exact runtime on one machine. For example, O(n) usually scales better than O(n^2) as n gets large.",
+    "real_world": "A team may choose between two search implementations and use Big-O to predict which one will still work well when the data grows from thousands to millions of items.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is Big-O different from Big-Theta or Big-Omega?"
+   },
+   {
+    "question": "What is the difference between time complexity and space complexity?",
+    "answer": "Time complexity measures how the runtime grows with input size, while space complexity measures how much extra memory the algorithm uses. Both matter because an algorithm can be fast but memory-hungry, or memory-efficient but slow. In interviews, it is important to talk about both when comparing solutions. The trade-off often depends on available memory and performance requirements.",
+    "real_world": "A mobile app may need a slightly slower algorithm if it uses much less memory, because devices have tight RAM limits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of an algorithm that trades space for time?"
+   },
+   {
+    "question": "What is the typical time complexity of looking up a key in a hash table, and why?",
+    "answer": "Average-case lookup in a hash table is O(1) because the table computes a hash and jumps directly to a bucket. The key idea is that good hashing spreads items evenly, so each bucket stays small. In the worst case, lookups can degrade if many keys collide. That is why hash tables are fast in practice but not always guaranteed constant time.",
+    "real_world": "A cache or dictionary in a backend service often uses a hash table to keep access fast for frequent lookups.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What causes hash table performance to degrade?"
+   },
+   {
+    "question": "When would you choose an array over a linked list?",
+    "answer": "Choose an array when you need fast indexed access and good cache locality. Arrays are also simpler and usually use less overhead per element. Linked lists are better only when you do many insertions or deletions in the middle and already have the node location, but they are slower for random access. In many beginner problems, arrays are the better default choice.",
+    "real_world": "If a service frequently reads items by position, an array is usually much faster than a linked list in practice.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why are linked lists often slower than arrays even when insertion is O(1)?"
+   },
+   {
+    "question": "What is the time complexity of binary search, and what requirement does it have?",
+    "answer": "Binary search runs in O(log n) time because it cuts the search space in half each step. The key requirement is that the data must be sorted, or at least ordered in a way that supports the halving decision. If the input is unsorted, binary search does not work correctly. That makes sorting or maintaining order an important trade-off.",
+    "real_world": "A product team might sort a list of timestamps once and then use binary search to answer many range queries quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can’t binary search be used on an unsorted array?"
+   },
+   {
+    "question": "What is the difference between linear search and binary search?",
+    "answer": "Linear search checks items one by one until it finds the target or reaches the end, so it is O(n). Binary search is O(log n), but only works on sorted data. Linear search is simpler and can be better for very small inputs or unsorted data. The choice depends on whether the cost of sorting is worth it for repeated searches.",
+    "real_world": "If you only need to find one item in a short list, linear search may be easier and fast enough; if you search the same data many times, binary search can save a lot of time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When might linear search actually be the better choice?"
+   },
+   {
+    "question": "What does it mean for an algorithm to be recursive?",
+    "answer": "A recursive algorithm solves a problem by calling itself on smaller subproblems. It needs a base case to stop the recursion, otherwise it will keep calling itself forever. Recursion often makes tree and divide-and-conquer problems easier to express. The trade-off is extra call stack usage and sometimes overhead compared with iteration.",
+    "real_world": "Recursive code is common in traversing file trees, nested data, or tree structures in a backend system.",
+    "code_lang": "python",
+    "code": "def factorial(n):\n    if n == 0:\n        return 1\n    return n * factorial(n - 1)",
+    "follow_up": "What happens if the base case is missing?"
+   },
+   {
+    "question": "What is a base case in recursion?",
+    "answer": "A base case is the condition where the recursive function stops calling itself and returns a result directly. It is essential because it prevents infinite recursion and makes the problem eventually terminate. A good recursive function usually has one or more base cases for the smallest valid inputs. Without one, you typically get a stack overflow or recursion depth error.",
+    "real_world": "A bug in a recursive parser or tree walk can crash a service if the stopping condition is wrong or missing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide what the base case should be?"
+   },
+   {
+    "question": "What is the difference between iterative and recursive solutions?",
+    "answer": "Iterative solutions use loops, while recursive solutions use function calls to repeat work on smaller inputs. Iteration is often more memory-efficient because it avoids growing the call stack. Recursion can be easier to read for hierarchical or divide-and-conquer problems. A strong candidate should be able to choose either based on clarity, stack limits, and performance.",
+    "real_world": "Teams often rewrite recursion into iteration in production when deep inputs could cause stack overflows.",
+    "code_lang": "python",
+    "code": "# iterative factorial\nresult = 1\nfor i in range(1, 6):\n    result *= i\nprint(result)",
+    "follow_up": "Can every recursive algorithm be rewritten iteratively?"
+   },
+   {
+    "question": "What is a common mistake beginners make when analyzing nested loops?",
+    "answer": "A common mistake is assuming every nested loop is automatically O(n^2). The real complexity depends on how many times each loop runs, and whether the inner loop depends on the outer one. For example, two loops of different sizes can produce O(n log n) or O(n^2), depending on the structure. You should count total operations, not just loop nesting.",
+    "real_world": "During code review, a team may misjudge a data-processing job as quadratic and worry unnecessarily, or miss a truly expensive loop that will hurt production at scale.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you analyze a loop where the inner loop halves a value each time?"
+   },
+   {
+    "question": "What is the difference between a stable and an unstable sort?",
+    "answer": "A stable sort keeps equal elements in their original relative order, while an unstable sort may reorder them. This matters when the data has multiple fields and you want to sort by one field without breaking a previous ordering on another field. Stability is about behavior with ties, not about speed. Whether a sort is stable depends on the algorithm and sometimes the implementation.",
+    "real_world": "Teams often rely on stable sorting when they sort by last name and then by first name, or when UI rows must keep their previous order for equal keys.",
+    "code_lang": "python",
+    "code": "items = [(2, 'a'), (1, 'x'), (2, 'b')]\nprint(sorted(items, key=lambda t: t[0]))\n# Stable sort keeps (2, 'a') before (2, 'b')",
+    "follow_up": "Can you give an example where stability changes the result?"
+   },
+   {
+    "question": "What is a greedy algorithm?",
+    "answer": "A greedy algorithm builds a solution by repeatedly choosing the best local option at each step, hoping that leads to a global optimum. It works when the problem has the greedy-choice property; otherwise it can give a suboptimal answer. Greedy methods are often simple and fast, but they need justification. A common interview skill is knowing when greedy is valid and when dynamic programming is needed instead.",
+    "real_world": "Greedy logic shows up in scheduling, change-making, and network selection, where a local choice can either be provably optimal or subtly wrong.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you tell whether a greedy choice is safe?"
+   },
+   {
+    "question": "What is dynamic programming in simple terms?",
+    "answer": "Dynamic programming solves a problem by breaking it into smaller overlapping subproblems and saving the results so each subproblem is solved once. It is useful when the same work would otherwise be repeated many times, especially in optimization and counting problems. The two key parts are identifying the subproblem and the recurrence. Memoization and tabulation are two common ways to implement it.",
+    "real_world": "DP is often used for things like shortest paths in constrained settings, edit distance, and resource allocation problems where naive recursion becomes too slow.",
+    "code_lang": "python",
+    "code": "def fib(n, memo={}):\n    if n < 2:\n        return n\n    if n not in memo:\n        memo[n] = fib(n-1, memo) + fib(n-2, memo)\n    return memo[n]",
+    "follow_up": "What is the difference between memoization and tabulation?"
+   },
+   {
+    "question": "What is the difference between memoization and tabulation?",
+    "answer": "Memoization is a top-down approach: you start with the original problem and cache results of recursive calls. Tabulation is bottom-up: you fill in a table from smaller subproblems to larger ones. Both avoid repeated work, but memoization is often easier to derive from recursion, while tabulation can be easier to optimize in space. The right choice depends on the problem and which version is clearer to reason about.",
+    "real_world": "A team may start with memoization to get the logic right, then switch to tabulation if recursion depth or overhead becomes a problem.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer bottom-up over top-down?"
+   },
+   {
+    "question": "What is a stack, and what is it used for?",
+    "answer": "A stack is a data structure with last-in, first-out behavior: the most recently added item is the first one removed. It is used when you need to reverse order, manage nested work, or track active function calls. Typical operations are push and pop. Stacks are also useful for iterative depth-first traversal and expression parsing.",
+    "real_world": "Stacks are used in parsers, undo features, browser history, and function call management under the hood.",
+    "code_lang": "python",
+    "code": "stack = []\nstack.append(1)\nstack.append(2)\nprint(stack.pop())  # 2\nprint(stack.pop())  # 1",
+    "follow_up": "What is the difference between a stack and a queue?"
+   },
+   {
+    "question": "What is a queue, and when would you use it?",
+    "answer": "A queue is a first-in, first-out data structure: the first item added is the first one removed. It is used when order matters and you want to process work in arrival order. Common examples are task scheduling, breadth-first search, and buffering requests. Compared with a stack, a queue preserves fairness and level order.",
+    "real_world": "Queues are common in job processors and message systems, where requests should be handled in the order they arrived or by explicit priority rules.",
+    "code_lang": "python",
+    "code": "from collections import deque\nq = deque()\nq.append(1)\nq.append(2)\nprint(q.popleft())  # 1\nprint(q.popleft())  # 2",
+    "follow_up": "When would breadth-first search use a queue?"
+   },
+   {
+    "question": "What is breadth-first search, at a high level?",
+    "answer": "Breadth-first search explores a graph or tree level by level, visiting all nodes one edge away before moving to nodes two edges away, and so on. It usually uses a queue to keep track of the frontier. BFS is useful when you need the shortest path in an unweighted graph or the nearest match in a tree. The main caution is to track visited nodes so you do not loop forever on graphs with cycles.",
+    "real_world": "BFS is used for shortest-hop routing, social graph exploration, and finding the nearest valid result in tree-shaped data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why do you need a visited set in graph search?"
+   },
+   {
+    "question": "Why do you need a visited set in graph algorithms?",
+    "answer": "A visited set prevents you from processing the same node more than once. In graphs with cycles, without it you can revisit nodes forever or do a lot of duplicate work. It also keeps traversal time closer to linear in the size of the graph. Whether you mark a node when enqueuing or when dequeuing depends on the algorithm, but you must be consistent.",
+    "real_world": "This is a common cause of infinite loops or exploding runtimes when a team adds cycle-shaped data to code that worked on trees.",
+    "code_lang": "python",
+    "code": "visited = set()\nif node not in visited:\n    visited.add(node)\n    for nxt in neighbors(node):\n        ...",
+    "follow_up": "What is the difference between a tree and a graph?"
+   },
+   {
+    "question": "What is the difference between a tree and a graph?",
+    "answer": "A tree is a special kind of graph that is connected and has no cycles. Because of that structure, trees have a single path between two nodes and are usually easier to traverse and reason about. A general graph can have cycles, disconnected components, and multiple paths between nodes. Many tree algorithms assume the tree properties, so using them on a general graph can break the logic.",
+    "real_world": "This distinction matters when modeling hierarchies like folders or org charts versus networks like social links or road maps.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect a cycle in a graph?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide whether a problem is better solved with a heap, a sorted list, or a balanced search tree?",
+    "answer": "It depends on the mix of operations you need. Heaps are best when you mostly need repeated min/max extraction, sorted lists are good when reads dominate and updates are rare, and balanced search trees help when you need ordered iteration plus fast inserts, deletes, and lookups. The real trade-off is not just asymptotic complexity but constant factors and how often the data changes. I’d choose the structure around the hottest operations in the workload.",
+    "real_world": "This comes up in scheduling systems, rate limiting, and leaderboards. For example, a team might start with a sorted array for simplicity and later switch to a heap when insert volume makes re-sorting too expensive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What workload pattern would make a heap a bad choice even if it has good theoretical performance?"
+   },
+   {
+    "question": "How would you compare quicksort and mergesort in practice, not just by their average-case complexity?",
+    "answer": "Quicksort is often faster in practice because it is in-place and has good cache behavior, but its worst case is poor if partitioning goes badly. Mergesort has predictable performance and is stable, but it typically needs extra memory. If I need stability or guaranteed performance, mergesort is safer; if memory is tight and average speed matters more, quicksort is attractive. The choice often depends on input characteristics and failure tolerance.",
+    "real_world": "This matters in data processing pipelines and sorting UI tables. A bad pivot strategy can make quicksort unexpectedly slow on nearly sorted or adversarial data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How can you reduce the risk of quicksort hitting its worst case?"
+   },
+   {
+    "question": "What is amortized analysis, and why is it useful for understanding some data structures?",
+    "answer": "Amortized analysis spreads the cost of occasional expensive operations across many cheap ones. It matters when a structure sometimes does a lot of work, like resizing an array or rebuilding internal state, but the average cost per operation is still small over a sequence. It is different from probability-based average case because it gives a guarantee over any valid sequence of operations. This is how you justify that certain repeated operations stay efficient in real systems.",
+    "real_world": "Dynamic arrays and hash tables are common examples. Without amortized analysis, teams may overestimate the cost of growth operations and optimize the wrong part of the system.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of an operation that is expensive occasionally but still O(1) amortized?"
+   },
+   {
+    "question": "How would you detect and fix an algorithm that is accidentally quadratic in production?",
+    "answer": "I would first look for input sizes where runtime grows much faster than the data volume, then profile to find repeated scans, nested loops over the same collection, or expensive work inside a loop. A common fix is to replace repeated membership checks with a hash-based set, precompute values, or sort once and use a linear merge-style pass. I would also add tests with larger inputs so the regression is visible before release. The key is to identify repeated work, not just make the code look cleaner.",
+    "real_world": "This often appears when a feature works fine in staging but slows down badly on real customer data. A classic case is looping over all records and doing a linear search for each one.",
+    "code_lang": "python",
+    "code": "# Bad: O(n^2)\nfor item in items:\n    if item.id in [x.id for x in selected]:\n        process(item)\n\n# Better: O(n)\nselected_ids = {x.id for x in selected}\nfor item in items:\n    if item.id in selected_ids:\n        process(item)",
+    "follow_up": "What kind of profiling evidence would convince you that the fix actually addressed the bottleneck?"
+   },
+   {
+    "question": "When would you prefer a two-pointer technique over using extra data structures?",
+    "answer": "I would use two pointers when the input has an order or monotonic property that lets me move through it once without backtracking. It often gives O(n) time and O(1) extra space, which is useful for large inputs or memory-sensitive code. Extra data structures can be simpler, but they may add overhead and hide the underlying pattern. Two pointers are especially useful for partitioning, merging, and finding pairs in sorted data.",
+    "real_world": "This shows up in parsing, deduping sorted arrays, and streaming-style cleanup jobs. It can replace a hash map solution when memory pressure matters.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What assumptions must be true for a two-pointer solution to work correctly?"
+   },
+   {
+    "question": "How do you reason about the complexity of graph traversal when the graph is represented as an adjacency list versus an adjacency matrix?",
+    "answer": "With an adjacency list, traversals like DFS or BFS typically scale with the number of vertices plus edges, because you only visit existing neighbors. With an adjacency matrix, checking neighbors usually requires scanning an entire row, so traversals can become much more expensive on sparse graphs. The matrix may still be useful when you need constant-time edge existence checks and the graph is dense. The representation changes the cost model, so the same algorithm can behave very differently.",
+    "real_world": "This matters in permission graphs, dependency analysis, and network tools. A representation that is fine for small dense graphs can become a major bottleneck on sparse production data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would an adjacency matrix be a better choice despite the higher traversal cost?"
+   },
+   {
+    "question": "How would you choose between brute force, backtracking, and dynamic programming for a search problem?",
+    "answer": "Brute force is fine if the search space is small or you only need a simple baseline. Backtracking is useful when you can prune large parts of the search tree early based on constraints. Dynamic programming helps when many subproblems repeat and the answer can be built from overlapping subresults. The choice depends on whether the problem has structure you can exploit, not just on the final complexity target.",
+    "real_world": "This comes up in combinatorial features like rule engines, scheduling, and configuration search. Teams often start with brute force, then add pruning, and only move to DP when repeated states make the search too slow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals tell you that memoization would help a backtracking solution?"
+   },
+   {
+    "question": "What makes an algorithm stable in practice, and when does that matter in product code?",
+    "answer": "A stable algorithm preserves the relative order of items that compare equal. It matters when records have a primary sort key but also carry hidden or secondary meaning, like timestamps, user-entered order, or already grouped data. Stability can reduce bugs because later processing stages may assume ties stay in their original order. If that order matters, using an unstable algorithm can silently change behavior even when the sorted keys look correct.",
+    "real_world": "This matters in reporting tools and UI lists where users expect equal-priority items to remain in the same order. A switch to an unstable sort can cause subtle regressions that are hard to spot in tests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where an unstable sort would produce a user-visible bug?"
+   },
+   {
+    "question": "How do you test the correctness and performance of an algorithm before shipping it?",
+    "answer": "I would start with small hand-checked cases, edge cases, and randomized tests against a known-correct but slower reference implementation. Then I would add representative large inputs to measure whether runtime and memory match expectations. For algorithms with tricky invariants, property-based tests are very effective because they can catch cases the examples miss. The goal is to validate both the answer and the shape of the cost under realistic load.",
+    "real_world": "This is common when replacing a legacy routine or optimizing a backend endpoint. A fast algorithm that is wrong on corner cases, or only fast on tiny inputs, still causes production incidents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What property would you use to test a shortest-path implementation without hard-coding every expected path?"
+   },
+   {
+    "question": "How would you estimate the runtime of an algorithm when the input size has two meaningful dimensions, like rows and columns?",
+    "answer": "Treat both dimensions explicitly instead of collapsing them too early. If an algorithm scans every cell of a matrix, its cost is proportional to rows times columns; if it also does work per row or per column, those terms should stay visible in the expression. This matters because a “linear” algorithm in one dimension can still be too slow when the other dimension grows. In reviews, I’d ask which input shape is common in production, because that often determines the real bottleneck.",
+    "real_world": "A team processing spreadsheets may say a step is “O(n)”, but if n is rows and each row contains many columns, the actual cost can blow up. Being explicit prevents underestimating batch job runtimes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you simplify those expressions when one dimension is always much smaller than the other?"
+   },
+   {
+    "question": "What is the difference between average-case, worst-case, and best-case complexity, and which one should you care about in production?",
+    "answer": "Worst-case is the safest bound, average-case describes expected behavior under a specific input distribution, and best-case is usually only a lower bound. In production, worst-case matters when bad inputs or adversarial traffic can happen, while average-case is useful when you understand the workload well and can measure it. The key trade-off is honesty versus optimism: a fast average can still be a bad choice if rare inputs cause major latency spikes. I usually want both worst-case and measured real-world performance.",
+    "real_world": "An endpoint backed by a hash table might be fast on typical traffic but degrade badly on pathological inputs or during resize events. For customer-facing systems, latency outliers often matter more than the mean.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where average-case is acceptable and one where worst-case is more important?"
+   },
+   {
+    "question": "How do you decide whether to sort first and then scan, versus using a hash-based approach to solve a data-processing problem?",
+    "answer": "Sorting first is good when you need ordered output, repeated range queries, or a deterministic pass after the sort. A hash-based approach is better when you mostly need membership checks, grouping, or deduplication and do not care about order. Sorting costs extra upfront work but can simplify later logic and reduce memory churn; hashing is often faster on average but can have more memory overhead and less predictable performance. The choice depends on whether order is part of the problem or just an implementation detail.",
+    "real_world": "For deduplicating user IDs in a batch job, a set is often simplest. For generating a report grouped by time and then walking adjacent records, sorting first can be a better fit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What trade-offs would change if the data does not fit in memory?"
+   },
+   {
+    "question": "What is the trade-off between using depth-first search and breadth-first search in a real system?",
+    "answer": "DFS is often simpler for exploring all possibilities and uses less memory on wide graphs, while BFS is better when you need the shortest path in an unweighted graph or the nearest matching item. DFS can get stuck going deep down one branch, and BFS can consume a lot of memory because it stores the frontier. The right choice depends on whether path length, memory usage, or exploration order matters most. In production, that often comes down to whether you need “any answer” or the “closest answer.”",
+    "real_world": "A recommendation system might use BFS-like expansion to find nearby entities, while a dependency resolver or file walker often uses DFS. Choosing the wrong search can cause either excessive memory use or poor result quality.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you add pruning or early exit to one of those traversals?"
+   },
+   {
+    "question": "How would you reason about the complexity of a divide-and-conquer algorithm beyond just saying it is recursive?",
+    "answer": "You look at how many subproblems are created, how big they are, and the work done outside the recursive calls. Some algorithms split the input evenly and combine results cheaply; others spend most of the time merging or partitioning. The shape of the recursion tree is what determines whether the total cost is logarithmic, linearithmic, or worse. This matters because two recursive algorithms can look similar in code but have very different scaling behavior.",
+    "real_world": "A team may replace a naive recursive splitter with a version that re-partitions too often and accidentally turns a fast pipeline into a slow one. Understanding the recursion tree helps catch that before production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you spot when the combine step, not the recursion, is the real bottleneck?"
+   },
+   {
+    "question": "What is a good way to think about space-time trade-offs when caching intermediate results?",
+    "answer": "Caching uses memory to avoid repeating work, so it helps when the same subproblem or lookup occurs many times. The main trade-off is that you are exchanging memory pressure and cache invalidation complexity for lower latency or CPU use. It is worth it when the saved work is substantial and the cached values are reused often enough to justify the overhead. In production, I also consider eviction policy, stale data, and whether the cache can amplify traffic during misses.",
+    "real_world": "A service might memoize expensive computations for a hot key set, but later hit memory limits or serve stale results after a data change. Good cache design is as much about invalidation as speed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to cache in-process, in Redis, or not at all?"
+   },
+   {
+    "question": "How would you compare a heap-based approach with maintaining a fully sorted list for repeated top-k queries?",
+    "answer": "A heap is usually better when you frequently insert items and only need the top few, because it avoids keeping everything fully ordered. A sorted list makes queries easy but can be expensive to maintain if updates are frequent, since insertions may require shifting many elements. If top-k is small relative to the data size, a heap often gives a better balance of update cost and query speed. If you need fast rank lookups or ordered iteration, a sorted structure may be worth the maintenance cost.",
+    "real_world": "Log aggregation systems often need the top errors or slowest endpoints without resorting the whole dataset every time. Choosing the wrong structure can turn an online query into a batch job.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes if you need both top-k and arbitrary percentile queries?"
+   },
+   {
+    "question": "What does it mean for an algorithm to be in-place, and why is that not always a win?",
+    "answer": "In-place means it uses only a small, constant amount of extra memory relative to the input size. That can reduce memory usage and improve cache locality, but it sometimes makes the algorithm harder to reason about, less stable, or slower in practice because of extra swaps or complicated logic. In-place is not automatically better if clarity, stability, or predictable performance matters more than memory savings. The decision should reflect the actual resource constraint, not just an abstract preference for low space.",
+    "real_world": "On a mobile device or inside a memory-limited container, in-place algorithms can prevent crashes. In a backend service with ample memory, a simpler non-in-place version may be easier to maintain and test.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you name a case where a non-in-place algorithm is the safer choice?"
+   },
+   {
+    "question": "How would you debug an algorithm that gives the right answer on small inputs but fails on larger ones?",
+    "answer": "I would first look for hidden assumptions that only hold on small cases, like overflow, recursion depth, or quadratic behavior masked by tiny inputs. Then I’d test boundary sizes, randomized inputs, and adversarial patterns to isolate whether the bug is logical or performance-related. Instrumenting counts, depths, and intermediate states often shows where the behavior diverges. Large-input failures are usually caused by state management, resource limits, or an asymptotic issue rather than a single obvious syntax bug.",
+    "real_world": "This often shows up when a feature passes unit tests but times out or crashes on production-scale data. The fix may be a different algorithm, not just a bug patch.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you log to tell apart a logic bug from a performance bug?"
+   },
+   {
+    "question": "When would you choose a dynamic programming approach over a greedy one, and what sign tells you greedy is unsafe?",
+    "answer": "Choose dynamic programming when local choices can affect future options in a way that makes the globally best solution non-obvious. Greedy is safe only when you can prove an optimal substructure plus a property that says the best local choice never blocks the global optimum. A warning sign is when a locally best move can be reversed by later information, or when small counterexamples break the strategy. In practice, I try greedy first for simplicity, but I switch to DP when I can produce a counterexample or prove the local choice is not enough.",
+    "real_world": "Scheduling, path selection, and resource allocation problems often tempt teams into a greedy shortcut that later fails on edge cases. DP can be slower, but it prevents subtle correctness bugs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test a greedy algorithm to build confidence that it is actually correct?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "If two algorithms have the same Big-O complexity, how do you decide which one will actually scale better in production?",
+    "answer": "I look at constant factors, memory access patterns, allocation behavior, branch predictability, and whether the algorithm is cache-friendly. An O(n log n) algorithm with tight loops over contiguous memory can beat another O(n log n) algorithm that does pointer chasing or lots of random access. I also care about tail latency, not just mean runtime, because pauses from GC, paging, or allocator contention can dominate at scale. The right answer is usually benchmarked under realistic data distributions and hardware, not inferred from asymptotics alone.",
+    "real_world": "Teams often replace a theoretically equivalent structure with a flatter one, like arrays plus batching instead of trees, because CPU cache misses become the bottleneck long before asymptotic complexity does.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you capture to distinguish CPU-bound work from memory-bound work?"
+   },
+   {
+    "question": "Can you explain why quickselect is usually fast for top-k, and when it is the wrong choice?",
+    "answer": "Quickselect partitions around a pivot and only recurses into the side containing the kth element, so expected time is linear rather than n log n. It is good when you need a one-time selection and do not need the whole input sorted. It is a poor fit when you need repeated top-k queries, strict worst-case guarantees, or must preserve the original order without copying. In those cases a heap, balanced tree, or deterministic selection strategy may be a better trade-off.",
+    "real_world": "For a one-off analytics job finding the 99th percentile cutoff, quickselect is often excellent. For a live leaderboard with frequent inserts and reads, recomputing with quickselect each time is a bad design.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you return the top k elements sorted after using quickselect?"
+   },
+   {
+    "question": "What is the point of a monotonic queue or stack, and what complexity improvement does it actually buy you?",
+    "answer": "A monotonic structure maintains elements in sorted order as you scan once, which lets you answer local min or max queries without re-scanning windows. The key result is usually linear total work because each element is pushed and popped at most once. It turns an obvious O(nk) sliding-window solution into O(n), or computes next greater or smaller elements in O(n). The trade-off is that it is specialized and easier to get wrong on duplicates and boundary conditions.",
+    "real_world": "This shows up in rate-limiters, anomaly detection, and time-series pipelines where you need rolling maxima over millions of points and cannot afford a per-window scan.",
+    "code_lang": "python",
+    "code": "from collections import deque\n\ndef max_window(a, k):\n    q, out = deque(), []\n    for i, x in enumerate(a):\n        while q and a[q[-1]] <= x: q.pop()\n        q.append(i)\n        if q[0] <= i - k: q.popleft()\n        if i >= k - 1: out.append(a[q[0]])\n    return out",
+    "follow_up": "How do duplicates affect correctness in a monotonic queue?"
+   },
+   {
+    "question": "How would you reason about the real complexity of Dijkstra’s algorithm, including the effect of the priority queue implementation?",
+    "answer": "With an adjacency list, the useful bound depends on the heap operations: roughly one extract-min per vertex and up to one relaxation-driven update per edge. Using a binary heap gives the familiar sparse-graph performance that scales with both vertices and edges times a log factor. Simpler implementations that linearly scan for the next minimum are much worse on large sparse graphs, while more advanced heaps can reduce some asymptotic costs but often lose in practice because of overhead. The graph density and update pattern matter more than quoting one formula.",
+    "real_world": "Routing and dependency-resolution systems often start with a simple heap and only revisit the choice if profiles show priority-queue operations dominate end-to-end latency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would bidirectional search beat ordinary Dijkstra?"
+   },
+   {
+    "question": "Why can union-find be treated as almost constant time, and what is actually happening under the hood?",
+    "answer": "Union-find gets its performance from combining path compression with union by rank or size. Path compression flattens trees during finds, and the rank or size heuristic prevents them from getting tall in the first place. The amortized cost per operation is so close to constant for practical input sizes that it is usually modeled that way, but the guarantee is amortized across sequences of operations, not per individual call. Without those heuristics, adversarial sequences can create long chains and much slower finds.",
+    "real_world": "It is a standard building block in Kruskal’s MST and connectivity checks over huge event streams, where a naive parent structure can quietly become a bottleneck under skewed merge patterns.",
+    "code_lang": "python",
+    "code": "def find(x, p):\n    if p[x] != x:\n        p[x] = find(p[x], p)\n    return p[x]\n\ndef union(a, b, p, sz):\n    ra, rb = find(a, p), find(b, p)\n    if ra == rb: return\n    if sz[ra] < sz[rb]: ra, rb = rb, ra\n    p[rb], sz[ra] = ra, sz[ra] + sz[rb]",
+    "follow_up": "What kinds of workloads make the amortized guarantee important rather than academic?"
+   },
+   {
+    "question": "How do you think about algorithmic complexity in external-memory or disk-backed systems, where RAM is not the main bottleneck?",
+    "answer": "In that setting, the dominant cost is often I/O count and access pattern rather than CPU steps. Sequential scans can beat asymptotically better random-access algorithms because disks and even SSDs strongly prefer locality, and page faults are expensive. I reason in terms of passes over data, block transfers, and whether the algorithm can stream, batch, or sort-merge instead of doing random lookups. A design that is optimal in RAM can collapse when it turns into millions of small reads.",
+    "real_world": "Database engines and ETL jobs often choose sort-merge joins or external mergesort specifically because predictable sequential I/O wins once the working set exceeds memory.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you redesign an in-memory hash join if the build side no longer fits in RAM?"
+   },
+   {
+    "question": "What is an online algorithm, and how do you evaluate its quality when it cannot see the future?",
+    "answer": "An online algorithm makes decisions incrementally as input arrives, without knowledge of future items. Since it cannot be compared fairly only by offline optimal output, we often evaluate it with competitive analysis, regret, or bounded approximation under realistic assumptions. The real trade-off is between immediate decision cost, memory footprint, and how expensive it is to revise earlier choices. In streaming systems, feasibility under latency and memory limits is often more important than exact optimality.",
+    "real_world": "Admission control, cache replacement, and stream aggregation all rely on online decisions where waiting for the full input would defeat the product requirement.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where an offline-optimal algorithm is useless in production because the problem is inherently online?"
+   },
+   {
+    "question": "How do concurrency and contention change your complexity analysis for a shared data structure?",
+    "answer": "Single-threaded complexity can become misleading because the effective cost now includes retries, lock wait time, cache-coherence traffic, and scheduler effects. A lock-free algorithm may have good progress guarantees but still perform poorly under high contention if many threads repeatedly fail compare-and-swap. Likewise, a theoretically efficient shared queue can collapse because the hot head or tail pointer becomes a serialization point. I treat contention as an input dimension and measure throughput and tail latency as concurrency increases.",
+    "real_world": "A global priority queue or LRU list often looks fine in benchmarks with one worker, then becomes the bottleneck in production when dozens of threads hammer the same cache lines.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What design changes reduce contention without changing the high-level functionality?"
+   },
+   {
+    "question": "Why do worst-case inputs matter for comparison sorts and hash-based algorithms, and how do you defend against adversarial cases?",
+    "answer": "Some algorithms have input patterns that trigger pathological behavior, like bad pivots in quicksort or many collisions in a hash table. In exposed systems, an attacker or just unlucky real-world skew can turn average-case assumptions into outages. Defenses include randomized pivots or hashing, fallback algorithms with stronger worst-case guarantees, input size caps, and monitoring for degenerate distributions. The design goal is not just fast common-case behavior, but resilience when the input is hostile or highly skewed.",
+    "real_world": "Public-facing services have seen denial-of-service incidents from collision-heavy inputs or crafted payloads that exploit predictable algorithm behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does introsort address this problem in practice?"
+   },
+   {
+    "question": "Suppose you need shortest paths on a huge graph that changes over time; how would you choose between recomputing from scratch and using an incremental algorithm?",
+    "answer": "I would look at update frequency, update locality, graph size, query volume, and the cost of stale answers. Full recomputation is simpler and often better when changes are bulk, global, or infrequent, because the constant factors and correctness risks of dynamic algorithms can outweigh their asymptotic benefits. Incremental approaches pay off when updates touch a small region and there are many queries between updates. The hard part is preserving correctness under edge deletions and negative interactions between batches of changes.",
+    "real_world": "Road-network and dependency-graph systems often start with periodic rebuilds, then move to incremental maintenance only after full recomputation stops meeting freshness or cost targets.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why are deletions usually harder to support efficiently than insertions?"
+   },
+   {
+    "question": "How would you explain the difference between asymptotic complexity and actual cost on modern hardware, especially for memory-bound algorithms?",
+    "answer": "Asymptotic complexity hides constant factors and memory behavior, but on modern CPUs cache misses, branch mispredictions, and allocation patterns can dominate runtime. An O(n log n) algorithm with sequential access can beat an O(n) algorithm that does random pointer chasing because the latter stalls on memory. I’d look at access locality, vectorization potential, and whether the working set fits in cache, not just operation counts. Complexity is still the right first filter, but production performance often comes down to data movement.",
+    "real_world": "Teams often replace theoretically optimal structures like pointer-heavy trees with flat arrays or B-trees because the cache behavior is dramatically better at scale. A service can regress after a schema change simply because objects get larger and no longer fit hot paths into cache.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where a worse Big-O algorithm wins because of locality?"
+   },
+   {
+    "question": "If you had to implement an LRU cache at high concurrency, how would you reason about algorithmic complexity versus contention?",
+    "answer": "The textbook design is a hash map plus a doubly linked list for O(1) lookup, insert, and eviction, but under concurrency the lock around list updates can become the real bottleneck. In practice you often shard the cache, accept approximate recency, or batch promotions so that the algorithmic complexity stays O(1) while reducing contention. The key trade-off is exact eviction order versus throughput and tail latency. A design that is perfect on paper can collapse under heavy write skew.",
+    "real_world": "A hot key pattern can make every access fight over the same lock protecting recency updates, causing p99 latency spikes even though the cache is still O(1). Large in-memory caches in production commonly use segmented or approximate LRU for this reason.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure mode do you get if you update recency on every read without enough synchronization?"
+   },
+   {
+    "question": "What is the real trade-off between a Bloom filter and a hash set for membership tests at scale?",
+    "answer": "A Bloom filter uses much less memory and gives O(k) probe cost, where k is the number of hash functions, but it can return false positives and cannot normally enumerate members. A hash set uses more memory but gives exact answers and supports deletion and iteration more naturally, depending on implementation. The practical trade-off is paying a small extra CPU cost to avoid expensive downstream work, like disk or network lookups. You choose a Bloom filter when false positives are acceptable and memory or I/O savings matter more than exactness.",
+    "real_world": "Storage systems often put a Bloom filter in front of SSTables so absent keys avoid disk reads. If the false-positive rate drifts up because the filter is undersized, read amplification and latency jump sharply.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does the false-positive rate change as the filter fills up?"
+   },
+   {
+    "question": "When would you use A* instead of Dijkstra, and what makes a heuristic safe?",
+    "answer": "A* is preferable when you have a target node and a heuristic that estimates remaining distance well, because it can explore far fewer nodes than Dijkstra. The heuristic is safe for optimal paths if it never overestimates the true remaining cost; with consistency, you also avoid some reprocessing complexity. If the heuristic is weak, A* degrades toward Dijkstra, so the benefit depends on domain knowledge. The trade-off is extra heuristic computation for less search.",
+    "real_world": "Route planning systems use spatial heuristics to avoid expanding huge parts of the map. A bad heuristic can erase the speedup, while an unsafe one can silently produce suboptimal routes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes if edge weights can be negative?"
+   },
+   {
+    "question": "Can you walk through why some dynamic programming solutions can be optimized with bitsets or SIMD-style operations?",
+    "answer": "Many DP transitions are basically set operations over reachable states, so representing the state table as bits lets one machine word update dozens of states at once. That changes the practical runtime from one operation per state to roughly one per word, often a large constant-factor win, while keeping the same high-level recurrence. It works best when the state dimension is dense and bounded, like subset sum or edit-distance variants. The trade-off is less flexible code and dependence on machine word size and memory layout.",
+    "real_world": "A subset-sum style check that is too slow with boolean arrays can become fast enough for request-time validation with bitsets. Teams also use this trick in offline analytics where millions of similar DP instances need to run cheaply.",
+    "code_lang": "python",
+    "code": "reachable = 1\nfor w in weights:\n    reachable |= reachable << w\n# sum t is reachable iff bit t is 1\ncan_make_t = (reachable >> t) & 1",
+    "follow_up": "What limits this approach when the target sum is very large?"
+   },
+   {
+    "question": "How do you reason about topological sorting in a system where the dependency graph may contain cycles due to bad data?",
+    "answer": "A topological sort only exists for a DAG, so in production the algorithm needs explicit cycle detection and a policy for what to do next. Kahn’s algorithm is useful because if nodes remain after all zero-indegree processing, you know there is a cycle; DFS-based approaches can also surface a back edge. The design question is whether to fail fast, isolate the cyclic component, or break ties with a fallback rule. Complexity is still linear in nodes plus edges, but error handling is part of the algorithm contract.",
+    "real_world": "Build systems, workflow schedulers, and config dependency resolvers regularly hit accidental cycles from bad deploys or operator mistakes. Without clear cycle reporting, the incident turns into a debugging exercise across many services.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need to report a human-usable cycle, which approach makes that easier?"
+   },
+   {
+    "question": "What happens to algorithm choice when exact results are too expensive and approximation is acceptable?",
+    "answer": "Then I’d look for approximation algorithms, sketches, sampling, or streaming summaries that reduce memory or runtime while giving a bounded error or probabilistic guarantee. The key is to make the error model explicit: additive vs multiplicative error, confidence level, and whether worst-case guarantees matter. Exact O(n log n) or O(n^2) work may be unnecessary if the product only needs ranking, anomaly detection, or cardinality estimates. The trade-off is losing perfect answers in exchange for predictable resource use.",
+    "real_world": "Distinct-count metrics at internet scale are usually estimated with sketches rather than exact sets, because exact counting can be prohibitively expensive in RAM and network transfer. Product teams care more about stable trends and bounded error than exact per-request counts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you validate that the approximation error is acceptable in production?"
+   },
+   {
+    "question": "How would you compare B-trees and balanced binary search trees from an algorithmic and systems perspective?",
+    "answer": "Both give logarithmic search and update complexity, but B-trees reduce tree height by storing many keys per node, which cuts pointer traversals and matches page-based storage better. That makes them much better for disks, SSDs, and often CPU caches too, because each node visit does more useful work. Balanced binary trees are simpler and fine in memory for some workloads, but they usually lose on locality. The systems trade-off is implementation complexity and node-splitting logic versus far better I/O behavior.",
+    "real_world": "Databases and filesystems overwhelmingly use B-tree variants because a few page reads can answer a query that would take many random node hops in a binary tree. Even in memory, flatter structures often win once datasets get large.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why do database engines often prefer B+ trees over plain B-trees?"
+   },
+   {
+    "question": "Suppose you need nearest-neighbor search in high dimensions; why do classic spatial indexes often stop working well?",
+    "answer": "Structures like k-d trees rely on partitioning space so that large regions can be pruned, but in high dimensions distances concentrate and pruning becomes much less effective. As dimension rises, the search can approach scanning most points, so the theoretical advantage erodes badly. At that point approximate methods, dimensionality reduction, or graph-based indexes are often better choices. The trade-off is exactness versus throughput, memory, and build complexity.",
+    "real_world": "Vector search for embeddings is the common example: exact tree-based indexes degrade quickly, so teams move to approximate nearest-neighbor systems to meet latency budgets. Incidents often come from assuming a low-dimensional algorithm will scale unchanged to hundreds of dimensions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metric properties affect whether an index can prune effectively?"
+   },
+   {
+    "question": "How would you detect whether a parallel algorithm is fundamentally limited by span rather than total work?",
+    "answer": "I’d separate work from span: work is the total operations, span is the length of the critical path. Even with many cores, speedup is bounded by span, synchronization barriers, and serial sections, so low span matters as much as low work. In practice I’d inspect dependencies, barrier frequency, and contention, then measure scaling as cores increase to see where it flattens. A work-efficient algorithm can still parallelize poorly if each stage depends tightly on the previous one.",
+    "real_world": "Parallel prefix, graph traversal, and dynamic programming often look highly parallel until barriers or frontier imbalance cap speedup well below core count. Teams discover this when CPU usage rises but wall-clock time barely improves after adding threads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of an algorithm with good total work but poor parallel speedup because of its dependency structure?"
+   }
+  ]
+ }
+}

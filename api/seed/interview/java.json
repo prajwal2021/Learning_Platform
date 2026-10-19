@@ -1,0 +1,453 @@
+{
+ "slug": "java",
+ "name": "Java",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between `==` and `equals()` in Java?",
+    "answer": "`==` compares primitive values directly, and for objects it compares whether two references point to the same object. `equals()` is meant for logical equality, so classes can override it to compare meaningful fields like IDs or names. If you use `==` on strings or other objects by mistake, code may work sometimes and fail in subtle ways. When you override `equals()`, you should usually also override `hashCode()`.",
+    "real_world": "This comes up often when checking whether two user records or two strings have the same content. Using `==` on objects is a common beginner bug that causes tests to pass for some inputs and fail in production.",
+    "code_lang": "java",
+    "code": "String a = new String(\"hi\");\nString b = new String(\"hi\");\nSystem.out.println(a == b);      // false\nSystem.out.println(a.equals(b)); // true",
+    "follow_up": "If you override `equals()`, why do you also need to override `hashCode()`?"
+   },
+   {
+    "question": "When would you use an `ArrayList` instead of a `LinkedList`?",
+    "answer": "Use `ArrayList` when you mostly need fast random access by index and append items to the end. Use `LinkedList` only when you have a lot of insertions or removals at the ends or through an iterator and you do not care about fast indexing. In practice, `ArrayList` is the default choice for most code because it is usually faster and simpler. A linked list has extra memory overhead and poor cache locality.",
+    "real_world": "A team might start with a linked list because they expect many inserts, then discover most operations are reads by index. Switching to `ArrayList` can improve performance and reduce memory use.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens to the performance of `ArrayList` when it grows and needs more capacity?"
+   },
+   {
+    "question": "What is the difference between `final`, `finally`, and `finalize()`?",
+    "answer": "`final` is a keyword used to prevent reassignment, inheritance, or overriding depending on where it is applied. `finally` is a block in exception handling that runs after `try`/`catch`, usually for cleanup. `finalize()` was a method related to garbage collection, but it is not something you should rely on for resource cleanup. For cleanup, use `try-with-resources` or explicit close methods instead.",
+    "real_world": "This matters when closing files, sockets, or database connections. Relying on `finalize()` can leak resources or make shutdown behavior unpredictable.",
+    "code_lang": "java",
+    "code": "try (var in = new java.io.FileInputStream(\"a.txt\")) {\n    // use the stream\n} catch (java.io.IOException e) {\n    e.printStackTrace();\n}",
+    "follow_up": "How does `try-with-resources` help compared with a plain `try/finally` block?"
+   },
+   {
+    "question": "What is a constructor in Java, and how is it different from a method?",
+    "answer": "A constructor initializes a new object, and it has the same name as the class with no return type. A method is called on an existing object, and it does have a return type, even if that return type is `void`. Constructors are used to enforce required setup, like setting fields to valid values. If you do not write one, Java may provide a default no-argument constructor only in some cases.",
+    "real_world": "This is important when creating immutable objects or objects that must be valid from the start, like a `User` with a required name and email. Missing or incorrect constructors often lead to partially initialized objects.",
+    "code_lang": "java",
+    "code": "class User {\n    private final String name;\n    User(String name) { this.name = name; }\n}",
+    "follow_up": "What happens if you define your own constructor and do not define a no-argument constructor?"
+   },
+   {
+    "question": "What does `static` mean in Java?",
+    "answer": "`static` means the member belongs to the class itself rather than to each object instance. You use it for shared constants, utility methods, and state that should be common to all instances. A static method cannot directly access instance fields because it has no `this` reference. Overusing static can make code harder to test and less flexible.",
+    "real_world": "Teams often use static constants for configuration keys or helper methods like parsing or formatting. Problems appear when developers put mutable shared state in static fields and create hidden coupling between requests.",
+    "code_lang": "java",
+    "code": "class MathUtil {\n    static int add(int a, int b) { return a + b; }\n}\nSystem.out.println(MathUtil.add(2, 3));",
+    "follow_up": "What is the difference between a static method and an instance method?"
+   },
+   {
+    "question": "What is inheritance, and when would you use it?",
+    "answer": "Inheritance lets one class reuse and extend behavior from another class with `extends`. It is useful when there is a true is-a relationship, like `Dog` being a kind of `Animal`. It also supports overriding, so subclasses can specialize behavior. In many cases, composition is a better choice than inheritance because it reduces tight coupling and makes code easier to change.",
+    "real_world": "A common use is a framework base class that provides shared behavior, while subclasses fill in specific parts. A common mistake is using inheritance just to reuse code, which can create fragile class hierarchies.",
+    "code_lang": "java",
+    "code": "class Animal { void speak() { System.out.println(\"...\"); } }\nclass Dog extends Animal {\n    @Override void speak() { System.out.println(\"woof\"); }\n}",
+    "follow_up": "When would you prefer composition over inheritance?"
+   },
+   {
+    "question": "What is the purpose of `try-catch`, and when should you use it?",
+    "answer": "`try-catch` handles exceptions that may be thrown while running code. You use it when an operation can fail in a recoverable way, such as parsing input, reading files, or calling external systems. Catching too broadly or ignoring the exception hides bugs and makes failures harder to debug. In many cases, you should catch only the exceptions you can handle meaningfully.",
+    "real_world": "This matters when reading user input or calling APIs that can fail unpredictably. Catching and logging the real exception helps diagnose production issues instead of crashing silently.",
+    "code_lang": "java",
+    "code": "try {\n    int n = Integer.parseInt(input);\n} catch (NumberFormatException e) {\n    System.out.println(\"Invalid number\");\n}",
+    "follow_up": "What is the difference between a checked and an unchecked exception?"
+   },
+   {
+    "question": "What is the difference between `String`, `StringBuilder`, and `StringBuffer`?",
+    "answer": "`String` is immutable, so every change creates a new object. `StringBuilder` is mutable and efficient for building strings in a single thread. `StringBuffer` is also mutable, but its methods are synchronized, so it has extra overhead and is less commonly used. For most string concatenation inside loops, `StringBuilder` is the right choice.",
+    "real_world": "This matters when constructing large SQL statements, log messages, or formatted text. Using repeated `+` concatenation in a loop can create unnecessary objects and slow code down.",
+    "code_lang": "java",
+    "code": "StringBuilder sb = new StringBuilder();\nsb.append(\"hello\");\nsb.append(\" \");\nsb.append(\"world\");\nSystem.out.println(sb.toString());",
+    "follow_up": "Why is repeated `+` concatenation in a loop inefficient?"
+   },
+   {
+    "question": "What does `null` mean in Java, and what is a common mistake with it?",
+    "answer": "`null` means a reference does not point to any object. A common mistake is calling a method or accessing a field on a null reference, which causes a `NullPointerException`. You should validate inputs, use defensive checks where needed, and design APIs so null is less likely to appear unexpectedly. Some codebases also use `Optional` to make absence explicit, but it is not a replacement for every null check.",
+    "real_world": "Null bugs are a major source of production errors, especially in request handling and data mapping layers. They often happen when one service returns missing data and another part of the code assumes it is always present.",
+    "code_lang": "java",
+    "code": "String name = null;\nif (name != null) {\n    System.out.println(name.length());\n}",
+    "follow_up": "What are some ways to reduce `NullPointerException`s in Java code?"
+   },
+   {
+    "question": "What is an interface in Java, and why would you use one instead of a class?",
+    "answer": "An interface defines a contract: the methods a type must provide, without saying how they are implemented. You use it when you want multiple unrelated classes to share the same behavior and when you want to code to an abstraction instead of a concrete class. This makes code easier to change and test, because implementations can be swapped out behind the interface.",
+    "real_world": "A team might define a `PaymentProcessor` interface so they can switch between Stripe, PayPal, or a mock in tests without changing the calling code.",
+    "code_lang": "java",
+    "code": "interface Logger {\n    void log(String message);\n}\n\nclass FileLogger implements Logger {\n    public void log(String message) { }\n}",
+    "follow_up": "How is an interface different from an abstract class?"
+   },
+   {
+    "question": "What is method overloading in Java?",
+    "answer": "Method overloading means having multiple methods with the same name but different parameter lists in the same class. It is used when the same action should work with different input shapes, like adding one item or many items. The compiler decides which version to call based on the arguments at compile time.",
+    "real_world": "This is common in utility APIs, where a method like `print` or `add` needs several convenient forms for callers.",
+    "code_lang": "java",
+    "code": "class MathUtil {\n    int add(int a, int b) { return a + b; }\n    int add(int a, int b, int c) { return a + b + c; }\n}",
+    "follow_up": "Can you overload a method only by changing the return type?"
+   },
+   {
+    "question": "What is the purpose of `break` and `continue` in Java loops?",
+    "answer": "`break` exits the loop immediately, while `continue` skips the rest of the current iteration and moves to the next one. They are useful for stopping early when you found what you need, or for ignoring values you do not want to process. Overusing them can make loop logic harder to follow, so they should be used sparingly.",
+    "real_world": "A search loop may `break` as soon as it finds a matching record, and a validation loop may `continue` past empty inputs.",
+    "code_lang": "java",
+    "code": "for (int i = 0; i < 5; i++) {\n    if (i == 2) continue;\n    if (i == 4) break;\n    System.out.println(i);\n}",
+    "follow_up": "What happens if you put `break` inside a nested loop?"
+   },
+   {
+    "question": "What is an exception in Java, and how is it different from a normal return value?",
+    "answer": "An exception is an object used to signal that something went wrong during execution. It is different from a normal return value because it interrupts the normal flow and can propagate up the call stack until it is handled. Use exceptions for unexpected or exceptional conditions, not for everyday control flow.",
+    "real_world": "If a file is missing or a network call fails, throwing an exception lets the caller decide whether to retry, report an error, or fall back.",
+    "code_lang": "java",
+    "code": "int parseAge(String s) {\n    return Integer.parseInt(s);\n}",
+    "follow_up": "What is the difference between checked and unchecked exceptions?"
+   },
+   {
+    "question": "What is the difference between a primitive type and a wrapper class in Java?",
+    "answer": "A primitive type like `int` or `boolean` stores a raw value, while a wrapper class like `Integer` or `Boolean` is an object that wraps that value. Wrappers are needed where objects are required, such as in collections or when you need utility methods on the value. Primitives are simpler and usually faster, so they are preferred when you do not need object behavior.",
+    "real_world": "You cannot put `int` directly into an `ArrayList`, so Java uses `Integer` there instead.",
+    "code_lang": "java",
+    "code": "int x = 5;\nInteger y = x;   // autoboxing\nint z = y;       // unboxing",
+    "follow_up": "What is autoboxing and what can go wrong with it?"
+   },
+   {
+    "question": "What is a package in Java?",
+    "answer": "A package is a namespace used to group related classes and avoid name conflicts. It helps organize code into logical modules and controls visibility with package-private access. In larger codebases, packages make it easier to find classes and manage dependencies.",
+    "real_world": "A team might keep all database-related classes in one package and all HTTP clients in another to keep the project organized.",
+    "code_lang": "java",
+    "code": "package com.example.app;\n\npublic class Main {\n}",
+    "follow_up": "What is the difference between `import` and `package`?"
+   },
+   {
+    "question": "How does an array work in Java, and when would you use one?",
+    "answer": "An array is a fixed-size container that stores elements of the same type. You use it when you know the number of items ahead of time and want simple indexed access. Because the size cannot change, arrays are less flexible than collections, but they are straightforward and efficient.",
+    "real_world": "Arrays are common for things like days of the week, scores from a fixed test, or data coming from an API with a known length.",
+    "code_lang": "java",
+    "code": "int[] scores = new int[3];\nscores[0] = 10;\nscores[1] = 20;\nscores[2] = 30;",
+    "follow_up": "What happens if you access an array with an invalid index?"
+   },
+   {
+    "question": "What is `switch` in Java, and when is it useful?",
+    "answer": "`switch` chooses one of several branches based on the value of an expression. It is useful when you are checking the same variable against a small set of known values, because it is often clearer than a long chain of `if-else` statements. It works best for discrete cases, not complex conditions.",
+    "real_world": "A `switch` is often used for menu options, command names, or mapping status codes to actions.",
+    "code_lang": "java",
+    "code": "switch (day) {\n    case \"MON\":\n        System.out.println(\"Start\");\n        break;\n    default:\n        System.out.println(\"Other\");\n}",
+    "follow_up": "What happens if you forget `break` in a classic `switch` statement?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do `HashMap` and `HashSet` differ, and when would you choose one over the other?",
+    "answer": "A `HashMap` stores key-value pairs, while a `HashSet` stores only unique values. Internally, a `HashSet` is often backed by a map, so the main difference is the API and the fact that sets model membership, not lookup by key. Use a map when you need to associate data with a key, and a set when you only care whether an item exists. In both cases, correct `equals()` and `hashCode()` are critical for custom objects.",
+    "real_world": "This comes up when deduplicating IDs, caching user profiles by ID, or checking whether a request has already been seen. A broken `hashCode()` implementation can make items impossible to find even though they were added.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What can go wrong if `equals()` and `hashCode()` are inconsistent?"
+   },
+   {
+    "question": "What is the difference between `ArrayList` and `HashMap` for lookup performance?",
+    "answer": "`ArrayList` is good for indexed access and iteration, but searching by value is linear in the list size. `HashMap` is designed for key-based lookup and is typically much faster for finding an item by key. The trade-off is that a map uses more memory and needs a suitable key type with stable `equals()` and `hashCode()`. If you keep scanning lists to find objects by ID, a map is usually the better data structure.",
+    "real_world": "Teams often start with a list of objects and later hit performance issues when every request does a linear scan. Replacing that list with a map can remove a hot path bottleneck immediately.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would a list still be better than a map?"
+   },
+   {
+    "question": "How does Java decide which overloaded method to call?",
+    "answer": "Java resolves overloads at compile time based on the declared types of the arguments, not the runtime type of the object. It chooses the most specific applicable method after considering widening, boxing, and varargs. This can be surprising when `null` or inheritance hierarchies are involved. Overloading is for convenience, but too many overloads can make APIs harder to predict.",
+    "real_world": "This matters when a utility has overloads like `log(String)` and `log(Object)` or when a call starts picking a different method after a refactor. A compile-time choice that looks wrong is often due to the static type of the variable, not the runtime value.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does overloading differ from overriding?"
+   },
+   {
+    "question": "What happens if you modify a collection while iterating over it with a for-each loop?",
+    "answer": "For many standard collections, modifying the collection structurally during a for-each loop can throw `ConcurrentModificationException`. The loop uses an iterator under the hood, and the collection detects that it changed outside the iterator. If you need to remove items safely, use the iterator’s `remove()` or collect items to remove later. If multiple threads are involved, you need proper synchronization or a concurrent collection.",
+    "real_world": "This is a common production bug in cleanup jobs and filters, where code removes expired entries while walking a list or map. It may work in tests and then fail intermittently under real data.",
+    "code_lang": "java",
+    "code": "List<Integer> xs = new ArrayList<>(List.of(1, 2, 3));\nfor (Integer x : xs) {\n    if (x == 2) xs.remove(x); // may throw ConcurrentModificationException\n}",
+    "follow_up": "What is the safe way to remove elements during iteration?"
+   },
+   {
+    "question": "How do `HashMap` collisions affect performance, and what should you watch for in custom keys?",
+    "answer": "When multiple keys land in the same bucket, lookups degrade because the map has to compare more entries. Good `hashCode()` distribution keeps operations close to constant time on average. For custom keys, `equals()` and `hashCode()` must agree, and the fields used in them should not change while the key is in the map. Mutable keys can make entries unreachable and are a common source of subtle bugs.",
+    "real_world": "This shows up when developers use mutable objects like request DTOs or entity objects as map keys. Entries then disappear from lookups after a field update, even though the map still contains them.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is it dangerous to use a mutable object as a key in a map?"
+   },
+   {
+    "question": "What is the difference between checked and unchecked exceptions, and how do you decide which one to use?",
+    "answer": "Checked exceptions must be declared or handled, while unchecked exceptions extend `RuntimeException` and do not need to be declared. Checked exceptions are useful when the caller can reasonably recover or must explicitly deal with a failure, like an expected I/O problem. Unchecked exceptions are better for programming errors, invalid state, or conditions the caller usually cannot fix immediately. In real APIs, overusing checked exceptions can make code noisy and hard to compose.",
+    "real_world": "This matters when designing service or library APIs that many teams will consume. If every layer has to catch and rethrow the same exception, the code becomes cluttered and the useful signal gets lost.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you wrap a checked exception in an unchecked one?"
+   },
+   {
+    "question": "How do `synchronized` methods or blocks help with thread safety?",
+    "answer": "`synchronized` ensures that only one thread at a time can execute the protected section for a given monitor object. It also provides visibility guarantees, so changes made by one thread become visible to others that later acquire the same lock. It is simple and effective for protecting shared mutable state, but it can reduce throughput and lead to contention if the critical section is large. For more complex concurrency needs, higher-level locks or concurrent collections are often easier to reason about.",
+    "real_world": "This is common when incrementing counters, updating shared caches, or protecting a non-thread-safe data structure. Without it, you get race conditions that only show up under load.",
+    "code_lang": "java",
+    "code": "class Counter {\n  private int n;\n  synchronized void inc() { n++; }\n  synchronized int get() { return n; }\n}",
+    "follow_up": "What are the trade-offs between `synchronized` and `java.util.concurrent` utilities?"
+   },
+   {
+    "question": "Why would you use `Optional` in Java, and when would you avoid it?",
+    "answer": "`Optional` makes absence explicit and can reduce `null` checks in return values. It is useful for methods that may legitimately have no result, because the caller is forced to think about the empty case. You should generally avoid using `Optional` for fields, method parameters, or collections, because that usually adds complexity without improving the API. It is a tool for expressing maybe-present return values, not a universal replacement for `null`.",
+    "real_world": "This helps in repository or lookup methods where a record may not exist. It can prevent a class of `NullPointerException`s, but overuse can make DTOs and frameworks awkward.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle absence if `Optional` is not a good fit?"
+   },
+   {
+    "question": "How do `List`, `Set`, and `Map` differ in how they model data, and how do you choose between them in a real system?",
+    "answer": "Use `List` when order and duplicates matter, `Set` when you need uniqueness, and `Map` when you want to associate keys with values. The choice affects both behavior and performance, especially for lookups and membership checks. In practice, you pick the structure that matches the operation you do most often, not just the shape of the data. If you need both uniqueness and fast lookup by an identifier, a `Map` is often the better fit than scanning a list.",
+    "real_world": "A team might store user sessions in a `Map<SessionId, Session>` so they can fetch or invalidate one session quickly. Using a list there would make every lookup and cleanup slower as traffic grows.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What trade-offs would you consider when choosing between `HashMap` and `TreeMap`?"
+   },
+   {
+    "question": "What is the difference between an abstract class and an interface in Java, and when would you use each?",
+    "answer": "An interface defines a contract, while an abstract class is for sharing state and partial implementation. Use an interface when multiple unrelated types should promise the same behavior, and use an abstract class when you need common fields or base logic. Modern Java allows default methods in interfaces, but they still shouldn’t replace shared domain state. In many designs, interfaces define the API and abstract classes provide reusable internals.",
+    "real_world": "This comes up when building payment integrations: different providers can implement the same `PaymentGateway` interface, while a shared abstract base can hold common retry or logging code.",
+    "code_lang": "java",
+    "code": "interface Cache {\n  String get(String key);\n}\nabstract class BaseCache {\n  protected int hits;\n  protected void recordHit() { hits++; }\n}",
+    "follow_up": "How do default methods in interfaces change that decision?"
+   },
+   {
+    "question": "How do Java generics help, and what problem do they solve beyond avoiding casts?",
+    "answer": "Generics let you express type relationships in the API so the compiler can catch mismatches before runtime. That removes casts, improves readability, and makes collection and utility code safer to reuse. They also help document intent, like a `List<Order>` being clearly different from a `List<Customer>`. The main trade-off is some added complexity, especially around type bounds and type erasure.",
+    "real_world": "A generic DAO or cache can be reused across entities without duplicating code, and the compiler will prevent accidentally storing the wrong type. Without generics, those bugs often show up later as `ClassCastException` in production.",
+    "code_lang": "java",
+    "code": "List<String> names = new ArrayList<>();\nnames.add(\"Ada\");\n// names.add(123); // compile error\nString first = names.get(0);",
+    "follow_up": "What is type erasure, and how does it affect generics at runtime?"
+   },
+   {
+    "question": "When would you use `TreeMap` or `TreeSet` instead of hash-based collections?",
+    "answer": "Use them when you need sorted order, range operations, or navigation like first, last, ceiling, or floor. They typically have worse constant factors than hash-based collections, but they preserve order based on a comparator or natural ordering. That matters when the order is part of the feature, not an accident. If you only need exact-key lookup, a hash-based collection is usually simpler and faster.",
+    "real_world": "This is common in reporting screens where you need entries grouped by date or a leaderboard sorted by score. A hash-based structure would still require a separate sort step every time you render.",
+    "code_lang": "java",
+    "code": "NavigableMap<Integer, String> scores = new TreeMap<>();\nscores.put(10, \"low\");\nscores.put(50, \"mid\");\nSystem.out.println(scores.ceilingEntry(20));",
+    "follow_up": "What are the risks of using a comparator that is inconsistent with equals?"
+   },
+   {
+    "question": "What happens when an `equals()` implementation and `hashCode()` implementation are inconsistent?",
+    "answer": "Hash-based collections use `hashCode()` to find a bucket and `equals()` to confirm a match. If two objects are equal but have different hash codes, lookups can fail even though the object is in the collection. If unequal objects share hash codes, performance can degrade but correctness is still preserved. The rule is: equal objects must have the same hash code, and both methods should use the same fields.",
+    "real_world": "This causes hard-to-debug issues where a key is inserted into a `HashMap` but later cannot be retrieved with an apparently identical object. It often shows up after teams add a new field to a value object and update only one of the methods.",
+    "code_lang": "java",
+    "code": "class User {\n  String id;\n  public boolean equals(Object o) { return true; }\n  public int hashCode() { return id.hashCode(); }\n}",
+    "follow_up": "How would you test a custom value class to catch this problem?"
+   },
+   {
+    "question": "What is immutability in Java, and why is it useful in concurrent code?",
+    "answer": "An immutable object cannot be changed after construction, so all threads can safely share it without coordination. That reduces bugs from race conditions and makes reasoning about code much easier. It also helps with caching and safe use as map keys because the object’s identity for equality does not change. The trade-off is that updates create new objects, which can add allocation overhead in some hot paths.",
+    "real_world": "Teams often make request DTOs, IDs, and configuration objects immutable because they are passed across threads and layers. Mutable shared state in those objects can create data corruption that is very hard to reproduce.",
+    "code_lang": "java",
+    "code": "final class Point {\n  private final int x, y;\n  Point(int x, int y) { this.x = x; this.y = y; }\n  int x() { return x; }\n  int y() { return y; }\n}",
+    "follow_up": "How do you make a class truly immutable if it contains a collection field?"
+   },
+   {
+    "question": "How do streams compare with loops in Java, and when would you prefer one over the other?",
+    "answer": "Streams are good for declarative transformations like filtering, mapping, grouping, and reducing, while loops are often clearer for complex control flow or mutation-heavy logic. Streams can make pipelines shorter and easier to read when the steps are simple and composable. Loops are usually easier to debug, and they avoid some stream overhead in very hot code. In real code, the best choice is the one that keeps the logic obvious to the next engineer.",
+    "real_world": "A stream pipeline is a good fit for turning a list of events into grouped counts. A loop is usually better when you need early exits, multiple accumulators, or detailed debugging during an incident.",
+    "code_lang": "java",
+    "code": "long count = orders.stream()\n  .filter(o -> o.isPaid())\n  .map(Order::customerId)\n  .distinct()\n  .count();",
+    "follow_up": "What is the difference between intermediate and terminal stream operations?"
+   },
+   {
+    "question": "What should you know about `StringBuilder` and object allocation when constructing lots of strings?",
+    "answer": "Repeated string concatenation can create many temporary objects because strings are immutable. `StringBuilder` lets you accumulate text efficiently in a mutable buffer and then convert once at the end. This matters in loops, logging, and serialization where concatenation happens many times. The trade-off is readability, so use it where the allocation cost is real rather than everywhere by default.",
+    "real_world": "This often shows up in code that builds large SQL queries, CSV output, or formatted reports. A naïve concatenation loop can become a performance bottleneck or produce unnecessary garbage collection pressure.",
+    "code_lang": "java",
+    "code": "StringBuilder sb = new StringBuilder();\nfor (String part : parts) {\n  sb.append(part).append(',');\n}\nString result = sb.toString();",
+    "follow_up": "When would `StringBuffer` be appropriate instead?"
+   },
+   {
+    "question": "What is the difference between `Runnable` and `Callable`, and why does it matter?",
+    "answer": "`Runnable` represents work that returns nothing and cannot directly throw checked exceptions, while `Callable` returns a value and can throw checked exceptions. That makes `Callable` more suitable for tasks submitted to executors when you need a result or failure propagation. In practice, `Runnable` is for fire-and-forget work, and `Callable` is for tasks you want to observe or combine. Choosing the right one affects how errors surface and how the caller waits for completion.",
+    "real_world": "Background jobs, parallel fetches, and batch processing often use `Callable` because each task may return data or fail independently. Using `Runnable` there would force awkward shared state or exception handling outside the task.",
+    "code_lang": "java",
+    "code": "ExecutorService pool = Executors.newFixedThreadPool(4);\nFuture<Integer> f = pool.submit(() -> 42);\nInteger answer = f.get();",
+    "follow_up": "How do you handle exceptions from tasks submitted to an executor?"
+   },
+   {
+    "question": "How do you debug a concurrency bug in Java that only appears under load?",
+    "answer": "First, identify the shared state and the thread interaction, then reduce the problem to a small reproducible case. Look for missing synchronization, unsafe publication, mutable objects shared across threads, and blocking calls in the wrong place. Tools like logs with thread names, thread dumps, and tests that increase contention can help reveal timing issues. The key is to reason about ownership of data, not just the symptom.",
+    "real_world": "These bugs often appear as rare stale reads, duplicate work, or corrupted counters in production but never on a developer laptop. Teams usually need to add focused tests or stress runs to catch them before release.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools or patterns would you use to make that bug reproducible in tests?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain the Java Memory Model in practical terms, especially what `volatile` does and does not guarantee?",
+    "answer": "The Java Memory Model defines when one thread’s writes become visible to another and what reorderings are allowed. `volatile` gives visibility and ordering around that variable: a write to a volatile happens-before a later read of that same volatile. It does not make compound actions like `count++` atomic, so you still need locking or atomic classes for read-modify-write. It’s best for flags, publication of immutable state, and simple state transitions, not for protecting invariants across multiple fields.",
+    "real_world": "A classic production bug is a shutdown flag that one thread sets and worker threads never observe because it was a plain boolean. Another is assuming `volatile` makes counters safe, leading to undercounting under load.",
+    "code_lang": "java",
+    "code": "class Counter {\n  volatile int x = 0;\n  void inc() { x++; }   // not atomic\n}\n\n// Use AtomicInteger or synchronization instead.",
+    "follow_up": "What changes if the state spans multiple fields that must stay consistent together?"
+   },
+   {
+    "question": "What actually happens inside the JVM during garbage collection, and how would you reason about choosing a collector for a latency-sensitive service?",
+    "answer": "Modern JVMs use generational collection because most objects die young, so they optimize the young generation for fast allocation and cheap reclamation. The trade-off is between throughput, pause time, heap footprint, and CPU overhead; low-latency collectors reduce long pauses but usually do more background work. For a latency-sensitive service, I’d start from observed pause distributions, allocation rate, live-set size, and tail-latency SLOs rather than picking a collector by default. The wrong collector or heap sizing can make pauses, promotion pressure, or concurrent CPU overhead dominate request latency.",
+    "real_world": "Teams often see p99 spikes from stop-the-world pauses even when average CPU looks fine. In large heaps, a collector tuned for throughput can be unacceptable for APIs with tight latency budgets.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or logs would you inspect first if you suspected GC was causing p99 latency regressions?"
+   },
+   {
+    "question": "How does class loading actually work in Java, and what kinds of production issues come from classloader boundaries?",
+    "answer": "Classes are loaded by classloaders, and the identity of a class is its binary name plus the defining classloader. Delegation usually flows parent-first, but containers and plugin systems sometimes isolate or invert loading to keep dependencies separate. This matters because the same class name loaded by two different classloaders is not assignment-compatible, which leads to confusing `ClassCastException`, linkage errors, or memory leaks if loaders stay referenced. Static state is also scoped per loaded class, not globally across isolated loaders.",
+    "real_world": "Application servers and plugin platforms commonly hit leaks where a redeployed app’s classloader cannot be garbage collected because a thread, cache, or `ThreadLocal` still references it. Another common incident is a library shaded or loaded twice, causing runtime type conflicts despite matching package names.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why are `ThreadLocal` values a common source of classloader leaks in long-lived thread pools?"
+   },
+   {
+    "question": "What is happening under the hood when the JIT optimizes Java code, and how can that change the way you benchmark or profile?",
+    "answer": "The JVM starts with interpreted or lightly compiled code, profiles hot paths at runtime, and then JIT-compiles them with optimizations like inlining, escape analysis, and devirtualization. Those optimizations depend on observed behavior, so code shape, warmup, polymorphism, and allocation patterns can change performance drastically. That’s why naive microbenchmarks are misleading: dead-code elimination, constant folding, and lack of warmup can measure the benchmark harness more than the code. In production, you also have deoptimization when assumptions stop holding, which can cause sudden latency shifts.",
+    "real_world": "A team may optimize away object creation by hand, only to find the JVM already scalar-replaced those objects and the “optimization” made code slower. Conversely, a benchmark can look great locally and regress in production because real call sites are megamorphic and no longer inline well.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the most common mistakes people make when writing Java microbenchmarks?"
+   },
+   {
+    "question": "How do `ThreadLocal` variables work, and what failure modes do they introduce in pooled-thread environments?",
+    "answer": "`ThreadLocal` stores per-thread state in a map attached to each `Thread`, which makes access cheap and avoids synchronization. The danger is lifecycle: in thread pools, threads outlive requests, so values can bleed between tasks if not cleared, and large objects can stay retained much longer than expected. It’s also easy to hide dependencies and make async code incorrect, because work may resume on a different thread where the context is absent. I treat `ThreadLocal` as a sharp tool for scoped context, not general state management.",
+    "real_world": "Request IDs, security principals, or database sessions can leak across users when code forgets to clear the thread-local in pooled executors. Long-lived workers also turn “temporary” thread-local buffers into persistent memory retention.",
+    "code_lang": "java",
+    "code": "private static final ThreadLocal<String> user = new ThreadLocal<>();\n\ntry {\n  user.set(\"alice\");\n  handleRequest();\n} finally {\n  user.remove();\n}",
+    "follow_up": "How would you propagate request context safely when work hops across executor threads?"
+   },
+   {
+    "question": "What are the semantics of `CompletableFuture`, and where do teams get into trouble using it at scale?",
+    "answer": "`CompletableFuture` models asynchronous completion and lets you compose dependent stages without blocking, but the semantics depend heavily on which thread executes each stage. Non-async continuations may run on the thread that completes the previous stage, while async variants use an executor, so blocking the common pool or accidentally running expensive work on completion threads is a common pitfall. Error handling is also subtle because exceptions are wrapped and can be dropped if pipelines are not joined or observed. At scale, unbounded fan-out and hidden executor contention are bigger problems than syntax.",
+    "real_world": "A service can deadlock or stall when tasks submit more work to a saturated executor and then block waiting for completion. Another common issue is CPU-heavy stages accidentally landing on the common pool, starving unrelated async work in the same JVM.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you explicitly pass an executor to `CompletableFuture` methods instead of relying on defaults?"
+   },
+   {
+    "question": "What does safepointing mean in the JVM, and why can it matter even when GC is not the main problem?",
+    "answer": "A safepoint is a moment when the JVM can stop Java threads to perform operations that require a consistent view of execution, including some GC phases, thread dumps, deoptimization, and certain runtime bookkeeping. If a thread delays reaching a safepoint, the JVM can’t complete that operation promptly, so pause time can be driven by thread behavior rather than heap pressure alone. Tight compute loops, JNI, or unusual runtime states can make safepoint latency visible in production. So when diagnosing pauses, I separate GC time from time spent getting threads to a safepoint.",
+    "real_world": "Teams sometimes blame GC for latency spikes that were actually long “time to safepoint” delays caused by CPU-bound threads. In low-latency services, that distinction matters because tuning the collector won’t fix a thread that doesn’t yield promptly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What evidence would help you distinguish a GC pause from a long time-to-safepoint issue?"
+   },
+   {
+    "question": "How does `ConcurrentHashMap` achieve concurrency, and what guarantees does it give compared with a synchronized `HashMap`?",
+    "answer": "`ConcurrentHashMap` is designed so reads are usually non-blocking and updates synchronize at a much finer granularity than a single global lock, which improves throughput under contention. It gives thread-safe individual operations and memory-visibility guarantees for published entries, but it does not make compound workflows automatically atomic unless you use the provided atomic methods like `compute` or `putIfAbsent`. Iteration is weakly consistent, so it reflects some concurrent updates without throwing `ConcurrentModificationException`. A synchronized `HashMap` is simpler but serializes all access on one lock.",
+    "real_world": "A common bug is doing `if (!map.containsKey(k)) map.put(k, v)` concurrently and ending up with duplicate initialization work. High-traffic caches and registries usually need `computeIfAbsent`-style atomicity rather than just a thread-safe container.",
+    "code_lang": "java",
+    "code": "map.computeIfAbsent(key, k -> loadValue(k));\n// avoids racy check-then-act logic",
+    "follow_up": "What problems can `computeIfAbsent` still cause if the mapping function is slow or has side effects?"
+   },
+   {
+    "question": "Can you explain false sharing and how it can hurt Java performance even when threads are not logically contending on the same variable?",
+    "answer": "False sharing happens when independent variables used by different threads sit on the same CPU cache line, so writes by one core invalidate the line for the other core. The threads are not sharing data semantically, but the hardware treats the cache line as the unit of coherence, which can destroy scalability in counters, ring buffers, and metrics hot paths. In Java this often shows up with adjacent fields or array elements updated by different threads. Fixes usually involve changing layout or sharding access patterns, but they trade memory footprint for lower coherence traffic.",
+    "real_world": "High-frequency counters can flatten out or get slower as you add threads because cores spend time bouncing cache lines instead of doing useful work. This is common in telemetry, queue implementations, and low-latency trading or messaging code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you redesign a global request counter to avoid both lock contention and false sharing?"
+   },
+   {
+    "question": "If you saw `OutOfMemoryError` in production, how would you distinguish a true Java heap leak from off-heap or native memory pressure?",
+    "answer": "`OutOfMemoryError` is a family of failures, so the first step is to identify which area is exhausted: Java heap, metaspace, direct buffers, thread stacks, or native memory more broadly. A heap leak shows up as retained Java objects and growing live set after GC, while off-heap issues often come from direct byte buffers, JNI allocations, too many threads, or memory-mapped files and may not be obvious in a heap dump. I’d correlate JVM error text, GC behavior, process RSS, native memory tracking if enabled, and thread counts before assuming “heap leak.” The remediation path is very different depending on where the memory went.",
+    "real_world": "A service can crash with healthy-looking heap usage because direct buffers or thread stacks exhausted container memory first. Another common incident is metaspace growth from dynamic class generation or repeated redeploy/classloader leaks rather than ordinary object retention.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you expect to see differently in metrics and diagnostics for a heap leak versus a direct-buffer leak?"
+   },
+   {
+    "question": "How does Java implement generics at runtime, and what practical limits or surprises come from type erasure?",
+    "answer": "Java generics are mostly a compile-time feature: the compiler checks types, inserts casts, and erases most type parameters from bytecode. At runtime, `List<String>` and `List<Integer>` are usually just `List`, which is why you cannot directly create `new T()`, use primitives as type arguments, or reliably check `instanceof List<String>`. Bridge methods are also generated to preserve polymorphism after erasure. The trade-off is backward compatibility with older bytecode, but you lose some runtime type information and can hit heap pollution around raw types and varargs.",
+    "real_world": "This matters when designing libraries: APIs that look strongly typed at compile time may still need explicit `Class<T>` tokens or serializers because runtime reflection cannot recover erased type arguments.",
+    "code_lang": "java",
+    "code": "List<String> a = new ArrayList<>();\nList<Integer> b = new ArrayList<>();\nSystem.out.println(a.getClass() == b.getClass()); // true\n\nObject x = a;\n// x instanceof List<String>  // illegal\nSystem.out.println(x instanceof List); // true",
+    "follow_up": "When do you use type tokens or `Class<T>` parameters to work around erasure?"
+   },
+   {
+    "question": "What are the trade-offs between `AtomicInteger`, `LongAdder`, and explicit locking for counters under high contention?",
+    "answer": "`AtomicInteger` gives linearizable updates with CAS, which is simple and exact but can suffer when many threads repeatedly fail CAS on the same cache line. `LongAdder` spreads contention across cells, so throughput is often much better for hot counters, but `sum()` is not an atomic snapshot relative to concurrent updates. A lock can be appropriate when the counter update must be part of a larger critical section, but for a plain hot metric it often scales worst. The key choice is exact semantics versus write scalability.",
+    "real_world": "Teams often switch request or metrics counters from `AtomicLong` to `LongAdder` after seeing CPU burn in contention-heavy services; the trade-off is acceptable because monitoring tolerates slightly in-flight reads.",
+    "code_lang": "java",
+    "code": "AtomicLong exact = new AtomicLong();\nLongAdder fast = new LongAdder();\n\nexact.incrementAndGet();\nfast.increment();\n\nlong a = exact.get();\nlong b = fast.sum();",
+    "follow_up": "If you needed an exact rate limiter counter rather than a metric, which would you choose and why?"
+   },
+   {
+    "question": "What really happens when a method throws an exception in Java, and why can exceptions become a performance problem in hot paths?",
+    "answer": "Throwing unwinds stack frames until a matching handler is found, and the JVM usually captures stack trace information, which is relatively expensive compared with normal control flow. The cost is not just the `throw`; frequent exceptions can inhibit inlining and pollute profiles in code the JIT would otherwise optimize well. Catching without throwing is much cheaper, so the real issue is using exceptions for expected events. In hot paths, prefer explicit checks or result types for common failures and reserve exceptions for exceptional conditions.",
+    "real_world": "A common production issue is parsing or validation code that uses exceptions for expected bad inputs; under bursty traffic it can drive up CPU and allocation rates enough to trigger latency spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you confirm with profiling that exceptions are the bottleneck rather than just visible noise?"
+   },
+   {
+    "question": "How does `ForkJoinPool` actually schedule work, and when does it perform badly despite looking parallel?",
+    "answer": "`ForkJoinPool` uses work-stealing: each worker has a deque, pushes and pops its own tasks cheaply, and steals from others when idle. It works best for many small CPU-bound tasks that recursively split into balanced pieces. It performs badly when tasks block on I/O or locks, because blocked workers reduce effective parallelism unless you explicitly compensate, and when task granularity is too fine the scheduling overhead dominates. Parallelism is not free; the split size and blocking behavior determine whether you gain or lose.",
+    "real_world": "Teams often get surprised by `parallelStream()` slowing down a service because the common pool is shared and a few blocking tasks can stall unrelated work using the same pool.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you change if the tasks must occasionally block on network calls?"
+   },
+   {
+    "question": "Can you explain biased locking, lightweight locking, and lock inflation at a practical level, and why lock state transitions matter?",
+    "answer": "The JVM has historically optimized uncontended locks by making the fast path very cheap, first for a lock mostly used by one thread and then for short uncontended contention with spinning before inflating to a heavier monitor. Once contention or certain operations occur, the lock can inflate and future acquisition gets more expensive. The practical point is that `synchronized` is often fine when contention is low, but performance can drop sharply when many threads start competing on the same monitor. The exact optimizations vary by JVM version, so I focus on the principle: uncontended locking is cheap, contended locking is not.",
+    "real_world": "A service may look fine in tests, then collapse in production when traffic pushes a shared monitor from mostly uncontended into heavily contended behavior, causing throughput loss and long blocked-thread queues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you diagnose whether a performance issue is due to lock contention rather than CPU saturation from business logic?"
+   },
+   {
+    "question": "What guarantees does `ExecutorService.submit()` give around task ordering, visibility, and failure handling, and where do engineers make wrong assumptions?",
+    "answer": "`submit()` only guarantees the task is handed to the executor according to that executor's policy; it does not generally guarantee global ordering unless you use a single-thread executor. Completion of a task establishes the usual happens-before relationship through `Future.get()`, but if you fire-and-forget, you lose an easy synchronization and error propagation point. Exceptions thrown by submitted tasks are captured in the `Future` instead of surfacing on the caller thread, so they are easy to miss. Engineers often assume submission order equals completion order and that failures will be visible without checking the `Future`.",
+    "real_world": "Production incidents happen when background tasks start failing silently for hours because code submits them and never inspects the returned `Future` or installs logging hooks.",
+    "code_lang": "java",
+    "code": "ExecutorService ex = Executors.newFixedThreadPool(2);\nFuture<?> f = ex.submit(() -> { throw new RuntimeException(\"boom\"); });\ntry {\n    f.get();\n} catch (ExecutionException e) {\n    System.out.println(e.getCause().getMessage());\n}",
+    "follow_up": "How is `execute()` different from `submit()` in how failures surface?"
+   },
+   {
+    "question": "How do Java NIO buffers work under the hood, and what trade-offs matter between heap buffers and direct buffers?",
+    "answer": "A buffer tracks position, limit, and capacity over some underlying memory, and direct buffers point to off-heap memory while heap buffers wrap JVM heap arrays. Direct buffers can reduce copying for some I/O paths and interact better with native code, but they are more expensive to allocate, are not moved by the GC, and can create native-memory pressure that is harder to see than heap usage. Heap buffers are cheaper and simpler for short-lived application processing. The right choice depends on allocation rate, I/O pattern, and whether avoiding copies actually matters.",
+    "real_world": "High-throughput network servers often pool direct buffers for socket I/O, but leaks or over-allocation can exhaust native memory while heap dashboards still look healthy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs would tell you direct buffer management is the real issue in a memory incident?"
+   },
+   {
+    "question": "What does `VarHandle` add compared with `volatile` fields and atomic classes, and when would you actually reach for it?",
+    "answer": "`VarHandle` exposes low-level access modes like plain, opaque, acquire, release, and volatile, plus atomic update operations, on fields and array elements. It lets you express weaker or more precise memory-ordering semantics than a plain `volatile` field and can avoid the object-per-variable overhead of some atomic wrappers. I would reach for it when implementing concurrency primitives or very performance-sensitive data structures, not for ordinary business code. The trade-off is power versus readability and correctness risk.",
+    "real_world": "Library code for queues, ring buffers, or custom schedulers may use `VarHandle` to control memory barriers precisely, because unnecessary full-fence semantics can cost throughput at scale.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where acquire-release is sufficient and full volatile semantics would be stronger than needed?"
+   },
+   {
+    "question": "How do Java records change API and model design, and what sharp edges should a senior engineer still watch for?",
+    "answer": "Records are concise nominal data carriers: the compiler gives you accessors, constructor machinery, `equals`, `hashCode`, and `toString` tied to the declared components. They work well for immutable DTO-style models and reduce boilerplate, but they are still classes with identity and can hold mutable components, so immutability is only shallow unless you defensively copy. They are a poor fit when invariants require hidden state or when framework requirements expect no-arg construction or field mutation. The real decision is whether the type is truly transparent data or richer domain behavior.",
+    "real_world": "Teams adopt records for request and event models, then later discover that embedding mutable lists without copying caused subtle shared-state bugs despite the record itself looking immutable.",
+    "code_lang": "java",
+    "code": "record User(String name, List<String> roles) {}\n\nvar roles = new ArrayList<String>();\nvar u = new User(\"a\", roles);\nroles.add(\"admin\");\nSystem.out.println(u.roles()); // [admin]",
+    "follow_up": "How would you enforce deep immutability when exposing a record in a public API?"
+   },
+   {
+    "question": "How do Java virtual threads change concurrency design, and what problems do they solve versus what problems do they not solve?",
+    "answer": "Virtual threads make blocking-style code scale to far more concurrent tasks by parking continuations instead of tying up an OS thread for each blocked operation. They simplify thread-per-request designs and can drastically reduce the complexity of callback-heavy code. They do not make CPU-bound work faster, remove database or downstream bottlenecks, or eliminate the need to reason about shared state and rate limits; pinning and blocking in native or synchronized regions can also reduce the benefit. The trade-off is much easier structured concurrency for I/O-heavy workloads, with the same fundamentals around contention and capacity planning.",
+    "real_world": "A service with tens of thousands of concurrent mostly-waiting requests can often replace large asynchronous pipelines with simpler blocking code, but if it still hammers a 100-connection database pool, latency will just move to that bottleneck.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of blocking can pin a virtual thread and how would you detect that in production?"
+   }
+  ]
+ }
+}

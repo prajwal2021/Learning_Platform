@@ -1,0 +1,360 @@
+{
+  "slug": "eu-users-logged-out-on-failover",
+  "title": "EU users are logged out during a US region failover",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "authentication",
+    "failover",
+    "sessions",
+    "redis",
+    "multi-region"
+  ],
+  "scenario": "A planned US-east failover shifts authentication traffic to EU-west for 20 minutes. About 1.2 million EU users are forced to log in again, and 9% of those affected users cannot log in until the failover ends. Session state is stored in a regional Redis cluster with a 12-hour TTL, while signing keys and session revocation lists are not replicated consistently. During the incident, failed validation logs in EU-west show 68% session_id_not_found, 23% unknown_key_id, and 9% revocation_status_unavailable; those three percentages are a breakdown of failed validations, not a breakdown of all users.",
+  "goal": "Find the production-safe root cause and design a fix that keeps users authenticated during regional failover without weakening auth validation.",
+  "concepts": [
+    {
+      "key": "region-failover",
+      "name": "Region failover",
+      "summary": "Region failover moves traffic from one data center region to another when a region is unavailable or being drained. It only works cleanly when the new region has the data and dependencies needed to serve the traffic.",
+      "used_here": "Authentication traffic is moved from US-east to EU-west for 20 minutes."
+    },
+    {
+      "key": "auth-validation",
+      "name": "Authentication validation",
+      "summary": "Authentication validation checks whether a request's session or token is still valid. It may need session records, signing keys, and revocation status.",
+      "used_here": "EU-west rejects many requests while trying to validate existing user sessions."
+    },
+    {
+      "key": "session-state",
+      "name": "Session state",
+      "summary": "Session state is server-side data that says a logged-in user's session exists and is valid. If the server handling a request cannot find it, the user may be treated as logged out.",
+      "used_here": "Session records live in a regional Redis cluster and are missing when validation runs in another region."
+    },
+    {
+      "key": "redis",
+      "name": "Redis",
+      "summary": "Redis is an in-memory data store often used for fast session lookups and caches. It is commonly deployed per region unless explicitly replicated across regions.",
+      "used_here": "The service stores session records in a regional Redis cluster."
+    },
+    {
+      "key": "ttl",
+      "name": "TTL",
+      "summary": "TTL means time to live, the time before a record expires automatically. A long TTL keeps a record around longer but does not make it available in another region.",
+      "used_here": "Sessions have a 12-hour TTL, but the TTL does not help if EU-west never had the session record."
+    },
+    {
+      "key": "signing-keys",
+      "name": "Signing keys",
+      "summary": "Signing keys are cryptographic keys used to sign and verify tokens or cookies. A verifier must have the right public or shared key to trust the token.",
+      "used_here": "Some failed validations report an unknown signing key ID in EU-west."
+    },
+    {
+      "key": "key-id",
+      "name": "Key ID",
+      "summary": "A key ID identifies which signing key was used to sign a token. It lets the verifier select the right key without trying every key.",
+      "used_here": "EU-west sees unknown key IDs for 23% of failed validations."
+    },
+    {
+      "key": "revocation-list",
+      "name": "Revocation list",
+      "summary": "A revocation list records sessions or tokens that should no longer be accepted. It is used when a user logs out, changes credentials, or an account is disabled.",
+      "used_here": "EU-west sometimes cannot determine whether a session has been revoked."
+    },
+    {
+      "key": "metric-denominator",
+      "name": "Metric denominator",
+      "summary": "A metric denominator is the population a percentage is measured against. Confusing denominators can make two equal-looking percentages mean different things.",
+      "used_here": "One 9% value is affected users who cannot log in; another 9% value is failed validations caused by revocation status being unavailable."
+    },
+    {
+      "key": "dns-stickiness",
+      "name": "DNS stickiness",
+      "summary": "DNS stickiness is the hope that users keep resolving to the same region because of DNS caching or geo-routing. It is not a strong guarantee because failover, resolver behavior, and network changes can move users.",
+      "used_here": "Relying on DNS alone would not guarantee users keep reaching the region that owns their auth state."
+    },
+    {
+      "key": "region-pinning",
+      "name": "Region pinning",
+      "summary": "Region pinning routes a user's session to the region that owns the data needed to serve it. It must be implemented by the service or routing layer, not assumed from DNS behavior alone.",
+      "used_here": "It is one way to ensure validation happens where the session and key material are available."
+    },
+    {
+      "key": "consistency",
+      "name": "Consistency",
+      "summary": "Consistency describes what readers are guaranteed to see after data is written. Stronger consistency gives fresher reads but may cost latency or availability across regions.",
+      "used_here": "The fix needs a defined consistency target for sessions, revocation data, and signing keys during failover."
+    },
+    {
+      "key": "stateless-token",
+      "name": "Stateless token",
+      "summary": "A stateless token carries enough signed information for a server to validate it without a session lookup. It improves regional availability but makes immediate revocation harder unless an additional revocation mechanism is used.",
+      "used_here": "It is an alternative design if signing keys are globally available and revocation trade-offs are explicit."
+    },
+    {
+      "key": "canary-rollout",
+      "name": "Canary rollout",
+      "summary": "A canary rollout sends a small amount of production traffic through a change before full rollout. It limits blast radius and gives real evidence that the change works.",
+      "used_here": "The failover fix should be tested on a small cohort before all users depend on it."
+    },
+    {
+      "key": "synthetic-test",
+      "name": "Synthetic test",
+      "summary": "A synthetic test is an automated test request that simulates important user cases in production-like paths. It can catch broken dependencies before real users are affected.",
+      "used_here": "Synthetic sessions can verify active, revoked, expired, and newly-keyed auth paths during failover."
+    },
+    {
+      "key": "rollout-gate",
+      "name": "Rollout gate",
+      "summary": "A rollout gate is an automated condition that must pass before a deployment or failover continues. It helps stop a bad change quickly when key metrics regress.",
+      "used_here": "The fix should be gated on validation errors staying near baseline, with rollback if they rise."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the failing validation path",
+      "question": "During the 20-minute failover, users are suddenly logged out. Which data should you inspect first to understand whether authentication is rejecting existing sessions in EU-west?",
+      "concept_keys": [
+        "region-failover",
+        "auth-validation",
+        "session-state",
+        "signing-keys",
+        "key-id",
+        "revocation-list",
+        "redis",
+        "dns-stickiness"
+      ],
+      "options": [
+        {
+          "text": "Compare EU-west auth validation errors before and during failover, split by session lookup, signing key lookup, and revocation check results.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Review browser login-page errors and password reset attempts, split by country and browser version during the failover window.",
+          "correct": false,
+          "hint": "Client-side errors show the user impact, but they do not tell you which server-side auth check rejected the request.",
+          "id": "b"
+        },
+        {
+          "text": "Check DNS resolver cache behavior for EU users and compare resolver TTLs with the planned failover duration.",
+          "correct": false,
+          "hint": "DNS behavior may explain where traffic went, but it does not explain why the region that received traffic rejected sessions.",
+          "id": "c"
+        },
+        {
+          "text": "Graph Redis CPU and memory in EU-west, then increase the Redis instance size if either resource is near saturation.",
+          "correct": false,
+          "hint": "Capacity can cause auth failures, but the symptom is forced logout during a route shift. First separate capacity problems from validation dependency problems.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The first question is whether EU-west can validate the sessions it is now receiving. Splitting failures by session lookup, signing key lookup, and revocation check shows which auth dependencies are missing or unhealthy. Browser errors and DNS data are useful later, but they are too indirect to identify the rejecting validation step."
+    },
+    {
+      "title": "Avoid mixing metric denominators",
+      "question": "The incident has two 9% values: 9% of affected users cannot log in until failover ends, and 9% of failed validations in EU-west are revocation_status_unavailable. What is the safest interpretation?",
+      "concept_keys": [
+        "metric-denominator",
+        "auth-validation",
+        "revocation-list"
+      ],
+      "options": [
+        {
+          "text": "Treat revocation_status_unavailable as the same 9% user login failure rate and focus the incident only on revocation storage.",
+          "correct": false,
+          "hint": "The two percentages are measured over different populations. Equal numbers do not mean they describe the same users or the same failure mode.",
+          "id": "a"
+        },
+        {
+          "text": "Use the failed-validation split to prioritize validation failure modes, while keeping the 9% unable-to-login figure as a separate user-impact metric.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Add 68%, 23%, and 9% to conclude that 100% of all affected users had one of those exact validation errors.",
+          "correct": false,
+          "hint": "Those percentages describe failed validations, not all affected users. Some users were forced to reauthenticate successfully and are outside that breakdown.",
+          "id": "c"
+        },
+        {
+          "text": "Ignore the failed-validation split because user-level login impact is the only metric that can guide debugging.",
+          "correct": false,
+          "hint": "User-impact metrics are essential, but they usually do not identify the failing dependency. You need both impact and cause-oriented telemetry.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The failed-validation breakdown and the user-impact percentage have different denominators. The 68%, 23%, and 9% validation split helps rank what the validator is failing on, while the 9% unable-to-login number measures business impact among affected users. Conflating them would over-focus on revocation even though it is only one validation failure category."
+    },
+    {
+      "title": "Identify the root cause",
+      "question": "You have confirmed that EU-west validation failures are 68% session_id_not_found, 23% unknown_key_id, and 9% revocation_status_unavailable during the route shift. What is the most likely root cause?",
+      "concept_keys": [
+        "region-failover",
+        "session-state",
+        "redis",
+        "ttl",
+        "signing-keys",
+        "key-id",
+        "revocation-list",
+        "dns-stickiness"
+      ],
+      "options": [
+        {
+          "text": "Authentication dependencies are regional, but failover moved validation to a region that lacks some sessions, signing keys, and revocation data.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "EU-west Redis is overloaded, so lookups time out and the service reports missing sessions and unknown signing keys.",
+          "correct": false,
+          "hint": "Overload can create timeouts, but the errors include key IDs unknown to the verifier. That points beyond a single Redis performance issue.",
+          "id": "b"
+        },
+        {
+          "text": "DNS stickiness failed for a subset of mobile users, so those users reached a different login page than their browser expected.",
+          "correct": false,
+          "hint": "Routing changes can expose the problem, but a different page alone would not produce missing session IDs and unknown key IDs in validation logs.",
+          "id": "c"
+        },
+        {
+          "text": "The 12-hour Redis TTL expired at the same time for many EU sessions, causing a synchronized logout wave.",
+          "correct": false,
+          "hint": "A TTL problem would normally correlate with session age or expiration time. The sharp change at failover points to where validation is happening.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The failures span the exact data needed to validate existing auth state: session records, signing keys, and revocation status. A 12-hour TTL does not explain a sudden 20-minute failover-correlated logout, and Redis overload does not explain unknown signing key IDs. The root issue is that routing moved users across a boundary where auth material was not consistently available."
+    },
+    {
+      "title": "Choose a safe immediate mitigation",
+      "question": "US-east is healthy enough to serve authentication again, and you need a mitigation before making code or data-model changes. What is the safest operational action?",
+      "concept_keys": [
+        "region-failover",
+        "region-pinning",
+        "session-state",
+        "revocation-list",
+        "ttl",
+        "dns-stickiness"
+      ],
+      "options": [
+        {
+          "text": "Extend the Redis session TTL from 12 hours to 24 hours in EU-west so existing sessions remain valid for the rest of the failover.",
+          "correct": false,
+          "hint": "A longer TTL only helps records already present in that Redis cluster. It does not create missing sessions or missing key material.",
+          "id": "a"
+        },
+        {
+          "text": "Temporarily skip revocation checks in EU-west so users can stay logged in while the failover continues.",
+          "correct": false,
+          "hint": "This may reduce one class of failure, but it weakens an important security control and does not address missing sessions or unknown keys.",
+          "id": "b"
+        },
+        {
+          "text": "Route active sessions back to the auth region that owns their validation data, and stop cross-region auth failover for those sessions until dependencies are available.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Lower DNS TTLs and wait for resolvers to move EU users back to their previous authentication path.",
+          "correct": false,
+          "hint": "DNS timing is not a reliable control for active sessions. Some clients and resolvers may not move when you need them to.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The safest immediate mitigation is to stop sending existing sessions to a region that cannot validate them and return them to the region with the required auth data. Extending TTL is tempting, but EU-west is missing records and key material, so expiration time is not the main issue. Disabling revocation would also create a security gap while only addressing 9% of failed validations."
+    },
+    {
+      "title": "Design the durable fix",
+      "question": "You need a durable design so a future regional failover does not force valid users to log in again. Which approach is production-safe?",
+      "concept_keys": [
+        "region-failover",
+        "region-pinning",
+        "session-state",
+        "signing-keys",
+        "key-id",
+        "revocation-list",
+        "consistency",
+        "stateless-token",
+        "dns-stickiness",
+        "redis",
+        "ttl"
+      ],
+      "options": [
+        {
+          "text": "Keep the regional Redis design and depend on DNS geo-routing so users normally return to the region where their session was created.",
+          "correct": false,
+          "hint": "Normal routing is not the same as a failover guarantee. Planned failover and network changes can send users somewhere else.",
+          "id": "a"
+        },
+        {
+          "text": "Align routing with auth dependencies: pin sessions to their owner, or fail over only to regions where session records, revocation data, and signing keys are available with defined consistency; if using stateless tokens, distribute signing keys globally and define revocation behavior.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Switch to long-lived stateless tokens signed by regional keys, remove session lookups, and accept that revoked tokens remain valid until they expire.",
+          "correct": false,
+          "hint": "Removing state can improve availability, but key availability and revocation trade-offs must still be designed explicitly. Long-lived tokens increase the security cost of delayed revocation.",
+          "id": "c"
+        },
+        {
+          "text": "Replicate only Redis session records globally, keep signing keys regional, and let revocation lists catch up asynchronously after failover.",
+          "correct": false,
+          "hint": "The incident had failures outside session lookup. A fix that covers only one dependency can still reject valid sessions.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The durable fix must make routing and auth material agree. For a stateful design, the failover region must have session records, revocation data, and globally available signing keys with a defined consistency target; this matters because 23% of failed validations had unknown key IDs. Stateless tokens can reduce session lookup dependence, but only if key distribution and revocation behavior are explicit."
+    },
+    {
+      "title": "Prove the fix before full rollout",
+      "question": "After implementing the durable design, how should you make the next failover safe and confirm the fix works?",
+      "concept_keys": [
+        "canary-rollout",
+        "synthetic-test",
+        "rollout-gate",
+        "auth-validation",
+        "session-state",
+        "signing-keys",
+        "key-id",
+        "revocation-list",
+        "region-failover"
+      ],
+      "options": [
+        {
+          "text": "Manually test one employee account in EU-west after failover, then rely on support tickets to catch the remaining cases.",
+          "correct": false,
+          "hint": "One account will not cover revoked sessions, old keys, new keys, and sessions created in different regions. Support tickets arrive after users are already harmed.",
+          "id": "a"
+        },
+        {
+          "text": "Deploy the change globally, monitor total login volume for 20 minutes, and roll back only if login volume exceeds the previous incident peak.",
+          "correct": false,
+          "hint": "Total login volume is a lagging signal and does not isolate the failure mode. You need targeted validation metrics before the blast radius is global.",
+          "id": "b"
+        },
+        {
+          "text": "Run a Redis load test in EU-west at projected failover QPS, then approve the failover if CPU and memory stay below 70%.",
+          "correct": false,
+          "hint": "Capacity is necessary, but this incident involved correctness of auth data and key availability. A load test alone can pass while validation still rejects users.",
+          "id": "c"
+        },
+        {
+          "text": "Run a canary failover with synthetic and low-percentage real traffic covering active, expired, revoked, and newly rotated-key sessions; gate rollout on missing-session, unknown-key, and revocation-unavailable rates staying near baseline, with automatic rollback.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "A canary limits blast radius while exercising the actual failover path. Synthetic cases should cover the edge cases that broke before: missing sessions, unknown key IDs, and unavailable revocation status. Redis capacity checks are useful, but they would not prove that signing keys and revocation data are correct."
+    }
+  ],
+  "takeaway": "Multi-region authentication only works when routing and auth dependencies are designed together. Sessions, signing keys, and revocation data must either be available in the failover region with clear consistency guarantees or users must be pinned to the region that owns them. Stateless tokens improve availability, but they move the hard problem to key distribution and revocation trade-offs.",
+  "review_issues": []
+}

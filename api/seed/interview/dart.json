@@ -1,0 +1,453 @@
+{
+ "slug": "dart",
+ "name": "Dart",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between `var`, `final`, and `const` in Dart?",
+    "answer": "`var` lets the compiler infer the type, but the variable can usually be reassigned. `final` means the variable can be assigned once at runtime, and `const` means the value is a compile-time constant and cannot change. Use `final` for values you know once at runtime, like a current timestamp, and `const` for truly constant values. `const` objects are canonicalized, so identical compile-time constants may be reused.",
+    "real_world": "This comes up when building UI state or configuration objects. A common bug is using `const` for something that depends on runtime data, or forgetting that `final` does not make a referenced object immutable.",
+    "code_lang": "dart",
+    "code": "var name = 'Ada';\nfinal createdAt = DateTime.now();\nconst pi = 3.14159;\n\nname = 'Grace';\n// createdAt = DateTime.now(); // error\n// pi = 3.2; // error",
+    "follow_up": "What is the difference between `final` and making the object itself immutable?"
+   },
+   {
+    "question": "How do Dart lists, sets, and maps differ, and when would you use each?",
+    "answer": "A `List` is ordered and allows duplicates, so it is good when position matters. A `Set` stores unique values and is useful for fast membership checks and deduplication. A `Map` stores key-value pairs, which is the right choice when you want to look up a value by an identifier. The main trade-off is between ordering, uniqueness, and lookup shape.",
+    "real_world": "You might use a list for rendering items in order, a set to avoid showing the same tag twice, and a map to cache user records by ID.",
+    "code_lang": "dart",
+    "code": "final names = ['Ada', 'Ada', 'Grace'];\nfinal uniqueNames = {'Ada', 'Grace'};\nfinal ages = {'Ada': 36, 'Grace': 40};\n\nprint(names.length);       // 3\nprint(uniqueNames.length);  // 2\nprint(ages['Ada']);         // 36",
+    "follow_up": "How do you check whether a collection contains an item in each case?"
+   },
+   {
+    "question": "What is null safety in Dart?",
+    "answer": "Null safety means variables are non-null by default unless you mark them as nullable with `?`. That prevents many runtime `null` errors by forcing you to handle the possibility of no value at compile time. You use `!` only when you are certain a value is not null, but overusing it can reintroduce crashes. The key idea is to make invalid states harder to represent.",
+    "real_world": "This matters when data comes from APIs or user input, where fields may be missing. Without null safety, teams often hit production crashes from unexpected `null` values.",
+    "code_lang": "dart",
+    "code": "String name = 'Dart';\nString? nickname;\n\nprint(name.length);\nprint(nickname?.length);\n// print(nickname.length); // error",
+    "follow_up": "When would you use the null-aware operators `?.`, `??`, and `??=`?"
+   },
+   {
+    "question": "What is the purpose of a constructor in Dart?",
+    "answer": "A constructor initializes a new object and can enforce required data at creation time. Dart supports positional, named, and optional parameters, which makes constructors flexible for different object shapes. A common pattern is to use `this.field` to assign parameters directly to fields. Constructors matter because they define the valid starting state of your object.",
+    "real_world": "This comes up when modeling API responses or form data. If a constructor is too loose, invalid objects get created and errors show up later in the app.",
+    "code_lang": "dart",
+    "code": "class User {\n  final String name;\n  final int age;\n  User(this.name, this.age);\n}\n\nfinal user = User('Ada', 36);",
+    "follow_up": "What is the difference between a named constructor and a factory constructor?"
+   },
+   {
+    "question": "What does the `async` and `await` syntax do in Dart?",
+    "answer": "`async` marks a function as asynchronous, and `await` pauses that function until a `Future` completes. This lets you write asynchronous code in a sequential style instead of chaining callbacks. The function still does not block the thread; it returns to the event loop while waiting. Use it for I/O, timers, and other work that completes later.",
+    "real_world": "This is common when calling an API, reading a file, or waiting for shared preferences. A mistake is forgetting `await` and then using a result before it is ready.",
+    "code_lang": "dart",
+    "code": "Future<String> loadName() async {\n  await Future.delayed(Duration(seconds: 1));\n  return 'Ada';\n}\n\nfinal name = await loadName();\nprint(name);",
+    "follow_up": "What happens if you call an async function without `await`?"
+   },
+   {
+    "question": "What is a `Future` in Dart?",
+    "answer": "A `Future` represents a value that will be available later, or an error if the operation fails. It is the core type used for asynchronous work in Dart. You handle it with `await`, `then`, or error handling like `try`/`catch` around awaited code. The trade-off is that you can model delayed results cleanly, but you must think about completion and failure.",
+    "real_world": "You see `Future` everywhere in network requests, database calls, and file access. A common beginner mistake is treating a `Future` like the final value and printing it directly.",
+    "code_lang": "dart",
+    "code": "Future<int> fetchCount() async {\n  return 42;\n}\n\nprint(fetchCount()); // Instance of 'Future<int>'\nprint(await fetchCount()); // 42",
+    "follow_up": "How do you handle errors from a `Future`?"
+   },
+   {
+    "question": "What is the difference between a function and a method in Dart?",
+    "answer": "A function is a standalone block of code you can call, while a method is a function defined inside a class. Methods usually operate on the object's fields and represent behavior tied to that type. In Dart, both are first-class, but methods help organize code around data and encapsulation. Use functions for general utilities and methods for object behavior.",
+    "real_world": "This matters when deciding where business logic should live. Teams often put everything into helper functions at first, then move behavior into methods when the domain model grows.",
+    "code_lang": "dart",
+    "code": "void greet(String name) {\n  print('Hello $name');\n}\n\nclass Greeter {\n  void greet(String name) {\n    print('Hello $name');\n  }\n}",
+    "follow_up": "What is the difference between instance methods and static methods?"
+   },
+   {
+    "question": "What does `this` mean in a Dart class?",
+    "answer": "`this` refers to the current instance of the class. You use it to access fields and methods on that object, and it often appears in constructors to distinguish parameters from fields. It is optional when there is no naming conflict, but it can improve clarity. In Dart, using `this.field` in the constructor is a common shorthand for assignment.",
+    "real_world": "This comes up in constructors and callback code where it is easy to confuse a parameter with a field. A common mistake is shadowing a field name and accidentally not assigning the object state you expected.",
+    "code_lang": "dart",
+    "code": "class Point {\n  final int x;\n  final int y;\n  Point(this.x, this.y);\n}\n\nfinal p = Point(2, 3);",
+    "follow_up": "When do you need to write `this.` explicitly?"
+   },
+   {
+    "question": "What are exceptions in Dart, and how do you handle them?",
+    "answer": "Exceptions represent errors that disrupt normal execution, such as failed parsing or network problems. You handle them with `try`, `catch`, and optionally `finally` for cleanup. For async code, catch exceptions around the `await`ed call. Good error handling means failing predictably and keeping the app from crashing unexpectedly.",
+    "real_world": "This matters when parsing user input or talking to an unreliable backend. If exceptions are ignored, a small bad response can bring down a screen or leave the app in a broken state.",
+    "code_lang": "dart",
+    "code": "try {\n  final value = int.parse('abc');\n  print(value);\n} catch (e) {\n  print('Invalid number: $e');\n} finally {\n  print('Done');\n}",
+    "follow_up": "What is the difference between `FormatException` and a general `Exception` catch?"
+   },
+   {
+    "question": "What is a class in Dart, and why would you use one?",
+    "answer": "A class is a blueprint for creating objects that bundle data and behavior together. You use classes when you want to model a real thing or a domain concept, like a `User` or `Cart`, and keep related fields and methods in one place. It helps organize code, reuse behavior, and make state easier to manage.",
+    "real_world": "A team might use classes for app models, UI state, or service objects instead of passing loose variables around. That makes code easier to read and change when requirements grow.",
+    "code_lang": "dart",
+    "code": "class User {\n  String name;\n  User(this.name);\n  void greet() => print('Hi, $name');\n}",
+    "follow_up": "How do you create an object from a class and call its methods?"
+   },
+   {
+    "question": "What does a `for` loop do in Dart, and when would you use it?",
+    "answer": "A `for` loop repeats a block of code a fixed number of times or while iterating through a collection. Use it when you know you need to process each item in order or repeat an action based on an index. It is common for counting, indexing, and simple traversal.",
+    "real_world": "You might use a `for` loop to render a list of items, validate each entry in an array, or build up a result string. Bugs often happen when the loop condition or index update is wrong.",
+    "code_lang": "dart",
+    "code": "for (var i = 0; i < 3; i++) {\n  print(i);\n}",
+    "follow_up": "How is a `for-in` loop different from a classic `for` loop?"
+   },
+   {
+    "question": "What is a `String` in Dart, and how do you combine strings?",
+    "answer": "A `String` is a sequence of text characters. You combine strings with interpolation or concatenation, but interpolation is usually cleaner and easier to read. It is the standard type for names, messages, JSON text, and many user-facing values.",
+    "real_world": "String interpolation is used constantly in logs, UI labels, and error messages. Using it well avoids messy concatenation chains and makes output easier to maintain.",
+    "code_lang": "dart",
+    "code": "var name = 'Ava';\nvar message = 'Hello, $name';\nprint(message);",
+    "follow_up": "How would you include an expression, not just a variable, in an interpolated string?"
+   },
+   {
+    "question": "What is the `main()` function in Dart?",
+    "answer": "`main()` is the entry point of a Dart program, so execution starts there. A program needs it unless something else is launching your code in a special way, like a test runner or Flutter framework. It is where you usually initialize app state or call the first function.",
+    "real_world": "When a console app fails immediately, one of the first checks is whether `main()` exists and whether startup code is inside it. In Flutter, `main()` typically bootstraps the app.",
+    "code_lang": "dart",
+    "code": "void main() {\n  print('Program started');\n}",
+    "follow_up": "Can `main()` be `async`, and if so, why would you do that?"
+   },
+   {
+    "question": "What is an import in Dart, and why do you need it?",
+    "answer": "An import brings code from another library or file into the current file so you can use it. You need imports to access classes, functions, and constants that are not in the same file. They help split code into reusable modules instead of putting everything in one place.",
+    "real_world": "Imports are common when sharing utilities across a codebase, like date helpers or API clients. Missing or incorrect imports are a common source of compile-time errors when files are reorganized.",
+    "code_lang": "dart",
+    "code": "import 'dart:math';\n\nvoid main() {\n  print(sqrt(16));\n}",
+    "follow_up": "What is the difference between importing a Dart core library and a file from your own project?"
+   },
+   {
+    "question": "What is inheritance in Dart?",
+    "answer": "Inheritance lets one class reuse and extend another class’s behavior. The child class gets the parent’s fields and methods, and can override behavior when needed. It is useful when two types share a clear is-a relationship, but overusing it can make code harder to change.",
+    "real_world": "A UI app might have a base `Shape` class with shared logic and specialized subclasses like `Circle` or `Rectangle`. In practice, teams often prefer composition unless inheritance is a natural fit.",
+    "code_lang": "dart",
+    "code": "class Animal {\n  void speak() => print('noise');\n}\nclass Dog extends Animal {\n  @override\n  void speak() => print('woof');\n}",
+    "follow_up": "What is method overriding, and how is it different from overloading?"
+   },
+   {
+    "question": "What does `if`/`else` do in Dart?",
+    "answer": "`if`/`else` lets you run different code based on a condition. Use it when the program needs to branch, such as checking permissions, validating input, or handling special cases. The condition must evaluate to a boolean value.",
+    "real_world": "This is used constantly in form validation, feature flags, and error handling. A common beginner mistake is using assignment or a non-boolean expression where a condition is expected.",
+    "code_lang": "dart",
+    "code": "var age = 18;\nif (age >= 18) {\n  print('adult');\n} else {\n  print('minor');\n}",
+    "follow_up": "What is the ternary operator, and when would you use it instead?"
+   },
+   {
+    "question": "What is type inference in Dart?",
+    "answer": "Type inference means Dart can often figure out a variable’s type from the value you assign. It reduces repetition and keeps code concise, while still preserving static typing. You still use explicit types when clarity matters or when the inferred type is not obvious.",
+    "real_world": "In larger codebases, inference speeds up writing code, but explicit types can make APIs and public fields easier to understand. If inference is unclear, readers may misread the intent of the code.",
+    "code_lang": "dart",
+    "code": "var count = 5;\nString label = 'items';\nprint('$count $label');",
+    "follow_up": "When would you prefer an explicit type over `var`?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "When would you use an abstract class versus an interface-like contract in Dart, and what trade-off are you making?",
+    "answer": "Use an abstract class when you want to share some implementation or common state along with the contract. Use a class as an interface when you only want to enforce a shape and let unrelated classes implement it. The trade-off is between code reuse and flexibility: abstract classes couple implementations more tightly, while interface-style contracts are easier to swap and mock. In Dart, every class can be used as an interface.",
+    "real_world": "This comes up when designing app layers like repositories or services. A team may start with one implementation and later add mocks, cache-backed versions, or platform-specific implementations without changing callers.",
+    "code_lang": "dart",
+    "code": "abstract class Cache {\n  void put(String key, String value);\n  String? get(String key);\n}\n\nclass MemoryCache implements Cache {\n  final _data = <String, String>{};\n  void put(String key, String value) => _data[key] = value;\n  String? get(String key) => _data[key];\n}",
+    "follow_up": "How do you decide between `extends` and `implements` when you own both classes?"
+   },
+   {
+    "question": "How do named constructors help in Dart, and when would you prefer them over factory methods?",
+    "answer": "Named constructors let one class expose several ways to create instances with clear intent, such as `User.fromJson` or `Point.origin`. They keep construction logic close to the type and make call sites self-documenting. Prefer them when you are still returning the same type and just need alternate initialization paths. Use a factory when you may return a cached instance, a subtype, or need more control over object creation.",
+    "real_world": "They are common when parsing API responses or offering different presets for domain objects. Good constructor names reduce mistakes in large codebases where the same model can be built from multiple sources.",
+    "code_lang": "dart",
+    "code": "class User {\n  final String name;\n  final int age;\n  User(this.name, this.age);\n  User.anonymous() : name = 'guest', age = 0;\n}",
+    "follow_up": "When would a factory constructor be a better fit than a named constructor?"
+   },
+   {
+    "question": "What happens if you use `late` incorrectly in Dart?",
+    "answer": "`late` tells Dart to trust you that a variable will be initialized before it is read. If you read it first, you get a runtime error instead of a compile-time one. That makes `late` useful for dependency injection, lazy initialization, and breaking initialization cycles, but it also moves some safety checks to runtime. Overusing it can hide bugs that null safety would otherwise catch earlier.",
+    "real_world": "A common production issue is a `late` field that is only assigned in one code path, then crashes when another path reads it. This often happens in widget state or service setup code during refactors.",
+    "code_lang": "dart",
+    "code": "late final String token;\n\nvoid init() {\n  token = 'abc';\n}\n\nvoid useToken() {\n  print(token);\n}",
+    "follow_up": "How would you redesign this code to avoid `late` altogether?"
+   },
+   {
+    "question": "How do you decide between `Future`, `Stream`, and synchronous APIs in Dart?",
+    "answer": "Use a synchronous API when the result is immediately available and there is no I/O or waiting. Use a `Future` for a single asynchronous result, like one network request or file read. Use a `Stream` when values arrive over time, such as websocket events, database changes, or progress updates. The trade-off is simplicity versus flexibility: `Stream` is more powerful but harder to reason about and test.",
+    "real_world": "This matters when designing service boundaries for apps. If you expose a stream for something that only ever returns one value, you make the call site more complex for no benefit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do error handling and cancellation differ between `Future` and `Stream`?"
+   },
+   {
+    "question": "How do generics help in Dart, and what problem do they solve in real code?",
+    "answer": "Generics let you write reusable, type-safe code for different element types without losing compile-time checking. They prevent casts and reduce runtime type errors in collections, repositories, and helper utilities. The main benefit is expressing intent once and letting the compiler enforce it everywhere. The trade-off is a little more type complexity, especially when dealing with nested or constrained generic types.",
+    "real_world": "They are especially useful in shared libraries and APIs where you want one implementation for many models. Without generics, teams often end up with `dynamic` values and runtime failures that are hard to trace.",
+    "code_lang": "dart",
+    "code": "class Box<T> {\n  final T value;\n  Box(this.value);\n}\n\nfinal box = Box<int>(3);",
+    "follow_up": "What are bounded type parameters, and when would you use them?"
+   },
+   {
+    "question": "What are the practical differences between `map`, `where`, and `fold` on iterables?",
+    "answer": "`map` transforms each item into another item, `where` filters items by a condition, and `fold` reduces the whole iterable to one value. They are useful for expressing data processing pipelines clearly and avoiding manual loops. `fold` is the most general, but it can be less readable than a specialized operation like `sum` or `join` when those are available. In performance-sensitive code, remember that chained iterable operations are lazy until consumed.",
+    "real_world": "You see this when transforming API responses into UI models or aggregating metrics. A clear iterable pipeline is often easier to test than a long imperative loop.",
+    "code_lang": "dart",
+    "code": "final nums = [1, 2, 3, 4];\nfinal result = nums\n    .where((n) => n.isEven)\n    .map((n) => n * 10)\n    .fold(0, (sum, n) => sum + n);",
+    "follow_up": "When would you prefer an explicit loop over chained iterable methods?"
+   },
+   {
+    "question": "How do you make a Dart class immutable, and why is that useful?",
+    "answer": "Make fields `final`, initialize everything in the constructor, and avoid exposing mutable collections directly. Immutability makes objects easier to reason about, safer to share across threads or async code, and friendlier to testing. It also works well with value equality and state management patterns. The trade-off is that updates usually mean creating a new object instead of mutating an existing one.",
+    "real_world": "Immutable models are common in app state, request/response DTOs, and cache keys. Mutable shared objects often cause bugs where one part of the app changes state unexpectedly in another part.",
+    "code_lang": "dart",
+    "code": "class Profile {\n  final String name;\n  final List<String> tags;\n  Profile(this.name, List<String> tags) : tags = List.unmodifiable(tags);\n}",
+    "follow_up": "How would you add a `copyWith` method to this class?"
+   },
+   {
+    "question": "What is the difference between `try/catch/finally` and handling errors with `Future` chains in Dart?",
+    "answer": "`try/catch/finally` is the most direct way to handle synchronous errors and awaited asynchronous errors. With `Future` chains, you can also use `.catchError`, but `async`/`await` with `try/catch` is usually clearer and easier to read. `finally` is for cleanup that must happen whether the operation succeeds or fails. The main trade-off is style: chain-based handling can fit fluent APIs, while `try/catch` is usually better for maintainability.",
+    "real_world": "This matters when closing files, releasing locks, or hiding loading indicators in app code. Missing cleanup in failure paths can lead to resource leaks or broken UI states.",
+    "code_lang": "dart",
+    "code": "Future<void> load() async {\n  try {\n    final data = await fetchData();\n    print(data);\n  } catch (e) {\n    print('failed: $e');\n  } finally {\n    print('done');\n  }\n}",
+    "follow_up": "How would you preserve the original stack trace when rethrowing an error?"
+   },
+   {
+    "question": "How do you decide between `==`/`hashCode` overrides and keeping object identity in Dart classes?",
+    "answer": "Override `==` and `hashCode` when two instances should be treated as the same value, such as model objects used in sets, maps, or tests. Keep identity when each instance really is unique, or when equality is expensive or ambiguous. The trade-off is convenience and correctness versus extra maintenance: once you define value equality, both methods must stay consistent. If you override one and not the other, collections can behave incorrectly.",
+    "real_world": "This comes up when deduplicating API models in a `Set` or using objects as map keys. Bugs often appear as “missing” entries or tests that pass only when using the same instance.",
+    "code_lang": "dart",
+    "code": "class User {\n  final int id;\n  User(this.id);\n  @override bool operator ==(Object other) => other is User && other.id == id;\n  @override int get hashCode => id.hashCode;\n}",
+    "follow_up": "How would you test that `==` and `hashCode` are implemented correctly?"
+   },
+   {
+    "question": "When would you choose a `factory` constructor in Dart instead of a regular constructor?",
+    "answer": "Use a `factory` when object creation may return an existing instance, choose among subclasses, or perform validation before deciding what to build. A regular constructor always creates the class directly, while a factory can hide that decision from callers. The trade-off is more flexibility and encapsulation versus less predictable construction flow. Factories are useful, but they can also make object creation harder to reason about if overused.",
+    "real_world": "A team might use a factory to parse JSON and return a cached object or a specialized subtype based on a payload field. That keeps caller code simple even when creation rules change later.",
+    "code_lang": "dart",
+    "code": "class Shape {\n  factory Shape.circle() => Circle();\n}\nclass Circle implements Shape {}",
+    "follow_up": "What are the downsides of using factories for most constructors in a codebase?"
+   },
+   {
+    "question": "What is the difference between `late`, nullable fields, and initializing everything in the constructor?",
+    "answer": "Use constructor initialization when a field can always be set immediately. Use a nullable field when `null` is a valid state and you want to model that explicitly. Use `late` only when you know the field will be assigned before first use, but not at construction time. The risk with `late` is runtime failure if initialization is missed, so it trades compiler guarantees for convenience.",
+    "real_world": "This often appears in Flutter state objects or dependency injection where a value is assigned after setup. Misuse can lead to production crashes that are hard to reproduce locally.",
+    "code_lang": "dart",
+    "code": "class Service {\n  late final String token;\n  void init(String t) => token = t;\n}",
+    "follow_up": "How would you refactor this if `token` might never be available?"
+   },
+   {
+    "question": "How do you choose between `List.generate`, a `for` loop, and `map` when building a collection in Dart?",
+    "answer": "Use `List.generate` when you want a list of a known size built from an index. Use a `for` loop when the logic is imperative, has side effects, or is easier to read step by step. Use `map` when transforming one iterable into another in a simple, declarative way. The main trade-off is readability versus flexibility; performance is usually similar enough that clarity should drive the choice.",
+    "real_world": "In UI code, teams often switch from `map` to a loop when the transformation needs branching, logging, or temporary state. That can make debugging much easier without changing behavior.",
+    "code_lang": "dart",
+    "code": "final squares = List.generate(5, (i) => i * i);\nfinal doubled = [for (final x in [1, 2, 3]) x * 2];",
+    "follow_up": "When would using `map` make debugging harder than a loop?"
+   },
+   {
+    "question": "What are the practical differences between synchronous iteration and using a `Stream` in Dart?",
+    "answer": "A synchronous iterable is for data already available in memory, while a stream represents values arriving over time. Streams are appropriate for events, sockets, file updates, or progress notifications, where you may get many values and want to react incrementally. The trade-off is more complexity: streams need subscription management, cancellation, and error handling. If you only need one result, a `Future` or synchronous return is simpler.",
+    "real_world": "This matters in apps that listen to websocket messages or user input events. Forgetting to cancel subscriptions can leak resources or keep screens alive longer than expected.",
+    "code_lang": "dart",
+    "code": "await for (final event in stream) {\n  print(event);\n}",
+    "follow_up": "How do you handle errors and cancellation with a stream subscription?"
+   },
+   {
+    "question": "How do you compare `Iterable` methods like `where`, `map`, and `expand` in terms of laziness and performance?",
+    "answer": "These methods on `Iterable` are lazy: they create a view of the computation and only run when iterated. That can save work and memory when chaining operations, especially on large collections. The trade-off is that repeated iteration repeats the transformation, so materializing with `toList()` can be better when you need the result multiple times. `expand` is for one-to-many transformations, not just one-to-one mapping.",
+    "real_world": "A backend service may chain several iterable operations over large in-memory data and accidentally do the same filtering twice. Materializing at the right point can reduce CPU cost and make behavior easier to profile.",
+    "code_lang": "dart",
+    "code": "final names = users\n    .where((u) => u.active)\n    .map((u) => u.name)\n    .toList();",
+    "follow_up": "When would you prefer `toList()` in the middle of a chain instead of at the end?"
+   },
+   {
+    "question": "What happens if a `switch` statement in Dart does not cover all cases of an enum or sealed type?",
+    "answer": "With exhaustive `switch`es, the compiler can help you catch missing branches when the type system knows all possible values. If the switch is not exhaustive, you may need a default branch, which can hide missing logic. The trade-off is safety versus flexibility: exhaustive switches are better when the set of cases is fixed and known. This is useful because adding a new enum value should break compilation in places that need updated handling.",
+    "real_world": "Teams often rely on this when adding a new app state or API status. Without exhaustive handling, a new case may fall into a generic branch and show the wrong UI or message.",
+    "code_lang": "dart",
+    "code": "switch (status) {\n  case Status.loading:\n    break;\n  case Status.done:\n    break;\n}",
+    "follow_up": "How would you design the code so the compiler helps you when new states are added?"
+   },
+   {
+    "question": "How do you structure error handling differently for synchronous code, `Future`s, and `Stream`s in Dart?",
+    "answer": "Synchronous code uses `try/catch` directly around the call. For `Future`s, you can still use `try/catch` with `await`, which is often clearer than chaining callbacks. Streams need per-subscription error handling, because errors may arrive after the listener starts. The trade-off is keeping control flow readable while making sure errors are observed at the right boundary.",
+    "real_world": "This matters in network layers where a request fails differently from a live event feed. A common bug is catching the wrong error path and leaving the UI stuck loading.",
+    "code_lang": "dart",
+    "code": "try {\n  final data = await fetch();\n} catch (e) {\n  log(e.toString());\n}",
+    "follow_up": "What changes if the same API returns a single result sometimes and a stream other times?"
+   },
+   {
+    "question": "How do `assert`, exceptions, and returning error values differ in Dart code you ship to production?",
+    "answer": "`assert` is for developer assumptions and should not be used for normal runtime validation. Exceptions are appropriate when a function cannot complete normally and wants to signal failure through control flow. Returning an error value can be better when failure is expected and should be handled explicitly by the caller. The trade-off is between convenience, explicitness, and how much the caller must remember to check.",
+    "real_world": "This comes up in parsers and form validation. Using `assert` for user input validation can let bad data reach production and fail later in a less obvious place.",
+    "code_lang": "dart",
+    "code": "User parseUser(Map<String, dynamic> json) {\n  if (json['id'] == null) throw FormatException('missing id');\n  return User(json['id'] as int);\n}",
+    "follow_up": "When would you choose a result type instead of throwing?"
+   },
+   {
+    "question": "How do you decide between making a Dart API mutable and exposing only read-only state?",
+    "answer": "Prefer immutable state when values represent snapshots, are shared across threads of thought in your app, or need to be safe to reuse and test. Mutable state is useful when the object represents a changing process or accumulator. The trade-off is simpler reasoning and fewer bugs versus more copying and update methods. In practice, immutable models are often better at the edges, while controlled mutation can be fine inside a narrow implementation detail.",
+    "real_world": "This matters in Flutter state management, where accidental mutation can cause UI updates to be missed or appear inconsistent. Immutable objects also make tests and logging easier because each state transition is explicit.",
+    "code_lang": "dart",
+    "code": "class Config {\n  final String host;\n  const Config(this.host);\n  Config copyWith({String? host}) => Config(host ?? this.host);\n}",
+    "follow_up": "How would you manage performance if immutable copies become too expensive?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How do isolates actually work in Dart, and when are they the right tool versus just scheduling work with Futures?",
+    "answer": "An isolate has its own heap and event loop, so it gives true parallelism without shared-memory races. A Future only schedules asynchronous work on the same isolate; CPU-heavy code still blocks that isolate until it yields. The trade-off is message-passing overhead, serialization or transfer limits, and more lifecycle complexity. Use isolates for sustained CPU-bound work or isolation of failure, not for ordinary I/O concurrency.",
+    "real_world": "In Flutter, JSON parsing or image processing on the UI isolate can cause dropped frames even if wrapped in a Future. Teams often move those workloads to background isolates after seeing jank in production traces.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What data can be sent efficiently between isolates, and what becomes a bottleneck?"
+   },
+   {
+    "question": "What are Dart microtasks, how are they ordered relative to the event queue, and where do they cause production bugs?",
+    "answer": "Dart drains the microtask queue before taking the next event from the event queue. That means a chain of scheduled microtasks can starve timers, I/O callbacks, and UI work if you keep enqueuing more. Futures created in some ways complete via microtasks, so ordering can surprise people when mixing them with Timer or platform events. Microtasks are useful for deferring work until the current synchronous stack unwinds, but they are a bad place for long or unbounded loops.",
+    "real_world": "A common incident is code that recursively schedules microtasks and makes an app appear frozen even though nothing is technically deadlocked. It also shows up in tests that pass locally but reorder work differently than expected.",
+    "code_lang": "dart",
+    "code": "import 'dart:async';\n\nvoid main() {\n  scheduleMicrotask(() => print('microtask'));\n  Timer.run(() => print('event'));\n  print('sync');\n}\n",
+    "follow_up": "How would you intentionally yield back to the event queue in Dart?"
+   },
+   {
+    "question": "If I write a long async function in Dart, what parts actually run synchronously and how can that still block the app?",
+    "answer": "Code in an async function runs synchronously until the first await on an incomplete Future. Any CPU work before that point blocks the current isolate just like normal synchronous code, and code after each await resumes in later turns of the event loop. Await does not make computation parallel or preemptive; it only suspends at explicit suspension points. That matters because a single badly placed parse, sort, or loop can still stall responsiveness.",
+    "real_world": "People often mark a method async and assume it is safe for the UI thread, then discover startup or gesture latency because the expensive part happens before the first await.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns do you use to chunk or offload long-running CPU work so it stays responsive?"
+   },
+   {
+    "question": "How do Stream subscriptions handle backpressure in Dart, and what are the failure modes if a producer is faster than a consumer?",
+    "answer": "Dart Streams do not provide universal automatic backpressure; it depends on the source and whether it honors pause and resume on the subscription. A single-subscription Stream can often be paused, but many producers still buffer, and broadcast Streams generally cannot coordinate demand per listener. If the producer outpaces the consumer, you can see memory growth, latency spikes, or dropped events if the source chooses to shed load. Design-wise, you need a policy: buffer with limits, slow the producer, batch, or drop explicitly.",
+    "real_world": "This matters in socket, log, and telemetry pipelines where bursts can overwhelm parsing or persistence. Teams get incidents where memory climbs because every stage is 'async' but nothing actually bounds the queue.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when the Stream is broadcast instead of single-subscription?"
+   },
+   {
+    "question": "What is the cost model of broadcast versus single-subscription streams in Dart, and how does that affect architecture?",
+    "answer": "A single-subscription Stream is the simplest model: one consumer, ordered delivery, and better support for pausing and backpressure semantics. A broadcast Stream fan-outs events to multiple listeners, but listeners only see events from the moment they subscribe and per-listener flow control is weaker. Broadcast is useful for hot event sources, but it can hide lifecycle bugs because missing a subscription window loses data silently. Architecturally, prefer single-subscription for data pipelines and convert to broadcast only at the boundary where you truly need fan-out.",
+    "real_world": "Teams often use broadcast for convenience in app-wide event buses, then spend time debugging missed initialization events or duplicate listeners causing inconsistent state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely expose a hot event source to late subscribers if they need the latest value?"
+   },
+   {
+    "question": "How does equality on records, collections, and user-defined objects differ in Dart, and what are the performance implications?",
+    "answer": "Records in Dart use structural equality, while ordinary List, Map, and Set equality is typically by identity unless you choose a custom equality strategy outside the core types. User-defined classes also default to identity unless you override == and hashCode. The performance angle is that deep structural comparisons can be expensive in hot paths, while identity checks are cheap but may not match business semantics. You should be deliberate, especially when values are used as map keys, in caches, or in state-diffing logic.",
+    "real_world": "State management bugs often come from assuming two collections with the same contents compare equal. On the other side, overly deep equality on large graphs can make rebuilds or cache lookups much slower than expected.",
+    "code_lang": "dart",
+    "code": "void main() {\n  print((1, 'a') == (1, 'a')); // true\n  print([1, 2] == [1, 2]);     // false\n}\n",
+    "follow_up": "If you need value semantics for nested collections, how do you keep that from becoming a performance problem?"
+   },
+   {
+    "question": "What does reified generics mean in Dart in practice, and where do people still get tripped up at runtime?",
+    "answer": "Dart keeps generic type information available at runtime in many cases, so checks like `x is List<int>` can work. But that does not mean every operation is fully runtime-safe: dynamic values, casts at boundaries, and variance rules can still defer failures until execution. Generic type arguments also do not magically validate the contents of untyped external data like JSON; you still have to parse and convert. In practice, reification helps tooling and runtime checks, but it is not a substitute for disciplined typed boundaries.",
+    "real_world": "Production failures often happen after deserializing external data into `dynamic` and trusting a later cast. The code compiles cleanly, then throws in a path that only certain payloads hit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do covariance and generic variance affect runtime soundness and inserted checks in Dart?"
+   },
+   {
+    "question": "Can you explain covariance in Dart, why it exists, and the runtime costs or risks it introduces?",
+    "answer": "Dart allows some covariant parameter behavior for usability, especially with overrides and common collection patterns, but that means the runtime may need inserted type checks where static typing cannot prove safety. The upside is more flexible APIs and smoother interop with object-oriented designs; the downside is possible late TypeErrors and a small per-call cost in affected paths. For hot code, those checks can matter if they sit inside tight loops or frequently called methods. The safer design is usually to keep APIs as type-stable as possible and avoid relying on covariant narrowing unless it buys real clarity.",
+    "real_world": "This shows up in framework extension points where subclass overrides narrow accepted types. It works until a caller holds only the base type and trips a runtime check in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you redesign an API that currently depends on covariant overrides to avoid runtime failures?"
+   },
+   {
+    "question": "How do zones work in Dart, and what problems do they solve that normal try/catch does not?",
+    "answer": "A Zone is an execution context that flows through async work, letting you intercept uncaught asynchronous errors and override behavior like timers, printing, or callbacks within that context. Normal try/catch only handles errors in the current synchronous stack or awaited async boundaries you explicitly observe; it will not globally capture unrelated future failures. Zones are useful for top-level error reporting, request-scoped context, and test instrumentation. The trade-off is hidden control flow and complexity, so they should be used as infrastructure, not as everyday application logic.",
+    "real_world": "Servers use zones to attach request IDs to logs across asynchronous call chains, and apps use them to report uncaught async crashes that would otherwise be missed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between `runZoned` and `runZonedGuarded` in practice?"
+   },
+   {
+    "question": "What are the performance characteristics of isolates for large data transfer, and how do you avoid copying becoming the bottleneck?",
+    "answer": "Because isolates do not share mutable heap objects, sending data usually involves copying or using sendable representations, which can dominate runtime for large payloads. For big binary data, the strategy is to minimize transfers, send compact formats, or use transfer mechanisms designed to hand off ownership instead of duplicating when available. Spawning isolates also has startup and memory overhead, so very fine-grained tasks often lose to staying on one isolate. The break-even point depends on payload size and computation cost, so you benchmark with realistic data.",
+    "real_world": "A team may move parsing to an isolate and still see little improvement because each request copies megabytes of JSON or image bytes back and forth. The profiler then shows messaging, not computation, as the hot path.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you measure whether an isolate boundary is helping or just moving the cost around?"
+   },
+   {
+    "question": "How does Dart decide between static dispatch, dynamic dispatch, and `noSuchMethod`, and what are the performance and failure implications?",
+    "answer": "A normal typed call is compiled assuming the receiver’s static type, but overridden instance methods still dispatch virtually at runtime. If the receiver is `dynamic`, Dart defers member resolution to runtime, which removes many compile-time checks and can trigger `NoSuchMethodError` or a custom `noSuchMethod` path. `noSuchMethod` is mainly for proxies and mocking; it is much slower and easier to break under refactors because misspellings become runtime failures. In hot code, prefer concrete or interface types so the compiler can optimize call sites better.",
+    "real_world": "Teams hit this when JSON-like maps or plugin objects get passed around as `dynamic`; a renamed method compiles but fails only in production paths. Proxy-heavy code and overuse of `noSuchMethod` also show up clearly in CPU profiles.",
+    "code_lang": "dart",
+    "code": "class A {\n  @override\n  dynamic noSuchMethod(Invocation i) => 'missing';\n}\n\nvoid main() {\n  dynamic a = A();\n  print(a.foo()); // missing\n}",
+    "follow_up": "When is using `dynamic` justified in a production Dart API, and how do you contain the damage?"
+   },
+   {
+    "question": "What is the difference between `Future.wait`, `Future.any`, and sequential `await`, especially around errors and cancellation?",
+    "answer": "Sequential `await` preserves order and naturally limits concurrency, but total latency becomes the sum of each step. `Future.wait` runs work concurrently and completes when all finish, but if one fails the combined future fails and the other operations usually keep running because Dart futures are not cancelled by default. `Future.any` returns the first completion, success or error, and leaves the rest running unless you built explicit cancellation into the underlying operations. The trade-off is latency versus resource control and cleanup complexity.",
+    "real_world": "A common incident is fanning out to many HTTP calls with `Future.wait`; one failure returns early to the caller, but the remaining requests still consume sockets and rate limits. Teams often add timeouts, bounded concurrency, or cancellable wrappers around underlying clients.",
+    "code_lang": "dart",
+    "code": "final a = Future.delayed(Duration(milliseconds: 50), () => 1);\nfinal b = Future.delayed(Duration(milliseconds: 10),\n    () => throw StateError('x'));\n\nawait Future.wait([a, b]); // throws\n// `a` still continues running in the background.",
+    "follow_up": "How would you implement bounded concurrency in Dart when you have thousands of async tasks?"
+   },
+   {
+    "question": "When would you use extension methods versus wrapper types or utility functions in Dart, and what are the sharp edges?",
+    "answer": "Extensions are great when you want fluent, discoverable helpers on types you do not own, without allocating wrapper objects. They are resolved statically from the imported libraries and the static type of the receiver, so they do not participate in virtual dispatch and can be surprising with `dynamic` or more general interface types. Wrapper types are better when the behavior is part of your domain model or you need invariants, state, or polymorphism. Utility functions are simplest when you want zero API surface on the target type.",
+    "real_world": "Large codebases end up with conflicting extensions on common types like `String` or `Iterable`; imports then decide which API is visible, which can make refactors brittle. Extensions also confuse people when a helper “disappears” because a variable got widened to `Object` or `dynamic`.",
+    "code_lang": "dart",
+    "code": "extension Ints on int {\n  bool get isEvenish => this % 2 == 0;\n}\n\nvoid main() {\n  Object x = 4;\n  print((x as int).isEvenish); // ok\n  // x.isEvenish; // not visible on Object\n}",
+    "follow_up": "How do you avoid extension method collisions in a shared package ecosystem?"
+   },
+   {
+    "question": "How do mixins actually compose behavior in Dart, and what should you watch for with state, ordering, and API design?",
+    "answer": "A mixin is applied into a class at compile time, and later mixins in the `with` clause override earlier ones if they define the same member. They are useful for sharing behavior across unrelated hierarchies, but they can create fragile coupling when they assume fields, initialization order, or `super` behavior that is not clearly constrained. Use `on` constraints and small, behavior-focused mixins when they require specific capabilities. If a mixin owns meaningful state or lifecycle, a normal class or composition is often safer.",
+    "real_world": "Production bugs often come from two mixins both mutating the same lifecycle hook or cache field, where changing the `with` order silently changes behavior. Framework code can hide this for a while because everything still compiles.",
+    "code_lang": "dart",
+    "code": "mixin A { String f() => 'A'; }\nmixin B { String f() => 'B'; }\nclass C with A, B {}\n\nvoid main() {\n  print(C().f()); // B\n}",
+    "follow_up": "What is the difference between `extends`, `with`, and `implements` in terms of inherited code and maintenance risk?"
+   },
+   {
+    "question": "How do sealed classes change API design in Dart, and where do they help beyond enums?",
+    "answer": "Sealed classes let you model a closed set of subtypes, so code in the same library can exhaustively reason about variants with pattern matching and switches. Compared with enums, each case can carry different data and behavior, which makes them much better for typed state machines, protocol messages, and result types. The main trade-off is library boundary control: adding a new subtype is a source-compatible change inside your codebase but can still force downstream exhaustive switches to be updated. They improve correctness by moving impossible states into the type system.",
+    "real_world": "Teams use sealed hierarchies for loading states or parser AST nodes; when a new state is introduced, the compiler points to all switches that now need handling instead of letting a default branch hide bugs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you model a `Result<T>` or UI state type with sealed classes and avoid misuse of nullable fields?"
+   },
+   {
+    "question": "What are the trade-offs between `Uint8List`, `ByteData`, and ordinary `List<int>` in Dart for binary-heavy code?",
+    "answer": "`Uint8List` is a typed data buffer backed by contiguous bytes, so it is compact and efficient for I/O, codecs, and FFI boundaries. `ByteData` is for structured reads and writes on a byte buffer with explicit widths and endianness, while `List<int>` is a general collection API and may carry more overhead and weaker guarantees about representation. For large or hot paths, using typed data avoids boxing-like overheads and extra copying patterns that show up with generic lists. The trade-off is a lower-level API and more care around views, offsets, and byte order.",
+    "real_world": "In networking or media code, using `List<int>` everywhere often causes avoidable allocations and conversions between buffers. Teams typically standardize on `Uint8List` internally and only expose higher-level objects at API boundaries.",
+    "code_lang": "dart",
+    "code": "final bytes = Uint8List(4);\nfinal view = ByteData.sublistView(bytes);\nview.setUint32(0, 0x01020304, Endian.big);\nprint(bytes); // [1, 2, 3, 4]",
+    "follow_up": "How do views and sublists on typed data affect copying, aliasing, and bugs?"
+   },
+   {
+    "question": "How should you think about memory retention in Dart when closures, streams, and caches keep objects alive longer than expected?",
+    "answer": "Dart uses garbage collection, so leaks are usually retention bugs: something still references the object graph. Common causes are closures capturing large contexts, long-lived stream subscriptions, timers, static caches, and collections that are never pruned. The fix is usually architectural: narrow captures, cancel subscriptions, bound caches, and avoid storing heavyweight objects in singleton state. These bugs are subtle because memory grows under load even though there is no manual allocation bug to find.",
+    "real_world": "A frequent mobile issue is a listener or closure capturing a screen model, preventing disposal after navigation; memory only climbs after many screen transitions. Server processes see the same pattern with unbounded memoization maps keyed by request data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What concrete signals would you look for in a heap snapshot to distinguish a real leak from normal caching?"
+   },
+   {
+    "question": "What are the semantics of `sync*` and `async*` generators in Dart, and where do they surprise people in production?",
+    "answer": "`sync*` produces an `Iterable` lazily, so work happens as the consumer iterates; `async*` produces a `Stream`, and each `yield` may be separated in time by awaits or event delivery. Both are convenient for expressing pipelines, but the body is re-entered by the consumer’s pull or subscription lifecycle, so side effects can happen later and more than once if you create multiple iterators or listeners where allowed. Cleanup logic must be written carefully because cancellation or early termination changes how much of the body runs. They are elegant, but not ideal when you need tight control over buffering, errors, or resource lifetime.",
+    "real_world": "A generator that opens a file or DB cursor can leak resources if callers stop early and the code assumes the body runs to completion. Teams often switch to explicit controllers or iterator objects when observability and cleanup matter.",
+    "code_lang": "dart",
+    "code": "Iterable<int> nums() sync* {\n  print('start');\n  yield 1;\n  yield 2;\n}\n\nvoid main() {\n  final it = nums();\n  print(it.first); // prints start, then 1\n}",
+    "follow_up": "How do cancellation and error propagation differ between `async*` streams and a `StreamController` you manage manually?"
+   },
+   {
+    "question": "How do isolates fail in practice, and how do you build supervision and recovery instead of just spawning workers?",
+    "answer": "An isolate is a separate execution context, so if it throws an uncaught error it does not automatically crash sibling isolates, but that worker is gone unless you restart it. In production you need a supervision layer: monitor exit and error ports, correlate requests to workers, handle timeouts, and make jobs idempotent because responses can be lost mid-flight. Spawning is not free, so long-lived worker pools are usually better than per-task isolates for repeated work. The trade-off is more operational complexity in exchange for CPU parallelism and fault isolation.",
+    "real_world": "A common incident is background parsing or image processing silently stopping after an uncaught exception in a worker; the main isolate keeps serving traffic, but jobs pile up or disappear. Robust systems treat workers as replaceable and track health explicitly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a worker pool protocol so the caller can retry safely after a worker exits?"
+   },
+   {
+    "question": "How do FFI calls change Dart’s performance and safety model, and what mistakes cause the worst production issues?",
+    "answer": "FFI can remove a lot of overhead for CPU-heavy native libraries, but each boundary crossing has cost, and you lose much of Dart’s memory and type safety. The worst mistakes are incorrect native signatures, lifetime bugs for native allocations, blocking calls on the main isolate, and excessive tiny calls where crossing overhead dominates the useful work. Batch work when possible, pin down ownership clearly, and keep unsafe code behind a narrow API. FFI is powerful, but debugging failures often becomes harder because crashes can happen outside normal Dart exception handling.",
+    "real_world": "Teams integrating crypto, codecs, or ML runtimes often get good throughput only after reducing per-element FFI calls into chunked operations. The painful incidents are usually memory corruption or UI jank from native code that blocks the isolate unexpectedly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose FFI over platform channels or a pure Dart implementation, and how would you measure the break-even point?"
+   }
+  ]
+ }
+}

@@ -1,0 +1,469 @@
+{
+ "slug": "ios",
+ "name": "iOS development",
+ "category": "Mobile",
+ "levels": {
+  "basic": [
+   {
+    "question": "What’s the difference between a class and a struct in Swift, and when would you use each?",
+    "answer": "A struct is a value type, so assigning it or passing it around copies the value; a class is a reference type, so multiple variables can refer to the same instance. Use structs for simple data models and immutability by default, and classes when you need shared mutable state, identity, or inheritance. In iOS code, many model types are structs because they are easier to reason about.",
+    "real_world": "This matters when two parts of an app unexpectedly change the same object. For example, a view model stored as a class can be mutated from different places, while a struct copy avoids that shared-state bug.",
+    "code_lang": "swift",
+    "code": "struct Point { var x: Int; var y: Int }\nclass Counter { var value = 0 }\n\nvar a = Point(x: 1, y: 2)\nvar b = a\nb.x = 9   // a.x is still 1\n\nvar c = Counter()\nvar d = c\nd.value = 9 // c.value is now 9",
+    "follow_up": "How does Swift’s copy-on-write behavior relate to value types like Array and Dictionary?"
+   },
+   {
+    "question": "What is a view controller in UIKit?",
+    "answer": "A view controller manages a screen of the app, including its view hierarchy, user interaction, and coordination of data going in and out. It sits between your model and your views and is responsible for lifecycle events like loading, appearing, and disappearing. You use it to organize screen-level behavior, not to put all app logic in one place.",
+    "real_world": "If a screen is slow or leaks memory, the view controller is often where the problem starts. Junior developers also commonly put networking, formatting, and UI setup all in one controller, which makes the app hard to maintain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are some common lifecycle methods you might override in a view controller?"
+   },
+   {
+    "question": "What is Auto Layout, and why do iOS apps use it instead of hardcoded frames?",
+    "answer": "Auto Layout is a constraint-based system for describing how views should size and position themselves relative to each other and to the container. It lets the interface adapt to different screen sizes, orientations, languages, and accessibility settings. Hardcoded frames are brittle because they break when content or device dimensions change.",
+    "real_world": "This matters when a layout looks fine on one iPhone but overlaps or clips on another. It also helps when text gets larger due to Dynamic Type or when right-to-left languages change the layout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does it mean when a constraint is ambiguous or unsatisfiable?"
+   },
+   {
+    "question": "What is the difference between `let` and `var` in Swift?",
+    "answer": "`let` creates a constant binding, while `var` creates a variable binding you can reassign. With value types, using `let` also prevents mutating properties of the value. Prefer `let` by default because it makes code safer and easier to understand.",
+    "real_world": "A common beginner bug is trying to mutate something declared with `let`, then being surprised by a compiler error. Using `let` broadly also prevents accidental state changes in model and UI code.",
+    "code_lang": "swift",
+    "code": "let name = \"Ana\"\n// name = \"Ben\" // error\n\nvar count = 1\ncount = 2",
+    "follow_up": "If `let` is a constant, why can a `let` array still seem to change in some cases?"
+   },
+   {
+    "question": "What is a storyboard or XIB used for in iOS development?",
+    "answer": "A storyboard or XIB is a visual way to define parts of your UI in Interface Builder. Storyboards can describe multiple screens and transitions, while XIBs are usually for a single view or reusable component. They are useful for quick UI assembly, but large storyboards can become hard to merge and maintain.",
+    "real_world": "Teams often use XIBs for reusable cells or custom views and keep navigation code in Swift. Large storyboard files can cause merge conflicts when multiple developers edit them at the same time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the trade-offs between building UI in code versus using Interface Builder?"
+   },
+   {
+    "question": "What is a delegate in iOS?",
+    "answer": "A delegate is an object that another object calls back to for decisions or events. It is a common pattern in UIKit for separating responsibilities, like responding to table view actions or text field changes. The main idea is that one object provides behavior for another without tight coupling.",
+    "real_world": "This is used all over UIKit, such as when a text field asks whether editing should begin or a table view asks how many rows to show. If you do not set the delegate, callbacks never happen and the component may seem broken.",
+    "code_lang": "swift",
+    "code": "class MyVC: UIViewController, UITableViewDelegate {\n    func tableView(_ tableView: UITableView,\n                   didSelectRowAt indexPath: IndexPath) {\n        print(\"Selected\")\n    }\n}",
+    "follow_up": "How is delegation different from a closure-based callback?"
+   },
+   {
+    "question": "What does `nil` mean in Swift, and why are optionals important?",
+    "answer": "`nil` means the absence of a value. Swift uses optionals to make missing values explicit, so you must handle the case where a value is not present instead of crashing by accident. This is important because many iOS APIs can legitimately return nothing, such as parsing failures or missing UI references.",
+    "real_world": "A very common production crash is force-unwrapping an optional that was unexpectedly `nil`. Optionals force you to think about incomplete data from the network, storage, or UIKit.",
+    "code_lang": "swift",
+    "code": "var text: String? = nil\nif let value = text {\n    print(value)\n} else {\n    print(\"missing\")\n}",
+    "follow_up": "What is the difference between optional binding and force unwrapping?"
+   },
+   {
+    "question": "What is the app lifecycle in iOS?",
+    "answer": "The app lifecycle describes the states an app moves through, such as inactive, active, background, and terminated. It matters because you may need to save state, pause work, or refresh data at different times. On modern iOS, scene-based lifecycle handling may also be involved depending on how the app is structured.",
+    "real_world": "This comes up when you want to stop camera capture when the app backgrounds or save user edits before the app is suspended. Forgetting lifecycle handling can lead to lost work or wasted battery.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use app-level lifecycle callbacks versus view controller lifecycle callbacks?"
+   },
+   {
+    "question": "What is the difference between a frame and bounds in a UIView?",
+    "answer": "A view’s frame describes its position and size in its parent’s coordinate system, while its bounds describes its own internal coordinate system. You use frame when placing the view relative to its superview, and bounds when reasoning about the view’s own content. Confusing them often causes drawing or layout bugs, especially after transforms.",
+    "real_world": "This matters when a rotated or scaled view does not appear where you expect. It also matters in custom drawing and scrolling code, where content coordinates are based on bounds.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do transforms affect frame and bounds?"
+   },
+   {
+    "question": "What is a `UITableView` used for, and what are its two main data source methods?",
+    "answer": "A table view shows a vertically scrolling list of rows. Its data source tells it how many rows to display and how to configure each cell. The two core methods are the number of rows method and the cell configuration method, and without them the table view has no content to show.",
+    "real_world": "This is one of the first places beginners implement dynamic lists such as settings screens or inboxes. If the data source is not wired correctly, the table appears empty even though the data exists.",
+    "code_lang": "swift",
+    "code": "func tableView(_ tableView: UITableView,\n               numberOfRowsInSection section: Int) -> Int {\n    items.count\n}\n\nfunc tableView(_ tableView: UITableView,\n               cellForRowAt indexPath: IndexPath) -> UITableViewCell {\n    let cell = tableView.dequeueReusableCell(withIdentifier: \"Cell\", for: indexPath)\n    cell.textLabel?.text = items[indexPath.row]\n    return cell\n}",
+    "follow_up": "Why do table view cells get reused, and what mistake do beginners often make with reuse?"
+   },
+   {
+    "question": "What is the difference between `weak` and `strong` references in Swift, and why do we use `weak` for delegates?",
+    "answer": "A strong reference keeps an object alive as long as something points to it. A weak reference does not increase the retain count, so it becomes `nil` automatically when the object is deallocated. Delegates are usually weak to avoid retain cycles, because the delegate often also owns or strongly references the object sending callbacks. If both sides hold strong references, neither gets released.",
+    "real_world": "This matters when a view controller owns a custom view, and the custom view points back to the controller as its delegate. If the delegate is strong, the screen can leak after dismissal.",
+    "code_lang": "swift",
+    "code": "protocol MyViewDelegate: AnyObject {\n    func didTap()\n}\n\nclass MyView {\n    weak var delegate: MyViewDelegate?\n}",
+    "follow_up": "What is a retain cycle, and how do you spot one?"
+   },
+   {
+    "question": "What is an optional in Swift, and how do you safely unwrap one?",
+    "answer": "An optional is a value that can either contain something or be `nil`. You unwrap it with `if let`, `guard let`, or optional chaining so you can handle the missing case safely. Force-unwrapping with `!` should be avoided unless you are certain the value exists, because it will crash otherwise. Optionals are Swift’s way of making missing data explicit.",
+    "real_world": "API responses and UI state often contain missing values. Safe unwrapping prevents crashes when a network field is absent or a text field is empty.",
+    "code_lang": "swift",
+    "code": "let name: String? = userName\n\nif let name = name {\n    print(name)\n} else {\n    print(\"No name\")\n}",
+    "follow_up": "What is the difference between `if let` and `guard let`?"
+   },
+   {
+    "question": "What is a closure in Swift, and when would you use one in iOS code?",
+    "answer": "A closure is a block of code you can pass around like a value. You use closures for callbacks, completion handlers, sorting, and event handling because they let you run code later when something finishes. Closures can capture values from their surrounding scope, which is powerful but can also create retain cycles if they capture `self` strongly. In UI code, completion handlers are one of the most common uses.",
+    "real_world": "Networking APIs often call a closure when a request completes. If that closure updates a view controller, you need to think about memory ownership and whether the screen might be dismissed first.",
+    "code_lang": "swift",
+    "code": "fetchData { result in\n    switch result {\n    case .success(let data):\n        print(data)\n    case .failure(let error):\n        print(error)\n    }\n}",
+    "follow_up": "What does `[weak self]` do in a closure?"
+   },
+   {
+    "question": "What is the difference between `UITableView` and `UICollectionView`?",
+    "answer": "A table view is optimized for a single vertical list of rows. A collection view is more flexible and can display items in grids, custom layouts, or even complex arrangements. Both reuse cells to stay efficient, but collection views are the better choice when the layout is not just a simple list. For a standard feed, table view is often simpler; for galleries or dashboards, collection view is usually better.",
+    "real_world": "A product catalog might use a collection view for a grid of images, while a settings screen usually fits a table view. Picking the wrong one often leads to awkward layout workarounds.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does cell reuse work in each one?"
+   },
+   {
+    "question": "What does it mean to register and dequeue a reusable cell in a table or collection view?",
+    "answer": "Registering tells the view what cell class or nib it should use for a given reuse identifier. Dequeuing gives you an existing off-screen cell to configure instead of creating a new one every time. This is important for scrolling performance and memory use. If you create a fresh cell repeatedly, large lists become slow and wasteful.",
+    "real_world": "In long lists, reuse is what keeps scrolling smooth. A common beginner bug is returning a new cell instance instead of dequeuing, which breaks performance and sometimes state reuse.",
+    "code_lang": "swift",
+    "code": "tableView.register(UITableViewCell.self, forCellReuseIdentifier: \"Cell\")\n\nlet cell = tableView.dequeueReusableCell(\n    withIdentifier: \"Cell\",\n    for: indexPath\n)\ncell.textLabel?.text = items[indexPath.row]",
+    "follow_up": "What happens if the reuse identifier does not match?"
+   },
+   {
+    "question": "What is the difference between `viewDidLoad` and `viewWillAppear` in a view controller?",
+    "answer": "`viewDidLoad` is called once when the view is loaded into memory, so it is a good place for one-time setup like wiring views or initializing data. `viewWillAppear` is called every time the view is about to appear, so it is useful for refreshing content or updating UI state. Putting repeated work in `viewDidLoad` can leave the screen stale when it comes back on screen. Putting expensive work in `viewWillAppear` can make navigation feel slow.",
+    "real_world": "A profile screen that needs to refresh the latest user name when returning from editing should update in `viewWillAppear`, not only in `viewDidLoad`. Otherwise the user sees old data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of work should be avoided in `viewWillAppear`?"
+   },
+   {
+    "question": "What is a `guard` statement used for in Swift?",
+    "answer": "`guard` lets you exit early when a condition is not met, which keeps the rest of the function less nested and easier to read. It is commonly used for unwrapping optionals, validating input, or checking preconditions. The key idea is that the `else` block must leave the current scope, usually with `return`, `break`, or `throw`. This makes success paths clearer.",
+    "real_world": "In event handlers and view controller methods, `guard` helps avoid deep nesting when required data is missing. That makes code easier to scan and reduces mistakes in edge cases.",
+    "code_lang": "swift",
+    "code": "func showUser(_ user: User?) {\n    guard let user = user else { return }\n    print(user.name)\n}",
+    "follow_up": "When would you prefer `guard` over `if`?"
+   },
+   {
+    "question": "What is `async` and `await` used for in Swift?",
+    "answer": "`async` and `await` make asynchronous code read more like synchronous code while still avoiding blocking the main thread. You mark a function as `async` if it does work later, such as a network call, and `await` the result when calling it. This improves readability compared with deeply nested callbacks. You still need to think about errors and thread safety, because async code does not automatically solve those problems.",
+    "real_world": "Fetching remote data is one of the most common uses. Without async/await, beginners often end up with callback chains that are hard to read and maintain.",
+    "code_lang": "swift",
+    "code": "func loadProfile() async throws {\n    let profile = try await api.fetchProfile()\n    print(profile.name)\n}",
+    "follow_up": "How do you update UI safely after an async call?"
+   },
+   {
+    "question": "What is the main thread in iOS, and why does UI work need to happen there?",
+    "answer": "The main thread is the thread that runs the app’s UI event loop. UIKit expects view updates, animations, and user interaction handling to happen on the main thread because it is not thread-safe. If you do slow work there, the app can freeze or feel janky. The usual pattern is to do heavy work in the background and then switch back to the main thread for UI updates.",
+    "real_world": "A slow image decode or network parsing step on the main thread can make scrolling stutter or taps feel delayed. Users notice that immediately as a performance problem.",
+    "code_lang": "swift",
+    "code": "DispatchQueue.global().async {\n    let data = loadData()\n    DispatchQueue.main.async {\n        self.label.text = data\n    }\n}",
+    "follow_up": "What kinds of tasks should be moved off the main thread?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do `UITableViewDiffableDataSource` and the older table view data source approach differ in practice?",
+    "answer": "A diffable data source keeps a snapshot of sections and items, then computes the minimal UI updates when the snapshot changes. Compared with manually calling insert/delete/reload methods, it reduces bookkeeping and makes state changes less error-prone, especially when data can arrive out of order. The trade-off is that you work with stable item identifiers and snapshots instead of directly mutating the visible rows. It is usually a better fit when your list changes frequently or has multiple sections.",
+    "real_world": "This matters when a feed or inbox updates from network and local events at the same time. Manual row updates often drift out of sync with the model and cause crashes like invalid update assertions.",
+    "code_lang": "swift",
+    "code": "var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()\nsnapshot.appendSections([.main])\nsnapshot.appendItems(items)\ndataSource.apply(snapshot, animatingDifferences: true)",
+    "follow_up": "What problems can happen if your item identifiers are not stable or not unique?"
+   },
+   {
+    "question": "How do you decide between using `async/await` and Combine in an iOS app?",
+    "answer": "Use `async/await` for straightforward one-shot asynchronous work like network requests, file reads, or sequential flows that are easier to express as code. Use Combine when you need ongoing streams, composition of multiple events, debouncing, or rich reactive pipelines. `async/await` is usually simpler to read and test, while Combine can be more powerful but also harder to reason about. In many apps, both coexist: `async/await` at the edges and Combine for event-driven UI or stream processing.",
+    "real_world": "A search screen often needs both: debounced text changes and a network request per query. Teams may use Combine for the text stream and `async/await` for the request itself.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you bridge a Combine publisher into an `async` function or vice versa?"
+   },
+   {
+    "question": "What is a retain cycle, and how would you debug one in an iOS app?",
+    "answer": "A retain cycle happens when two objects strongly reference each other so neither is deallocated. In iOS this commonly appears with closures capturing `self`, timers, delegates that are not weak, or view controller relationships. You debug it by checking `deinit`, using Instruments' Leaks or Allocations, and looking for objects that should disappear but stay alive after dismissal. The fix is usually to break the strong chain with `weak` or `unowned`, or to invalidate the owner of the callback.",
+    "real_world": "This shows up when a screen can be dismissed but its network callbacks, timers, or notification handlers still fire. The user sees duplicated work, memory growth, or a controller that never releases.",
+    "code_lang": "swift",
+    "code": "task { [weak self] in\n    guard let self else { return }\n    self.refreshUI()\n}\n",
+    "follow_up": "When would you choose `unowned` instead of `weak`, and what can go wrong?"
+   },
+   {
+    "question": "What is the difference between `viewDidLayoutSubviews` and `viewDidAppear`, and when would you use each?",
+    "answer": "`viewDidLayoutSubviews` is called after Auto Layout has sized and positioned subviews, so it is the right place for work that depends on final frames. `viewDidAppear` is called when the view is on screen, so it is better for starting animations, tracking analytics, or presenting another controller. `viewDidLayoutSubviews` can run multiple times, so code there should be idempotent and cheap. `viewDidAppear` is tied to visibility, not layout.",
+    "real_world": "A chart or video player often needs final bounds before configuring rendering layers. If you do that work too early, the layout may be wrong or the content may jump after appearing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can putting expensive work in `viewDidLayoutSubviews` cause performance problems?"
+   },
+   {
+    "question": "How would you design caching for images in an iOS app, and what trade-offs matter?",
+    "answer": "A common approach is to use both an in-memory cache for fast reuse and a disk cache for persistence across launches. Memory cache should be bounded so it does not cause pressure or terminations, while disk cache reduces network use but adds I/O and invalidation complexity. You also need to decide cache keys, expiration, and whether to store the original image or a resized variant. In lists, prefetching and cancellation matter as much as the cache itself.",
+    "real_world": "Image-heavy feeds often stutter because every scroll triggers decoding and downloads. A good cache avoids repeated fetches and keeps scrolling smooth, especially on older devices.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you avoid showing the wrong image in a reused cell while a request is still in flight?"
+   },
+   {
+    "question": "What causes a table or collection view cell to show stale content after reuse, and how do you prevent it?",
+    "answer": "Cells are reused, so any state not fully reset can leak from one item to the next. Common causes are old text, images, selection state, hidden views, or asynchronous callbacks finishing after reuse. The fix is to configure every visible property from the current model, reset transient state in `prepareForReuse`, and cancel or validate async work. Reuse is an optimization, but it means the cell must be treated as disposable state.",
+    "real_world": "This often appears as an image from the previous row flashing in a new row during fast scrolling. It is a common production bug in feeds and chat lists.",
+    "code_lang": "swift",
+    "code": "override func prepareForReuse() {\n    super.prepareForReuse()\n    avatarImageView.image = nil\n    titleLabel.text = nil\n    task?.cancel()\n}",
+    "follow_up": "How would you structure image loading so a late callback does not update the wrong reused cell?"
+   },
+   {
+    "question": "What are the practical differences between `URLSession` data tasks and download tasks?",
+    "answer": "A data task returns the response body in memory, which is convenient for JSON and small responses. A download task writes the response to a temporary file, which is better for large files because it avoids holding the entire payload in memory. Download tasks also support resuming in some cases, while data tasks are simpler for typical API calls. The choice is mostly about payload size and whether you need a file on disk.",
+    "real_world": "If an app downloads a large PDF or video with a data task, it can spike memory and get terminated. For large assets, a download task is usually safer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you handle errors and retries differently for API JSON requests versus file downloads?"
+   },
+   {
+    "question": "How do you handle thread safety when updating shared model state in a Swift app?",
+    "answer": "You need a clear ownership model so state is mutated from one place or protected by synchronization. In modern Swift, actors are a good fit for isolating mutable shared state, while older code may use serial queues or locks depending on the workload. The key is to avoid unsynchronized reads and writes from multiple threads, which can cause races that are hard to reproduce. UI updates still need to end up on the main thread, but the data model itself should also be made safe.",
+    "real_world": "Race conditions often appear as intermittent crashes or corrupted counts in analytics and sync code. They are especially hard to debug because adding print statements can change the timing.",
+    "code_lang": "swift",
+    "code": "actor SessionStore {\n    private var tokens: [String] = []\n    func add(_ token: String) { tokens.append(token) }\n    func all() -> [String] { tokens }\n}",
+    "follow_up": "When would you still prefer a serial dispatch queue over an actor?"
+   },
+   {
+    "question": "What is dependency injection in iOS, and why is it useful for testing?",
+    "answer": "Dependency injection means passing required collaborators into an object instead of creating them internally. This makes code easier to test because you can supply mocks or fakes, and it reduces hidden coupling to concrete implementations like singletons. It also makes production code more flexible because implementations can be swapped without changing the consumer. The trade-off is more initializer or property wiring, but that usually pays off quickly in real apps.",
+    "real_world": "Networking, analytics, and persistence code are easier to verify when the view model receives protocols rather than instantiating real services. It prevents tests from hitting the network or the database.",
+    "code_lang": "swift",
+    "code": "protocol APIClient { func fetch() async throws -> Data }\nfinal class ViewModel {\n    private let client: APIClient\n    init(client: APIClient) { self.client = client }\n}",
+    "follow_up": "How would you inject dependencies into a view controller created from a storyboard?"
+   },
+   {
+    "question": "How do you approach debugging a screen that is slow to load or scroll on an iPhone?",
+    "answer": "First separate startup work, layout cost, image decoding, and data fetching so you know where the time goes. Instruments, Time Profiler, and Core Animation are the main tools: look for expensive work on the main thread, too many layout passes, oversized images, and repeated cell configuration. Then move non-UI work off the main thread, reduce view hierarchy complexity, and avoid doing heavy work in frequently called methods. The goal is not just fewer milliseconds, but consistent frame times during interaction.",
+    "real_world": "Users notice this as a blank screen pause, delayed taps, or janky scrolling in a list. Performance problems often only appear on older devices or with real network latency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs tell you whether the bottleneck is layout, rendering, or data loading?"
+   },
+   {
+    "question": "How do `UICollectionViewCompositionalLayout` and the older flow layout differ in practice, and when would you choose one over the other?",
+    "answer": "Flow layout is simpler when your items are mostly a grid or a basic list with uniform spacing. Compositional layout is better when a screen has multiple sections with different arrangements, such as a horizontal carousel followed by a two-column grid and a full-width banner. The trade-off is flexibility versus complexity: compositional layout can model more UI cleanly, but it is harder to reason about and debug at first. In real projects, I’d choose flow layout for straightforward screens and compositional layout when the design team wants mixed, section-specific layouts.",
+    "real_world": "A shopping app might use a compositional layout for a home screen with featured products, categories, and recommendations. Using one layout for all of that often leads to awkward workarounds and brittle spacing code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you add pinned section headers or orthogonal scrolling to that layout?"
+   },
+   {
+    "question": "What is the difference between `lazy var` and a computed property in Swift, and when would you use each?",
+    "answer": "A `lazy var` stores a value the first time it is accessed, while a computed property recalculates every time it is read. Use `lazy` when initialization is expensive or depends on `self`, and you only want to build it if it is actually needed. Use a computed property when the value should always reflect the current state and is cheap to compute. The trade-off is memory and initialization cost versus always having fresh results.",
+    "real_world": "This comes up when building a view or formatter only after a screen needs it, instead of paying the cost during object creation. It also matters when a property needs `self` and cannot be initialized before the instance exists.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What risks come with `lazy` properties in multithreaded code?"
+   },
+   {
+    "question": "How would you choose between `UserDefaults`, Keychain, and local file storage for app data?",
+    "answer": "`UserDefaults` is for small pieces of non-sensitive preference data, like toggles or last-used settings. Keychain is for secrets such as tokens or credentials because it is designed to store sensitive data more securely. Local files make sense for larger structured data, caches, or content you want to persist and manage yourself. The main trade-off is convenience versus security and control: `UserDefaults` is easy but limited, while files and Keychain require more explicit handling.",
+    "real_world": "A common bug is storing auth tokens in `UserDefaults` because it is convenient during development. That becomes a security problem and often makes logout or reinstall behavior harder to reason about.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle migrating existing stored data from one of those stores to another?"
+   },
+   {
+    "question": "What happens if you capture `self` strongly in a closure that is stored on the object itself?",
+    "answer": "You can create a retain cycle because the object retains the closure, and the closure retains the object through `self`. That means neither gets deallocated when you expect. The usual fix is to capture `self` weakly or, when appropriate, unowned, and then handle the fact that `self` may be nil. The key trade-off is avoiding leaks while not making the code harder than necessary.",
+    "real_world": "This often shows up in completion handlers, timers, or callback properties on view models and view controllers. In Instruments, the screen never disappears from memory even after navigation away from it.",
+    "code_lang": "swift",
+    "code": "service.load { [weak self] result in\n    guard let self else { return }\n    self.render(result)\n}",
+    "follow_up": "When would you use `unowned` instead of `weak`, if ever?"
+   },
+   {
+    "question": "How do you decide between MVVM and a plain view controller with helper objects in an iOS app?",
+    "answer": "I would use MVVM when the screen has enough state and formatting logic that the view controller is getting crowded, or when I want a clearer boundary for testing. A plain view controller with small helper objects is often better for simple screens because it is easier to follow and introduces less abstraction. The trade-off is structure versus overhead: MVVM can improve testability and organization, but it can also become boilerplate if the screen is small. The right choice depends on screen complexity, team conventions, and how much logic needs to be isolated from UIKit.",
+    "real_world": "On a form screen with validation, loading states, and multiple API responses, MVVM usually keeps the code more maintainable. On a static settings screen, a full view model layer can be unnecessary ceremony.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What responsibilities should stay in the view controller even if you use MVVM?"
+   },
+   {
+    "question": "How would you debug a memory leak in a view controller that should deallocate after dismissal?",
+    "answer": "First, confirm the object is not being held somewhere unexpected by adding a `deinit` log or using Instruments. Then look for common causes like strong closure captures, timers, notification observers, delegates that are not weak, or child view controllers retained incorrectly. I would narrow it down by removing subscriptions or callbacks one by one until the leak disappears. The important part is to verify the retain path rather than guessing, because leaks often come from indirect ownership relationships.",
+    "real_world": "This matters when a settings or detail screen is opened many times and memory keeps climbing. In production, that can eventually cause slowdowns or termination on older devices.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you use Instruments to confirm the retaining object?"
+   },
+   {
+    "question": "How do you test asynchronous networking code in iOS without hitting the real API?",
+    "answer": "I would inject a networking layer and replace it with a mock that returns known responses in tests. That lets me verify success, failure, decoding, and loading-state behavior deterministically. For async code, the test should await the result and assert on the rendered state or view model output rather than internal implementation details. The trade-off is that you are testing the contract, which is more stable than relying on live network calls.",
+    "real_world": "This is useful when a backend is unstable or rate-limited, and CI needs reliable tests. It also catches decoding bugs before they reach production.",
+    "code_lang": "swift",
+    "code": "struct MockClient: APIClient {\n    func fetchProfile() async throws -> Profile {\n        Profile(name: \"Ava\")\n    }\n}",
+    "follow_up": "How would you test an error path or a timeout path in the same setup?"
+   },
+   {
+    "question": "How would you approach a bug where a collection view shows the wrong image after rapid scrolling?",
+    "answer": "I would first confirm whether the cell is being reused correctly and whether image requests are being canceled when the cell scrolls offscreen. Then I would check if the async callback updates the cell after it has been reused for a different model. The fix is usually to reset cell state in `prepareForReuse`, associate each request with the model or cell identity, and ignore stale callbacks. The key issue is that reuse and asynchronous loading can race each other.",
+    "real_world": "This happens often in feeds and chat apps where images arrive later than the cell configuration. Users see avatars or thumbnails flicker to the wrong content if the code does not guard against reuse.",
+    "code_lang": "swift",
+    "code": "override func prepareForReuse() {\n    super.prepareForReuse()\n    imageView.image = nil\n    task?.cancel()\n    task = nil\n}",
+    "follow_up": "How would you structure the loading code so stale completions cannot update the wrong cell?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does Swift ARC actually work at runtime, and where does its cost show up in a production iOS app?",
+    "answer": "ARC inserts retain and release operations at compile time, and the runtime updates reference counts as object ownership changes. The cost usually shows up in hot paths with lots of short-lived object churn, bridging between Swift and Objective-C, and cross-thread ownership transfers. It’s usually not one retain that hurts; it’s millions of them on scrolling, decoding, or diffing paths. Value types, copy-on-write collections, and reducing temporary object creation can materially lower that overhead.",
+    "real_world": "Teams hit this when a feed scrolls at 120Hz on newer devices but drops frames on older ones because view models, attributed strings, or boxed closures are being created and released constantly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you confirm ARC overhead instead of guessing that allocation or layout is the bottleneck?"
+   },
+   {
+    "question": "What guarantees does `@MainActor` actually give you, and what are the edge cases where people still get concurrency bugs?",
+    "answer": "`@MainActor` isolates annotated code to the main actor, so access is serialized through that actor rather than being generally thread-safe. It does not make non-isolated shared state safe, and it does not prevent logical races across suspension points where state can change before execution resumes. You also have to be careful with legacy callbacks, detached tasks, and Objective-C entry points that bypass structured concurrency assumptions. The guarantee is actor isolation, not magic global correctness.",
+    "real_world": "A common incident is a view model marked `@MainActor` that reads a shared cache mutated elsewhere; the UI code looks safe, but the cache still races and intermittently shows stale or inconsistent data.",
+    "code_lang": "swift",
+    "code": "@MainActor\nfinal class VM {\n    var text = \"\"\n    func load() async {\n        let value = await api.fetch()\n        text = value\n    }\n}\n",
+    "follow_up": "What changes when you use `Task {}` versus `Task.detached {}` from a `@MainActor` context?"
+   },
+   {
+    "question": "If you had to explain Swift actor reentrancy to a senior iOS engineer, what would you say and why does it matter?",
+    "answer": "Actors protect isolated state, but they are reentrant: once an actor-isolated function hits an `await`, other work can enter that actor before the original function resumes. That means invariants that were true before suspension may no longer hold after it. The practical fix is to avoid spanning critical state transitions across `await`, or capture and validate state after resumption. This matters because code can be data-race-free and still be logically wrong.",
+    "real_world": "Teams see this in deduped loaders or token refresh flows: two requests enter, one suspends during I/O, and another mutates the actor state, causing duplicate work or invalid refresh ordering.",
+    "code_lang": "swift",
+    "code": "actor Counter {\n    var value = 0\n    func incrementSlowly() async {\n        let old = value\n        await Task.yield()\n        value = old + 1\n    }\n}\n",
+    "follow_up": "How would you redesign that example so it preserves correctness without blocking the actor?"
+   },
+   {
+    "question": "When would you use an unstructured task in iOS, and what failure modes do you watch for?",
+    "answer": "I use unstructured tasks for lifecycle-bound work kicked off from UI events when there isn’t already an async call chain to attach to. The danger is losing cancellation, priority, and ownership semantics: the task may outlive the screen, continue expensive work, or update state after the user navigates away. If I use one, I keep a handle, cancel it explicitly, and define where results are allowed to land. Structured concurrency is preferred when the work is naturally a child of existing async work.",
+    "real_world": "A search screen that fires a new task per keystroke can easily stack requests and decode work, burning battery and showing out-of-order results unless old tasks are cancelled.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you propagate cancellation correctly from a view controller or SwiftUI view into network and decoding work?"
+   },
+   {
+    "question": "What are the real trade-offs between Core Data and SQLite or a custom persistence layer for a large iOS app?",
+    "answer": "Core Data gives you object graph management, change tracking, faulting, fetch batching, and migration tooling, which can save a lot of product time for relational local data. The trade-off is framework complexity, debugging difficulty, and performance cliffs if you misuse contexts, fetch too much, or trigger lots of fault firing on the main thread. Raw SQLite or a custom layer gives tighter control and often simpler performance reasoning, but you have to build identity, relationships, migration, and observation yourself. For large apps, the decision is usually about team expertise and data-shape stability as much as raw speed.",
+    "real_world": "This matters when an offline-first app grows from a few tables to tens of thousands of records and suddenly list screens hitch because whole object graphs are being materialized for what should have been a lightweight projection.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the Core Data patterns you rely on to keep large fetches and writes off the main thread?"
+   },
+   {
+    "question": "How would you diagnose and fix launch-time regressions in an iOS app that has grown large over time?",
+    "answer": "I’d separate pre-main from post-main time, then identify work happening synchronously on the critical path: dynamic library loading, static initializers, dependency graph creation, disk I/O, migrations, and network setup. The first fixes are usually to remove eager work, defer nonessential initialization until first use, and turn startup into a staged pipeline with explicit budgets. I also look for work accidentally forced onto main, like decoding config or reading large caches before the first frame. Launch performance is mostly about eliminating unnecessary work, not making everything slightly faster.",
+    "real_world": "A common production regression is adding analytics, feature flag setup, database migration checks, and image cache warming to startup until cold launch slips from acceptable to visibly slow on older devices.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of work are worth keeping on the launch path even if they cost time?"
+   },
+   {
+    "question": "What happens under the hood when the system delivers a memory warning or terminates your app for memory pressure, and how should that shape your design?",
+    "answer": "The system tracks memory pressure at the process level and may warn before reclaiming aggressively, but termination can still happen without much room for recovery if the app keeps growing or spikes quickly. You should treat in-memory caches as disposable, keep your working set bounded, and avoid designs that require large one-shot allocations like decoding huge images at full resolution. Releasing hidden view hierarchies, image buffers, and transient data matters more than micro-optimizing object counts. The design goal is graceful degradation under pressure, not assuming you’ll always get a chance to clean up.",
+    "real_world": "Apps often crash when opening a photo-heavy screen because thumbnails, full-size images, and rendered copies all coexist briefly, multiplying memory use far beyond what the UI suggests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools would you use to distinguish a leak from a high but bounded memory footprint?"
+   },
+   {
+    "question": "How would you reason about Swift copy-on-write performance in a real iOS codebase instead of just saying arrays are cheap until mutated?",
+    "answer": "Copy-on-write is cheap only while storage stays uniquely referenced and operations don’t force a full copy. In practice, performance depends on mutation patterns, bridging, slicing, passing large collections across abstraction layers, and hidden copies triggered by concurrent access or API boundaries. I look at whether a hot path appends repeatedly, transforms whole collections, or accidentally creates multiple owners before mutation. The trade-off is excellent ergonomics versus sometimes non-obvious copying costs at scale.",
+    "real_world": "A diffing pipeline can look innocent but end up copying large arrays multiple times per refresh when intermediate helpers each take and mutate their own copies of the same data.",
+    "code_lang": "swift",
+    "code": "var a = Array(0..<1000)\nvar b = a      // shared storage\nb.append(1000) // b may copy here\nprint(a.count) // 1000\nprint(b.count) // 1001\n",
+    "follow_up": "What coding patterns help you avoid accidental large copies without prematurely dropping to unsafe APIs?"
+   },
+   {
+    "question": "What are the hard parts of background execution on iOS, and how do you design around the system’s limits?",
+    "answer": "The hard part is that background execution is opportunistic and policy-driven: the system decides when and how long you run, and the guarantees vary by mechanism and app state. So the design has to assume work may start late, be interrupted, or never run, and every operation must be resumable and idempotent. Long chains of dependent background work are fragile unless each step persists progress and can recover after termination. The right architecture is durable state plus small retriable units, not assuming a cron-like scheduler.",
+    "real_world": "Teams get burned when they rely on a background refresh to always prefetch content or upload logs overnight, then discover it runs irregularly across devices, battery states, and user behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do silent push, background app refresh, and foreground-triggered catch-up differ as reliability mechanisms?"
+   },
+   {
+    "question": "How would you handle a production incident where networking is nominally successful, but users intermittently see stale data or out-of-order updates?",
+    "answer": "I’d first separate transport success from data freshness and ordering by checking cache policy, request deduplication, retry behavior, and whether older responses can overwrite newer state. The usual fix is to make freshness explicit with versions, timestamps, or request tokens, and ensure state application is monotonic from the UI’s point of view. I also look at intermediate caches, CDN behavior, and local persistence because stale reads often come from one layer silently serving old data. The root problem is usually missing consistency rules, not a failed HTTP request.",
+    "real_world": "This shows up in search, chat lists, and account screens where a slower earlier request finishes after a newer one and the UI applies it last, making the app look randomly wrong.",
+    "code_lang": "swift",
+    "code": "let currentID = UUID()\nlatestRequestID = currentID\nlet result = try await api.fetch()\nguard latestRequestID == currentID else { return }\nstate = result\n",
+    "follow_up": "How would you extend that approach when data can arrive from both network and local database observation?"
+   },
+   {
+    "question": "How does Swift task cancellation actually propagate in an iOS app, and what mistakes cause cancelled work to keep running anyway?",
+    "answer": "Cancellation in Swift is cooperative: a parent task marks children as cancelled, but the work only stops if code checks cancellation or calls APIs that throw on cancellation. Tight CPU loops, callback bridges, and detached tasks commonly ignore it, so work continues after a screen is gone. I structure async code to check `Task.isCancelled` or `try Task.checkCancellation()` at meaningful boundaries, and I make cancellation part of adapter code around legacy APIs. The trade-off is a bit more plumbing, but it prevents wasted battery, duplicate writes, and UI updates racing after navigation.",
+    "real_world": "A search screen can easily issue overlapping requests as the user types; if older tasks are not cancelled and observed, stale results can win the race and flash in the UI.",
+    "code_lang": "swift",
+    "code": "func load() async throws -> Data {\n    try Task.checkCancellation()\n    let data = try await api.fetch()\n    try Task.checkCancellation()\n    return data\n}",
+    "follow_up": "How would you bridge cancellation into a callback-based API that has its own cancellation token?"
+   },
+   {
+    "question": "When would you use `TaskGroup` in iOS code, and what are the failure and performance trade-offs compared with launching tasks manually?",
+    "answer": "`TaskGroup` is the right tool when you have a bounded set of child operations with the same lifetime, like fetching several independent resources for one screen. It gives you structured cancellation, scoped lifetime, and a clear rule for error handling: with throwing groups, one failure can cancel the rest. Launching tasks manually is more flexible, but it is easier to leak work, lose errors, or outlive the caller by accident. I also cap fan-out, because spawning hundreds of child tasks can increase memory, scheduling overhead, and backend pressure.",
+    "real_world": "A home screen that requests ten widgets in parallel benefits from grouping; if the user leaves the screen, the whole batch should stop instead of continuing network and decode work in the background.",
+    "code_lang": "swift",
+    "code": "let items = try await withThrowingTaskGroup(of: Item.self) { group in\n    for id in ids { group.addTask { try await api.item(id) } }\n    var out: [Item] = []\n    for try await item in group { out.append(item) }\n    return out\n}",
+    "follow_up": "How would you limit concurrency inside a task group if `ids` can be very large?"
+   },
+   {
+    "question": "What is your mental model for `Sendable`, and where does it catch real bugs in a large iOS codebase?",
+    "answer": "`Sendable` means a value is safe to transfer across concurrency domains without shared mutable state causing races. In practice it catches the easy-to-miss cases where a closure passed to concurrent work captures a reference type or mutable container that was never designed for cross-thread access. The hard part is that many UIKit and Foundation reference types are not meaningfully sendable, so the fix is often architectural: isolate state in an actor, convert to immutable value snapshots, or constrain execution to one actor. Marking things `@unchecked Sendable` should be rare because it suppresses a real safety check.",
+    "real_world": "Teams often hit this during migration to strict concurrency when networking callbacks start capturing caches, formatters, or model objects that are mutated elsewhere, causing flaky data races instead of deterministic crashes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is `@unchecked Sendable` justified, and what proof would you want before allowing it in code review?"
+   },
+   {
+    "question": "What are the practical differences between `NSLock`, serial queues, and actors for protecting mutable state on iOS?",
+    "answer": "They all serialize access, but they differ in cost, ergonomics, and failure modes. `NSLock` is low-level and fast for small critical sections, but it is easy to deadlock or accidentally hold across expensive work. A serial queue is a good fit for legacy callback code and can integrate with GCD APIs, but sync hops and reentrancy assumptions can get subtle. Actors give the best compiler-supported isolation in Swift concurrency, but they require async call sites and can still suffer from logical races if you split read-modify-write across suspension points.",
+    "real_world": "A shared in-memory cache used by image loading, prefetching, and eviction can work with any of the three, but the wrong choice often shows up as either UI latency from over-serialization or heisenbugs from accidental unsynchronized access.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where an actor is safer than a lock but slower in practice?"
+   },
+   {
+    "question": "How do you reason about Core Data concurrency in a production app, especially with background imports and UI consistency?",
+    "answer": "I treat managed object contexts as thread- or queue-confined and pass object IDs, not managed objects, across boundaries. Background imports should write in a private context, save in batches, and merge changes into the view context in a controlled way so the UI updates predictably. The trade-off is merge complexity versus responsiveness: large saves and aggressive fault firing can cause jank, while too many tiny saves amplify I/O and notification overhead. You also need to decide how conflicts are resolved, because last-writer-wins can silently drop user edits.",
+    "real_world": "A sync job importing thousands of records can make scrolling hitch if the main context is forced to process a flood of changes or if the UI faults in too much object graph data at once.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if a background import causes the fetched results controller to emit a storm of UI updates?"
+   },
+   {
+    "question": "What actually happens in the rendering pipeline between changing a view property and pixels appearing on screen, and where do performance problems usually come from?",
+    "answer": "Most UIKit and SwiftUI changes eventually become layer tree mutations that are committed in a transaction before the render server composites frames for display. Performance issues usually come from doing too much work on the main thread before commit, triggering expensive layout passes, causing offscreen rendering, or decoding large images right when a frame is needed. I separate CPU-bound preparation from main-thread view updates and verify whether the bottleneck is app-side work or GPU/compositing behavior. The key trade-off is visual richness versus consistent frame time; on 60 Hz you have about 16.7 ms per frame, and less on higher refresh devices.",
+    "real_world": "A feed with shadows, masks, dynamic text sizing, and large remote images can look fine on a fast phone but drop frames badly on older devices when many cells enter at once.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which layer or view features most often trigger offscreen rendering, and how do you confirm it?"
+   },
+   {
+    "question": "How would you investigate and fix an app that intermittently hangs without crashing, especially around the main thread?",
+    "answer": "I would start by distinguishing a deadlock, a long synchronous operation, and thread contention, because they look similar to users but have different fixes. In practice I capture main-thread stack traces during the hang, inspect signposts and time profiler data, and look for sync waits on queues, blocking I/O, expensive JSON or image work, or lock inversion. If the app appears frozen only under load, I also suspect priority inversion or too much work bouncing back to the main actor. The fix is usually architectural: remove sync waits, shorten critical sections, push work off the main thread, or make dependencies asynchronous end-to-end.",
+    "real_world": "A common production incident is calling `DispatchQueue.main.sync` indirectly from code already reachable on the main thread, or blocking the main thread waiting for a network callback that itself needs the main thread.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell apart a deadlock from a livelock or starvation issue in diagnostics?"
+   },
+   {
+    "question": "What are the real trade-offs between `NotificationCenter`, delegates, Combine publishers, and async streams for app-wide event delivery on iOS?",
+    "answer": "Delegates are best for one-to-one, strongly typed relationships with clear ownership. `NotificationCenter` is simple for broad fan-out, but it is loosely typed and easy to abuse into hidden coupling. Combine and async streams give stronger composition and cancellation semantics for ongoing event pipelines, but they add complexity and can obscure ownership if subscriptions are scattered. I choose based on cardinality, type safety, lifetime, and whether backpressure or structured cancellation matters.",
+    "real_world": "A login-state change that many features care about is tempting to broadcast everywhere; if you use notifications casually, you often end up with observers firing in surprising orders and features tightly coupled through global state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent duplicate handling or ordering bugs when multiple observers react to the same event?"
+   },
+   {
+    "question": "How do you design deep linking and navigation state so it works with multiple scenes, cold starts, and partially loaded data?",
+    "answer": "I treat a deep link as an intent that must be parsed into a stable route plus the data dependencies required to fulfill it. On cold start or in a new scene, the app may need authentication, store hydration, or remote fetches before the final screen can be shown, so navigation should be resumable instead of assuming everything is already in memory. The trade-off is complexity versus reliability: a centralized router can simplify reasoning, but it can also become a god object if it owns too much app state. I prefer route parsing, coordinators or flow objects, and explicit fallback states when the target cannot be resolved.",
+    "real_world": "Without this, links opened from push notifications often fail only in production when the app starts fresh, because the code path was tested mainly from an already-running app with caches populated.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle a deep link that targets content the user no longer has permission to access?"
+   },
+   {
+    "question": "How do you make `Codable` decoding resilient to backend drift without silently corrupting product behavior?",
+    "answer": "I separate transport models from domain models and make decoding tolerant only where the product can truly tolerate it. Missing optional fields and additive changes are fine, but for fields that drive logic or experiments I prefer explicit validation, defaults chosen deliberately, and metrics when payloads are malformed or semantically inconsistent. The trade-off is strictness versus availability: failing the whole payload can blank a screen, but accepting bad data silently can create harder production bugs. Custom decoding is often worth it for versioned enums, date formats, and partial-failure handling.",
+    "real_world": "A backend adding a new enum case can break app logic if the client assumes exhaustive handling; the safer pattern is to preserve unknown values or map them to a controlled fallback and alert on it.",
+    "code_lang": "swift",
+    "code": "enum Status: Decodable {\n    case active, disabled, unknown(String)\n    init(from decoder: Decoder) throws {\n        let raw = try decoder.singleValueContainer().decode(String.self)\n        switch raw {\n        case \"active\": self = .active\n        case \"disabled\": self = .disabled\n        default: self = .unknown(raw)\n        }\n    }\n}",
+    "follow_up": "How would you surface decoding drift quickly in production without flooding your telemetry?"
+   }
+  ]
+ }
+}

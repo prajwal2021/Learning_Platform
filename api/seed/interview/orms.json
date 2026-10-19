@@ -1,0 +1,493 @@
+{
+ "slug": "orms",
+ "name": "ORMs (Hibernate, SQLAlchemy, Prisma, Entity Framework)",
+ "category": "Databases",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is an ORM, and why would you use one instead of writing SQL everywhere?",
+    "answer": "An ORM maps database tables to language objects so you can create, read, update, and delete data using normal code instead of composing every query by hand. It helps with productivity, consistency, and keeps a lot of boilerplate out of application code. The trade-off is that you still need to understand SQL, because ORMs can hide expensive queries or make simple things more complicated.",
+    "real_world": "A team building a CRUD admin app uses an ORM to avoid repeating insert and update SQL in every service. Later they notice slow pages because the ORM is loading too much data without them realizing it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between an entity object and a plain data transfer object?"
+   },
+   {
+    "question": "What is lazy loading in an ORM?",
+    "answer": "Lazy loading means related data is not fetched until your code actually accesses it. This can reduce unnecessary queries, but it can also create extra database round trips later if you iterate through many objects. In some systems it can even fail outside the original database session or context, so you need to know when related data is being loaded.",
+    "real_world": "A page loads a list of users and then touches each user’s profile relation, causing dozens of extra queries. The team had expected one query and instead got a slow page because of lazy loading.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the opposite of lazy loading, and when would you prefer it?"
+   },
+   {
+    "question": "What is the N+1 query problem?",
+    "answer": "N+1 happens when you first run one query to load a list of items, and then the ORM runs one more query per item to fetch related data. That is often caused by accessing relationships one object at a time instead of preloading them. The fix is usually to eager load the needed relations or fetch the data in a single joined query.",
+    "real_world": "A dashboard that shows orders and customer names works in development but becomes very slow in production. The root cause is the ORM issuing one query for orders and then one query per order for customer details.",
+    "code_lang": "python",
+    "code": "orders = session.query(Order).all()\nfor order in orders:\n    print(order.customer.name)\n# often becomes N+1 if customer is lazy-loaded",
+    "follow_up": "How would you detect N+1 problems in a codebase?"
+   },
+   {
+    "question": "What does it mean to map a class or model to a table?",
+    "answer": "It means each instance of the class represents one row in a table, and each field usually corresponds to a column. The ORM uses that mapping to generate SQL and turn query results back into objects. This is the core idea behind most ORMs, including Hibernate, SQLAlchemy, Prisma, and Entity Framework.",
+    "real_world": "When a schema changes, teams often update the mapped model so the application still reads and writes the correct columns. If the mapping is wrong, the app can silently save data into the wrong place or fail at runtime.",
+    "code_lang": "java",
+    "code": "@Entity\nclass User {\n  @Id Long id;\n  String email;\n}",
+    "follow_up": "What problems can happen if the model and database schema get out of sync?"
+   },
+   {
+    "question": "What is a migration in an ORM workflow?",
+    "answer": "A migration is a versioned change to the database schema, such as creating a table, adding a column, or changing an index. ORMs often help generate or manage these changes so the schema can evolve with the application code. Migrations matter because schema changes need to be repeatable across development, test, and production environments.",
+    "real_world": "A team adds a new required field in the application but forgets the migration. The app deploys successfully but fails when it tries to save records because the column does not exist.",
+    "code_lang": "sql",
+    "code": "ALTER TABLE users\nADD COLUMN display_name TEXT;",
+    "follow_up": "Why is using migrations safer than changing the database manually?"
+   },
+   {
+    "question": "What is the difference between an ORM session or context and a database connection?",
+    "answer": "A connection is the actual link to the database, while a session or context is the ORM’s unit of work that tracks objects and changes. The session may open and reuse connections behind the scenes, and it also remembers which objects are loaded or modified. This matters because many ORM operations only work while the session or context is still alive.",
+    "real_world": "A developer returns ORM objects from a function after the session is closed, then gets errors when trying to access related fields. The issue is that the ORM no longer has a live context to load the missing data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does it mean for an object to be attached or detached from a session?"
+   },
+   {
+    "question": "What is the unit of work pattern in an ORM?",
+    "answer": "The unit of work groups changes to objects and then writes them to the database together, usually on commit. Instead of issuing a query for every small change, the ORM tracks what was inserted, updated, or deleted and flushes those changes in a controlled way. This helps keep transactions consistent, but it can also make the timing of SQL less obvious to beginners.",
+    "real_world": "A service updates several related rows and either wants all of them saved or none of them saved. The ORM’s unit of work lets the team commit them as one transaction instead of handling each update separately.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between flush and commit?"
+   },
+   {
+    "question": "How do you usually model relationships like one-to-many or many-to-many in an ORM?",
+    "answer": "A one-to-many relationship is usually represented by a foreign key on the many side and a collection on the one side. A many-to-many relationship usually uses a join table, either explicitly or through ORM mapping helpers. Knowing the relationship type helps you choose the right mapping and avoid awkward data shapes.",
+    "real_world": "A product can belong to many categories, and each category can contain many products. The team uses a join table so the ORM can represent that shared relationship cleanly.",
+    "code_lang": "python",
+    "code": "class Order(Base):\n    __tablename__ = 'orders'\n    items = relationship('OrderItem', back_populates='order')",
+    "follow_up": "When would you model the join table as its own entity instead of hiding it?"
+   },
+   {
+    "question": "What is eager loading, and why would you use it?",
+    "answer": "Eager loading tells the ORM to fetch related data up front instead of waiting until it is accessed later. You use it when you know you will need the related objects and want to avoid many small database calls. The trade-off is that eager loading can fetch more data than necessary, so it should match the access pattern of the code.",
+    "real_world": "A page needs orders and their line items for every row in a table. Eager loading can turn many follow-up queries into a smaller number of planned queries and make the page much faster.",
+    "code_lang": "csharp",
+    "code": "var orders = context.Orders\n    .Include(o => o.Items)\n    .ToList();",
+    "follow_up": "How do eager loading and lazy loading affect performance differently?"
+   },
+   {
+    "question": "What is a common mistake when using an ORM with transactions?",
+    "answer": "A common mistake is assuming changes are saved immediately when you modify an object in memory. In many ORMs, the database is only updated when the session flushes or the transaction commits. Another mistake is holding a transaction open too long, which can cause locks and slow down other requests.",
+    "real_world": "An API updates an order and then sends a confirmation email before the transaction commits. If the commit fails, the email is still sent even though the database change never happened.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure code so external side effects only happen after a successful commit?"
+   },
+   {
+    "question": "What is the difference between an ORM-generated query and writing a query by hand?",
+    "answer": "ORM-generated queries are built from object operations and relationship rules, while hand-written SQL gives you exact control over joins, filters, and projections. ORMs are good for common CRUD work, but hand-written SQL is often better for complex reporting, performance tuning, or database-specific features. A strong developer knows when to use each instead of forcing everything through the ORM.",
+    "real_world": "A reporting screen needs aggregates across several tables and the ORM query becomes hard to read and slow. The team switches that one path to raw SQL or a database view while keeping normal CRUD in the ORM.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you deliberately bypass the ORM and use raw SQL?"
+   },
+   {
+    "question": "What is a primary key in an ORM model, and why does the ORM care about it?",
+    "answer": "A primary key uniquely identifies each row, and the ORM uses it to tell one object instance from another. It needs that identity to track changes, update the right row, and avoid creating duplicates in memory for the same record. If the key is missing or unstable, persistence and relationship handling become unreliable.",
+    "real_world": "This matters when you load the same row through different code paths and expect them to refer to the same object. A bad key setup can cause duplicate inserts, broken updates, or confusing cache behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do auto-generated IDs differ from application-assigned IDs in an ORM?"
+   },
+   {
+    "question": "What does it mean for an ORM object to be transient, persistent, or detached?",
+    "answer": "These states describe whether the ORM is currently tracking the object and whether it knows how to save changes. Transient means it was created in memory and is not attached to the session or context; persistent means it is being tracked; detached means it was tracked before but is no longer attached. Knowing the state helps explain why changes are saved sometimes and ignored other times.",
+    "real_world": "A common bug is modifying an object after the session has been closed and expecting the update to be written automatically. Teams also run into detached objects when passing models between web requests or background jobs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you attach a detached object back to a session or context?"
+   },
+   {
+    "question": "What is the difference between committing and flushing in an ORM?",
+    "answer": "Flushing sends pending SQL changes to the database, while committing ends the transaction and makes those changes durable. An ORM may flush before a query so the query sees the latest in-memory changes, but the data is not final until commit. The key trade-off is that flush helps consistency inside a transaction, while commit is the boundary where the database guarantees durability.",
+    "real_world": "This shows up when a record seems to exist during a request but disappears after an error because the transaction was never committed. It also matters when debugging unexpected SQL being sent earlier than you expected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would an ORM flush automatically?"
+   },
+   {
+    "question": "Why do ORMs often use a change-tracking mechanism, and what can go wrong if you bypass it?",
+    "answer": "Change tracking lets the ORM detect which fields changed so it can generate efficient updates only for those columns. If you bypass it by updating the database directly or mutating objects in unsupported ways, the ORM’s in-memory state can get out of sync with the database. That can cause stale reads, overwritten data, or missing updates.",
+    "real_world": "This matters when one part of a service uses raw SQL for a hot path while the rest uses ORM objects. Without careful refresh or reload logic, later ORM saves can overwrite changes made outside the session.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you refresh an ORM object after the database changed outside the session?"
+   },
+   {
+    "question": "What is a relationship back-reference, and why is it useful?",
+    "answer": "A back-reference lets you navigate the relationship from both sides, such as from parent to children and from child back to parent. It is useful because it keeps the object graph easier to work with and can help the ORM keep both sides consistent in memory. The trade-off is that you need to understand which side is the owning side, especially when saving changes.",
+    "real_world": "A team might use this when creating a parent record and several children in one request, then assigning both directions in memory before saving. If the relationship is not configured consistently, one side may look right in code while the database still gets the wrong foreign key.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which side of a relationship usually stores the foreign key?"
+   },
+   {
+    "question": "What is cascading in an ORM, and when is it helpful or dangerous?",
+    "answer": "Cascading means operations on one object automatically apply to related objects, such as saving or deleting children when the parent changes. It is helpful for managing object graphs with less manual code, especially when records are truly owned by another record. It is dangerous when a delete or update spreads farther than intended and affects more rows than you expected.",
+    "real_world": "This matters in admin tools and cleanup jobs where deleting one parent record can accidentally remove a large set of related data. Teams often need to review cascade rules carefully before enabling them in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is cascading different from database foreign key ON DELETE behavior?"
+   },
+   {
+    "question": "What is the purpose of an ORM migration file compared with changing the model class or entity alone?",
+    "answer": "The model class describes the code-side shape of the data, while the migration file changes the actual database schema. Updating the model alone does nothing to existing databases. Migrations matter because they make schema changes explicit, reviewable, and repeatable across environments.",
+    "real_world": "A common production issue is deploying code that expects a new column before the database has been migrated. Migration files help teams coordinate code releases with database changes safely.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should you do when a migration needs to handle existing data safely?"
+   },
+   {
+    "question": "Why is it a problem to use an ORM object directly as your API response model?",
+    "answer": "ORM objects usually contain persistence concerns, lazy-loaded relationships, and internal state that you do not want to expose directly. Returning them can leak fields, trigger extra database access during serialization, or create circular-reference problems. A separate response DTO or serializer gives you a stable API shape and better control over what gets returned.",
+    "real_world": "This often appears when a JSON response suddenly triggers more queries than expected or includes sensitive fields. It also makes versioning harder because the API becomes tightly coupled to the database model.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you map an ORM model to a DTO instead of returning it directly?"
+   },
+   {
+    "question": "What happens if you create two ORM objects with the same primary key in the same session or context?",
+    "answer": "Most ORMs expect one tracked object per primary key within a session or context. If you try to add a second object with the same identity, you can get an error, an overwrite, or confusing behavior depending on the ORM and how it is attached. The identity map is there to keep one source of truth for each row.",
+    "real_world": "This happens when code loads an object, then later builds a new object from request data using the same ID instead of updating the loaded one. It can lead to duplicate-object bugs that are hard to debug.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you update an existing row safely instead of creating a new instance?"
+   },
+   {
+    "question": "What is a database constraint, and how should an ORM interact with it?",
+    "answer": "A constraint is a rule enforced by the database, such as uniqueness or required fields. The ORM should help you express the rule in the model, but the database still needs the constraint because application code can fail or be bypassed. Good ORM usage treats the database as the final authority and handles constraint errors explicitly.",
+    "real_world": "This matters when two requests try to create the same unique value at the same time. The ORM may let both attempts start, but the database constraint is what prevents duplicate data and forces proper error handling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle a unique constraint violation in application code?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide when to bypass the ORM and write a raw SQL query in a real application?",
+    "answer": "Use raw SQL when the ORM makes the query awkward, slow, or impossible to express clearly, especially for reporting, window functions, vendor-specific features, or bulk operations. The trade-off is losing some portability and change tracking, so you need to map the results carefully and keep the query close to the code that uses it. In normal CRUD paths, the ORM is usually fine; in hot paths, measure first and optimize surgically.",
+    "real_world": "A team might keep 95% of queries in the ORM but switch one dashboard endpoint to raw SQL because the ORM version causes multiple round trips and timeouts. Another common case is bulk updates where loading thousands of entities into memory is too expensive.",
+    "code_lang": "python",
+    "code": "from sqlalchemy import text\nrows = session.execute(\n    text(\"SELECT user_id, count(*) AS orders FROM orders GROUP BY user_id\")\n).all()",
+    "follow_up": "How do you keep raw SQL from becoming hard to maintain in a codebase that mostly uses an ORM?"
+   },
+   {
+    "question": "What causes an ORM query to be much slower than the equivalent SQL, and how do you debug that?",
+    "answer": "Common causes are accidental extra queries, loading too much data, poor join shape, inefficient filtering, and client-side processing after rows are fetched. I usually inspect the generated SQL, check the number of round trips, and look at the database execution plan before changing code. The key is to distinguish ORM overhead from a genuinely bad query plan.",
+    "real_world": "A production endpoint can look fine in code review but turn out to issue one query per row because of relationship access inside a loop. Another case is a query that returns full entities when the caller only needs two columns, inflating latency and memory use.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools or logs would you use to see the SQL your ORM is actually sending?"
+   },
+   {
+    "question": "How do you handle updates to a single field without first loading the whole entity from the database?",
+    "answer": "If the ORM supports it, use a targeted update statement or attach a stub entity and mark only the changed fields as modified. This avoids an extra read and can reduce lock time and memory use, but you lose some validation that would happen on a loaded entity. For high-throughput paths, that trade-off is often worth it.",
+    "real_world": "This matters for simple actions like marking an order as shipped or incrementing a counter. Loading the full object graph just to change one column can create unnecessary latency and contention.",
+    "code_lang": "javascript",
+    "code": "await prisma.user.update({\n  where: { id },\n  data: { lastLoginAt: new Date() }\n})",
+    "follow_up": "When would you still prefer loading the entity before updating it?"
+   },
+   {
+    "question": "What is optimistic concurrency control in an ORM, and why is it useful?",
+    "answer": "Optimistic concurrency checks whether the row changed since you last read it, usually with a version column or timestamp. It helps prevent silent overwrites when two requests update the same record at about the same time. If the check fails, you can retry, merge, or return a conflict instead of losing data.",
+    "real_world": "This comes up in admin screens or collaborative workflows where two users edit the same record. Without concurrency checks, the last save can overwrite a more recent change with no warning.",
+    "code_lang": "csharp",
+    "code": "public class Order {\n  public int Id { get; set; }\n  [Timestamp] public byte[] Version { get; set; }\n}",
+    "follow_up": "How would you design the user experience when a concurrency conflict happens?"
+   },
+   {
+    "question": "How do ORM-managed transactions help, and what problems still require careful handling?",
+    "answer": "ORM-managed transactions make it easier to group related changes and commit them atomically, which protects consistency when several tables must change together. But they do not fix long-running work, external API calls, or poor isolation choices, and they can still deadlock or fail on retries. You still need to keep the transaction short and know what should happen on rollback.",
+    "real_world": "A common failure mode is starting a transaction, then making a network call before committing. That holds locks longer than necessary and can cause timeouts under load.",
+    "code_lang": "python",
+    "code": "with Session(engine) as session:\n    with session.begin():\n        session.add(order)\n        order.status = \"paid\"",
+    "follow_up": "When would you use a separate transaction scope for part of a workflow?"
+   },
+   {
+    "question": "What is the difference between loading a relationship and filtering on it in the database?",
+    "answer": "Loading a relationship means populating related objects for later use, while filtering on it means using related-table conditions to choose which parent rows come back. These are different operations and can produce very different SQL and performance characteristics. A query can filter by a relation without eagerly loading that relation, and vice versa.",
+    "real_world": "This matters when you want only users who have paid invoices, but you do not need the invoice rows in memory. Confusing the two often leads to either over-fetching or missing rows entirely.",
+    "code_lang": "sql",
+    "code": "SELECT u.*\nFROM users u\nWHERE EXISTS (\n  SELECT 1 FROM invoices i\n  WHERE i.user_id = u.id AND i.status = 'paid'\n)",
+    "follow_up": "How would you express the same idea in a typical ORM query builder?"
+   },
+   {
+    "question": "How do you model many-to-many relationships when the join table has extra data?",
+    "answer": "Once the join table has its own attributes, it should usually become an explicit entity rather than a pure link table. That lets you store things like role, quantity, or timestamps on the association itself and query it directly. The trade-off is a slightly more complex object model, but it matches the database reality better.",
+    "real_world": "This shows up in memberships where a user belongs to a team with a specific role, or in order items where the association stores quantity and price. Trying to force this into a bare many-to-many usually leads to awkward hacks.",
+    "code_lang": "python",
+    "code": "class Membership(Base):\n    user_id = Column(FK('users.id'), primary_key=True)\n    team_id = Column(FK('teams.id'), primary_key=True)\n    role = Column(String)",
+    "follow_up": "How would cascading deletes behave differently on an association entity versus a pure join table?"
+   },
+   {
+    "question": "What is the safest way to delete a parent row that has children in an ORM-backed application?",
+    "answer": "The safest approach depends on your domain rules: either delete the children explicitly, reassign them, or let the database reject the delete if the relationship must not be broken. ORM cascade delete can be convenient, but it should reflect real ownership, not just save code. I prefer making the rule obvious in both the model and the database constraint.",
+    "real_world": "A team can accidentally wipe out large parts of a dataset when a parent entity is deleted and cascade is broader than intended. Another common issue is foreign key errors in production because the code assumed a delete would magically clean up dependents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide whether to use ORM cascade rules or database-level cascade rules?"
+   },
+   {
+    "question": "What testing strategy do you use for ORM code so you catch mapping and query issues before production?",
+    "answer": "I use unit tests for domain logic, but I also want integration tests that hit a real database and exercise the actual mappings, migrations, and queries. In-memory substitutes can miss differences in SQL behavior, constraints, and transaction semantics. The goal is to test the ORM layer where it can fail, not just the pure business logic.",
+    "real_world": "A query that passes against an in-memory test database can fail in production because the real database handles nulls, case sensitivity, or joins differently. Migration problems also often show up only when the schema is applied for real.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you include in a minimal integration test for an ORM repository or data access layer?"
+   },
+   {
+    "question": "How do you think about schema changes in a team when the ORM model, migrations, and deployed database can get out of sync?",
+    "answer": "Treat the migration as the source of truth for the schema change, and make the model code follow it in the same release. If the application must support old and new code during rollout, make changes in a backward-compatible order, such as adding nullable columns before removing old ones. The main risk is deploying code that assumes a schema change the database does not yet have.",
+    "real_world": "This matters in zero-downtime deployments where multiple app instances may run different versions briefly. A bad rollout order can cause runtime errors or failed migrations in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle a migration that must rename or split a column without downtime?"
+   },
+   {
+    "question": "How do you avoid the ORM identity map returning stale data when another process updates the same row?",
+    "answer": "Within a single session or context, the ORM usually gives you the same in-memory object for a row, so it will not notice outside changes unless you refresh or expire it. If your read-after-write path must reflect concurrent updates, you need an explicit reload strategy or a shorter unit of work. The trade-off is consistency versus extra database round trips. If the application has long-lived sessions, stale state becomes much more likely.",
+    "real_world": "This shows up in web apps with background jobs or multiple app instances, where one request updates a record and another request keeps serving the old value from its session cache. Teams often debug “why is the UI not seeing the latest status?” only to find the object was already loaded earlier in the request.",
+    "code_lang": "python",
+    "code": "user = session.get(User, 1)\n# another process updates row here\nsession.refresh(user)\nprint(user.status)",
+    "follow_up": "How would you design session scope in a web application to reduce stale reads?"
+   },
+   {
+    "question": "When would you use an explicit join entity instead of a plain many-to-many mapping?",
+    "answer": "Use an explicit join entity when the association itself has data or behavior, such as role, created_at, sort order, or approval state. It also makes the relationship easier to query and validate when you need to treat the link as a first-class record. A plain many-to-many is simpler, but it breaks down as soon as the join row carries meaning beyond the two foreign keys.",
+    "real_world": "A team might start with a simple user-group join table, then later need to store who invited the user and when they joined. At that point, the association becomes business data, not just plumbing.",
+    "code_lang": "python",
+    "code": "class Membership(Base):\n    user_id = Column(ForeignKey('user.id'), primary_key=True)\n    group_id = Column(ForeignKey('group.id'), primary_key=True)\n    role = Column(String)\n    joined_at = Column(DateTime)",
+    "follow_up": "How do you map that join entity so both sides of the relationship stay easy to use?"
+   },
+   {
+    "question": "What happens if you modify a detached ORM object and then try to save it later?",
+    "answer": "A detached object is no longer being tracked by an active session or context, so changes to it are not automatically detected. To persist those changes, you usually need to reattach or merge the object, or load the current row and copy over the updates. The main risk is overwriting newer database state with stale detached data. This is especially common when objects cross request boundaries.",
+    "real_world": "This often appears in service layers that serialize entities, send them to another layer, and later try to reuse them for updates. In production, it can cause missing updates or surprise conflicts because the object stopped participating in change tracking.",
+    "code_lang": "csharp",
+    "code": "var existing = await db.Users.FindAsync(dto.Id);\nexisting.Name = dto.Name;\nawait db.SaveChangesAsync();",
+    "follow_up": "What are the risks of using merge or attach methods with detached objects?"
+   },
+   {
+    "question": "How do you prevent a large object graph from being loaded accidentally when you traverse relationships?",
+    "answer": "You control the shape of loading with explicit include/join options, or by keeping relationships lazy only where that is acceptable. For large graphs, prefer loading exactly what the use case needs and avoid walking object references in code that may trigger more queries than expected. The trade-off is convenience versus predictability and memory use. This is important because a small-looking loop can expand into many database calls.",
+    "real_world": "A common failure mode is a report endpoint that loads a root entity and then iterates through nested relationships, unexpectedly pulling thousands of rows into memory. The endpoint may work in staging but time out under production data volume.",
+    "code_lang": "python",
+    "code": "orders = (\n    session.query(Order)\n    .options(selectinload(Order.items))\n    .filter(Order.customer_id == cid)\n    .all()\n)",
+    "follow_up": "How do you decide between select-in loading and a join-based eager load?"
+   },
+   {
+    "question": "How do you handle bulk updates or deletes without loading each row into memory?",
+    "answer": "For set-based operations, use the ORM’s bulk or query-based update and delete APIs, or raw SQL if the ORM abstraction gets in the way. That avoids materializing thousands of entities and can be much faster, but it also bypasses normal change tracking and lifecycle hooks. You need to be careful about stale in-memory objects and any business logic that depends on per-entity events. The key trade-off is performance versus ORM-managed behavior.",
+    "real_world": "This is common for backfills, cleanup jobs, and account deactivation flows where you need to touch many rows quickly. A team can accidentally write a per-row loop and turn a minutes-long job into a hours-long one.",
+    "code_lang": "python",
+    "code": "session.query(User).filter(User.last_login < cutoff).update(\n    {User.active: False}, synchronize_session=False\n)\nsession.commit()",
+    "follow_up": "What problems can happen if the session still has loaded instances of those rows?"
+   },
+   {
+    "question": "Why can ORM pagination become incorrect or inefficient with joins, and how do you fix it?",
+    "answer": "A join can multiply rows, so applying limit and offset to the joined result may page over duplicates instead of distinct root records. That can produce missing or repeated entities across pages and often forces the database to process more data than needed. A common fix is to page on the root IDs first, then load the related data in a second step. This keeps pagination stable and easier to reason about.",
+    "real_world": "This often breaks list endpoints that join tags, comments, or child rows and then paginate in the ORM. Users see duplicated items on one page and missing items on the next because the SQL pages rows, not objects.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM orders o\nWHERE o.id IN (\n  SELECT id FROM orders\n  ORDER BY created_at DESC\n  LIMIT 20 OFFSET 40\n);",
+    "follow_up": "What alternative pagination approach would you use for very large tables?"
+   },
+   {
+    "question": "How do you keep ORM models and database schema in sync across multiple deployment environments?",
+    "answer": "Use migrations as the source of truth, and make deployments tolerant of intermediate states when old and new code overlap. That usually means expanding schema first, deploying code that can handle both shapes, and only then removing old columns or constraints. The main risk is assuming code and database move together when production often lags behind by one or more releases. Good deployment order matters more than the ORM itself.",
+    "real_world": "This is critical in blue-green or rolling deploys where one version of the app may read a column that another version already dropped. Teams often discover this only after a partial rollout causes runtime errors in one environment.",
+    "code_lang": "yaml",
+    "code": "# deployment order idea\n# 1. add nullable column\n# 2. deploy code that writes both fields\n# 3. backfill data\n# 4. remove old field later",
+    "follow_up": "How would you design a migration that safely renames a column with no downtime?"
+   },
+   {
+    "question": "When would you turn off automatic change tracking or use read-only queries in an ORM?",
+    "answer": "Use read-only patterns when you only need to display data and do not plan to mutate it, because tracking every object adds memory and CPU overhead. This is useful for reporting, search results, and large exports where identity resolution and dirty checking are unnecessary. The trade-off is losing the convenience of automatic updates, so you should only do it where write behavior is clearly not needed. It can also reduce accidental writes in code paths that should be pure reads.",
+    "real_world": "Reporting screens and export jobs often suffer from slow memory growth because thousands of rows are being tracked even though nothing will be saved. Teams usually notice this when a page that should be cheap becomes one of the slowest endpoints in the service.",
+    "code_lang": "python",
+    "code": "rows = session.execute(\n    select(User.id, User.email).execution_options(stream_results=True)\n)\nfor row in rows:\n    print(row.email)",
+    "follow_up": "What are the downsides of bypassing entity tracking in a read-modify-write flow?"
+   },
+   {
+    "question": "How do you test ORM queries so you catch database-specific behavior before release?",
+    "answer": "Use a real database in integration tests for the queries that matter, especially anything involving joins, constraints, transactions, or vendor-specific SQL. Unit tests can mock too much and miss issues like case sensitivity, cascading behavior, or unsupported SQL generated by the ORM. The goal is not to test the ORM itself, but to verify your mapping and query assumptions against the actual database engine. For high-risk queries, include fixture data that exercises edge cases.",
+    "real_world": "This matters when a query passes in an in-memory test database but fails in PostgreSQL or SQL Server because the SQL dialect behaves differently. Teams often catch these only after deployment unless they run integration tests against the same engine they use in production.",
+    "code_lang": "python",
+    "code": "def test_unique_email(db_session):\n    db_session.add(User(email='a@x.com'))\n    db_session.commit()\n    with pytest.raises(IntegrityError):\n        db_session.add(User(email='a@x.com'))\n        db_session.commit()",
+    "follow_up": "What kind of ORM behavior would you still mock in a unit test, if any?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does an ORM decide the order of INSERTs, UPDATEs, and DELETEs during a flush, and what edge cases can still break it?",
+    "answer": "Most ORMs build a dependency graph from foreign keys and queued entity state changes, then topologically order statements so parents and children satisfy constraints. They also batch similar statements when possible, which can fight with dependency ordering. Cycles, self-referential rows, database triggers, and non-null foreign keys with mutually dependent rows are common edge cases where the ORM may need multiple flushes, deferred constraints, or explicit SQL. If you do not understand the flush plan, you can get constraint failures even though the object graph looks valid in memory.",
+    "real_world": "A classic incident is creating two rows that reference each other through non-null foreign keys: the app works in unit tests with relaxed constraints, then production fails on flush because neither row can be inserted first.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle a circular foreign-key dependency without dropping constraints?"
+   },
+   {
+    "question": "What is the trade-off between identity generation strategies like database-generated IDs, sequences, and client-generated UUIDs in an ORM?",
+    "answer": "The choice affects when the ORM knows the primary key, how well inserts batch, and how indexes behave. Database-generated identities are simple but can force an insert earlier and reduce batching because the key comes back row by row. Sequence-based or pooled allocation lets the ORM assign IDs before insert and usually batches better. Client-generated UUIDs avoid round trips but can enlarge indexes and, depending on the UUID shape, hurt locality and write amplification.",
+    "real_world": "Teams often see a large drop in insert throughput after moving to identity columns because the ORM can no longer batch large writes as efficiently as it did with preallocated sequence values.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does key generation choice affect insert batching in your ORM of choice?"
+   },
+   {
+    "question": "Why do bulk inserts often perform much worse through an ORM than expected, and what do you change first when ingesting millions of rows?",
+    "answer": "The slow path is usually not SQL generation itself but per-row object construction, change tracking, relationship bookkeeping, flush bookkeeping, and keeping all objects in the identity map. The first fixes are to batch work explicitly, flush and clear the session/context periodically, disable features you do not need for the import path, and use the ORM's bulk APIs or database-native loaders when semantics allow. You also want to watch transaction size, lock duration, and memory growth. For very large imports, raw database bulk load tools usually beat any full ORM path.",
+    "real_world": "A backfill job that creates millions of tracked entities can exhaust memory long before the database is the bottleneck; clearing the session every few thousand rows often fixes the immediate issue.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What ORM guarantees do you give up when you switch to bulk APIs or native loaders?"
+   },
+   {
+    "question": "What are the correctness risks of using ORM-level upsert helpers or merge-like operations?",
+    "answer": "They look convenient, but they can blur the difference between insert and update semantics. Depending on the ORM and database, they may overwrite fields you did not mean to touch, ignore in-memory version checks, trigger unexpected updates of relationships, or behave differently across dialects. Merge-style APIs are especially risky with partially populated detached objects because absent fields can be interpreted in surprising ways. I treat upsert as a business decision, not just a convenience method, and verify the exact SQL and conflict behavior.",
+    "real_world": "A common production bug is a consumer receiving partial event payloads and calling a merge helper, which then nulls columns that were never present in the event.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement an upsert when only a subset of columns should be updated on conflict?"
+   },
+   {
+    "question": "How can an ORM accidentally cause lock escalation or long lock hold times, even if individual queries look reasonable?",
+    "answer": "The ORM can stretch transaction lifetimes by keeping a unit of work open across network calls, rendering templates, or multiple repository methods before flush and commit. It can also issue updates in an order that touches many rows before reaching the hot one, or flush unexpectedly before a read query, acquiring locks earlier than the developer expects. Large batches and cascades amplify this because more rows remain locked until commit. The fix is usually tighter transaction boundaries, explicit flush points, and reviewing generated SQL with the database's lock behavior in mind.",
+    "real_world": "I've seen a simple admin action block checkout traffic because the request opened a transaction, loaded and modified a large graph, then called an external service before committing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs in database monitoring would tell you the ORM is holding locks too long?"
+   },
+   {
+    "question": "What does it mean for an ORM to compile or cache queries, and why can that matter under load?",
+    "answer": "Most mature ORMs turn an expression tree or query builder graph into SQL plus metadata, then cache some or all of that work so repeated query shapes are cheap. If your code constantly creates unique query shapes, embeds literals instead of parameters, or uses dynamic includes and projections in many combinations, cache hit rate drops and CPU goes into query compilation instead of execution. It also affects database plan caching because unstable SQL text produces more distinct plans. Under load, this shows up as high application CPU even when the database is not saturated.",
+    "real_world": "A reporting endpoint that dynamically builds many slightly different predicates can burn application CPU on query compilation and flood the database with one-off plans.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether the bottleneck is ORM query compilation versus database execution?"
+   },
+   {
+    "question": "How do inheritance mappings in ORMs actually translate to SQL, and what are the performance trade-offs between the common strategies?",
+    "answer": "Single-table inheritance stores all types in one table with a discriminator, which keeps reads simple but can create many nullable columns and weak per-subtype constraints. Joined-table inheritance normalizes subtype fields into separate tables, which preserves structure but adds joins to read a concrete type. Table-per-concrete-type avoids joins for a single subtype but makes polymorphic queries expensive because they become unions. The right choice depends on whether you do mostly polymorphic reads, subtype-specific reads, or frequent schema evolution.",
+    "real_world": "Teams often choose joined inheritance for purity, then discover a hot endpoint reads large polymorphic lists and now pays several joins per row.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you avoid ORM inheritance entirely and model it with explicit composition?"
+   },
+   {
+    "question": "What are the hidden costs of automatic relationship fix-up or bidirectional synchronization inside an ORM?",
+    "answer": "When you add a child to a parent collection, many ORMs also set the child's back-reference and update bookkeeping so the graph stays consistent in memory. That convenience has costs: extra CPU for graph maintenance, accidental loading of collections during synchronization, and surprising side effects when large collections are involved. It can also hide bugs because the in-memory graph looks correct even if the intended database-side operation is expensive or incomplete. On hot paths, I prefer smaller aggregates and explicit updates over giant bidirectional graphs.",
+    "real_world": "A harmless-looking add-to-collection loop can become quadratic when each mutation causes collection bookkeeping across thousands of existing children.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you profile whether relationship fix-up is the bottleneck rather than SQL execution?"
+   },
+   {
+    "question": "What happens when ORM mapping metadata and the live schema drift apart in subtle ways, like nullability, column defaults, or enum values?",
+    "answer": "You get failures that are hard to reproduce because the app's assumptions no longer match what the database enforces or auto-fills. A property the ORM thinks is optional may violate a not-null constraint, a server default may be missed because the ORM sends an explicit null, or an enum change may deserialize rows the application no longer understands. These are not just migration problems; they are runtime contract mismatches. The defense is schema diffing in CI, integration tests against the real engine, and careful rollout of application and database changes.",
+    "real_world": "A frequent outage pattern is adding a database default and assuming old application versions will benefit, but the ORM still sends explicit nulls so inserts continue failing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you roll out a new non-null column safely when multiple app versions may run at once?"
+   },
+   {
+    "question": "Can an ORM contribute to deadlocks, and how do you reduce deadlock frequency without just retrying forever?",
+    "answer": "Yes. Deadlocks often come from different transactions touching the same tables and rows in different orders, and ORM-generated flushes can make that order less obvious. Cascades, implicit flushes, and loading then updating graphs can widen the lock footprint compared with a narrow hand-written statement. The best fixes are consistent access ordering, smaller transactions, targeted updates, and using the same query patterns across code paths so lock acquisition is predictable. Retries are still necessary, but if deadlocks are common, the write path shape usually needs redesign.",
+    "real_world": "Two services may both update account and invoice rows, but if one path reaches them through account->invoices and the other through invoice->account, deadlocks can spike under concurrency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What information would you collect from the database and application to prove the deadlock is caused by ORM flush ordering?"
+   },
+   {
+    "question": "How do second-level caches in ORMs actually work, and what consistency problems do they introduce?",
+    "answer": "A second-level cache stores entity or query results beyond a single session/context, usually keyed by primary key and sometimes invalidated on writes. It reduces read load, but correctness depends on the invalidation model: local caches, distributed caches, and query caches all have different staleness windows. Query caches are especially tricky because they depend on table-level or region-level invalidation, not just entity keys. I only use them for data that is read-heavy and can tolerate bounded staleness, or where updates flow through one controlled path.",
+    "real_world": "Teams often enable a cache and see latency improve, then later serve stale prices or permissions because another service updated the same tables without going through the ORM. In multi-node deployments, cache invalidation lag becomes the real failure mode, not raw query speed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you cache whole entities versus just reference data or hand-picked query results?"
+   },
+   {
+    "question": "What can go wrong when an ORM keeps a session or DbContext open for too long?",
+    "answer": "A long-lived session accumulates tracked entities, snapshots, and relationship state, so memory usage and flush cost grow over time. It also increases the chance of writing stale assumptions back to the database, because the in-memory view diverges from current rows. In some ORMs, accidental autoflush before queries can turn a read path into a write path with surprising lock timing. The safe pattern is usually short-lived units of work, explicit transaction boundaries, and periodic clearing if you must process large batches.",
+    "real_world": "A common production incident is a background worker that reuses one context for thousands of messages and gets slower every hour, then starts timing out or OOMing. Another is a web request scope that leaked into async jobs and held onto stale tracked entities.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you process a million-row batch while still using the ORM safely?"
+   },
+   {
+    "question": "How do ORMs translate LINQ or expression trees into SQL, and where do translation boundaries usually fail?",
+    "answer": "Most ORMs build an abstract query tree from language constructs, then rewrite and lower it into a dialect-specific SQL AST. The hard boundary is anything the provider cannot prove how to execute in SQL: custom methods, some date or string operations, provider-specific semantics, or mixed client/server evaluation. Good ORMs now fail fast more often instead of silently switching large parts to client-side execution, because that can explode data transfer. The practical rule is to know what stays server-side and inspect generated SQL for nontrivial queries.",
+    "real_world": "This matters when a harmless-looking helper function inside a filter suddenly makes the ORM pull far more rows than intended, or just throws at runtime after a deploy because one provider supports the translation and another does not.",
+    "code_lang": "csharp",
+    "code": "var q = ctx.Users\n    .Where(u => Normalize(u.Email) == target) // custom method\n    .Select(u => u.Id);\n\n// Often not translatable; fix by using SQL-translatable ops only.",
+    "follow_up": "What kinds of expressions are most likely to produce provider-specific bugs across PostgreSQL, SQL Server, and MySQL?"
+   },
+   {
+    "question": "How do you reason about isolation levels when the ORM hides a lot of the SQL details?",
+    "answer": "The ORM does not remove database isolation behavior; it just makes it easier to forget which reads and writes happen inside the transaction. You still need to reason about lost updates, non-repeatable reads, phantom rows, and lock scope, especially when one business operation spans multiple ORM queries. Higher isolation can prevent anomalies but increases contention, and some ORMs may emit extra reads during flush or relationship handling that affect locking. I pick the isolation level based on the invariant I need, then verify the actual SQL sequence the ORM issues.",
+    "real_world": "A classic bug is checking 'no active subscription exists' and then inserting one in the same service method, only to get duplicates under concurrency because the transaction and uniqueness strategy were not designed together.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you needed to enforce a cross-row business invariant, would you rely on isolation level, explicit locking, unique constraints, or all three?"
+   },
+   {
+    "question": "What are the trade-offs between database defaults, ORM-side defaults, and generated columns?",
+    "answer": "Database defaults apply no matter who writes the row, so they are better for shared schemas and operational correctness. ORM-side defaults are convenient in application code but can diverge across services, and they may not apply on bulk operations or direct SQL paths. Generated columns or computed values centralize logic in the database, but the ORM has to know whether a field is server-generated so it can refresh it correctly after insert or update. I prefer the database as the source of truth for important values, then map them explicitly.",
+    "real_world": "Teams get bitten when one service inserts via the ORM and another uses raw SQL or a different language stack, and only one path populates a supposedly default field. That turns into null-handling bugs and inconsistent analytics.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you map a server-generated value so the ORM does not overwrite it or assume it already knows the final value?"
+   },
+   {
+    "question": "How do soft deletes interact with ORM relationships and uniqueness constraints?",
+    "answer": "Soft deletes seem simple until joins, uniqueness, and cascades are involved. Relationship queries need a consistent filter strategy, otherwise deleted children reappear in aggregates or counts, and unique constraints may still block reinserting a logically deleted value unless the database supports partial or filtered uniqueness. ORM-level global filters help ergonomics, but they can hide rows in administrative flows and complicate debugging. You need a policy for uniqueness, indexing, and whether foreign keys should still reference soft-deleted rows.",
+    "real_world": "A frequent incident is 'username already taken' even though the visible account was deleted months ago, or reports that silently exclude historical data because the ORM's default filter was applied where the business actually wanted all rows.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose archive tables or hard deletes instead of soft deletes?"
+   },
+   {
+    "question": "What is the performance impact of materialization in an ORM, and when is projection a better choice than loading entities?",
+    "answer": "Materializing entities means allocating objects, populating fields, registering them in the identity map, and often creating change-tracking snapshots. That overhead is worth it when you intend to modify the entities or navigate relationships, but it is wasted for read-only list endpoints and analytics-style queries. Projection to DTOs or tuples usually cuts CPU, memory, and tracking overhead, and it also narrows the selected columns. At scale, the biggest gains often come from not creating entity instances you never plan to update.",
+    "real_world": "In production, read-heavy endpoints often spend more time in object creation and tracking than in the database once indexes are decent. Switching a hot path from tracked entities to projection can materially reduce p95 latency and GC pressure.",
+    "code_lang": "python",
+    "code": "rows = (\n    session.query(User.id, User.email)\n    .filter(User.active == True)\n    .all()\n)\n# Prefer this over loading full User objects for a read-only list.",
+    "follow_up": "How would you measure whether the bottleneck is SQL execution, network transfer, or ORM materialization?"
+   },
+   {
+    "question": "How do ORMs behave with composite keys, and why do they tend to complicate large systems?",
+    "answer": "ORMs can support composite keys, but they complicate identity maps, relationship mappings, foreign keys, caching keys, and update semantics. Many convenience APIs assume a single stable identifier, so composite keys tend to make generic repository code, batching, and detached-object handling more awkward. They can still be the right model for natural uniqueness or join entities, but for mutable business data I usually keep a surrogate primary key and enforce the composite business rule with a unique constraint. That separates identity from business meaning and reduces ORM friction.",
+    "real_world": "Teams feel this when adding cross-service references, cache entries, or audit logs: passing around three columns as identity is more error-prone than one surrogate key, even if the database model looked elegant at first.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where do composite keys still make good sense despite the tooling and ORM complexity?"
+   },
+   {
+    "question": "How do you roll out a zero-downtime schema change when the ORM model and application code evolve across multiple deploys?",
+    "answer": "I use expand-and-contract. First add backward-compatible schema elements like nullable columns, new tables, or dual-write paths; then deploy code that can read both old and new shapes; backfill; switch reads; and only later enforce constraints or drop old columns. The ORM model often has to temporarily represent both versions, and generated migrations need human review because the safe operational sequence is not always what the tool emits. The key is that old code and new code must both work during the transition window.",
+    "real_world": "Without this, a deployment order issue can cause one app version to write data another version cannot read, or a migration can lock a hot table while app instances still expect the previous schema shape.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of a schema change that looks harmless in development but is dangerous on a large production table?"
+   },
+   {
+    "question": "How do retries interact with ORM transactions, and what makes a retry unsafe or non-idempotent?",
+    "answer": "Retrying after deadlocks or transient connection errors can be correct, but only if the whole unit of work is safe to repeat. The danger is side effects outside the database transaction: sending emails, charging cards, publishing messages, or generating externally visible sequence numbers before commit. ORM helpers can make retries look easy while hiding the need to reset session state and re-run from a clean transaction. I treat retries as an application-level design problem, not just a database flag.",
+    "real_world": "A classic incident is a transaction that inserts an order and sends a confirmation before commit; the commit fails, the code retries, and the customer gets duplicate notifications or duplicate downstream actions. Outbox patterns are commonly used to separate durable DB state from external effects.",
+    "code_lang": "typescript",
+    "code": "await db.$transaction(async (tx) => {\n  await tx.order.create({ data: order });\n  // Don't publish to Kafka here unless you have an outbox pattern.\n});",
+    "follow_up": "How would you design an outbox flow so database commit and message publication are reliable together?"
+   }
+  ]
+ }
+}

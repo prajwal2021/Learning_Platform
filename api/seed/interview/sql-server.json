@@ -1,0 +1,477 @@
+{
+ "slug": "sql-server",
+ "name": "SQL Server",
+ "category": "Databases",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is a primary key in SQL Server, and why would you use one?",
+    "answer": "A primary key uniquely identifies each row in a table. SQL Server enforces that it cannot be NULL and that values are unique, which makes it the main way to reference a row safely from other tables. It also creates a unique index unless you choose otherwise, which helps with lookups and joins.",
+    "real_world": "This matters when you need stable row identity for orders, users, or payments. Without a proper primary key, duplicates and bad joins become much easier to create.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a primary key different from a unique constraint?"
+   },
+   {
+    "question": "What is the difference between INNER JOIN, LEFT JOIN, and RIGHT JOIN?",
+    "answer": "An INNER JOIN returns only rows that match in both tables. A LEFT JOIN returns all rows from the left table and matching rows from the right table, with NULLs when there is no match. A RIGHT JOIN does the same thing from the other side, but many teams prefer LEFT JOINs for readability.",
+    "real_world": "This comes up when reporting on customers and their orders. If you use the wrong join, you can accidentally drop customers who have not ordered yet or duplicate rows through bad matching.",
+    "code_lang": "sql",
+    "code": "SELECT c.CustomerId, o.OrderId\nFROM Customers c\nLEFT JOIN Orders o\n  ON o.CustomerId = c.CustomerId;",
+    "follow_up": "What happens if the join condition matches multiple rows on the other side?"
+   },
+   {
+    "question": "What does the WHERE clause do in a SELECT statement?",
+    "answer": "The WHERE clause filters rows before the final result set is returned. It is used to limit data based on conditions like dates, status, or IDs. A common mistake is trying to filter aggregated results there instead of using HAVING.",
+    "real_world": "Teams use WHERE constantly to narrow queries for dashboards or troubleshooting. A bad filter can make a report look empty or much larger than expected.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM Orders\nWHERE OrderDate >= '2025-01-01'\n  AND Status = 'Paid';",
+    "follow_up": "When would you use HAVING instead of WHERE?"
+   },
+   {
+    "question": "What is the difference between DELETE, TRUNCATE, and DROP?",
+    "answer": "DELETE removes rows, usually with a WHERE clause, and logs row-by-row changes. TRUNCATE removes all rows from a table much faster, but you cannot filter which rows to keep. DROP removes the table itself, including its definition and data.",
+    "real_world": "This matters during cleanup jobs and test resets. A wrong DROP or TRUNCATE can destroy data much faster than an intended DELETE.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What limitations does TRUNCATE have compared with DELETE?"
+   },
+   {
+    "question": "What is a foreign key, and what problem does it solve?",
+    "answer": "A foreign key is a constraint that requires values in one table to match existing values in another table’s key column. It helps maintain referential integrity, so you do not end up with orphaned rows like an order pointing to a nonexistent customer. It can also control what happens when referenced rows are updated or deleted.",
+    "real_world": "This is important in systems with parent-child data such as customers and orders or departments and employees. Without it, data bugs can quietly accumulate and break reports or application logic.",
+    "code_lang": "sql",
+    "code": "ALTER TABLE Orders\nADD CONSTRAINT FK_Orders_Customers\nFOREIGN KEY (CustomerId)\nREFERENCES Customers(CustomerId);",
+    "follow_up": "What happens if you try to insert a child row with no matching parent?"
+   },
+   {
+    "question": "What is the purpose of GROUP BY in SQL Server?",
+    "answer": "GROUP BY collects rows into groups so you can calculate aggregates like COUNT, SUM, AVG, MIN, and MAX per group. You use it when you want results summarized instead of row-by-row. Columns in the SELECT list must either be grouped or aggregated, which is a common beginner mistake.",
+    "real_world": "This is used for reports like sales by month or orders by customer. If you skip GROUP BY, you usually get one total for the whole table instead of per-category totals.",
+    "code_lang": "sql",
+    "code": "SELECT CustomerId, COUNT(*) AS OrderCount\nFROM Orders\nGROUP BY CustomerId;",
+    "follow_up": "Why would an aggregate query fail if you include a non-aggregated column in SELECT?"
+   },
+   {
+    "question": "What is an index in SQL Server, and when would you add one?",
+    "answer": "An index is a data structure that helps SQL Server find rows faster without scanning the whole table. You usually add one on columns used often in WHERE, JOIN, ORDER BY, or GROUP BY clauses. The trade-off is that indexes take storage and slow down inserts, updates, and deletes because they must also be maintained.",
+    "real_world": "Indexes often make the difference between a query finishing in milliseconds and timing out in production. But too many indexes can hurt write-heavy systems and increase maintenance work.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a clustered and a nonclustered index?"
+   },
+   {
+    "question": "What does NULL mean in SQL Server?",
+    "answer": "NULL means the value is unknown, missing, or not applicable. It is not the same as 0, empty string, or false, and comparisons with NULL need special handling using IS NULL or IS NOT NULL. A common mistake is using = NULL, which does not work as expected.",
+    "real_world": "NULL handling matters in user profiles, optional fields, and analytics. Bad NULL logic can cause missed rows in reports or broken validation rules.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM Users\nWHERE MiddleName IS NULL;",
+    "follow_up": "How do NULL values affect COUNT, comparisons, and arithmetic?"
+   },
+   {
+    "question": "What is a subquery, and when would you use one?",
+    "answer": "A subquery is a query nested inside another query. You use it when the outer query depends on a result set or single value produced by the inner query, such as filtering rows based on an aggregate or selecting matching IDs. Sometimes a JOIN is clearer or faster, but subqueries are useful for expressing the logic directly.",
+    "real_world": "This comes up in reporting and validation queries, especially when you need to compare rows against a computed threshold. A poorly written subquery can also be harder to understand or perform worse than a join.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM Orders\nWHERE CustomerId IN (\n  SELECT CustomerId\n  FROM Customers\n  WHERE IsActive = 1\n);",
+    "follow_up": "When would you prefer a JOIN over a subquery?"
+   },
+   {
+    "question": "What is the difference between a stored procedure and a view?",
+    "answer": "A view is a saved SELECT query that behaves like a virtual table. A stored procedure is a saved executable batch that can contain logic, parameters, and multiple statements. Use a view for reusable read logic and a procedure when you need controlled operations, input parameters, or more complex workflows.",
+    "real_world": "Views are often used to simplify reporting queries or hide table complexity. Stored procedures are common for application actions like creating orders or running maintenance tasks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you update data through a view, and what limits that?"
+   },
+   {
+    "question": "What is the difference between CHAR and VARCHAR in SQL Server, and when would you use each?",
+    "answer": "CHAR is fixed-length, so SQL Server pads shorter values with spaces up to the defined size. VARCHAR is variable-length, so it stores only the characters actually used, up to the defined size. Use CHAR for values that are always the same length, like fixed-size codes; use VARCHAR for most text to save space.",
+    "real_world": "This matters when a team stores things like country codes, status codes, or user-entered names. Choosing CHAR for variable text can waste space and make comparisons confusing because of padding.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE Demo(\n  Code CHAR(5),\n  Name VARCHAR(20)\n);",
+    "follow_up": "How do trailing spaces affect comparisons and sorting in SQL Server?"
+   },
+   {
+    "question": "What is the difference between COUNT(*) and COUNT(column_name)?",
+    "answer": "COUNT(*) counts rows, including rows where some columns are NULL. COUNT(column_name) counts only rows where that column is not NULL. They can return different results if the column contains nulls, so you choose based on whether you want all rows or only populated values.",
+    "real_world": "This comes up in reporting when a team expects a total number of records but gets a smaller number because some rows have missing data in the counted column. It can also hide data-quality issues if people use COUNT(column) without realizing NULLs are excluded.",
+    "code_lang": "sql",
+    "code": "SELECT COUNT(*) AS total_rows,\n       COUNT(MiddleName) AS rows_with_middle_name\nFROM Person;",
+    "follow_up": "How would you count distinct non-NULL values in a column?"
+   },
+   {
+    "question": "What does the DISTINCT keyword do?",
+    "answer": "DISTINCT removes duplicate rows from the result set for the selected columns. If you select more than one column, SQL Server treats each unique combination as a separate row. It is useful when you want unique values, but it can be more expensive than a plain select because SQL Server has to deduplicate the results.",
+    "real_world": "Teams often use DISTINCT to quickly get a list of unique customers or statuses from a table. It can also hide a modeling problem if duplicates are being produced by a bad join.",
+    "code_lang": "sql",
+    "code": "SELECT DISTINCT City\nFROM Customers;",
+    "follow_up": "When would DISTINCT be a sign that your query or data model should be fixed instead?"
+   },
+   {
+    "question": "What is the difference between a UNION and a UNION ALL?",
+    "answer": "UNION combines results from two queries and removes duplicate rows. UNION ALL combines them without removing duplicates, so it is usually faster. Use UNION when you need uniqueness across both sets; use UNION ALL when duplicates are acceptable or meaningful.",
+    "real_world": "This is common when combining data from two tables with the same schema, like current and archived records. Using UNION when duplicates are not a concern can add unnecessary work to a large query.",
+    "code_lang": "sql",
+    "code": "SELECT Email FROM Leads\nUNION ALL\nSELECT Email FROM Customers;",
+    "follow_up": "What conditions must the two queries satisfy for UNION to work?"
+   },
+   {
+    "question": "What is a transaction in SQL Server?",
+    "answer": "A transaction is a unit of work that should either fully succeed or fully fail. In SQL Server, transactions help keep data consistent when multiple changes need to happen together. If one step fails, you can roll back the whole transaction instead of leaving partial changes in the database.",
+    "real_world": "This matters in order-entry systems, banking, and inventory updates, where updating one table without the others would create bad data. A failed payment or shipment should not leave the database halfway updated.",
+    "code_lang": "sql",
+    "code": "BEGIN TRAN;\nUPDATE Accounts SET Balance = Balance - 100 WHERE Id = 1;\nUPDATE Accounts SET Balance = Balance + 100 WHERE Id = 2;\nCOMMIT;",
+    "follow_up": "What is the difference between COMMIT and ROLLBACK?"
+   },
+   {
+    "question": "What is a primary key constraint actually doing in SQL Server?",
+    "answer": "A primary key enforces that the column or set of columns is unique and not NULL. It identifies each row in a table and gives SQL Server a reliable way to reference that row. A table can have only one primary key, but that key can be made of multiple columns.",
+    "real_world": "This is important when building tables that other tables depend on, such as customers, orders, or products. Without a stable key, it becomes hard to update or link rows safely.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE Employees (\n  EmployeeId INT PRIMARY KEY,\n  Name VARCHAR(50)\n);",
+    "follow_up": "How is a primary key different from a unique constraint?"
+   },
+   {
+    "question": "What does an identity column do in SQL Server?",
+    "answer": "An identity column automatically generates numeric values for new rows. It is commonly used for surrogate keys where you want SQL Server to assign a new ID instead of the application doing it. It does not guarantee gapless numbering, because inserts can fail or be rolled back.",
+    "real_world": "This is often used for order IDs, customer IDs, or log row IDs. Teams sometimes assume identity values will be consecutive forever, which causes confusion when gaps appear after failures or deletes.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE Orders (\n  OrderId INT IDENTITY(1,1),\n  CreatedAt DATETIME2\n);",
+    "follow_up": "When would you prefer a natural key instead of an identity column?"
+   },
+   {
+    "question": "What does ORDER BY do, and what is a common mistake with it?",
+    "answer": "ORDER BY sorts the result set by one or more columns. A common mistake is assuming rows come back in a predictable order without using ORDER BY; SQL Server does not guarantee that. Another common issue is ordering by one column while selecting rows from a larger query that can still have ties unless you add more sort columns.",
+    "real_world": "This matters in paging, reports, and user-facing lists where stable order is expected. Without ORDER BY, the same query can appear to return rows in different orders over time.",
+    "code_lang": "sql",
+    "code": "SELECT Name, CreatedAt\nFROM Customers\nORDER BY CreatedAt DESC;",
+    "follow_up": "What happens if multiple rows have the same CreatedAt value?"
+   },
+   {
+    "question": "What is the difference between the HAVING and WHERE clauses?",
+    "answer": "WHERE filters rows before grouping happens, while HAVING filters groups after GROUP BY. Use WHERE for conditions on individual rows and HAVING for conditions on aggregate results like COUNT or SUM. Putting a row-level filter in HAVING is usually less clear and can be less efficient.",
+    "real_world": "This comes up in reports like “show customers with more than 5 orders.” The row filter belongs in WHERE, but the count threshold belongs in HAVING.",
+    "code_lang": "sql",
+    "code": "SELECT CustomerId, COUNT(*) AS OrderCount\nFROM Orders\nGROUP BY CustomerId\nHAVING COUNT(*) > 5;",
+    "follow_up": "Can you use WHERE with an aggregate function?"
+   },
+   {
+    "question": "What is a JOIN condition, and what happens if you leave it out?",
+    "answer": "The join condition tells SQL Server how rows from two tables match up. If you leave it out, you usually get a Cartesian product, meaning every row from one table is combined with every row from the other. That can create a huge, incorrect result set very quickly.",
+    "real_world": "This is one of the most common beginner mistakes in production queries, especially when tables are small in testing but large in real data. A missing join predicate can cause performance problems and bad results at the same time.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM Orders o\nJOIN Customers c\n  ON o.CustomerId = c.CustomerId;",
+    "follow_up": "How would you spot an accidental Cartesian product in a query?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How would you decide between a clustered index and a nonclustered index for a table you’re designing?",
+    "answer": "A clustered index defines the physical ordering of the rows, so I’d pick the key that matches the most common range scans and avoids frequent page splits. A nonclustered index is better when I need fast lookups on a different access pattern without changing the table’s row order. The trade-off is write cost versus read performance: more indexes help reads but slow inserts, updates, and deletes. I’d also consider whether the key is narrow, stable, and unique enough to make a good clustering key.",
+    "real_world": "This matters when a table starts slowing down under production traffic because the wrong clustering key causes hot pages or expensive random I/O. Teams often discover this after seeing high latch contention or many page splits on an insert-heavy table.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a bad clustering key in practice?"
+   },
+   {
+    "question": "When would you use a covering index, and what does that buy you?",
+    "answer": "A covering index includes all columns needed by a query, so SQL Server can satisfy the query from the index alone without going back to the base table. That usually reduces logical reads and can make lookups much faster. The trade-off is a larger index and more overhead on writes, so I’d use it for a few high-value queries rather than broadly. It’s especially useful for read-heavy workloads with predictable predicates and select lists.",
+    "real_world": "In production, a report or API endpoint can go from many key lookups per request to a single index seek when the index covers the query. That can cut latency and CPU significantly on busy systems.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX IX_Orders_CustomerDate\nON dbo.Orders(CustomerId, OrderDate)\nINCLUDE (Status, TotalAmount);",
+    "follow_up": "How do you decide which columns belong in the key versus the INCLUDE list?"
+   },
+   {
+    "question": "What’s the difference between SARGable and non-SARGable predicates, and why does it matter?",
+    "answer": "A SARGable predicate lets SQL Server use an index efficiently, usually by applying a search argument directly to the indexed column. A non-SARGable predicate forces SQL Server to compute or transform values first, which often leads to scans instead of seeks. For example, wrapping the column in a function is a common way to make a predicate non-SARGable. In real work, rewriting the predicate is often a bigger win than adding another index.",
+    "real_world": "This comes up in slow queries where a seemingly simple filter is scanning millions of rows. A small rewrite can turn a scan into a seek and drastically reduce response time.",
+    "code_lang": "sql",
+    "code": "-- Non-SARGable\nWHERE YEAR(OrderDate) = 2025\n\n-- SARGable\nWHERE OrderDate >= '2025-01-01'\n  AND OrderDate <  '2026-01-01'",
+    "follow_up": "What are other common things that make predicates non-SARGable?"
+   },
+   {
+    "question": "How do you think about parameter sniffing in SQL Server when a query is fast for one input and slow for another?",
+    "answer": "Parameter sniffing happens when SQL Server compiles a plan based on the initial parameter values and reuses that plan for later executions. If the data is skewed, one cached plan can be great for one value and terrible for another. I’d first confirm it with actual execution plans and runtime differences, then decide whether to change the query shape, add a more appropriate index, or use a targeted workaround only if needed. I’d avoid hiding the issue with a blanket fix unless I’ve proved it’s the right trade-off.",
+    "real_world": "This often shows up in stored procedures where one customer or one date range is much more common than others. The first execution after deployment can “teach” SQL Server a bad plan for everyone else.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test whether the bad performance is actually caused by parameter sniffing?"
+   },
+   {
+    "question": "When would you choose a common table expression over a temporary table, and what trade-offs matter?",
+    "answer": "A CTE is good for making a query easier to read when I’m just organizing one statement, while a temporary table is better when I need to materialize intermediate results, index them, or reuse them across multiple steps. A temp table gives SQL Server more concrete rowcount information after it’s populated, which can help the optimizer in some cases. The trade-off is extra I/O and tempdb usage versus simpler syntax. I’d choose based on whether I need reuse, statistics, or better control over the intermediate data shape.",
+    "real_world": "This matters in reporting queries where a complex multi-join statement is hard to maintain or performs poorly. Teams often switch to a temp table when they need to break a query into stages and stabilize the plan.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When can a temp table make a query slower instead of faster?"
+   },
+   {
+    "question": "What is a window function, and when would you prefer it over a GROUP BY query?",
+    "answer": "A window function computes over a set of rows related to the current row without collapsing the result set. I’d use it when I need per-row detail plus an aggregate, like ranking, running totals, or comparing a row to its partition. GROUP BY is better when I want one row per group, but it removes row-level detail. Window functions often simplify queries that would otherwise need self-joins or multiple subqueries.",
+    "real_world": "This is common in analytics, finance, and customer-facing reports where you need both the row and its context. For example, you might show each order along with the customer’s total spend and rank.",
+    "code_lang": "sql",
+    "code": "SELECT OrderId,\n       CustomerId,\n       Amount,\n       SUM(Amount) OVER (PARTITION BY CustomerId) AS CustomerTotal\nFROM dbo.Orders;",
+    "follow_up": "What’s the difference between ROW_NUMBER, RANK, and DENSE_RANK?"
+   },
+   {
+    "question": "How do you handle duplicates safely in SQL Server without losing good data?",
+    "answer": "First I’d define what “duplicate” means, because it often depends on business rules rather than exact row equality. Then I’d inspect the data, use a deterministic ordering to choose which row to keep, and delete only the extras in a transaction or a controlled batch. I’d also add a unique constraint or index afterward if the duplicates should never come back. The key trade-off is being precise and auditable rather than doing a blind delete.",
+    "real_world": "This comes up after bad application logic or a failed import creates repeated rows in a customer or orders table. Teams need a cleanup script that’s repeatable and safe to run in production.",
+    "code_lang": "sql",
+    "code": "WITH d AS (\n  SELECT *,\n         ROW_NUMBER() OVER (\n           PARTITION BY Email\n           ORDER BY CreatedAt\n         ) AS rn\n  FROM dbo.Users\n)\nDELETE FROM d WHERE rn > 1;",
+    "follow_up": "How would you validate that your duplicate-removal script won’t delete the wrong row?"
+   },
+   {
+    "question": "What’s the practical difference between an execution plan and the actual runtime behavior of a query?",
+    "answer": "The estimated plan shows what SQL Server thinks it will do based on statistics and compilation-time assumptions, while the actual plan includes what really happened during execution. Differences between them can reveal bad cardinality estimates, parameter sensitivity, or missing indexes. I look at both because a good-looking plan can still behave badly if the row estimates are wrong. In debugging, I care about where the biggest mismatch occurs and whether it’s causing an expensive operator choice.",
+    "real_world": "A query may look fine in the estimated plan but still spill to tempdb or scan far more rows than expected at runtime. That’s often the clue that statistics or parameter values are misleading the optimizer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you check first if estimated row counts are wildly different from actual row counts?"
+   },
+   {
+    "question": "How do isolation levels affect blocking and consistency in SQL Server?",
+    "answer": "Isolation levels control what one transaction can see while another transaction is changing data. Higher isolation reduces anomalies like dirty reads, but it can increase blocking and reduce concurrency. I’d choose the weakest level that still preserves the correctness the application needs, and I’d be careful about using settings that can show uncommitted data. In practice, the right choice depends on whether the workload values freshness, throughput, or strict consistency more.",
+    "real_world": "This matters when a reporting query blocks OLTP traffic or when a dashboard starts reading data that later gets rolled back. Teams often need to balance user-facing latency against correctness guarantees.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use snapshot-based behavior instead of relying on locking reads?"
+   },
+   {
+    "question": "How would you approach a production query that suddenly got slower after a schema or data change?",
+    "answer": "I’d compare the old and new execution plans, check whether statistics changed, and look for parameter or cardinality shifts caused by the new data shape. Then I’d verify whether the query started scanning instead of seeking, using a different join order, or spilling to tempdb. If the regression is tied to a specific plan, I’d fix the root cause if possible rather than forcing the old plan immediately. The goal is to restore performance without baking in a brittle workaround.",
+    "real_world": "This is a common incident pattern after an index change, a migration, or a data volume jump. The issue may only appear under real production data, not in dev.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What evidence would make you choose a query rewrite over an index change?"
+   },
+   {
+    "question": "How do clustered and nonclustered indexes differ in how SQL Server stores and uses them?",
+    "answer": "A clustered index defines the physical order of rows in the table, so there can only be one. A nonclustered index is a separate structure that points to the rows, and you can have many of them. The trade-off is that clustered indexes help with range scans and ordering, while too many nonclustered indexes slow down writes because SQL Server must maintain them on insert, update, and delete.",
+    "real_world": "This matters when a reporting query needs fast date ranges but the same table also gets heavy OLTP writes. Teams often discover that a seemingly good index choice makes insert latency worse across the app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do key lookups affect nonclustered index design?"
+   },
+   {
+    "question": "What is parameter sniffing in SQL Server, and how would you deal with a query that is good for one parameter value but bad for another?",
+    "answer": "Parameter sniffing happens when SQL Server compiles a plan using the first parameter values it sees, and that plan may not fit later executions with different data distributions. This matters because one cached plan can be excellent for selective values and terrible for broad ones. Common fixes are to inspect the plan, rewrite the query or indexing, use local variables carefully, or force recompilation only when the workload justifies it.",
+    "real_world": "A customer support search screen might be fast for one account but time out for a large tenant because the same cached plan is reused. This is a classic production issue after a deployment or after data skews over time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prove whether the problem is parameter sniffing versus a missing index?"
+   },
+   {
+    "question": "When would you use a common table expression instead of a temporary table, and when would you prefer the temporary table?",
+    "answer": "Use a CTE when you want a readable, single-statement query and do not need to store intermediate results. Use a temporary table when you need to reuse intermediate data, add indexes, inspect row counts, or break a complex workload into steps. The trade-off is simplicity versus control: CTEs are cleaner, but temp tables can give better plans and debugging options for larger or multi-step queries.",
+    "real_world": "This comes up in ETL jobs and reporting queries that become hard to maintain as logic grows. A team may switch to a temp table after finding that the optimizer performs better once intermediate cardinality is materialized.",
+    "code_lang": "sql",
+    "code": "WITH recent_orders AS (\n  SELECT customer_id, order_id\n  FROM Orders\n  WHERE order_date >= '2025-01-01'\n)\nSELECT customer_id, COUNT(*)\nFROM recent_orders\nGROUP BY customer_id;",
+    "follow_up": "What are the main performance risks of using temp tables?"
+   },
+   {
+    "question": "What is a window function, and why would you use it instead of grouping the data?",
+    "answer": "A window function calculates across a set of related rows while still returning each row, instead of collapsing rows into one result per group. That is useful for running totals, rankings, and comparing a row to its peers. Compared with GROUP BY, you keep row-level detail, which often avoids extra joins or subqueries.",
+    "real_world": "A finance dashboard may need both each transaction and a per-account running balance in the same result set. Window functions let you compute that directly instead of pre-aggregating and joining back.",
+    "code_lang": "sql",
+    "code": "SELECT\n  customer_id,\n  order_id,\n  amount,\n  SUM(amount) OVER (PARTITION BY customer_id ORDER BY order_date) AS running_total\nFROM Orders;",
+    "follow_up": "What is the difference between PARTITION BY and ORDER BY inside the window?"
+   },
+   {
+    "question": "How do you safely remove duplicates in SQL Server when you need to keep one row and delete the rest?",
+    "answer": "First decide which row should survive, because duplicates are often not truly identical from a business perspective. A common approach is to use ROW_NUMBER() over a partition of the duplicate keys, then delete rows where the row number is greater than one. This is safer than a blind DISTINCT because it lets you control which row remains and review the logic before deleting data.",
+    "real_world": "This happens after a buggy import job or a missing unique constraint allows duplicate customers or orders into production. Teams usually dry-run the ranking query first to verify the exact rows that would be removed.",
+    "code_lang": "sql",
+    "code": "WITH d AS (\n  SELECT *, ROW_NUMBER() OVER (\n    PARTITION BY email ORDER BY created_at\n  ) AS rn\n  FROM Users\n)\nDELETE FROM d WHERE rn > 1;",
+    "follow_up": "How would you make this safer in production before running the delete?"
+   },
+   {
+    "question": "What is the practical difference between an execution plan and what the query actually does at runtime?",
+    "answer": "The execution plan is SQL Server’s chosen strategy for accessing data, joining tables, and sorting or aggregating rows. Runtime behavior also depends on actual row counts, memory grants, spills, waits, blocking, and parameter values, so a good-looking plan can still perform badly. You need both to debug performance because the plan tells you what SQL Server intended, while runtime metrics show what really happened.",
+    "real_world": "A query can look fine in the estimated plan but still spill to tempdb because the memory grant was too small. In production, that often shows up as intermittent slowness that is hard to reproduce from the SQL text alone.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What details do you check first when comparing an estimated and actual plan?"
+   },
+   {
+    "question": "When would you choose a temp table over a table variable in SQL Server?",
+    "answer": "A temp table is usually better when the intermediate result is larger, reused multiple times, or needs indexes and statistics for a good plan. Table variables are simpler for small rowsets, but SQL Server has historically had weaker cardinality information for them, which can lead to poor plans. The trade-off is execution quality versus simplicity, and the better choice depends on the expected row count and how the data is used.",
+    "real_world": "A stored procedure that works fine in test with small inputs can fall apart in production if a table variable suddenly holds thousands of rows. Teams often switch to a temp table after seeing bad join choices in the plan.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs in a plan would make you suspect a table variable is hurting performance?"
+   },
+   {
+    "question": "How do you decide between a correlated subquery and a join or APPLY operator in SQL Server?",
+    "answer": "A correlated subquery can be readable for simple existence checks or scalar lookups, but it may execute logically per outer row if the optimizer cannot transform it well. A join is often clearer when you are combining sets, while APPLY is useful when the inner query depends on each outer row and returns a derived subset. The right choice depends on readability, estimated row counts, and whether the optimizer can produce a set-based plan efficiently.",
+    "real_world": "This comes up in top-N-per-group queries and lookups against a detail table. A rewrite from a correlated subquery to APPLY or a window function can turn a slow query into one that scales much better.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would APPLY be a better fit than a normal join?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how lock escalation works in SQL Server and what you do when it becomes a production problem?",
+    "answer": "SQL Server may escalate many row or page locks into a table lock to reduce lock manager overhead. That saves memory and CPU, but it can suddenly turn a busy OLTP workload into broad blocking if one statement touches enough rows. I first check whether the real issue is a large scan, missing index, or oversized batch, because fixing access patterns is usually better than fighting escalation directly. If needed, I reduce batch size, shorten transactions, and in some cases partition or change the operation pattern so each statement touches fewer rows.",
+    "real_world": "A common incident is a purge or backfill job that starts fine and then escalates to a table lock, blocking user writes for minutes. Teams often fix it by deleting in smaller batches with an index that supports the predicate.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would row versioning change the impact of that same workload?"
+   },
+   {
+    "question": "What actually happens inside tempdb under heavy load, and why does it become a bottleneck?",
+    "answer": "tempdb backs temporary tables, table variables, worktables for sorts and hashes, row versioning, and some online maintenance operations. Under heavy concurrency, allocation map contention, metadata pressure, and I/O saturation can all show up, so the symptom might be latch waits, slow spills, or version store growth. The fix depends on the pressure source: tune queries to avoid unnecessary spills, keep transactions short under versioning, and make sure tempdb has appropriate file layout and storage. It is a shared system database, so one bad workload can degrade unrelated requests.",
+    "real_world": "A reporting query that spills large hash joins can fill tempdb and slow down OLTP sessions using snapshot isolation because both depend on the same database. This is why tempdb sizing and monitoring are part of normal capacity planning.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether tempdb pain is coming from spills, version store, or allocation contention?"
+   },
+   {
+    "question": "How do you think about cardinality estimation mistakes in SQL Server, and why do they hurt so much?",
+    "answer": "The optimizer picks a plan based on estimated row counts, not actual ones, so bad estimates cascade into bad join types, memory grants, and access methods. A severe underestimate can cause nested loops and spills; a severe overestimate can waste memory and reduce concurrency. I look for skew, correlated predicates, stale or low-quality statistics, implicit conversions, and expressions the estimator cannot reason about well. Fixes range from stats improvements and query rewrites to different indexing or, selectively, plan-shaping hints when the model keeps getting it wrong.",
+    "real_world": "A query that estimated 10 rows but returned 10 million can spill repeatedly and hold resources far longer than expected, causing a broad slowdown. These incidents often look like 'the server is slow' even though one estimate error triggered it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs in an actual execution plan tell you the cardinality estimate was the root cause?"
+   },
+   {
+    "question": "What are memory grants in SQL Server, and how do bad grants affect performance at scale?",
+    "answer": "Memory grants are workspace memory reservations for operators like sort and hash join before the query runs. If the grant is too small, the query spills to tempdb; if it's too large, fewer queries can run concurrently and the server may look underutilized but saturated. Grant sizing comes from cardinality and operator choice, so estimate problems often become grant problems. I diagnose it by looking for spills, queued queries waiting on memory, and plans that reserve far more memory than they use.",
+    "real_world": "In mixed workloads, one over-granted report query can starve dozens of short OLTP requests from getting a grant, causing sudden latency spikes. The opposite failure is repeated sort spills hammering tempdb.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you reduce excessive memory grants without just adding more RAM?"
+   },
+   {
+    "question": "How does READ COMMITTED SNAPSHOT differ from SNAPSHOT isolation in SQL Server, and what trade-offs do you care about?",
+    "answer": "Both use row versioning so readers can avoid blocking writers, but they apply at different scopes. READ COMMITTED SNAPSHOT changes the behavior of read committed statements to read versioned rows statement by statement, while SNAPSHOT gives a transaction-consistent view for the whole transaction once enabled and chosen by the session. The trade-offs are tempdb version store load, update conflict behavior under SNAPSHOT, and the fact that row versioning reduces some blocking but does not eliminate write-write contention. I care most about transaction length, tempdb capacity, and whether the app assumes locking-based read semantics.",
+    "real_world": "Teams often enable READ COMMITTED SNAPSHOT to reduce reader-writer blocking in OLTP systems without changing application code. Problems show up later when a long-running transaction keeps old row versions alive and tempdb grows unexpectedly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of anomalies can still happen under READ COMMITTED SNAPSHOT?"
+   },
+   {
+    "question": "What is the Halloween problem in SQL Server, and why should a senior engineer care about it?",
+    "answer": "The Halloween problem is when a data modification could accidentally affect the same row more than once because the row moves or becomes visible again during the scan. SQL Server avoids this by using protection mechanisms such as spools or different access paths, which can add I/O, memory use, and plan complexity. A senior engineer should care because an apparently simple UPDATE can become much slower due to Halloween protection, especially when it modifies indexed columns used by the scan. Understanding that explains why the optimizer chooses plans that look less direct.",
+    "real_world": "A bulk UPDATE against a key column can unexpectedly introduce an eager spool and turn a fast seek-based plan into a slower, tempdb-heavy one. Without knowing the Halloween problem, teams often misdiagnose it as random optimizer behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of UPDATE statements are most likely to trigger Halloween protection?"
+   },
+   {
+    "question": "How do you decide whether partitioning in SQL Server is actually worth the complexity?",
+    "answer": "Partitioning helps most when you need operational benefits like sliding-window loads, archival, targeted maintenance, or partition elimination on very large tables. It is not a general-purpose speed feature, and poorly aligned indexes or predicates can erase the expected benefit. I ask whether data naturally segments by a key that matches access patterns and retention policy, and whether the team can handle the added complexity in indexing, statistics, and deployment. If the goal is simply faster point lookups, better indexing usually matters more than partitioning.",
+    "real_world": "Large event tables often use monthly partitions so old data can be switched out quickly instead of deleted row by row. The failure mode is adding partitioning without aligned indexes, then discovering queries still scan far more data than expected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What has to be true for partition switching to be safe and fast?"
+   },
+   {
+    "question": "What is the difference between rebuilding and reorganizing an index in SQL Server, and how would you choose between them in a real system?",
+    "answer": "Rebuild creates the index structure again and updates statistics with a full scan equivalent for that index, while reorganize is an online, incremental defragmentation of leaf pages. Rebuild is more expensive in CPU, log, and space but can fix deeper structural issues; reorganize is lighter but more limited and usually slower to achieve major change. I do not treat fragmentation percentages alone as the decision signal; I look at page density, workload pattern, index size, and whether scan performance is actually suffering. On write-heavy systems, unnecessary maintenance can create more churn than benefit.",
+    "real_world": "A nightly 'rebuild everything' job often causes avoidable log growth, AG redo lag, and blocking or resource spikes. Mature teams target only indexes that show real benefit from maintenance.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can low page density matter more than logical fragmentation for many workloads?"
+   },
+   {
+    "question": "What happens during a deadlock in SQL Server, and how do you fix the underlying issue instead of just retrying?",
+    "answer": "A deadlock occurs when sessions form a cycle of incompatible locks and none can proceed, so SQL Server chooses a victim and rolls it back. Retrying is necessary at the application layer, but the real fix is to remove the cycle by making access order consistent, reducing transaction scope and duration, improving indexes so statements lock fewer rows, or changing isolation behavior where appropriate. I always capture the deadlock graph because it shows the resources, lock modes, and statement order involved. Without that, teams tend to guess and only mask the symptom.",
+    "real_world": "A classic production pattern is two code paths updating the same tables in different orders; it works in test and then deadlocks under concurrency. The durable fix is usually a consistent table access order plus better supporting indexes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish a deadlock from ordinary blocking when users just report timeouts?"
+   },
+   {
+    "question": "Can you walk through how SQL Server high availability choices affect data loss and failover behavior?",
+    "answer": "The core trade-off is between failover time, readable secondaries, operational complexity, and whether some data loss is acceptable. Synchronous technologies can minimize or avoid data loss at the cost of commit latency and dependency on replica health, while asynchronous options usually reduce primary impact but can lose recent transactions on failover. I also separate high availability from disaster recovery: local automatic failover and distant geo-recovery solve different problems. The right choice depends on recovery objectives, write latency budget, and whether the application can handle failover and replica lag correctly.",
+    "real_world": "Teams sometimes enable synchronous replication across a slow link and then discover every commit got slower. Others assume an async secondary is lossless, fail over during an outage, and are surprised by missing recent writes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you explain the difference between RPO and RTO to an engineering manager deciding between synchronous and asynchronous replicas?"
+   },
+   {
+    "question": "How does SQL Server use the transaction log during normal operation and recovery, and what production problems show up when the log is the bottleneck?",
+    "answer": "The log is the durable record of every change, written sequentially before dirty pages are considered committed. Recovery uses checkpoints plus the log to redo committed work not yet on disk and undo incomplete transactions. When the log is the bottleneck, you usually see high write latency, long commit times, growing log files, or log reuse waits because truncation is blocked. The trade-off is durability and fast crash recovery versus the cost of synchronous log IO and managing long-running transactions.",
+    "real_world": "A single open transaction or an unavailable log backup chain can prevent log truncation, fill the disk, and stop writes across the whole database. On busy OLTP systems, slow storage for the log can turn a healthy server into one with widespread timeout incidents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of operations prevent log truncation even when the workload itself is not that large?"
+   },
+   {
+    "question": "What’s really happening when SQL Server spills a sort or hash to tempdb, and how would you diagnose and reduce it?",
+    "answer": "A spill happens when an operator like Sort or Hash Match gets less memory than it needs and writes intermediate data to tempdb. That adds extra reads and writes, often turning a CPU-bound query into an IO-bound one. You diagnose it from actual execution plans, spill warnings, and tempdb activity, then fix the root cause: bad estimates, oversized rows, missing indexes, or too much concurrency competing for grants. More memory can help, but plan quality and row-size reduction usually matter more.",
+    "real_world": "A nightly ETL may run fine most days, then spill massively after a data skew change and overrun its batch window. In mixed workloads, repeated spills can saturate tempdb and slow unrelated sessions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can a query still spill even on a server that has a lot of free RAM?"
+   },
+   {
+    "question": "How do ghost records work in SQL Server, and when do they become a real performance problem?",
+    "answer": "When rows are deleted, SQL Server often marks them as ghost records first instead of physically removing them immediately. A background cleanup process later reclaims the space, which makes deletes cheaper and helps concurrency. They become a problem when cleanup falls behind, leaving lots of dead rows that bloat scans, page density, and index maintenance work. The trade-off is faster delete behavior versus delayed space reclamation and potential read amplification.",
+    "real_world": "After a large purge, teams are surprised that table and index sizes barely shrink and scans are still slow. In systems with heavy delete churn, ghost buildup can distort storage and make maintenance windows much longer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is ghost cleanup different from actually returning space to the operating system or shrinking a file?"
+   },
+   {
+    "question": "If a query is doing a Key Lookup thousands of times, how do you decide whether that’s acceptable or a sign to redesign the index?",
+    "answer": "A Key Lookup is fine when the outer input is small, because the random lookups are cheap enough. It becomes a problem when estimated or actual row counts are high, because many random reads can dominate the query and amplify latch and buffer pressure. I decide based on row counts, frequency, read patterns, and whether adding INCLUDE columns or changing key order would help more than it hurts write cost and index size. The trade-off is faster reads for that workload versus larger indexes and more expensive updates.",
+    "real_world": "A query that returns 20 rows in testing may return 50,000 rows in production for a common tenant, and the lookup pattern suddenly causes severe latency. Teams often fix it by making one targeted covering index instead of trying to cover every query.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer to rewrite the query instead of adding columns to the index?"
+   },
+   {
+    "question": "How do filtered indexes actually change optimization choices in SQL Server, and what are the common ways teams accidentally make them unusable?",
+    "answer": "A filtered index is only built for rows matching a predicate, so it can be much smaller and more selective than a full-table index. The optimizer can use it only when it can prove the query predicate matches the filter condition closely enough. Teams make them unusable with mismatched predicates, implicit conversions, parameterization that hides the constant, or by expecting one filtered index to serve many predicate shapes. The win is lower storage and maintenance cost, but they require disciplined query patterns.",
+    "real_world": "They are very effective for queues, soft deletes, or active/inactive rows, where most queries hit a small subset. In production, a harmless-looking ORM change can parameterize the predicate differently and make the filtered index stop matching.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX IX_OpenOrders\nON dbo.Orders(CustomerId, CreatedAt)\nINCLUDE (Total)\nWHERE Status = 'Open';\n\nSELECT Total\nFROM dbo.Orders\nWHERE Status = 'Open' AND CustomerId = 42;",
+    "follow_up": "Why can local variables or forced parameterization make a filtered index less likely to be chosen?"
+   },
+   {
+    "question": "What are forwarded records in a heap, and why can a heap become surprisingly expensive under update-heavy workloads?",
+    "answer": "In a heap, if an update makes a row too large to stay on its original page, SQL Server may move it and leave a forwarding pointer behind. Future lookups may need an extra hop, and lots of forwarded records can make scans and lookups much more expensive. Heaps can be fine for specific patterns, but under update-heavy workloads they often degrade in ways a clustered index avoids. The trade-off is simpler insert behavior versus poorer locality and more unpredictable read cost after updates.",
+    "real_world": "A staging table that started as append-only can evolve into an update-heavy table and suddenly become slow without any obvious query change. Rebuilding the heap or adding a clustered index can remove a large amount of wasted IO.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is keeping a table as a heap still the right design?"
+   },
+   {
+    "question": "How do implicit conversions hurt SQL Server performance, and why are they easy to miss in code review?",
+    "answer": "If SQL Server has to convert a column at runtime to compare it with a different data type, it can prevent index seeks and distort cardinality estimates. They are easy to miss because the query text looks harmless and often still returns correct results. The worst cases are joins and predicates on large tables where a conversion on the indexed side forces scans. The fix is to align data types across schema and parameters, not to rely on SQL Server to coerce them cheaply.",
+    "real_world": "A service passes NVARCHAR parameters to compare against VARCHAR keys, and a query that was a seek turns into a scan only in production-sized tables. These issues often appear after integrating with a new application layer or driver.",
+    "code_lang": "sql",
+    "code": "-- Bad if CustomerId is INT\nSELECT *\nFROM dbo.Customers\nWHERE CustomerId = N'42';\n\n-- Better\nSELECT *\nFROM dbo.Customers\nWHERE CustomerId = 42;",
+    "follow_up": "Why does it matter which side of the predicate gets converted?"
+   },
+   {
+    "question": "What’s your mental model for row versioning overhead in SQL Server, beyond just saying it uses tempdb?",
+    "answer": "Row versioning stores older row images so readers can see a consistent snapshot without blocking writers. The cost is extra writes for version generation, extra storage and cleanup work, and longer retention when old transactions stay open. That affects tempdb or the version store area depending on the feature set, but the important operational point is that long-running readers can keep old versions alive and amplify IO and space usage. The trade-off is much better read/write concurrency versus more background maintenance and failure modes around version store growth.",
+    "real_world": "A reporting query left open for hours can prevent version cleanup and cause sudden space pressure, even though the OLTP workload itself looks normal. Teams often discover this only after enabling optimistic isolation to reduce blocking.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can an idle transaction in an application connection pool be dangerous with row-versioned reads?"
+   },
+   {
+    "question": "How do you reason about parallel query plans in SQL Server when parallelism makes a query slower instead of faster?",
+    "answer": "Parallelism helps when work can be split efficiently, but it adds exchange operators, synchronization, and skew risk. If one thread gets most of the rows, or the query is memory- or IO-bound, more workers can add overhead without reducing elapsed time. I look for row skew, repartitioning costs, excessive CX-related waits in context, and whether the plan shape changes between serial and parallel choices. The trade-off is lower latency for large set-based work versus higher CPU use and sometimes worse tail latency under concurrency.",
+    "real_world": "One analytical query may speed up alone but hurt the whole server during peak traffic by consuming many workers and grants. Production tuning often means making one query slightly slower in isolation so the system is much faster overall.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of operators or data distributions commonly create parallelism skew?"
+   },
+   {
+    "question": "When would you use indexed views in SQL Server, and what hidden costs make teams regret them?",
+    "answer": "Indexed views can precompute expensive aggregations or joins and turn repeated read-time work into maintained storage. They help most when the query shape is stable and the base tables change much less often than they are read. The hidden costs are extra write overhead, stricter design rules, more complex deployments, and cases where the optimizer does not match the view the way you expected. They are a targeted optimization, not a general replacement for good table and index design.",
+    "real_world": "They can rescue dashboards that hit the same heavy aggregation all day, but they often backfire on write-heavy systems because every insert or update has more maintenance work to do. Teams also get surprised when a query must be written carefully for the indexed view benefit to appear consistently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you compare an indexed view with maintaining a separate summary table yourself?"
+   }
+  ]
+ }
+}

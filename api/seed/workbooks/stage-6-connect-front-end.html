@@ -1,0 +1,2449 @@
+<title>Connect the Front End</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Schibsted+Grotesk:wght@600;700;800&display=swap">
+<style>
+/* Layout: a workbook column with lab panels; sticky section bar; request-inspector vernacular (status pills, origins, log rows). */
+:root {
+  --bg: #F4F6F9;
+  --surface: #FFFFFF;
+  --sunk: #EBEEF3;
+  --line: #D6DCE5;
+  --ink: #121923;
+  --muted: #586273;
+  --edge: #8C96A6;
+  --accent: #2643C4;
+  --accent-soft: #E5EAFC;
+  --on-accent: #FFFFFF;
+  --ok: #1D7646;
+  --ok-soft: #E1F2E8;
+  --warn: #8F5B00;
+  --warn-soft: #FAEFD7;
+  --bad: #B3261E;
+  --bad-soft: #FBE6E4;
+  --code-bg: #EEF1F6;
+  --code-ink: #1A2230;
+  --code-comment: #687284;
+  --code-key: #2643C4;
+  --code-str: #1D7646;
+  --code-num: #8F5B00;
+  --code-title: #7A2E9C;
+  --f-display: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1218; --surface: #151B24; --sunk: #1B222D; --line: #2B3441; --ink: #E4E9F0; --muted: #9AA5B6; --edge: #6D7787;
+    --accent: #93A7FF; --accent-soft: #1E2749; --on-accent: #0E1218;
+    --ok: #63CD93; --ok-soft: #12291C; --warn: #E9B75A; --warn-soft: #2E2411; --bad: #F2887D; --bad-soft: #361917;
+    --code-bg: #10161F; --code-ink: #DCE2EC; --code-comment: #7F8A9B; --code-key: #A2B4FF; --code-str: #84D6A6; --code-num: #E9B75A; --code-title: #D7A6F0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1218; --surface: #151B24; --sunk: #1B222D; --line: #2B3441; --ink: #E4E9F0; --muted: #9AA5B6; --edge: #6D7787;
+  --accent: #93A7FF; --accent-soft: #1E2749; --on-accent: #0E1218;
+  --ok: #63CD93; --ok-soft: #12291C; --warn: #E9B75A; --warn-soft: #2E2411; --bad: #F2887D; --bad-soft: #361917;
+  --code-bg: #10161F; --code-ink: #DCE2EC; --code-comment: #7F8A9B; --code-key: #A2B4FF; --code-str: #84D6A6; --code-num: #E9B75A; --code-title: #D7A6F0;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.6; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.6rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.55rem, 3.4vw, 2.1rem); font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1.12rem; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 2px; }
+code, kbd { font-family: var(--f-mono); font-size: 0.88em; }
+:not(pre) > code { background: var(--sunk); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; overflow-wrap: anywhere; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1080px; margin: 0 auto; }
+.measure { max-width: 68ch; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--f-mono); }
+.eyebrow { font-family: var(--f-mono); font-size: 0.74rem; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+
+/* Sticky section bar */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
+.bar-inner { display: flex; align-items: center; gap: 16px; padding-block: 10px; }
+.bar-brand { font-family: var(--f-display); font-weight: 800; font-size: 0.95rem; white-space: nowrap; }
+.bar-nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.bar-nav::-webkit-scrollbar { display: none; }
+.bar-nav a { font-size: 0.84rem; color: var(--muted); text-decoration: none; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.bar-nav a:hover { color: var(--ink); background: var(--sunk); }
+.bar-nav a.is-here { color: var(--accent); background: var(--accent-soft); }
+
+/* Hero */
+.hero { padding-block: 48px 32px; display: grid; gap: 28px; }
+.hero .lead { font-size: 1.12rem; max-width: 62ch; }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.facts { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); border-top: 1px solid var(--line); }
+.facts dt, .facts dd { margin: 0; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.facts dt { font-family: var(--f-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding-right: 20px; padding-top: 13px; }
+.progress-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; gap: 14px; }
+.meter { display: grid; gap: 6px; }
+.meter-row { display: flex; justify-content: space-between; font-size: 0.9rem; }
+.meter-row b { font-variant-numeric: tabular-nums; }
+.meter-track { height: 8px; background: var(--sunk); border-radius: 99px; overflow: hidden; }
+.meter-fill { height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width 0.3s ease; }
+.flow-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.86rem; }
+.flow-strip span { border: 1px solid var(--line); background: var(--surface); padding: 4px 10px; border-radius: 6px; }
+.flow-strip span.key { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.flow-strip i { font-style: normal; color: var(--edge); }
+
+/* Sections */
+.sec { padding-block: 56px 8px; border-top: 1px solid var(--line); scroll-margin-top: 56px; }
+.sec-head { display: grid; gap: 10px; margin-bottom: 24px; }
+.sec-head .measure { color: var(--muted); }
+.kind { display: inline-flex; gap: 8px; align-items: center; }
+.kind::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--edge); }
+.kind.try::before { background: var(--accent); }
+.kind.practice::before { background: var(--warn); }
+.lab { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; display: grid; gap: 18px; min-width: 0; }
+.lab + .lab, .lab + .block, .block + .lab, .block + .block { margin-top: 22px; }
+.block { display: grid; gap: 12px; min-width: 0; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.split { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.label { font-size: 0.8rem; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Controls */
+.btn { font: 500 0.88rem var(--f-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; cursor: pointer; }
+.btn:hover { border-color: var(--edge); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { font: 500 0.84rem var(--f-body); color: var(--muted); background: transparent; border: 0; border-right: 1px solid var(--line); padding: 7px 12px; cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.control { display: grid; gap: 6px; min-width: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 16px 24px; }
+input[type="text"], select { font: 0.92rem var(--f-mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 0.92rem; cursor: pointer; }
+.check input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+.chip { font: 500 0.8rem var(--f-mono); color: var(--ink); background: var(--sunk); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+.chip:hover { border-color: var(--accent); }
+.chip.is-on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+/* Pills and verdicts */
+.pill { display: inline-block; font: 600 0.74rem var(--f-mono); padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.ok { color: var(--ok); background: var(--ok-soft); }
+.pill.bad { color: var(--bad); background: var(--bad-soft); }
+.pill.warn { color: var(--warn); background: var(--warn-soft); }
+.pill.info { color: var(--accent); background: var(--accent-soft); }
+.verdict { border-radius: 8px; padding: 12px 14px; border: 1px solid; display: grid; gap: 4px; }
+.verdict b { font-family: var(--f-display); font-size: 1.05rem; }
+.verdict.ok { color: var(--ok); background: var(--ok-soft); }
+.verdict.bad { color: var(--bad); background: var(--bad-soft); }
+.verdict.warn { color: var(--warn); background: var(--warn-soft); }
+.verdict span { color: var(--ink); font-size: 0.92rem; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+th { font-size: 0.76rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td code { white-space: nowrap; }
+.log td { font-family: var(--f-mono); font-size: 0.8rem; }
+.log td.note { font-family: var(--f-body); color: var(--muted); font-size: 0.84rem; }
+.log .empty td { color: var(--muted); font-family: var(--f-body); }
+
+/* Code */
+pre.code { margin: 0; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font: 0.8rem/1.6 var(--f-mono); tab-size: 2; }
+pre.code code { background: none; border: 0; padding: 0; font-size: inherit; }
+.hljs-comment, .hljs-quote { color: var(--code-comment); font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-literal, .hljs-type { color: var(--code-key); }
+.hljs-string, .hljs-regexp, .hljs-template-string { color: var(--code-str); }
+.hljs-number, .hljs-attr, .hljs-variable, .hljs-template-variable { color: var(--code-num); }
+.hljs-title, .hljs-title.function_, .hljs-title.class_, .hljs-section, .hljs-name, .hljs-tag { color: var(--code-title); }
+.hljs-meta, .hljs-params { color: var(--code-ink); }
+
+/* Steps */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: s; }
+.step { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+.step.is-done { background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 40%, var(--line)); }
+.step input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--ok); cursor: pointer; }
+.step-body { display: grid; gap: 6px; min-width: 0; }
+.step-title { font-family: var(--f-display); font-weight: 700; font-size: 1.05rem; cursor: pointer; display: flex; gap: 10px; align-items: baseline; }
+.step-title .n { font-family: var(--f-mono); font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+.step p { font-size: 0.94rem; }
+.step .done { font-size: 0.9rem; }
+.step .done b { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+.step .try { font-size: 0.84rem; }
+
+/* Route map and tree */
+.map-svg { width: 100%; min-width: 600px; height: auto; display: block; }
+.map-svg text { font-family: var(--f-body); }
+.map-svg .zone { fill: var(--sunk); stroke: var(--line); }
+.map-svg .box { fill: var(--surface); stroke: var(--edge); stroke-width: 1.25; }
+.map-svg .t-name { fill: var(--ink); font-weight: 600; font-size: 13px; }
+.map-svg .t-line { fill: var(--ink); font-size: 11.5px; font-family: var(--f-mono); }
+.map-svg .t-quiet { fill: var(--muted); font-size: 11.5px; }
+.map-svg .wire { fill: none; stroke: var(--edge); stroke-width: 1.25; }
+.map-svg .mk { fill: var(--edge); }
+.map-svg .node { cursor: pointer; }
+.map-svg .node:hover .box { stroke: var(--accent); }
+.map-svg .node.is-on .box { stroke: var(--accent); stroke-width: 2.5; fill: var(--accent-soft); }
+.map-svg .node:focus-visible { outline: none; }
+.map-svg .node:focus-visible .box { stroke: var(--accent); stroke-width: 2.5; }
+.tree { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 0; font: 0.78rem/1.7 var(--f-mono); overflow-x: auto; }
+.tree span { display: block; padding: 0 14px; white-space: pre; color: var(--code-ink); }
+.tree span .c { color: var(--code-comment); }
+.tree span.is-on { background: var(--accent-soft); color: var(--accent); font-weight: 600; box-shadow: inset 3px 0 0 var(--accent); }
+.resolve-out { display: grid; gap: 10px; }
+.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; font-size: 0.9rem; margin: 0; }
+.kv dt { color: var(--muted); font-size: 0.82rem; padding-top: 1px; }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+
+/* Request track */
+.track { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.tnode { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--bg); display: grid; gap: 2px; align-content: start; min-width: 0; position: relative; }
+.tnode .lane { font: 500 0.66rem var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.tnode .nm { font: 600 0.84rem var(--f-mono); overflow-wrap: anywhere; }
+.tnode .sub { font-size: 0.76rem; color: var(--muted); }
+.tnode.is-visited { border-color: var(--edge); }
+.tnode.is-active { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent-soft); }
+.tnode.is-active .nm { color: var(--accent); }
+.tnode.is-fail { border-color: var(--bad); background: var(--bad-soft); }
+.tnode.is-fail .nm { color: var(--bad); }
+.tnode.backend { border-style: dashed; }
+.step-panel { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; display: grid; gap: 6px; min-height: 110px; }
+.step-panel.fail { border-left-color: var(--bad); }
+.step-panel.ok { border-left-color: var(--ok); }
+.step-count { font: 500 0.78rem var(--f-mono); color: var(--muted); }
+
+/* Sequence */
+.seq-svg { width: 100%; min-width: 600px; height: auto; display: block; }
+.seq-svg text { font-family: var(--f-mono); font-size: 12px; }
+.seq-svg .life { stroke: var(--line); stroke-width: 1.25; stroke-dasharray: 4 4; }
+.seq-svg .head rect { fill: var(--surface); stroke: var(--edge); stroke-width: 1.25; }
+.seq-svg .head text { fill: var(--ink); font-family: var(--f-body); font-weight: 600; font-size: 13px; }
+.seq-svg .msg path { stroke: var(--edge); stroke-width: 1.25; fill: none; }
+.seq-svg .msg text { fill: var(--muted); }
+.seq-svg .msg.is-past path { stroke: var(--ink); }
+.seq-svg .msg.is-past text { fill: var(--ink); }
+.seq-svg .msg.is-on path { stroke: var(--accent); stroke-width: 2.5; }
+.seq-svg .msg.is-on text { fill: var(--accent); font-weight: 600; }
+.seq-svg .act rect { fill: var(--surface); stroke: var(--edge); stroke-width: 1.25; }
+.seq-svg .act text { fill: var(--ink); text-anchor: middle; }
+.seq-svg .act .an { font-weight: 600; }
+.seq-svg .act.is-on rect { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2.5; }
+.seq-svg .mk { fill: var(--edge); }
+.seq-svg .mk-on { fill: var(--accent); }
+.jar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.86rem; background: var(--bg); border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; }
+.jar .cookie { font-family: var(--f-mono); font-size: 0.8rem; color: var(--ok); }
+
+/* Cards */
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.card { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; background: var(--surface); display: grid; gap: 6px; align-content: start; }
+.card h3 { font-family: var(--f-mono); font-size: 0.92rem; }
+.card p { font-size: 0.9rem; }
+
+/* Trace lists */
+.trace { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.trace li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+.trace li:last-child { border-bottom: 0; }
+.trace .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--edge); margin-top: 6px; }
+.trace .dot.ok { background: var(--ok); }
+.trace .dot.bad { background: var(--bad); }
+.trace .dot.warn { background: var(--warn); }
+.trace .dot.info { background: var(--accent); }
+.console { margin: 0; font: 0.78rem/1.55 var(--f-mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; color: var(--code-ink); }
+.console.err { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); background: var(--bad-soft); }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+fieldset { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px 16px; margin: 0; display: grid; gap: 12px; min-width: 0; }
+legend { font-family: var(--f-mono); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 6px; }
+fieldset.is-off .dim { opacity: 0.45; }
+.hint { font-size: 0.82rem; color: var(--warn); }
+
+/* Code tabs */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { font: 500 0.78rem var(--f-mono); color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.tab .side { color: var(--edge); margin-right: 6px; }
+.tab[aria-selected="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.code-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.code-head .path { font: 600 0.84rem var(--f-mono); overflow-wrap: anywhere; min-width: 0; }
+.notes { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; font-size: 0.92rem; }
+
+/* Field mapper */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.fchip { font: 500 0.78rem var(--f-mono); border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 2px 9px; cursor: pointer; }
+.fchip.special { border-style: dashed; color: var(--muted); }
+.fchip.is-on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.dbgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.dbt { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 10px 12px; display: grid; gap: 6px; align-content: start; }
+.dbt h4 { margin: 0; font: 600 0.84rem var(--f-mono); }
+.dbt h4 small { font-weight: 400; color: var(--muted); }
+.cols { display: flex; flex-wrap: wrap; gap: 4px; }
+.col { font: 0.74rem var(--f-mono); color: var(--muted); border: 1px solid transparent; border-radius: 4px; padding: 0 5px; }
+.col.is-on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.dest { border-left: 3px solid var(--accent); padding-left: 12px; display: grid; gap: 4px; min-height: 64px; font-size: 0.92rem; }
+
+/* Drills */
+.drills { display: grid; gap: 14px; counter-reset: d; }
+.drill { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px 18px; display: grid; gap: 10px; }
+.drill .sym { font-weight: 600; }
+.drill .sym::before { counter-increment: d; content: "Drill " counter(d); display: block; font: 500 0.72rem var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.opts { display: grid; gap: 6px; }
+.opt { text-align: left; font: 0.92rem var(--f-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; cursor: pointer; }
+.opt:hover:not(:disabled) { border-color: var(--accent); }
+.opt:disabled { cursor: default; }
+.opt.right { border-color: var(--ok); background: var(--ok-soft); }
+.opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.feedback { font-size: 0.9rem; }
+details.q { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 12px 16px; }
+details.q summary { cursor: pointer; font-weight: 600; }
+details.q[open] summary { margin-bottom: 8px; }
+details.q p { font-size: 0.94rem; }
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+footer { padding-block: 48px 64px; border-top: 1px solid var(--line); margin-top: 56px; display: grid; gap: 12px; font-size: 0.9rem; }
+footer ol { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.kind.basics::before { background: var(--ok); }
+.note-box { border: 1px solid var(--line); border-left: 3px solid var(--warn); border-radius: 8px; background: var(--surface); padding: 12px 14px; display: grid; gap: 4px; font-size: 0.92rem; }
+.note-box b { font-family: var(--f-mono); font-size: 0.8rem; letter-spacing: 0.04em; }
+
+/* Component test panel */
+.ct-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 20px; align-items: start; }
+.mock { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 14px; display: grid; gap: 8px; }
+.mock .mock-title { font: 500 0.7rem var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mock label { font-size: 0.86rem; font-weight: 600; }
+.mock textarea, .mock input[type="datetime-local"] { font: 0.92rem var(--f-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
+.mock textarea { min-height: 64px; resize: vertical; }
+.mock select { font-family: var(--f-body); background: var(--surface); }
+.mock .mock-alert { color: var(--bad); font-size: 0.9rem; font-weight: 600; min-height: 1.4em; }
+.mock .btn { justify-self: start; }
+.ct-out { display: grid; gap: 14px; min-width: 0; }
+.ct-test { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.ct-test .tname { font: 600 0.84rem var(--f-mono); overflow-wrap: anywhere; }
+.ct-test code { white-space: pre-wrap; }
+.ct-sum { font: 0.82rem var(--f-mono); }
+pre.body { margin: 0; background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: 0.78rem/1.55 var(--f-mono); overflow-x: auto; }
+.open-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.open-row .btn { font: 500 0.78rem var(--f-mono); padding: 5px 10px; }
+
+/* Test quiz */
+.quiz { display: grid; gap: 14px; counter-reset: q; }
+.quiz .drill .sym::before { counter-increment: q; content: "Change " counter(q); }
+.opts.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+@media (max-width: 900px) {
+  .track { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dbgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .hero-grid, .two, .split, .ct-grid { grid-template-columns: minmax(0, 1fr); }
+  .opts.three { grid-template-columns: minmax(0, 1fr); }
+  .cards { grid-template-columns: minmax(0, 1fr); }
+  .bar-brand { display: none; }
+  .lab { padding: 16px; }
+}
+@media (max-width: 520px) {
+  .track { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dbgrid { grid-template-columns: minmax(0, 1fr); }
+  .facts { grid-template-columns: minmax(0, 1fr); }
+  .facts dt { border-bottom: 0; padding-bottom: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; scroll-behavior: auto !important; }
+}
+</style>
+
+<div class="bar">
+  <div class="wrap gutter bar-inner">
+    <span class="bar-brand">Stage 6</span>
+    <nav class="bar-nav" aria-label="Sections">
+      <a href="#steps">Steps</a>
+      <a href="#routes">Routes</a>
+      <a href="#basics">Basics</a>
+      <a href="#tests">Component tests</a>
+      <a href="#request">Requests</a>
+      <a href="#signin">Sign-in</a>
+      <a href="#guard">Route guard</a>
+      <a href="#cors">CORS</a>
+      <a href="#code">Code</a>
+      <a href="#handoff">Stage 7</a>
+      <a href="#drills">Drills</a>
+      <a href="#checkpoint">Checkpoint</a>
+    </nav>
+  </div>
+</div>
+
+<main>
+<header class="wrap gutter hero">
+  <div style="display:grid;gap:14px">
+    <p class="eyebrow">Core Build Starter Guide · Stage 6 of 10 · User Notices example</p>
+    <h1>Connect the front end</h1>
+    <p class="lead">Stage 6 connects each screen from Stage 1 to the backend functions from Stage 5, and makes sign-in work from end to end. When it is done, every screen is a page with a route, every page gets its data through an API call to <code>/v1</code>, and a list records what each page sends and reads. Stage 7 designs the tables from that list.</p>
+  </div>
+  <div class="hero-grid">
+    <div style="display:grid;gap:16px;min-width:0">
+      <dl class="facts">
+        <dt>Decision</dt><dd>How does each screen reach the backend?</dd>
+        <dt>Input</dt><dd>The Stage 1 screen list, and the Stage 5 functions running against the stub data layer</dd>
+        <dt>Output</dt><dd>Every screen working against the backend, sign-in working end to end, component tests for the shared components, and a route list with the API calls each page makes</dd>
+        <dt>To Stage 7</dt><dd>The fields each page sends and reads</dd>
+        <dt>First app</dt><dd>Do in full</dd>
+      </dl>
+      <div class="flow-strip" aria-label="Where Stage 6 sits">
+        <span>Stage 5 functions</span><i>+</i><span>Stage 1 screens</span><i>→</i><span class="key">Stage 6 pages, routes, sign-in</span><i>→</i><span>Stage 7 tables</span>
+      </div>
+      <p class="muted" style="font-size:0.92rem;max-width:62ch">The backend skeleton comes before this stage so that every page has a function to call. The database comes after it because the API calls settle which fields are stored.</p>
+    </div>
+    <aside class="progress-card" aria-label="Your progress">
+      <p class="eyebrow">Your progress</p>
+      <div class="meter">
+        <div class="meter-row"><span>Steps done</span><b id="prog-steps-n">0 of 10</b></div>
+        <div class="meter-track"><div class="meter-fill" id="prog-steps"></div></div>
+      </div>
+      <div class="meter">
+        <div class="meter-row"><span>Checkpoint items</span><b id="prog-check-n">0 of 9</b></div>
+        <div class="meter-track"><div class="meter-fill" id="prog-check"></div></div>
+      </div>
+      <div class="meter">
+        <div class="meter-row"><span>Drills answered correctly</span><b id="prog-drill-n">0 of 14</b></div>
+        <div class="meter-track"><div class="meter-fill" id="prog-drill"></div></div>
+      </div>
+      <p class="muted" style="font-size:0.8rem">Ticks are saved in this browser only.</p>
+    </aside>
+  </div>
+</header>
+
+<!-- STEPS -->
+<section class="sec" id="steps">
+  <div class="wrap gutter">
+    <div class="sec-head">
+      <p class="eyebrow kind">Track</p>
+      <h2>The ten steps</h2>
+      <p class="measure">The guide lists this work in seven steps. Here it runs in ten: sign-in, which every other call depends on, is connected first, the front end's origin is allowed before the first call from the browser, and the shared components are tested as soon as they are built. Tick a step when its Done when line is true.</p>
+    </div>
+    <ol class="steps" id="step-list">
+      <li class="step"><input type="checkbox" id="step-1" aria-labelledby="step-1-t"><div class="step-body">
+        <label class="step-title" id="step-1-t" for="step-1"><span class="n">01</span>Create the front end</label>
+        <p>In the repository, create the Next.js application in <code>frontend/</code> (for example <code>npx create-next-app@latest frontend</code>, choosing TypeScript and the App Router), then check that <code>package.json</code> has the Next.js version from your Stage 3 version table. Commit <code>package-lock.json</code>: it is the front end's lock file, as <code>requirements.txt</code> is the backend's. From then on, install with <code>npm ci</code>, which installs exactly what the lock file records. create-next-app 16.4 turns on Cache Components in <code>next.config.ts</code>; the code on this page is written for that setting.</p>
+        <p class="done"><b>Done when</b><code>npm run dev</code> serves a page at http://localhost:3000 and the lock file is committed.</p>
+      </div></li>
+      <li class="step"><input type="checkbox" id="step-2" aria-labelledby="step-2-t"><div class="step-body">
+        <label class="step-title" id="step-2-t" for="step-2"><span class="n">02</span>Match screens to functions</label>
+        <p>Write one row per Stage 1 screen: its route, the API calls it makes, and the backend router and service that answer them. A screen with no function, or a function no screen calls, is a gap. Add the missing function (a short return to Stage 5) or remove the unused one.</p>
+        <p class="done"><b>Done when</b>the route list has no empty cell.</p>
+        <a class="try" href="#routes">Open the route list</a>
+      </div></li>
+      <li class="step"><input type="checkbox" id="step-3" aria-labelledby="step-3-t"><div class="step-body">
+        <label class="step-title" id="step-3-t" for="step-3"><span class="n">03</span>Build the shared components</label>
+        <p>Build what several pages use: the root layout with the navigation bar, the user table, the notice form and the status badge. Each component receives its data as props and makes no API call of its own, so the page that uses it owns the call.</p>
+        <p class="done"><b>Done when</b>each component renders with sample data.</p>
+      </div></li>
+      <li class="step"><input type="checkbox" id="step-test" aria-labelledby="step-test-t"><div class="step-body">
+        <label class="step-title" id="step-test-t" for="step-test"><span class="n">04</span>Test the shared components</label>
+        <p>Install Vitest and React Testing Library with the guide's command, create <code>vitest.config.mts</code>, add the test script, and test each shared component the way a staff member uses it: fill in the form, press the button, read what appears. Add <code>npm ci</code>, <code>npm audit</code> and <code>npm test</code> to the CI workflow.</p>
+        <p class="done"><b>Done when</b><code>npm test</code> passes for NoticeForm, UserTable and NavBar, and the CI workflow runs the front end job.</p>
+        <a class="try" href="#tests">Try the component test panel</a>
+      </div></li>
+      <li class="step"><input type="checkbox" id="step-4" aria-labelledby="step-4-t"><div class="step-body">
+        <label class="step-title" id="step-4-t" for="step-4"><span class="n">05</span>Create the routes</label>
+        <p>Make one folder per route under <code>app/</code>, each with a <code>page.tsx</code>. A dynamic segment, such as a user id, is a folder named in square brackets. Each page starts as a placeholder that shows its title.</p>
+        <p class="done"><b>Done when</b>every URL in the route list opens its placeholder.</p>
+        <a class="try" href="#routes">Try the URL resolver</a>
+      </div></li>
+      <li class="step"><input type="checkbox" id="step-5" aria-labelledby="step-5-t"><div class="step-body">
+        <label class="step-title" id="step-5-t" for="step-5"><span class="n">06</span>Allow the front end's origin (CORS)</label>
+        <p>Add the CORS middleware to the backend, with the allowed origin read through <code>get_settings()</code> (<code>ALLOWED_ORIGIN</code> is http://localhost:3000 in development) and credentials allowed.</p>
+        <p class="done"><b>Done when</b>a test call from the browser shows no CORS error in the console.</p>
+        <a class="try" href="#cors">Try the CORS simulator</a>
+      </div></li>
+      <li class="step"><input type="checkbox" id="step-6" aria-labelledby="step-6-t"><div class="step-body">
+        <label class="step-title" id="step-6-t" for="step-6"><span class="n">07</span>Add the API helper and connect the sign-in page</label>
+        <p>Write <code>lib/api.ts</code>, the one function every page uses to call the backend. Connect the sign-in page first; the backend checks the credentials and sets the session cookie.</p>
+        <p class="done"><b>Done when</b>signing in with a test staff account sets a cookie named <code>session</code> (developer tools, Application, then Cookies).</p>
+        <a class="try" href="#signin">Step through sign-in</a>
+      </div></li>
+      <li class="step"><input type="checkbox" id="step-7" aria-labelledby="step-7-t"><div class="step-body">
+        <label class="step-title" id="step-7-t" for="step-7"><span class="n">08</span>Connect the other pages</label>
+        <p>One page at a time, replace the placeholder with the API call, and handle the three states every page has besides success: loading, error, and no data.</p>
+        <p class="done"><b>Done when</b>each page shows the stub data from the backend, and shows a message when the backend is stopped.</p>
+        <a class="try" href="#request">Step through a request</a>
+      </div></li>
+      <li class="step"><input type="checkbox" id="step-8" aria-labelledby="step-8-t"><div class="step-body">
+        <label class="step-title" id="step-8-t" for="step-8"><span class="n">09</span>Guard the routes</label>
+        <p>Add <code>proxy.ts</code> so that a visitor without a session cookie is sent to <code>/login</code>.</p>
+        <p class="done"><b>Done when</b>in a private browser window, opening /users goes to /login.</p>
+        <a class="try" href="#guard">Test the route guard</a>
+      </div></li>
+      <li class="step"><input type="checkbox" id="step-9" aria-labelledby="step-9-t"><div class="step-body">
+        <label class="step-title" id="step-9-t" for="step-9"><span class="n">10</span>Check links, run the checkpoint, commit</label>
+        <p>Click through every page from the navigation bar. Record what each page sends and reads, for Stage 7.</p>
+        <p class="done"><b>Done when</b>every checkpoint item is ticked and the work is committed.</p>
+        <a class="try" href="#handoff">See what Stage 7 receives</a>
+      </div></li>
+    </ol>
+    <div class="btn-row" style="margin-top:12px"><button class="btn" type="button" id="steps-reset">Clear step ticks</button></div>
+  </div>
+</section>
+
+<!-- ROUTES -->
+<section class="sec" id="routes">
+  <div class="wrap gutter">
+    <div class="sec-head">
+      <p class="eyebrow kind try">Try</p>
+      <h2>Screens to pages and routes</h2>
+      <p class="measure">Each Stage 1 screen becomes one folder under <code>app/</code> that holds a <code>page.tsx</code>, and the folder path is the URL. Type a URL, or select a page on the map, to see which file serves it.</p>
+    </div>
+
+    <div class="lab">
+      <div class="split">
+        <div class="block">
+          <div class="control">
+            <label class="label" for="route-input">URL in the browser</label>
+            <input type="text" id="route-input" value="/users/42" spellcheck="false" autocomplete="off">
+          </div>
+          <div class="chips" aria-label="Sample URLs">
+            <button class="chip route-chip" type="button" data-path="/">/</button>
+            <button class="chip route-chip" type="button" data-path="/login">/login</button>
+            <button class="chip route-chip" type="button" data-path="/users">/users</button>
+            <button class="chip route-chip" type="button" data-path="/users/42">/users/42</button>
+            <button class="chip route-chip" type="button" data-path="/users/new">/users/new</button>
+            <button class="chip route-chip" type="button" data-path="/notices">/notices</button>
+            <button class="chip route-chip" type="button" data-path="/notices/new">/notices/new</button>
+            <button class="chip route-chip" type="button" data-path="/settings">/settings</button>
+          </div>
+          <div class="resolve-out" id="route-out" aria-live="polite"></div>
+        </div>
+        <div class="block">
+          <p class="label">frontend/ after Stage 6</p>
+          <pre class="tree" id="tree"><span data-tree="root">frontend/</span><span>  proxy.ts               <i class="c"># route guard</i></span><span>  .env.development       <i class="c"># the two API settings</i></span><span>  package-lock.json      <i class="c"># lock file; npm ci</i></span><span>  vitest.config.mts      <i class="c"># component tests</i></span><span>  __tests__/             <i class="c"># NavBar, NoticeForm, UserTable</i></span><span>  lib/api.ts             <i class="c"># calls from the browser</i></span><span>  lib/api-server.ts      <i class="c"># calls from the server</i></span><span>  components/            <i class="c"># NavBar, UserTable, ...</i></span><span>  app/</span><span data-tree="layout">    layout.tsx           <i class="c"># html, body, NavBar</i></span><span data-tree="/">    page.tsx             <i class="c"># /</i></span><span data-tree="/login">    login/page.tsx       <i class="c"># /login</i></span><span data-tree="/users">    users/page.tsx       <i class="c"># /users</i></span><span data-tree="/users/[id]">    users/[id]/page.tsx  <i class="c"># /users/42</i></span><span data-tree="/notices">    notices/page.tsx     <i class="c"># /notices</i></span><span data-tree="/notices/new">    notices/new/page.tsx <i class="c"># /notices/new</i></span></pre>
+        </div>
+      </div>
+
+      <div class="block">
+        <p class="label">Page map: every page is reachable from the NavBar or a link</p>
+        <div class="scroll-x">
+          <svg class="map-svg" viewBox="0 0 760 356" role="img" aria-label="Page map. The root page and the sign-in page are outside the guarded area. Users list, User detail, Notice history and New notice are inside the area guarded by proxy.ts. The NavBar links to Users list and Notice history.">
+            <defs>
+              <marker id="map-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker>
+            </defs>
+            <rect class="zone" x="256" y="16" width="480" height="324" rx="8"/>
+            <text class="t-name" x="272" y="40">Guarded by proxy.ts</text>
+            <text class="t-quiet" x="272" y="58">No session cookie: the visitor is sent to /login</text>
+            <rect class="box" x="272" y="72" width="448" height="40" rx="8"/>
+            <text class="t-name" x="496" y="96" text-anchor="middle" style="font-weight:500">NavBar, in app/layout.tsx, on every page</text>
+            <g class="wire-g">
+              <path class="wire" d="M376 112V140" marker-end="url(#map-arrow)"/>
+              <path class="wire" d="M616 112V140" marker-end="url(#map-arrow)"/>
+              <path class="wire" d="M376 212V252" marker-end="url(#map-arrow)"/>
+              <path class="wire" d="M592 212V252" marker-end="url(#map-arrow)"/>
+              <path class="wire" d="M648 252V212" marker-end="url(#map-arrow)"/>
+              <path class="wire" d="M224 56H236V168H272" marker-end="url(#map-arrow)"/>
+              <path class="wire" d="M224 224H248V192H272" marker-end="url(#map-arrow)"/>
+              <path class="wire" d="M256 248H224" stroke-dasharray="4 4" marker-end="url(#map-arrow)"/>
+            </g>
+            <text class="t-quiet" x="384" y="130">Users</text>
+            <text class="t-quiet" x="624" y="130">Notices</text>
+            <text class="t-quiet" x="384" y="238">click a row</text>
+            <text class="t-quiet" x="584" y="238" text-anchor="end">New notice button</text>
+            <text class="t-quiet" x="656" y="238">after saving</text>
+            <g class="node" data-route="/" data-example="/" tabindex="0" role="button" aria-label="Root page, slash">
+              <rect class="box" x="24" y="20" width="200" height="72" rx="8"/>
+              <text class="t-name" x="40" y="44">Root page</text>
+              <text class="t-line" x="40" y="60">/</text>
+              <text class="t-quiet" x="40" y="76">Sends the visitor on to /users</text>
+            </g>
+            <g class="node" data-route="/login" data-example="/login" tabindex="0" role="button" aria-label="Sign in, slash login">
+              <rect class="box" x="24" y="188" width="200" height="72" rx="8"/>
+              <text class="t-name" x="40" y="212">Sign in</text>
+              <text class="t-line" x="40" y="228">/login</text>
+              <text class="t-quiet" x="40" y="244">Open to everyone</text>
+            </g>
+            <g class="node" data-route="/users" data-example="/users" tabindex="0" role="button" aria-label="Users list, slash users">
+              <rect class="box" x="272" y="140" width="208" height="72" rx="8"/>
+              <text class="t-name" x="284" y="164">Users list</text>
+              <text class="t-line" x="284" y="180">/users</text>
+              <text class="t-quiet" x="284" y="196">GET /v1/users?group={id}</text>
+            </g>
+            <g class="node" data-route="/users/[id]" data-example="/users/42" tabindex="0" role="button" aria-label="User detail, slash users slash id">
+              <rect class="box" x="272" y="252" width="208" height="72" rx="8"/>
+              <text class="t-name" x="284" y="276">User detail</text>
+              <text class="t-line" x="284" y="292">/users/[id]</text>
+              <text class="t-quiet" x="284" y="308">GET and PATCH /v1/users/{id}</text>
+            </g>
+            <g class="node" data-route="/notices" data-example="/notices" tabindex="0" role="button" aria-label="Notice history, slash notices">
+              <rect class="box" x="512" y="140" width="208" height="72" rx="8"/>
+              <text class="t-name" x="524" y="164">Notice history</text>
+              <text class="t-line" x="524" y="180">/notices</text>
+              <text class="t-quiet" x="524" y="196">GET /v1/notices, Send now</text>
+            </g>
+            <g class="node" data-route="/notices/new" data-example="/notices/new" tabindex="0" role="button" aria-label="New notice, slash notices slash new">
+              <rect class="box" x="512" y="252" width="208" height="72" rx="8"/>
+              <text class="t-name" x="524" y="276">New notice</text>
+              <text class="t-line" x="524" y="292">/notices/new</text>
+              <text class="t-quiet" x="524" y="308">POST /v1/notices</text>
+            </g>
+          </svg>
+        </div>
+        <p class="muted" style="font-size:0.88rem">The dashed arrow is the guard's redirect. <code>/login</code> is outside the guarded area, so a visitor who is sent there can sign in.</p>
+      </div>
+    </div>
+
+    <div class="block">
+      <h3>The route list for User Notices</h3>
+      <div class="scroll-x">
+        <table>
+          <thead><tr><th>Screen</th><th>Route folder</th><th>URL</th><th>API calls</th><th>Backend router and service</th></tr></thead>
+          <tbody>
+            <tr><td>Sign in</td><td><code>app/login/</code></td><td><code>/login</code></td><td><code>POST /v1/auth/login</code></td><td>routers/auth.py, auth/</td></tr>
+            <tr><td>Users list</td><td><code>app/users/</code></td><td><code>/users</code></td><td><code>GET /v1/users?group={id}&amp;limit=50&amp;offset=0</code><br><code>GET /v1/users/groups</code> for the group filter</td><td>routers/users.py, services/users.py</td></tr>
+            <tr><td>User detail</td><td><code>app/users/[id]/</code></td><td><code>/users/42</code></td><td><code>GET /v1/users/{id}</code><br><code>PATCH /v1/users/{id}</code></td><td>routers/users.py, services/users.py</td></tr>
+            <tr><td>New notice</td><td><code>app/notices/new/</code></td><td><code>/notices/new</code></td><td><code>POST /v1/notices</code></td><td>routers/notices.py, services/notices.py (schedule_notice)</td></tr>
+            <tr><td>Notice history</td><td><code>app/notices/</code></td><td><code>/notices</code></td><td><code>GET /v1/notices</code><br><code>POST /v1/notices/{id}/send</code> for Send now</td><td>routers/notices.py, services/notices.py (list_notices, send_notice)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="notes measure">
+        <li>A folder is a URL segment, and only a folder with a page file is a page you can open.</li>
+        <li>A folder name in square brackets, such as <code>[id]</code>, is a dynamic segment: one page file serves every user.</li>
+        <li>The root layout, <code>app/layout.tsx</code>, is required and holds the <code>html</code> and <code>body</code> tags. Anything placed in it, such as the NavBar, appears on every page.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- BASICS -->
+<section class="sec" id="basics">
+  <div class="wrap gutter">
+    <div class="sec-head">
+      <p class="eyebrow kind basics">Basics</p>
+      <h2>Server and Client Components</h2>
+      <p class="measure">The rest of this page uses these three terms. If you know them, skip to Component tests.</p>
+    </div>
+    <div class="cards">
+      <div class="card"><h3>Server Component</h3><p>A component that runs on the Next.js server and sends finished HTML to the browser. In the App Router, components are Server Components unless marked otherwise.</p></div>
+      <div class="card"><h3>Client Component</h3><p>A component whose file starts with <code>'use client'</code>. It also runs in the browser, so it can respond to clicks and typing. Forms and tables that change on the page are Client Components.</p></div>
+      <div class="card"><h3>Route handler</h3><p>A <code>route.ts</code> file that answers HTTP requests on the Next.js server, like a small API endpoint.</p></div>
+    </div>
+    <p class="measure" style="margin-top:16px">In User Notices, the pages that call the backend are Client Components, and so is NoticeForm. The root page, <code>app/page.tsx</code>, is a Server Component: it runs on the server and only redirects.</p>
+  </div>
+</section>
+
+<!-- COMPONENT TESTS -->
+<section class="sec" id="tests">
+  <div class="wrap gutter">
+    <div class="sec-head">
+      <p class="eyebrow kind try">Try</p>
+      <h2>Component tests</h2>
+      <p class="measure">A component test renders one shared component in a simulated browser (jsdom) and uses it the way a staff member would. It needs no backend and runs in seconds, so CI runs it on every push. The guide's example asks for three: NoticeForm shows an error and makes no API call for empty text or a past send time, UserTable renders one row per user it receives, and NavBar renders a link to every page. Pick an input for NoticeForm to see what its test expects.</p>
+    </div>
+
+    <div class="lab">
+      <div class="controls">
+        <div class="control"><span class="label" id="ct-preset-l">Input for NoticeForm</span>
+          <div class="seg" role="group" aria-labelledby="ct-preset-l" data-group="ctpreset">
+            <button type="button" data-value="empty" aria-pressed="true">Empty text</button>
+            <button type="button" data-value="past" aria-pressed="false">A past send time</button>
+            <button type="button" data-value="valid" aria-pressed="false">A valid notice</button>
+          </div></div>
+      </div>
+      <div class="ct-grid">
+        <div class="block">
+          <form class="mock" id="ct-form" novalidate>
+            <span class="mock-title">NoticeForm, as the test renders it</span>
+            <label for="ct-text">Notice text</label>
+            <textarea id="ct-text" spellcheck="false"></textarea>
+            <label for="ct-group">Group</label>
+            <select id="ct-group"><option value="1">Group 1</option><option value="2">Group 2</option></select>
+            <label for="ct-sendat">Send at</label>
+            <input type="datetime-local" id="ct-sendat">
+            <p class="mock-alert" id="ct-alert"></p>
+            <button class="btn primary" type="submit">Schedule notice</button>
+          </form>
+          <label class="check"><input type="checkbox" id="ct-break"><span>Break NoticeForm: change <code>if (!text)</code> to <code>if (false)</code> and see which test fails</span></label>
+          <p class="muted" style="font-size:0.86rem">Edit the fields to try your own input. The page runs the same checks as NoticeForm, in the same order.</p>
+        </div>
+        <div class="ct-out" aria-live="polite">
+          <dl class="kv" id="ct-result"></dl>
+          <div class="ct-test" id="ct-test"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <h3>Install and configure</h3>
+      <p class="measure">Run these in <code>frontend/</code>. The second line is the guide's install command (<code>vite-tsconfig-paths</code> resolves the imports that start with <code>@/</code>), and the third adds <code>"test": "vitest"</code> to <code>package.json</code>. The first line is needed on a project made by create-next-app 16.4, which sets <code>@types/node</code> to <code>^20</code>: Vitest 5 accepts <code>^22</code> or 24 and later, and without the first line npm stops with ERESOLVE. Version 24 matches the Node.js 24 LTS runtime.</p>
+      <pre class="code"><code class="language-bash" id="ct-install">npm install --save-dev @types/node@24
+npm install --save-dev vitest @vitejs/plugin-react vite-tsconfig-paths jsdom @testing-library/react @testing-library/dom
+npm pkg set scripts.test=vitest</code></pre>
+      <p class="measure">The Vitest configuration is the one from the Next.js Vitest guide: the <code>tsconfigPaths()</code> and <code>react()</code> plugins, and <code>test: { environment: 'jsdom' }</code>. Without the jsdom environment every test stops with <code>ReferenceError: document is not defined</code>, because <code>render()</code> has no document to draw into. Vite 8, which Vitest 5 installs, prints a notice that it can read the tsconfig paths itself through <code>resolve.tsconfigPaths</code>; the plugin still works, and this page keeps the guide's configuration.</p>
+      <div class="open-row"><span class="label">Open in the code section:</span>
+        <button class="btn" type="button" data-open-file="vitest">vitest.config.mts</button>
+        <button class="btn" type="button" data-open-file="noticeform">NoticeForm.tsx</button>
+        <button class="btn" type="button" data-open-file="noticeformtest">NoticeForm.test.tsx</button>
+        <button class="btn" type="button" data-open-file="usertable">UserTable.tsx</button>
+        <button class="btn" type="button" data-open-file="usertabletest">UserTable.test.tsx</button>
+        <button class="btn" type="button" data-open-file="navbar">NavBar.tsx</button>
+        <button class="btn" type="button" data-open-file="navbartest">NavBar.test.tsx</button>
+        <button class="btn" type="button" data-open-file="ci">ci.yml</button>
+      </div>
+    </div>
+
+    <div class="two" style="margin-top:22px">
+      <div class="block">
+        <h3>Run them</h3>
+        <pre class="console" id="ct-run"></pre>
+        <p class="measure" style="font-size:0.92rem">In a terminal, <code>npm test</code> keeps watching and runs the tests again after each change; press q to stop. In CI, where the CI variable is set, Vitest runs the tests once and exits. Vitest may print a performance hint under the summary.</p>
+      </div>
+      <div class="block">
+        <h3>In CI</h3>
+        <ul class="notes">
+          <li><b><code>npm ci</code>.</b> Installs exactly what <code>package-lock.json</code> records, and stops with an error if it disagrees with <code>package.json</code>.</li>
+          <li><b><code>npm audit --omit=dev --audit-level=high</code>.</b> Fails the job on a high or critical finding in the packages the release runs: next, react and react-dom. On October 15 and 16, 2026, the full <code>npm audit</code> on a new create-next-app 16.4.2 project reported 5 high findings, all in eslint-config-next's dependencies (braces, through micromatch and fast-glob), with no fixed version. Remove <code>--omit=dev</code> once a fixed version is published.</li>
+          <li><b><code>npm test</code>.</b> Runs Vitest once, because GitHub Actions sets the CI variable.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="block" style="margin-top:22px">
+      <h3>What component tests cannot cover</h3>
+      <ul class="notes measure">
+        <li><b>Async Server Components.</b> Vitest does not support them, so Next.js recommends end-to-end tests for those. A Server Component that awaits <code>apiServer()</code>, in the request stepper below, is one.</li>
+        <li><b>The connections.</b> A component test never reaches <code>proxy.ts</code>, the backend, CORS or the session cookie. Stage 9 adds Playwright end-to-end tests that sign in, edit a user, schedule a notice and check the signed-out redirect in a real browser.</li>
+      </ul>
+    </div>
+
+    <div class="lab" id="quiz-lab">
+      <div class="block">
+        <h3>Which kind of test?</h3>
+        <p class="measure">For each front end change, pick the test that catches a break in it: a component test (Vitest and React Testing Library, this stage), an end-to-end test (Playwright in a real browser, Stage 9) or an API test (a request to one backend endpoint, without a browser, Stage 9).</p>
+        <p class="mono" style="font-size:0.88rem" id="quiz-score" aria-live="polite"></p>
+      </div>
+      <div class="quiz" id="quiz-list"></div>
+      <div class="btn-row"><button class="btn" type="button" id="quiz-reset">Reset the quiz</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- REQUEST -->
+<section class="sec" id="request">
+  <div class="wrap gutter">
+    <div class="sec-head">
+      <p class="eyebrow kind try">Try</p>
+      <h2>How a request travels</h2>
+      <p class="measure">A page never calls fetch directly. A Client Component calls <code>api()</code> in <code>lib/api.ts</code>, which sends the request to <code>/v1</code> with the session cookie. A Server Component calls <code>apiServer()</code> in <code>lib/api-server.ts</code>, which uses <code>API_INTERNAL_URL</code> and passes the cookie on. Either way, the backend checks the cookie through <code>current_user</code> before it calls the service. The sandbox is a second copy of the deployment, used for testing, set up in Stage 9; live is the copy the staff use. Pick a situation, then step through it.</p>
+    </div>
+    <div class="lab">
+      <div class="controls">
+        <div class="control"><span class="label" id="rq-origin-l">Where the call is made</span>
+          <div class="seg" role="group" aria-labelledby="rq-origin-l" data-group="origin">
+            <button type="button" data-value="browser" aria-pressed="true">In the browser</button>
+            <button type="button" data-value="server" aria-pressed="false">On the Next.js server</button>
+          </div></div>
+        <div class="control"><span class="label" id="rq-env-l">Where it runs</span>
+          <div class="seg" role="group" aria-labelledby="rq-env-l" data-group="env">
+            <button type="button" data-value="dev" aria-pressed="true">Development</button>
+            <button type="button" data-value="prod" aria-pressed="false">Sandbox and live</button>
+          </div></div>
+        <div class="control"><span class="label" id="rq-session-l">Session cookie</span>
+          <div class="seg" role="group" aria-labelledby="rq-session-l" data-group="session">
+            <button type="button" data-value="valid" aria-pressed="true">Valid</button>
+            <button type="button" data-value="expired" aria-pressed="false">Expired token</button>
+            <button type="button" data-value="missing" aria-pressed="false">Missing</button>
+          </div></div>
+        <div class="control" id="rq-action-ctl"><span class="label" id="rq-action-l">What the page does</span>
+          <div class="seg" role="group" aria-labelledby="rq-action-l" data-group="action">
+            <button type="button" data-value="read" aria-pressed="true">Load user 42</button>
+            <button type="button" data-value="save" aria-pressed="false">Save a change</button>
+          </div></div>
+        <div class="control" id="rq-action-server" hidden><span class="label">What the page does</span>
+          <p style="font-size:0.88rem;padding-top:6px">Shows the group names: <code>GET /v1/users/groups</code></p></div>
+      </div>
+
+      <ol class="track" aria-label="Request path">
+        <li class="tnode" data-node="page"><span class="lane" id="tn-page-lane">Browser</span><span class="nm" id="tn-page-nm">Page</span><span class="sub" id="tn-page-sub">users/[id]/page.tsx</span></li>
+        <li class="tnode" data-node="api"><span class="lane" id="tn-api-lane">Browser</span><span class="nm" id="tn-api-nm">lib/api.ts</span><span class="sub" id="tn-api-sub">URL, cookie, errors</span></li>
+        <li class="tnode" data-node="hop"><span class="lane">Network</span><span class="nm" id="tn-hop-nm">localhost:8000</span><span class="sub" id="tn-hop-sub">another origin: CORS</span></li>
+        <li class="tnode backend" data-node="router"><span class="lane">Backend</span><span class="nm">routers/users.py</span><span class="sub" id="tn-router-sub">/v1/users/{user_id}</span></li>
+        <li class="tnode backend" data-node="cu"><span class="lane">Backend</span><span class="nm">current_user</span><span class="sub">checks the token</span></li>
+        <li class="tnode backend" data-node="svc"><span class="lane">Backend</span><span class="nm">services/users.py</span><span class="sub">stub until Stage 7</span></li>
+      </ol>
+
+      <div class="step-panel" id="rq-panel" aria-live="polite">
+        <span class="step-count" id="rq-count">Step 1 of 7</span>
+        <h3 id="rq-title"></h3>
+        <p id="rq-text" class="measure"></p>
+      </div>
+      <div class="btn-row">
+        <button class="btn" type="button" id="rq-back">Back</button>
+        <button class="btn primary" type="button" id="rq-next">Next step</button>
+        <button class="btn" type="button" id="rq-all">Show all steps</button>
+        <button class="btn" type="button" id="rq-reset">Start over</button>
+      </div>
+
+      <div class="block">
+        <p class="label" id="rq-log-cap">Network log, as the browser's Network tab would list it</p>
+        <div class="scroll-x">
+          <table class="log">
+            <thead><tr><th>Method</th><th>URL</th><th>Status</th><th>Note</th></tr></thead>
+            <tbody id="rq-log"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <h3>The address by environment</h3>
+      <div class="scroll-x">
+        <table>
+          <thead><tr><th>Environment</th><th>The page runs at</th><th>Calls from the browser go to</th><th>Calls made on the Next.js server go to</th><th>CORS applies</th></tr></thead>
+          <tbody>
+            <tr><td>Development</td><td><code>http://localhost:3000</code></td><td><code>http://localhost:8000/v1/...</code> (<code>NEXT_PUBLIC_API_BASE</code>)</td><td><code>http://127.0.0.1:8000/v1/...</code> (<code>API_INTERNAL_URL</code>)</td><td>Yes, to calls from the browser: two origins</td></tr>
+            <tr><td>Sandbox and live</td><td><code>https://notices.example.internal</code></td><td><code>/v1/...</code> on the same origin (<code>NEXT_PUBLIC_API_BASE</code> is empty); nginx sends it to the backend (Stage 9)</td><td><code>http://127.0.0.1:8000/v1/...</code> (<code>API_INTERNAL_URL</code>, set in the user-notices-web unit)</td><td>No</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="measure">Two settings produce this. <code>NEXT_PUBLIC_API_BASE</code> starts with <code>NEXT_PUBLIC_</code>, so Next.js copies its value into the browser code when the build runs. It is set only in <code>.env.development</code>, which <code>npm run dev</code> loads, so the release build has an empty value and the browser calls the relative path <code>/v1</code>. The same build then runs in the sandbox and in live. <code>API_INTERNAL_URL</code> has no prefix: it stays on the Next.js server and is read when the code runs, from <code>.env.development</code> in development and from the user-notices-web unit on the servers. It can use 127.0.0.1 because the Next.js server passes the session cookie on itself; the browser's address stays localhost so that the cookie's host matches.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SIGN-IN -->
+<section class="sec" id="signin">
+  <div class="wrap gutter">
+    <div class="sec-head">
+      <p class="eyebrow kind try">Try</p>
+      <h2>Sign-in and route guards</h2>
+      <p class="measure">The backend checks the password at sign-in and the session on every API call. The front end collects the credentials, sends them, and sends visitors without a session to <code>/login</code>. It never checks a password. Step through a first visit.</p>
+    </div>
+    <div class="lab">
+      <div class="scroll-x">
+        <svg class="seq-svg" viewBox="0 0 760 596" role="img" aria-label="Sign-in sequence between the browser, the Next.js server running proxy.ts, and the backend. The step text below describes each message.">
+          <defs>
+            <marker id="sq-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker>
+            <marker id="sq-a-on" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk-on" d="M0 0L10 5L0 10z"/></marker>
+          </defs>
+          <line class="life" x1="132" y1="52" x2="132" y2="584"/>
+          <line class="life" x1="380" y1="52" x2="380" y2="584"/>
+          <line class="life" x1="628" y1="52" x2="628" y2="584"/>
+          <g class="head"><rect x="28" y="12" width="208" height="40" rx="8"/><text x="132" y="37" text-anchor="middle">Browser</text></g>
+          <g class="head"><rect x="276" y="12" width="208" height="40" rx="8"/><text x="380" y="37" text-anchor="middle">Next.js server, proxy.ts</text></g>
+          <g class="head"><rect x="524" y="12" width="208" height="40" rx="8"/><text x="628" y="37" text-anchor="middle">Backend (FastAPI)</text></g>
+          <g class="msg" id="sq-m1"><path d="M132 100H380" marker-end="url(#sq-a)"/><text x="256" y="92" text-anchor="middle">GET /users, no cookie</text></g>
+          <g class="msg" id="sq-m2"><path d="M380 148H132" marker-end="url(#sq-a)"/><text x="256" y="140" text-anchor="middle">307 redirect to /login</text></g>
+          <g class="msg" id="sq-m3"><path d="M132 196H628" marker-end="url(#sq-a)"/><text x="616" y="188" text-anchor="end">POST /v1/auth/login</text><text x="616" y="212" text-anchor="end">email and password</text></g>
+          <g class="act" id="sq-a1"><rect x="540" y="224" width="176" height="48" rx="8"/><text class="an" x="628" y="244">verify_credentials</text><text x="628" y="260">then issue_token</text></g>
+          <g class="msg" id="sq-m4"><path d="M628 304H132" marker-end="url(#sq-a)"/><text x="616" y="296" text-anchor="end">204, Set-Cookie: session</text><text x="616" y="320" text-anchor="end">HttpOnly, SameSite=Lax</text></g>
+          <g class="msg" id="sq-m5"><path d="M132 360H380" marker-end="url(#sq-a)"/><text x="256" y="352" text-anchor="middle">GET /users, cookie sent</text></g>
+          <g class="msg" id="sq-m6"><path d="M380 408H132" marker-end="url(#sq-a)"/><text x="256" y="400" text-anchor="middle">page served</text></g>
+          <g class="msg" id="sq-m7"><path d="M132 456H628" marker-end="url(#sq-a)"/><text x="616" y="448" text-anchor="end">GET /v1/users?group=3</text><text x="616" y="472" text-anchor="end">cookie sent with it</text></g>
+          <g class="act" id="sq-a2"><rect x="540" y="484" width="176" height="48" rx="8"/><text class="an" x="628" y="504">current_user</text><text x="628" y="520">checks the token</text></g>
+          <g class="msg" id="sq-m8"><path d="M628 564H132" marker-end="url(#sq-a)"/><text x="616" y="556" text-anchor="end">200 and the list, or 401</text></g>
+        </svg>
+      </div>
+      <div class="jar" id="si-jar" aria-live="polite"></div>
+      <div class="step-panel" id="si-panel" aria-live="polite">
+        <span class="step-count" id="si-count"></span>
+        <h3 id="si-title"></h3>
+        <p id="si-text" class="measure"></p>
+      </div>
+      <div class="btn-row">
+        <button class="btn" type="button" id="si-back">Back</button>
+        <button class="btn primary" type="button" id="si-next">Next step</button>
+        <button class="btn" type="button" id="si-reset">Start over</button>
+      </div>
+    </div>
+
+    <div class="block">
+      <h3>Who checks what</h3>
+      <div class="scroll-x">
+        <table>
+          <thead><tr><th>Check</th><th>Where it runs</th><th>What it protects</th></tr></thead>
+          <tbody>
+            <tr><td>Email and password</td><td>Backend: <code>verify_credentials</code>, at <code>POST /v1/auth/login</code></td><td>Sign-in</td></tr>
+            <tr><td>Session token on every API call</td><td>Backend: <code>current_user</code>, through <code>Depends</code></td><td>The data</td></tr>
+            <tr><td>A session cookie exists before a page loads</td><td>Front end: <code>proxy.ts</code></td><td>The visitor's path: no page that loads and then fails</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="block">
+      <h3>The session cookie's settings</h3>
+      <div class="cards">
+        <div class="card"><h3>HttpOnly</h3><p>JavaScript on the page cannot read the cookie; only the server receives it. A script injected through a bug cannot copy the session.</p></div>
+        <div class="card"><h3>SameSite=Lax</h3><p>The browser does not send the cookie with requests started by other sites, except when a visitor follows a link to the application. Lax is also the default when the attribute is missing.</p></div>
+        <div class="card"><h3>Secure</h3><p>The cookie is sent over HTTPS only. Browsers allow plain HTTP on localhost, except Safari, so the route sets Secure only when <code>ALLOWED_ORIGIN</code> starts with https://, as it does in the sandbox and live. No separate setting is needed.</p></div>
+      </div>
+      <p class="measure muted" style="font-size:0.92rem">In development the cookie is set by the backend on port 8000 and read by <code>proxy.ts</code> on port 3000. That works because cookies are scoped by host name, not by port.</p>
+    </div>
+  </div>
+</section>
+
+<!-- GUARD -->
+<section class="sec" id="guard">
+  <div class="wrap gutter">
+    <div class="sec-head">
+      <p class="eyebrow kind try">Try</p>
+      <h2>Test the route guard</h2>
+      <p class="measure"><code>proxy.ts</code> runs before a page loads, on the paths its matcher lists, and checks only that a session cookie exists. Pick a path and a cookie state. Then remove the matcher to see why it is there.</p>
+    </div>
+    <div class="lab">
+      <div class="split">
+        <div class="block">
+          <div class="control">
+            <label class="label" for="g-path">Request path</label>
+            <input type="text" id="g-path" value="/users/42" spellcheck="false" autocomplete="off">
+          </div>
+          <div class="chips">
+            <button class="chip g-chip" type="button" data-path="/">/</button>
+            <button class="chip g-chip" type="button" data-path="/login">/login</button>
+            <button class="chip g-chip" type="button" data-path="/users">/users</button>
+            <button class="chip g-chip" type="button" data-path="/users/42">/users/42</button>
+            <button class="chip g-chip" type="button" data-path="/notices/new">/notices/new</button>
+            <button class="chip g-chip" type="button" data-path="/_next/static/chunks/main.js">/_next/static/...</button>
+          </div>
+          <div class="controls">
+            <div class="control"><span class="label" id="g-cookie-l">Session cookie</span>
+              <div class="seg" role="group" aria-labelledby="g-cookie-l" data-group="gcookie">
+                <button type="button" data-value="none" aria-pressed="true">None</button>
+                <button type="button" data-value="valid" aria-pressed="false">Present, valid</button>
+                <button type="button" data-value="expired" aria-pressed="false">Present, expired</button>
+              </div></div>
+            <div class="control"><span class="label" id="g-matcher-l">config.matcher</span>
+              <div class="seg" role="group" aria-labelledby="g-matcher-l" data-group="gmatcher">
+                <button type="button" data-value="on" aria-pressed="true">As in the guide</button>
+                <button type="button" data-value="off" aria-pressed="false">Removed</button>
+              </div></div>
+          </div>
+          <ol class="trace" id="g-out" aria-live="polite"></ol>
+        </div>
+        <div class="block">
+          <p class="label">frontend/proxy.ts</p>
+          <pre class="code"><code class="language-typescript" id="g-code">import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+export function proxy(request: NextRequest) {
+  if (!request.cookies.has('session')) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+  return NextResponse.next()
+}
+
+export const config = { matcher: ['/users/:path*', '/notices/:path*'] }</code></pre>
+          <p class="muted" style="font-size:0.88rem">Next.js 16 renamed this file convention from middleware to proxy. The file sits at the root of <code>frontend/</code>, beside <code>app/</code>. The Next.js documentation advises against relying on proxy alone and says to verify authentication in the code that handles the data, which here is the backend.</p>
+          <div class="note-box"><b>CVE-2025-29927</b><span>In March 2025 a flaw in Next.js middleware let a request skip the middleware's checks by sending an internal header, <code>x-middleware-subrequest</code>. Self-hosted applications run with <code>next start</code> or the standalone output were affected, which is how User Notices runs in Stage 9; applications hosted on Vercel were not. Next.js 15.2.3, 14.2.25, 13.5.9 and 12.3.5 fixed it, and Next.js 16 is outside the affected versions (<a href="https://github.com/advisories/GHSA-f82v-jwr5-mffw" target="_blank" rel="noopener">GitHub Advisory Database</a>, <a href="https://vercel.com/blog/postmortem-on-next-js-middleware-bypass" target="_blank" rel="noopener">Vercel postmortem</a>). It is one reason the backend checks the token itself: a request that skipped <code>proxy.ts</code> still gets 401 from <code>current_user</code> for any data.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CORS -->
+<section class="sec" id="cors">
+  <div class="wrap gutter">
+    <div class="sec-head">
+      <p class="eyebrow kind try">Try</p>
+      <h2>CORS simulator</h2>
+      <p class="measure">CORS errors appear only in development, where the page (http://localhost:3000) and the backend (http://localhost:8000) are two origins. An origin is the scheme, host and port together. The browser enforces the rule; only the backend can allow an origin. Load a preset or change the settings, and read what the browser, the backend log and the console would show.</p>
+    </div>
+    <div class="lab">
+      <div class="block">
+        <p class="label">Presets</p>
+        <div class="presets">
+          <button class="chip preset" type="button" data-preset="working">Working setup</button>
+          <button class="chip preset" type="button" data-preset="nomw">No middleware</button>
+          <button class="chip preset" type="button" data-preset="slash">Trailing slash</button>
+          <button class="chip preset" type="button" data-preset="nocreds">No credentials: 'include'</button>
+          <button class="chip preset" type="button" data-preset="acred">allow_credentials off</button>
+          <button class="chip preset" type="button" data-preset="nopatch">PATCH not allowed</button>
+          <button class="chip preset" type="button" data-preset="ip">127.0.0.1 address</button>
+          <button class="chip preset" type="button" data-preset="wild">Wildcard origin</button>
+          <button class="chip preset" type="button" data-preset="prod">Sandbox and live</button>
+        </div>
+      </div>
+      <div class="two">
+        <fieldset>
+          <legend>Browser side</legend>
+          <div class="control"><label class="label" for="c-origin">Page origin (address bar)</label>
+            <select id="c-origin">
+              <option value="http://localhost:3000">http://localhost:3000</option>
+              <option value="http://127.0.0.1:3000">http://127.0.0.1:3000</option>
+              <option value="https://notices.example.internal">https://notices.example.internal (nginx)</option>
+            </select></div>
+          <div class="control"><label class="label" for="c-req">Request</label>
+            <select id="c-req">
+              <option value="get">GET /v1/users?group=3 (no body)</option>
+              <option value="post">POST /v1/notices (JSON body)</option>
+              <option value="patch">PATCH /v1/users/42 (JSON body)</option>
+            </select></div>
+          <div class="control"><label class="label" for="c-creds">fetch credentials</label>
+            <select id="c-creds">
+              <option value="include">'include' (as api() sets it)</option>
+              <option value="same-origin">not set (the default, 'same-origin')</option>
+            </select></div>
+        </fieldset>
+        <fieldset id="c-backend">
+          <legend>Backend side (main.py and .env)</legend>
+          <label class="check"><input type="checkbox" id="c-mw" checked><span>CORS middleware added</span></label>
+          <div class="control dim"><label class="label" for="c-allowed">ALLOWED_ORIGIN</label>
+            <input type="text" id="c-allowed" value="http://localhost:3000" spellcheck="false" autocomplete="off">
+            <span class="hint" id="c-hint" aria-live="polite"></span></div>
+          <label class="check dim"><input type="checkbox" id="c-acred" checked><span><code>allow_credentials=True</code></span></label>
+          <label class="check dim"><input type="checkbox" id="c-patch" checked><span><code>allow_methods</code> includes PATCH</span></label>
+        </fieldset>
+      </div>
+      <div class="verdict" id="c-verdict" aria-live="polite"></div>
+      <div class="two">
+        <div class="block">
+          <p class="label">What happens, in order</p>
+          <ol class="trace" id="c-events"></ol>
+        </div>
+        <div class="block">
+          <p class="label">Backend log</p>
+          <div class="scroll-x">
+            <table class="log"><thead><tr><th>Method</th><th>Path</th><th>Status</th></tr></thead><tbody id="c-log"></tbody></table>
+          </div>
+          <p class="label">Browser console</p>
+          <pre class="console" id="c-console"></pre>
+        </div>
+      </div>
+    </div>
+    <div class="block">
+      <h3>The rules behind the simulator</h3>
+      <ul class="notes measure">
+        <li><b>Exact origin.</b> <code>http://localhost:3000</code>, not <code>localhost:3000</code>, not <code>http://localhost:3000/</code>, and not https.</li>
+        <li><b>No wildcard with credentials.</b> FastAPI's documentation says <code>allow_origins</code>, <code>allow_methods</code> and <code>allow_headers</code> cannot be <code>["*"]</code> when <code>allow_credentials</code> is True; each has to be listed.</li>
+        <li><b>Both sides opt in.</b> The backend allows credentials, and the page's fetch sends them (<code>credentials: 'include'</code> in <code>api()</code>). Either one alone leaves the cookie out.</li>
+        <li><b>Preflight.</b> A POST with a JSON body, or any PATCH, makes the browser ask first with OPTIONS. A GET with no body goes out directly, and the browser checks the CORS headers on the response.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- CODE -->
+<section class="sec" id="code">
+  <div class="wrap gutter">
+    <div class="sec-head">
+      <p class="eyebrow kind">Read</p>
+      <h2>Code for this stage</h2>
+      <p class="measure">The files Stage 6 adds or changes, with what each part does. The backend files use the names from Stage 4: <code>app.auth</code> exports <code>verify_credentials</code>, <code>issue_token</code> and <code>current_user</code>, and settings come from <code>get_settings()</code>. The front end files, the tests and the sign-in route ran as shown on October 15 and 16, 2026.</p>
+    </div>
+    <div class="lab">
+      <div class="tabs" role="tablist" aria-label="Files" id="code-tabs"></div>
+      <div class="split">
+        <div class="block">
+          <div class="code-head"><span class="path" id="code-path"></span><button class="btn" type="button" id="code-copy">Copy</button></div>
+          <pre class="code" id="code-pre" tabindex="0"><code id="code-view"></code></pre>
+        </div>
+        <div class="block">
+          <p class="label">What each part does</p>
+          <ul class="notes" id="code-notes"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HANDOFF -->
+<section class="sec" id="handoff">
+  <div class="wrap gutter">
+    <div class="sec-head">
+      <p class="eyebrow kind try">Try</p>
+      <h2>What Stage 7 receives</h2>
+      <p class="measure">Step 10 records what each page sends and reads. Stage 7 designs the tables from that list: staff, user_groups, users, notices and notice_messages, with the notice_summary view for the counts on Notice history. Select a field to see where Stage 7 stores it.</p>
+    </div>
+    <div class="lab">
+      <div class="scroll-x">
+        <table>
+          <thead><tr><th>Page</th><th>Sends</th><th>Reads</th></tr></thead>
+          <tbody id="f-rows"></tbody>
+        </table>
+      </div>
+      <div class="dest" id="f-dest" aria-live="polite"></div>
+      <div class="dbgrid" id="f-db"></div>
+    </div>
+  </div>
+</section>
+
+<!-- DRILLS -->
+<section class="sec" id="drills">
+  <div class="wrap gutter">
+    <div class="sec-head">
+      <p class="eyebrow kind practice">Practice</p>
+      <h2>Debugging drills</h2>
+      <p class="measure">Start every diagnosis in the browser's developer tools: the Console tab shows CORS and script errors, and the Network tab shows each request with its status. Then check that the backend is running before reading any code. Pick the cause for each symptom.</p>
+      <p class="mono" style="font-size:0.88rem" id="drill-score" aria-live="polite">0 of 14 answered</p>
+    </div>
+    <div class="drills" id="drill-list"></div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn" type="button" id="drill-reset">Reset the drills</button></div>
+  </div>
+</section>
+
+<!-- CHECKPOINT -->
+<section class="sec" id="checkpoint">
+  <div class="wrap gutter">
+    <div class="sec-head">
+      <p class="eyebrow kind practice">Practice</p>
+      <h2>Checkpoint and practice questions</h2>
+      <p class="measure">The Stage 6 checkpoint from the guide, with three additions from the workbook: the page states, the lock file and the route list.</p>
+    </div>
+    <div class="two">
+      <div class="lab">
+        <ul class="checklist" id="check-list">
+          <li><label class="check"><input type="checkbox" id="ck-1"><span>Every screen from Stage 1 has a page and a route</span></label></li>
+          <li><label class="check"><input type="checkbox" id="ck-2"><span>Every page reaches the backend through an API call, and shows loading, error and no-data states</span></label></li>
+          <li><label class="check"><input type="checkbox" id="ck-3"><span>Every link has a route, and some link reaches every page</span></label></li>
+          <li><label class="check"><input type="checkbox" id="ck-4"><span>CORS allows the front end's origin</span></label></li>
+          <li><label class="check"><input type="checkbox" id="ck-5"><span>Credentials checked in the backend; routes guarded in the front end; sign-in works end to end</span></label></li>
+          <li><label class="check"><input type="checkbox" id="ck-tests"><span>Component tests for the shared components pass</span></label></li>
+          <li><label class="check"><input type="checkbox" id="ck-6"><span><code>package-lock.json</code> committed</span></label></li>
+          <li><label class="check"><input type="checkbox" id="ck-7"><span>Route list records what each page sends and reads</span></label></li>
+          <li><label class="check"><input type="checkbox" id="ck-8"><span>Work committed</span></label></li>
+        </ul>
+      </div>
+      <div class="block">
+        <details class="q"><summary>Developer A clears a CORS error by setting <code>allow_origins=["*"]</code>. Why is that the wrong fix?</summary><p>FastAPI's documentation does not allow a wildcard origin together with <code>allow_credentials=True</code>. A server that answers every origin and allows credentials lets pages from any origin make calls that carry credentials. List http://localhost:3000.</p></details>
+        <details class="q"><summary>proxy.ts lets a visitor open /users because a session cookie exists, but the token expired yesterday. What does the visitor see?</summary><p>The page opens, its first API call returns 401 from <code>current_user</code>, and the 401 branch in <code>api()</code> sends the visitor to /login.</p></details>
+        <details class="q"><summary>In the sandbox, nginx serves the pages and /v1 from one address. Does the browser apply CORS there?</summary><p>No. The page and the API share one origin, so there is no cross-origin request. The middleware stays, with <code>ALLOWED_ORIGIN</code> set to the site's own address.</p></details>
+        <details class="q"><summary>The New notice page sends text, group_id and send_at. Where does the notice's author come from?</summary><p>From the backend: the route takes the signed-in staff member from <code>current_user</code>. A value sent by the page can be changed by whoever uses the page.</p></details>
+        <details class="q"><summary>Why does UserTable receive its users as a prop instead of calling the API itself?</summary><p>The page owns the call and its loading and error states. The component can be reused on other pages and checked with sample data.</p></details>
+        <details class="q"><summary>The User detail page works with npm run dev. After the release build, which address does it call?</summary><p>The relative path /v1. <code>NEXT_PUBLIC_API_BASE</code> is http://localhost:8000 in <code>.env.development</code> and empty in the release build, because its value is fixed into the code when the build runs. nginx sends /v1 to the backend.</p></details>
+        <details class="q"><summary>Guide self-check. The browser console shows a CORS error when the Users list loads. Which side do you change, and what do you change?</summary><p>The backend. Add the front end's origin to the allowed origins in the CORS middleware (<code>ALLOWED_ORIGIN</code> in .env). The browser enforces the rule, but only the backend can allow the origin.</p></details>
+        <details class="q"><summary>Guide self-check. Why does the front end guard its routes if the backend checks the token on every call?</summary><p>The guard sends a visitor who is not signed in to the sign-in page instead of showing pages that fail. It does not protect the data. The backend's check on every call does.</p></details>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn" type="button" id="check-reset">Clear checkpoint ticks</button></div>
+  </div>
+</section>
+
+<footer class="wrap gutter">
+  <p class="eyebrow">Sources</p>
+  <p class="muted">Pages opened on October 14, 15 and 16, 2026, to check this page.</p>
+  <ol>
+    <li><a href="https://claude.ai/code/artifact/14f43b9b-4033-45b5-bdd4-85f24308a82b" target="_blank" rel="noopener">Stage 6 Workbook: Connect the Front End</a> and the <a href="https://claude.ai/code/artifact/e9e37dea-6c8e-49ad-a939-8289421e444e" target="_blank" rel="noopener">Core Build Starter Guide</a>, version 3.1</li>
+    <li><a href="https://nextjs.org/docs/app/getting-started/layouts-and-pages" target="_blank" rel="noopener">Next.js: Layouts and Pages</a></li>
+    <li><a href="https://nextjs.org/docs/app/api-reference/file-conventions/proxy" target="_blank" rel="noopener">Next.js: proxy.js file convention</a></li>
+    <li><a href="https://nextjs.org/docs/app/guides/environment-variables" target="_blank" rel="noopener">Next.js: Environment Variables</a></li>
+    <li><a href="https://fastapi.tiangolo.com/tutorial/cors/" target="_blank" rel="noopener">FastAPI: CORS (Cross-Origin Resource Sharing)</a></li>
+    <li><a href="https://fastapi.tiangolo.com/advanced/response-cookies/" target="_blank" rel="noopener">FastAPI: Response Cookies</a></li>
+    <li><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies" target="_blank" rel="noopener">MDN: Using HTTP cookies</a></li>
+    <li><a href="https://github.com/advisories/GHSA-f82v-jwr5-mffw" target="_blank" rel="noopener">GitHub Advisory Database: Authorization Bypass in Next.js Middleware (CVE-2025-29927)</a></li>
+    <li><a href="https://vercel.com/blog/postmortem-on-next-js-middleware-bypass" target="_blank" rel="noopener">Vercel: Postmortem on Next.js Middleware bypass</a></li>
+    <li><a href="https://nextjs.org/docs/app/guides/testing" target="_blank" rel="noopener">Next.js: Testing</a></li>
+    <li><a href="https://nextjs.org/docs/app/guides/testing/vitest" target="_blank" rel="noopener">Next.js: How to set up Vitest with Next.js</a></li>
+    <li><a href="https://nextjs.org/docs/app/api-reference/functions/cookies" target="_blank" rel="noopener">Next.js: cookies</a></li>
+    <li><a href="https://github.com/actions/setup-node" target="_blank" rel="noopener">GitHub: actions/setup-node</a></li>
+    <li><a href="https://github.com/actions/checkout" target="_blank" rel="noopener">GitHub: actions/checkout</a></li>
+  </ol>
+  <p class="muted" style="font-size:0.84rem">The simulators model the behavior described in these sources and in the guide. The CORS answers, the sign-in cookie and the route order were checked against FastAPI 0.143.2, and the component tests, the build and the sign-in flow against Next.js 16.4.2, on October 15 and 16, 2026. Console messages follow Chrome's wording; other browsers word them differently.</p>
+</footer>
+</main>
+
+<!-- Code sources (plain text, read by the Code section) -->
+<script type="text/plain" id="src-api" data-lang="typescript" data-path="frontend/lib/api.ts">const BASE = process.env.NEXT_PUBLIC_API_BASE ?? ''
+
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message)
+  }
+}
+
+export async function api<T>(
+  path: string,
+  options: { method?: string; body?: unknown } = {},
+): Promise<T> {
+  const res = await fetch(`${BASE}/v1${path}`, {
+    method: options.method ?? 'GET',
+    credentials: 'include', // send and accept the session cookie
+    headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  })
+  if (res.status === 401 && !path.startsWith('/auth/')) {
+    window.location.href = '/login' // session missing or expired
+  }
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return (res.status === 204 ? undefined : await res.json()) as T
+}</script>
+<script type="text/plain" id="src-apiserver" data-lang="typescript" data-path="frontend/lib/api-server.ts">// calls made on the Next.js server
+import { cookies } from 'next/headers'
+
+export async function apiServer<T>(path: string): Promise<T> {
+  const session = (await cookies()).get('session')
+  const res = await fetch(`${process.env.API_INTERNAL_URL}/v1${path}`, {
+    headers: session ? { Cookie: `session=${session.value}` } : {},
+  })
+  if (!res.ok) throw new Error(`${res.status} from ${path}: ${await res.text()}`)
+  return (await res.json()) as T
+}</script>
+<script type="text/plain" id="src-detail" data-lang="typescript" data-path="frontend/app/users/[id]/page.tsx">'use client'
+import { Suspense, useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import { api } from '@/lib/api'
+
+type User = { id: number; name: string; phone: string; group_id: number; opted_in: boolean }
+
+export default function UserDetailPage() {
+  return (
+    <Suspense fallback={<p>Loading user...</p>}>
+      <UserDetail />
+    </Suspense>
+  )
+}
+
+function UserDetail() {
+  const { id } = useParams<{ id: string }>()
+  const [user, setUser] = useState<User | null>(null)
+  const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    api<User>(`/users/${id}`).then(setUser).catch((e) => setError(e.message))
+  }, [id])
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault()
+    if (!user) return
+    try {
+      setUser(await api<User>(`/users/${id}`, {
+        method: 'PATCH',
+        body: { phone: user.phone, opted_in: user.opted_in },
+      }))
+      setSaved(true)
+    } catch (err) {
+      setError((err as Error).message)
+    }
+  }
+
+  if (error) return <p role="alert">Could not load or save this user: {error}</p>
+  if (!user) return <p>Loading user...</p>
+  return (
+    <form onSubmit={save}>
+      <h1>{user.name}</h1>
+      <label>
+        Phone
+        <input value={user.phone}
+          onChange={(e) => { setUser({ ...user, phone: e.target.value }); setSaved(false) }} />
+      </label>
+      <label>
+        <input type="checkbox" checked={user.opted_in}
+          onChange={(e) => { setUser({ ...user, opted_in: e.target.checked }); setSaved(false) }} />
+        Opted in to notices
+      </label>
+      <button type="submit">Save</button>
+      {saved && <p>Saved.</p>}
+    </form>
+  )
+}</script>
+<script type="text/plain" id="src-login" data-lang="typescript" data-path="frontend/app/login/page.tsx">'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { api, ApiError } from '@/lib/api'
+
+export default function LoginPage() {
+  const router = useRouter()
+  const [error, setError] = useState('')
+
+  async function signIn(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const form = new FormData(e.currentTarget)
+    try {
+      await api('/auth/login', {
+        method: 'POST',
+        body: { email: form.get('email'), password: form.get('password') },
+      })
+      router.push('/users')
+    } catch (err) {
+      setError(err instanceof ApiError && err.status === 401
+        ? 'Email or password is incorrect.'
+        : 'Sign-in failed. Try again.')
+    }
+  }
+
+  return (
+    <form onSubmit={signIn}>
+      <label>Email <input name="email" type="email" required /></label>
+      <label>Password <input name="password" type="password" required /></label>
+      {error && <p role="alert">{error}</p>}
+      <button type="submit">Sign in</button>
+    </form>
+  )
+}</script>
+<script type="text/plain" id="src-proxy" data-lang="typescript" data-path="frontend/proxy.ts">import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+export function proxy(request: NextRequest) {
+  if (!request.cookies.has('session')) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+  return NextResponse.next()
+}
+
+export const config = { matcher: ['/users/:path*', '/notices/:path*'] }</script>
+<script type="text/plain" id="src-root" data-lang="typescript" data-path="frontend/app/page.tsx">import { redirect } from 'next/navigation'
+
+export default function Home() {
+  redirect('/users')
+}</script>
+<script type="text/plain" id="src-fenv" data-lang="ini" data-path="frontend/.env.development"># Loaded by npm run dev only. Ignored by git, as other .env files are.
+NEXT_PUBLIC_API_BASE=http://localhost:8000
+API_INTERNAL_URL=http://127.0.0.1:8000</script>
+<script type="text/plain" id="src-noticeform" data-lang="typescript" data-path="frontend/components/NoticeForm.tsx">'use client'
+import { useState } from 'react'
+
+export type Group = { id: number; name: string }
+export type NewNotice = { text: string; group_id: number; send_at: string }
+
+export default function NoticeForm({ groups, onSubmit }: {
+  groups: Group[]
+  onSubmit: (notice: NewNotice) => Promise<void> // the page passes a function that calls api()
+}) {
+  const [error, setError] = useState('')
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const form = new FormData(e.currentTarget)
+    const text = String(form.get('text') ?? '').trim()
+    const sendAt = new Date(String(form.get('send_at') ?? ''))
+    if (!text) {
+      setError('Enter the notice text.')
+      return
+    }
+    if (Number.isNaN(sendAt.getTime()) || sendAt <= new Date()) {
+      setError('Choose a send time in the future.')
+      return
+    }
+    setError('')
+    await onSubmit({ text, group_id: Number(form.get('group_id')), send_at: sendAt.toISOString() })
+  }
+
+  return (
+    <form onSubmit={submit} noValidate>
+      <label htmlFor="notice-text">Notice text</label>
+      <textarea id="notice-text" name="text" />
+      <label htmlFor="notice-group">Group</label>
+      <select id="notice-group" name="group_id">
+        {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+      </select>
+      <label htmlFor="notice-send-at">Send at</label>
+      <input id="notice-send-at" name="send_at" type="datetime-local" />
+      {error && <p role="alert">{error}</p>}
+      <button type="submit">Schedule notice</button>
+    </form>
+  )
+}</script>
+<script type="text/plain" id="src-usertable" data-lang="typescript" data-path="frontend/components/UserTable.tsx">import Link from 'next/link'
+
+export type UserSummary = { id: number; name: string; phone: string; group_id: number; opted_in: boolean }
+
+export default function UserTable({ users }: { users: UserSummary[] }) {
+  if (users.length === 0) return <p>No users in this group.</p>
+  return (
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Phone</th><th>Opted in</th></tr>
+      </thead>
+      <tbody>
+        {users.map((u) => (
+          <tr key={u.id}>
+            <td><Link href={`/users/${u.id}`}>{u.name}</Link></td>
+            <td>{u.phone}</td>
+            <td>{u.opted_in ? 'Yes' : 'No'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}</script>
+<script type="text/plain" id="src-navbar" data-lang="typescript" data-path="frontend/components/NavBar.tsx">import Link from 'next/link'
+
+// The pages no other link reaches. User detail is reached from a row in UserTable,
+// New notice from Notice history, and Sign in by the guard's redirect.
+const pages = [
+  { href: '/users', label: 'Users' },
+  { href: '/notices', label: 'Notices' },
+]
+
+export default function NavBar() {
+  return (
+    <nav aria-label="Main">
+      {pages.map((p) => <Link key={p.href} href={p.href}>{p.label}</Link>)}
+    </nav>
+  )
+}</script>
+<script type="text/plain" id="src-vitest" data-lang="typescript" data-path="frontend/vitest.config.mts">import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+import tsconfigPaths from 'vite-tsconfig-paths'
+
+export default defineConfig({
+  plugins: [tsconfigPaths(), react()],
+  test: { environment: 'jsdom' },
+})</script>
+<script type="text/plain" id="src-navbartest" data-lang="typescript" data-path="frontend/__tests__/NavBar.test.tsx">import { afterEach, expect, test } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import NavBar from '@/components/NavBar'
+
+afterEach(cleanup)
+
+// From the route list: the pages the NavBar has to reach
+const routes = ['/users', '/notices']
+
+test('renders a link to every page', () => {
+  render(<NavBar />)
+  const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'))
+  for (const route of routes) expect(hrefs).toContain(route)
+})</script>
+<script type="text/plain" id="src-noticeformtest" data-lang="typescript" data-path="frontend/__tests__/NoticeForm.test.tsx">import { afterEach, expect, test, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import NoticeForm from '@/components/NoticeForm'
+
+afterEach(cleanup)
+const groups = [{ id: 1, name: 'Group 1' }]
+
+function submit(text: string, sendAt: string) {
+  fireEvent.change(screen.getByLabelText('Notice text'), { target: { value: text } })
+  fireEvent.change(screen.getByLabelText('Send at'), { target: { value: sendAt } })
+  fireEvent.click(screen.getByRole('button', { name: 'Schedule notice' }))
+}
+
+test('empty text shows an error and makes no API call', async () => {
+  const onSubmit = vi.fn()
+  render(<NoticeForm groups={groups} onSubmit={onSubmit} />)
+  submit('   ', '2099-01-01T09:00')
+  expect((await screen.findByRole('alert')).textContent).toBe('Enter the notice text.')
+  expect(onSubmit).not.toHaveBeenCalled()
+})
+
+test('a past send time shows an error and makes no API call', async () => {
+  const onSubmit = vi.fn()
+  render(<NoticeForm groups={groups} onSubmit={onSubmit} />)
+  submit('Office closed on Friday', '2020-01-01T09:00')
+  expect((await screen.findByRole('alert')).textContent).toBe('Choose a send time in the future.')
+  expect(onSubmit).not.toHaveBeenCalled()
+})
+
+test('valid input is passed on once, with the send time in UTC', async () => {
+  const onSubmit = vi.fn()
+  render(<NoticeForm groups={groups} onSubmit={onSubmit} />)
+  submit('Office closed on Friday', '2099-01-01T09:00')
+  await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+  expect(onSubmit).toHaveBeenCalledWith({
+    text: 'Office closed on Friday',
+    group_id: 1,
+    send_at: new Date('2099-01-01T09:00').toISOString(),
+  })
+})</script>
+<script type="text/plain" id="src-usertabletest" data-lang="typescript" data-path="frontend/__tests__/UserTable.test.tsx">import { afterEach, expect, test } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import UserTable from '@/components/UserTable'
+
+afterEach(cleanup)
+const users = [
+  { id: 1, name: 'Sample User 1', phone: '+15555550101', group_id: 1, opted_in: true },
+  { id: 2, name: 'Sample User 2', phone: '+15555550102', group_id: 1, opted_in: false },
+]
+
+test('renders one row per user, each linking to its detail page', () => {
+  render(<UserTable users={users} />)
+  const rows = screen.getAllByRole('row').slice(1) // the first row is the header
+  expect(rows).toHaveLength(users.length)
+  expect(screen.getByRole('link', { name: 'Sample User 2' }).getAttribute('href')).toBe('/users/2')
+})
+
+test('no users shows the no-data message', () => {
+  render(<UserTable users={[]} />)
+  expect(screen.getByText('No users in this group.')).toBeDefined()
+  expect(screen.queryAllByRole('row')).toHaveLength(0)
+})</script>
+<script type="text/plain" id="src-auth" data-lang="python" data-path="backend/app/routers/auth.py">from fastapi import APIRouter, Depends, HTTPException, Response
+from pydantic import BaseModel
+from app.auth import issue_token, verify_credentials
+from app.settings import Settings, get_settings
+
+router = APIRouter(prefix="/auth")
+
+class LoginBody(BaseModel):
+    email: str
+    password: str
+
+@router.post("/login", status_code=204)
+async def login(body: LoginBody, response: Response,
+                settings: Settings = Depends(get_settings)) -> None:
+    staff = await verify_credentials(body.email, body.password)  # Staff | None
+    if staff is None:
+        raise HTTPException(status_code=401, detail="Email or password is incorrect")
+    response.set_cookie(
+        key="session",
+        value=issue_token(staff),
+        httponly=True,  # page scripts cannot read it
+        samesite="lax",
+        secure=settings.allowed_origin.startswith("https://"),  # true in the sandbox and live
+        max_age=8 * 60 * 60,  # example: one working day
+    )</script>
+<script type="text/plain" id="src-users" data-lang="python" data-path="backend/app/routers/users.py (excerpt)">from fastapi import APIRouter, Depends, Query
+from app.auth import current_user
+from app.interfaces.auth import Staff
+
+router = APIRouter(prefix="/users")
+
+@router.get("")
+async def list_users(group: int | None = None,
+                     limit: int = Query(50, ge=1, le=200),  # page size, at most 200
+                     offset: int = Query(0, ge=0),
+                     staff: Staff = Depends(current_user)):
+    ...  # UserService.list_users, as in Stage 5
+
+@router.get("/groups")  # declared before /{user_id}
+async def list_groups(staff: Staff = Depends(current_user)):
+    ...  # id and name of each row in user_groups
+
+@router.get("/{user_id}")
+async def read_user(user_id: int, staff: Staff = Depends(current_user)):
+    # current_user reads the session cookie, checks the token,
+    # and raises 401 when it is missing or invalid.
+    ...  # UserService.get_user, as in Stage 5</script>
+<script type="text/plain" id="src-main" data-lang="python" data-path="backend/app/main.py (added in Stage 6)">from fastapi.middleware.cors import CORSMiddleware
+from app.settings import get_settings
+
+# after app = FastAPI(...)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[get_settings().allowed_origin],  # exact origin, no trailing slash
+    allow_credentials=True,                          # lets the session cookie through
+    allow_methods=["GET", "POST", "PATCH"],
+    allow_headers=["Content-Type"],
+)</script>
+<script type="text/plain" id="src-benv" data-lang="ini" data-path="backend/.env (development)"># The other Stage 4 settings stay as they are.
+# The Settings class reads this file: start from backend/ with
+#   uvicorn app.main:app --reload
+# and restart after changing it.
+ALLOWED_ORIGIN=http://localhost:3000</script>
+<script type="text/plain" id="src-ci" data-lang="yaml" data-path=".github/workflows/ci.yml (the job Stage 6 adds)"># The backend job from Stage 4 stays as it is.
+  frontend:
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm test</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } }
+  };
+  function hl(el) {
+    if (window.hljs && el) { try { delete el.dataset.highlighted; window.hljs.highlightElement(el); } catch (e) { /* plain text stays */ } }
+  }
+  function pill(status) {
+    var cls = status >= 400 ? 'bad' : (status >= 300 ? 'warn' : 'ok');
+    return '<span class="pill ' + cls + '">' + status + '</span>';
+  }
+
+  /* ---------- Segmented controls ---------- */
+  var segHandlers = {};
+  $$('.seg').forEach(function (seg) {
+    seg.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      $$('button', seg).forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      var h = segHandlers[seg.dataset.group]; if (h) h(b.dataset.value);
+    });
+  });
+  function setSeg(group, value) {
+    var seg = $('.seg[data-group="' + group + '"]');
+    $$('button', seg).forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.value === value ? 'true' : 'false'); });
+  }
+
+  /* ---------- Progress ---------- */
+  var drillState = {};
+  var drillTotal = 13;
+  function updateProgress() {
+    var sT = $$('#step-list input').length, cT = $$('#check-list input').length;
+    var s = $$('#step-list input:checked').length;
+    var c = $$('#check-list input:checked').length;
+    var d = Object.keys(drillState).filter(function (k) { return drillState[k] === true; }).length;
+    $('#prog-steps-n').textContent = s + ' of ' + sT;
+    $('#prog-steps').style.width = (s / sT * 100) + '%';
+    $('#prog-check-n').textContent = c + ' of ' + cT;
+    $('#prog-check').style.width = (c / cT * 100) + '%';
+    $('#prog-drill-n').textContent = d + ' of ' + drillTotal;
+    $('#prog-drill').style.width = (d / drillTotal * 100) + '%';
+  }
+  function bindChecks(listSel, key, itemClass) {
+    var saved = store.get(key, {});
+    $$(listSel + ' input[type="checkbox"]').forEach(function (cb) {
+      cb.checked = !!saved[cb.id];
+      if (itemClass) cb.closest('.' + itemClass).classList.toggle('is-done', cb.checked);
+      cb.addEventListener('change', function () {
+        var cur = store.get(key, {}); cur[cb.id] = cb.checked; store.set(key, cur);
+        if (itemClass) cb.closest('.' + itemClass).classList.toggle('is-done', cb.checked);
+        updateProgress();
+      });
+    });
+  }
+  bindChecks('#step-list', 's6-steps', 'step');
+  bindChecks('#check-list', 's6-check', null);
+  $('#steps-reset').addEventListener('click', function () {
+    store.set('s6-steps', {});
+    $$('#step-list input').forEach(function (cb) { cb.checked = false; cb.closest('.step').classList.remove('is-done'); });
+    updateProgress();
+  });
+  $('#check-reset').addEventListener('click', function () {
+    store.set('s6-check', {});
+    $$('#check-list input').forEach(function (cb) { cb.checked = false; });
+    updateProgress();
+  });
+
+  /* ---------- Route resolver ---------- */
+  var ROUTES = [
+    { pattern: '/', file: 'app/page.tsx', screen: 'Root page (not a Stage 1 screen)', calls: [], guarded: false, links: 'Typing the bare address', note: 'Calls redirect(\'/users\'), so the bare address has a page.' },
+    { pattern: '/login', file: 'app/login/page.tsx', screen: 'Sign in', calls: ['POST /v1/auth/login'], guarded: false, links: 'The route guard\'s redirect, and the 401 branch in api()' },
+    { pattern: '/users', file: 'app/users/page.tsx', screen: 'Users list', calls: ['GET /v1/users?group={id}&limit=50&offset=0', 'GET /v1/users/groups (group filter)'], guarded: true, links: 'NavBar (Users), sign-in, the root page' },
+    { pattern: '/notices', file: 'app/notices/page.tsx', screen: 'Notice history', calls: ['GET /v1/notices', 'POST /v1/notices/{id}/send (Send now)'], guarded: true, links: 'NavBar (Notices), New notice after saving' },
+    { pattern: '/notices/new', file: 'app/notices/new/page.tsx', screen: 'New notice', calls: ['POST /v1/notices'], guarded: true, links: 'The New notice button on Notice history' },
+    { pattern: '/users/[id]', file: 'app/users/[id]/page.tsx', screen: 'User detail', calls: ['GET /v1/users/{id}', 'PATCH /v1/users/{id}'], guarded: true, links: 'A row in the Users list', note: 'useParams() reads the id, so the form renders inside Suspense (Cache Components is on).' }
+  ];
+  function normalize(p) {
+    p = String(p || '').trim();
+    if (!p) return '/';
+    p = p.replace(/^https?:\/\/[^/]+/i, '');
+    p = p.split('#')[0].split('?')[0];
+    if (p.charAt(0) !== '/') p = '/' + p;
+    if (p.length > 1) p = p.replace(/\/+$/, '');
+    return p || '/';
+  }
+  function resolve(path) {
+    var p = normalize(path);
+    if (/^\/_next\//.test(p) || /\.[a-z0-9]{1,5}$/i.test(p)) return { kind: 'static', path: p };
+    var segs = p === '/' ? [] : p.slice(1).split('/');
+    for (var i = 0; i < ROUTES.length; i++) {
+      var r = ROUTES[i];
+      var ps = r.pattern === '/' ? [] : r.pattern.slice(1).split('/');
+      if (ps.length !== segs.length) continue;
+      var params = {}, ok = true;
+      for (var j = 0; j < ps.length; j++) {
+        var m = /^\[(\w+)\]$/.exec(ps[j]);
+        if (m) params[m[1]] = decodeURIComponent(segs[j]);
+        else if (ps[j] !== segs[j]) { ok = false; break; }
+      }
+      if (ok) return { kind: 'page', path: p, route: r, params: params };
+    }
+    return { kind: 'none', path: p };
+  }
+  function renderResolve() {
+    var res = resolve($('#route-input').value);
+    var out = $('#route-out');
+    $$('.map-svg .node').forEach(function (n) { n.classList.remove('is-on'); });
+    $$('#tree span[data-tree]').forEach(function (n) { n.classList.remove('is-on'); });
+    $$('.route-chip').forEach(function (c) { c.classList.toggle('is-on', normalize(c.dataset.path) === res.path); });
+    if (res.kind === 'page') {
+      var r = res.route;
+      var node = $('.map-svg .node[data-route="' + r.pattern + '"]'); if (node) node.classList.add('is-on');
+      var line = $('#tree span[data-tree="' + r.pattern + '"]'); if (line) line.classList.add('is-on');
+      var paramTxt = Object.keys(res.params).length ? '{ ' + Object.keys(res.params).map(function (k) { return k + ": '" + res.params[k] + "'"; }).join(', ') + ' }' : 'none';
+      var extra = '';
+      if (res.params.id !== undefined && !/^\d+$/.test(res.params.id)) {
+        extra = '<div class="verdict warn"><b>[id] accepts any value</b><span>"' + esc(res.params.id) + '" matched the dynamic segment. The page has to treat an id that is not a number as not found; the backend\'s <code>user_id: int</code> answers 422 for it.</span></div>';
+      }
+      out.innerHTML =
+        '<div class="verdict ok"><b>Served by ' + esc(r.file) + '</b><span>' + esc(r.screen) + '</span></div>' + extra +
+        '<dl class="kv">' +
+        '<dt>params</dt><dd class="mono">' + esc(paramTxt) + '</dd>' +
+        '<dt>Route guard</dt><dd>' + (r.guarded ? 'proxy.ts runs first (matcher <code>' + (r.pattern.indexOf('/users') === 0 ? '/users/:path*' : '/notices/:path*') + '</code>)' : 'Not guarded: outside the matcher') + '</dd>' +
+        '<dt>API calls</dt><dd>' + (r.calls.length ? r.calls.map(function (c) { return '<code>' + esc(c) + '</code>'; }).join('<br>') : 'None') + '</dd>' +
+        '<dt>Reached from</dt><dd>' + esc(r.links) + '</dd>' +
+        (r.note ? '<dt>Note</dt><dd>' + esc(r.note) + '</dd>' : '') +
+        '</dl>';
+    } else if (res.kind === 'static') {
+      out.innerHTML = '<div class="verdict warn"><b>A static file, not a page</b><span>Next.js serves ' + esc(res.path) + ' from its build output or <code>public/</code>. No page.tsx is involved.</span></div>';
+    } else {
+      var guess = 'app' + res.path + '/page.tsx';
+      out.innerHTML = '<div class="verdict bad"><b>404: no page for ' + esc(res.path) + '</b><span>Next.js looked for <code>' + esc(guess) + '</code> and found no folder with a page file. If this screen is on the Stage 1 list, add the folder and its page.tsx; if not, no link should point here.</span></div>';
+    }
+  }
+  $('#route-input').addEventListener('input', renderResolve);
+  $$('.route-chip').forEach(function (c) { c.addEventListener('click', function () { $('#route-input').value = c.dataset.path; renderResolve(); }); });
+  $$('.map-svg .node').forEach(function (n) {
+    var pick = function () { $('#route-input').value = n.dataset.example; renderResolve(); };
+    n.addEventListener('click', pick);
+    n.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+  renderResolve();
+
+  /* ---------- Request stepper ---------- */
+  var rq = { origin: 'browser', env: 'dev', session: 'valid', action: 'read', idx: 0, all: false };
+  function buildServerRequest() {
+    var dev = rq.env === 'dev';
+    var url = 'http://127.0.0.1:8000/v1/users/groups';
+    var steps = [];
+    if (rq.session === 'missing') {
+      steps.push({ node: 'page', title: 'The browser asks for a guarded page', text: 'The page that shows the group names sits under /users, inside the proxy.ts matcher, so proxy.ts runs before any Server Component.' });
+      steps.push({ node: 'page', fail: true, title: 'proxy.ts redirects before the page runs', text: 'There is no session cookie, so proxy.ts answers 307 with Location: /login. The Server Component and apiServer() never run, and no call reaches the backend.' });
+      return steps;
+    }
+    steps.push({ node: 'page', title: 'The Server Component calls apiServer()', text: 'proxy.ts found the session cookie and let the request through. While the Next.js server renders the page, a Server Component inside Suspense runs await apiServer<Group[]>(\'/users/groups\'). The browser shows the Suspense fallback until the HTML for the list arrives.' });
+    steps.push({ node: 'api', title: 'apiServer() builds the request', text: 'cookies() reads the session cookie from the request the browser sent to the Next.js server. The URL is API_INTERNAL_URL plus /v1/users/groups: ' + url + '. ' + (dev ? 'In development API_INTERNAL_URL comes from .env.development.' : 'On the servers API_INTERNAL_URL comes from the user-notices-web unit.') + ' It has no NEXT_PUBLIC_ prefix, so it never reaches the browser. A fetch on the server carries no browser cookies, so apiServer() puts the session cookie in the Cookie header itself.' });
+    steps.push({ node: 'hop', title: 'The Next.js server calls the backend directly', text: (dev ? 'Both servers run on your machine, and the call goes from the Next.js server to 127.0.0.1:8000.' : 'The front end and the backend run on the same server, and the call goes from the Next.js server to 127.0.0.1:8000 without passing through nginx.') + ' No browser takes part, so there is no CORS check and no preflight. The browser\'s Network tab does not show this call.' });
+    steps.push({ node: 'router', title: 'routers/users.py receives it', text: 'FastAPI matches GET /v1/users/groups. The /groups route is declared before /{user_id}; declared after it, groups would be read as a user id and the call would fail with 422. Depends(current_user) runs before the route body.' });
+    if (rq.session === 'valid') {
+      steps.push({ node: 'cu', title: 'current_user accepts the token', text: 'The token in the forwarded cookie is valid, so current_user returns the signed-in Staff.' });
+      steps.push({ node: 'svc', title: 'The route reads the groups', text: 'The route returns the id and name of each row in user_groups, from the Stage 5 stub until Stage 7 replaces it with PostgreSQL.', log: { m: 'GET', url: url, status: 200, note: 'the groups as JSON' } });
+      steps.push({ node: 'page', ok: true, title: 'The page shows the group names', text: 'The Server Component renders the list, and the Next.js server streams it into the page in place of the Suspense fallback. The browser receives HTML, not JSON.' });
+    } else {
+      steps.push({ node: 'cu', fail: true, title: 'current_user raises 401', text: 'The forwarded cookie arrived, but the token in it has expired. proxy.ts could not tell; it only checks that the cookie exists. The route body never runs.', log: { m: 'GET', url: url, status: 401, note: 'token expired' } });
+      steps.push({ node: 'api', fail: true, title: 'apiServer() throws', text: 'apiServer() throws an Error with the status. It does not send the visitor to /login: the redirect in api() uses window, which exists only in the browser. Next.js shows the nearest error.tsx, or its default error page, in place of the group names.' });
+    }
+    return steps;
+  }
+  function buildRequest() {
+    if (rq.origin === 'server') return buildServerRequest();
+    var dev = rq.env === 'dev', save = rq.action === 'save';
+    var method = save ? 'PATCH' : 'GET';
+    var url = dev ? 'http://localhost:8000/v1/users/42' : 'https://notices.example.internal/v1/users/42';
+    var steps = [];
+    var first = save
+      ? 'The staff member changes the phone number and presses Save. The page runs api(\'/users/42\', { method: \'PATCH\', body: { phone, opted_in } }).'
+      : 'UserDetailPage runs api(\'/users/42\') when it loads, and shows "Loading user..." while it waits.';
+    if (rq.session === 'missing') first += ' With no cookie at all, proxy.ts normally sends the visitor to /login before this page loads; this run shows the backend\'s answer if the call is made anyway, for example after the cookie was cleared.';
+    steps.push({ node: 'page', title: 'The page calls api()', text: first });
+    steps.push({ node: 'api', title: 'api() builds the request', text: (dev
+      ? 'NEXT_PUBLIC_API_BASE is http://localhost:8000 in .env.development, so the URL is ' + url + '. credentials: \'include\' tells the browser to send the session cookie to this other origin.'
+      : 'The release build has no NEXT_PUBLIC_API_BASE, so the URL is the relative path /v1/users/42 on the page\'s own origin. Same-origin calls carry the cookie, so credentials: \'include\' changes nothing here.')
+      + (save ? ' The JSON body adds the header Content-Type: application/json.' : '') });
+    var cookieWord = rq.session === 'missing' ? 'with no Cookie header' : 'with Cookie: session=...';
+    if (dev && save) {
+      steps.push({ node: 'hop', title: 'The browser sends a preflight', text: 'The page (localhost:3000) and the backend (localhost:8000) are different origins, and PATCH needs permission first, so the browser sends OPTIONS. The CORS middleware answers with Access-Control-Allow-Origin: http://localhost:3000 and Access-Control-Allow-Credentials: true.', log: { m: 'OPTIONS', url: url, status: 200, note: 'preflight, answered by the CORS middleware' } });
+      steps.push({ node: 'hop', title: 'The browser sends the PATCH', text: 'The preflight allowed it, so the PATCH goes out ' + cookieWord + '.' });
+    } else if (dev) {
+      steps.push({ node: 'hop', title: 'The browser sends the request to another origin', text: 'A GET with no body needs no preflight. The browser sends it ' + cookieWord + ', and checks the CORS headers on the response before the page can read it.' });
+    } else {
+      steps.push({ node: 'hop', title: 'nginx passes /v1/ to the backend', text: 'The browser sends the request to https://notices.example.internal ' + cookieWord + '. nginx matches location /v1/ and passes it to 127.0.0.1:8000. Page and API share one origin, so the browser makes no CORS check.' });
+    }
+    steps.push({ node: 'router', title: 'routers/users.py receives it', text: 'FastAPI matches ' + method + ' /v1/users/{user_id} with user_id = 42. Before the route body runs, Depends(current_user) runs.' });
+    if (rq.session === 'valid') {
+      steps.push({ node: 'cu', title: 'current_user accepts the token', text: 'It reads the session cookie, checks the token that issue_token created, and passes the signed-in staff member to the route as staff.' });
+      steps.push({ node: 'svc', title: save ? 'update_user saves the change' : 'The users service reads user 42', text: save
+        ? 'update_user validates the phone and opted_in values and writes them to the store, which is the Stage 5 stub until Stage 7. The route returns the updated user.'
+        : 'services/users.py reads user 42 from the store, which is the Stage 5 stub until Stage 7 replaces it with PostgreSQL.' });
+      steps.push({ node: 'page', ok: true, title: 'The page shows the result', text: (dev ? 'The response carries Access-Control-Allow-Origin: http://localhost:3000 and Access-Control-Allow-Credentials: true, so the browser hands it to the page. ' : '') + (save ? 'The page replaces its state with the saved user and shows "Saved."' : 'The page fills the form with the user.'), log: { m: method, url: url, status: 200, note: save ? 'the updated user as JSON' : 'the user as JSON' } });
+    } else {
+      steps.push({ node: 'cu', fail: true, title: 'current_user raises 401', text: rq.session === 'missing'
+        ? 'No session cookie arrived, so there is no token to check. The route body never runs.'
+        : 'The cookie arrived, but the token in it has expired. proxy.ts could not tell; it only checks that the cookie exists. The route body never runs.', log: { m: method, url: url, status: 401, note: rq.session === 'missing' ? 'Not signed in' : 'token expired' } });
+      steps.push({ node: 'api', fail: true, title: 'api() sends the visitor to sign in', text: 'api() sees status 401 on a path outside /auth/, sets window.location.href to \'/login\', and throws ApiError. /login is outside the proxy.ts matcher, so the sign-in page loads.' });
+    }
+    return steps;
+  }
+  function renderRequest() {
+    var steps = buildRequest();
+    if (rq.idx > steps.length - 1) rq.idx = steps.length - 1;
+    var dev = rq.env === 'dev', srv = rq.origin === 'server';
+    $('#tn-page-lane').textContent = srv ? 'Next.js server' : 'Browser';
+    $('#tn-page-nm').textContent = srv ? 'Server Component' : 'Page';
+    $('#tn-page-sub').textContent = srv ? 'inside Suspense' : 'users/[id]/page.tsx';
+    $('#tn-api-lane').textContent = srv ? 'Next.js server' : 'Browser';
+    $('#tn-api-nm').textContent = srv ? 'lib/api-server.ts' : 'lib/api.ts';
+    $('#tn-api-sub').textContent = srv ? 'API_INTERNAL_URL, cookie' : 'URL, cookie, errors';
+    $('#tn-hop-nm').textContent = srv ? '127.0.0.1:8000' : (dev ? 'localhost:8000' : 'nginx /v1/');
+    $('#tn-hop-sub').textContent = srv ? 'server to server: no CORS' : (dev ? 'another origin: CORS' : 'same origin: no CORS');
+    $('#tn-router-sub').textContent = srv ? '/v1/users/groups' : '/v1/users/{user_id}';
+    $('#rq-action-ctl').hidden = srv;
+    $('#rq-action-server').hidden = !srv;
+    $('#rq-log-cap').textContent = srv ? 'Requests from the Next.js server, as its log would list them. The browser\'s Network tab does not show these.' : 'Network log, as the browser\'s Network tab would list it';
+    var last = rq.all ? steps.length - 1 : rq.idx;
+    var cur = steps[last];
+    $$('.tnode').forEach(function (n) { n.classList.remove('is-active', 'is-visited', 'is-fail'); });
+    for (var i = 0; i <= last; i++) {
+      var n = $('.tnode[data-node="' + steps[i].node + '"]');
+      if (n) n.classList.add(steps[i].fail ? 'is-fail' : 'is-visited');
+    }
+    var an = $('.tnode[data-node="' + cur.node + '"]'); if (an && !cur.fail) an.classList.add('is-active');
+    var panel = $('#rq-panel');
+    panel.classList.toggle('fail', !!cur.fail); panel.classList.toggle('ok', !!cur.ok);
+    if (rq.all) {
+      $('#rq-count').textContent = 'All ' + steps.length + ' steps';
+      $('#rq-title').textContent = steps[steps.length - 1].title;
+      $('#rq-text').innerHTML = '<ol style="margin:0;padding-left:1.2em;display:grid;gap:6px">' + steps.map(function (s) { return '<li><b>' + esc(s.title) + '.</b> ' + esc(s.text) + '</li>'; }).join('') + '</ol>';
+    } else {
+      $('#rq-count').textContent = 'Step ' + (rq.idx + 1) + ' of ' + steps.length;
+      $('#rq-title').textContent = cur.title;
+      $('#rq-text').textContent = cur.text;
+    }
+    var rows = [];
+    for (var k = 0; k <= last; k++) if (steps[k].log) rows.push(steps[k].log);
+    $('#rq-log').innerHTML = rows.length ? rows.map(function (r) {
+      return '<tr><td>' + r.m + '</td><td>' + esc(r.url) + '</td><td>' + pill(r.status) + '</td><td class="note">' + esc(r.note) + '</td></tr>';
+    }).join('') : '<tr class="empty"><td colspan="4">' + ((srv && rq.session === 'missing') ? 'No request reaches the backend: proxy.ts redirects before the page runs.' : 'No responses yet. Step forward to send the request.') + '</td></tr>';
+    $('#rq-back').disabled = rq.all || rq.idx === 0;
+    $('#rq-next').disabled = rq.all || rq.idx === steps.length - 1;
+  }
+  segHandlers.origin = function (v) { rq.origin = v; rq.idx = 0; rq.all = false; renderRequest(); };
+  segHandlers.env = function (v) { rq.env = v; rq.idx = 0; rq.all = false; renderRequest(); };
+  segHandlers.session = function (v) { rq.session = v; rq.idx = 0; rq.all = false; renderRequest(); };
+  segHandlers.action = function (v) { rq.action = v; rq.idx = 0; rq.all = false; renderRequest(); };
+  $('#rq-next').addEventListener('click', function () { rq.idx++; renderRequest(); });
+  $('#rq-back').addEventListener('click', function () { rq.idx = Math.max(0, rq.idx - 1); renderRequest(); });
+  $('#rq-all').addEventListener('click', function () { rq.all = true; renderRequest(); });
+  $('#rq-reset').addEventListener('click', function () { rq.idx = 0; rq.all = false; renderRequest(); });
+  renderRequest();
+
+  /* ---------- Sign-in sequence ---------- */
+  var SI = [
+    { on: ['m1'], title: 'The visitor opens /users', text: 'proxy.ts runs first, because /users matches the matcher /users/:path*. The browser has no session cookie yet.' },
+    { on: ['m2'], title: 'proxy.ts redirects to /login', text: 'NextResponse.redirect sends the browser to /login with status 307. The matcher does not cover /login, so the sign-in page loads instead of redirecting again.' },
+    { on: ['m3'], title: 'The sign-in page posts the credentials', text: 'The form calls api(\'/auth/login\', { method: \'POST\', body: { email, password } }). In development this is a cross-origin POST with JSON, so the browser sends a preflight first (see the CORS simulator).' },
+    { on: ['a1'], title: 'The backend checks the password', text: 'verify_credentials compares the password with the stored hash. On a match, issue_token creates the session token. On a mismatch, the route answers 401 and the page shows "Email or password is incorrect." The front end never compares passwords.' },
+    { on: ['m4'], title: 'The backend sets the session cookie', text: 'The 204 response carries Set-Cookie: session=...; HttpOnly; SameSite=Lax. The browser stores it because api() used credentials: \'include\'. HttpOnly means page scripts cannot read it.' },
+    { on: ['m5', 'm6'], title: 'The browser opens /users again', text: 'router.push(\'/users\') starts a new navigation. proxy.ts finds the cookie and calls NextResponse.next(), so the page is served. In development the cookie set by port 8000 is visible on port 3000, because cookies are scoped by host, not port.' },
+    { on: ['m7', 'a2'], title: 'The page calls the API', text: 'The Users list calls GET /v1/users?group=3 through api(). The cookie goes with it. current_user reads it and checks the token.' },
+    { on: ['m8'], title: 'The backend answers', text: 'A valid token gives 200 and the list. An expired or invalid token gives 401, and api() sends the visitor back to /login.' }
+  ];
+  var siIdx = 0;
+  var order = ['m1', 'm2', 'm3', 'a1', 'm4', 'm5', 'm6', 'm7', 'a2', 'm8'];
+  function renderSignin() {
+    var s = SI[siIdx];
+    var past = [];
+    for (var i = 0; i < siIdx; i++) past = past.concat(SI[i].on);
+    order.forEach(function (id) {
+      var g = $('#sq-' + id); if (!g) return;
+      var on = s.on.indexOf(id) !== -1, done = past.indexOf(id) !== -1;
+      g.classList.toggle('is-on', on); g.classList.toggle('is-past', !on && done);
+      var p = $('path', g); if (p) p.setAttribute('marker-end', on ? 'url(#sq-a-on)' : 'url(#sq-a)');
+    });
+    $('#si-count').textContent = 'Step ' + (siIdx + 1) + ' of ' + SI.length;
+    $('#si-title').textContent = s.title;
+    $('#si-text').textContent = s.text;
+    $('#si-jar').innerHTML = siIdx >= 4
+      ? '<span class="label">Browser cookies for localhost</span><span class="cookie">session=&lt;token&gt;; HttpOnly; SameSite=Lax; Max-Age=28800</span>'
+      : '<span class="label">Browser cookies for localhost</span><span class="muted">None yet</span>';
+    $('#si-back').disabled = siIdx === 0;
+    $('#si-next').disabled = siIdx === SI.length - 1;
+  }
+  $('#si-next').addEventListener('click', function () { siIdx = Math.min(SI.length - 1, siIdx + 1); renderSignin(); });
+  $('#si-back').addEventListener('click', function () { siIdx = Math.max(0, siIdx - 1); renderSignin(); });
+  $('#si-reset').addEventListener('click', function () { siIdx = 0; renderSignin(); });
+  renderSignin();
+
+  /* ---------- Route guard tester ---------- */
+  var g = { cookie: 'none', matcher: 'on' };
+  var MATCHERS = [{ src: '/users/:path*', re: /^\/users(\/.*)?$/ }, { src: '/notices/:path*', re: /^\/notices(\/.*)?$/ }];
+  function li(dot, html) { return '<li><span class="dot ' + dot + '"></span><span>' + html + '</span></li>'; }
+  function serveLine(p) {
+    var res = resolve(p);
+    if (res.kind === 'page') {
+      var r = res.route;
+      var t = 'Next.js serves <code>' + esc(r.file) + '</code>.';
+      if (r.calls.length && r.guarded) {
+        if (g.cookie === 'valid') t += ' Its API calls carry the cookie, and <code>current_user</code> accepts the token: 200.';
+        else if (g.cookie === 'expired') t += ' Its first API call returns 401 from <code>current_user</code>, and <code>api()</code> sends the visitor to /login.';
+        else t += ' Its first API call returns 401, and <code>api()</code> sends the visitor to /login.';
+      }
+      if (r.pattern === '/') t += ' It redirects to /users, which goes through the guard.';
+      return li(r.guarded && g.cookie !== 'valid' && r.calls.length ? 'warn' : 'ok', t);
+    }
+    if (res.kind === 'static') return li('ok', 'Next.js serves the static file.');
+    return li('bad', '404: no page.tsx for ' + esc(res.path) + '.');
+  }
+  function renderGuard() {
+    var p = normalize($('#g-path').value);
+    $$('.g-chip').forEach(function (c) { c.classList.toggle('is-on', normalize(c.dataset.path) === p); });
+    var hasCookie = g.cookie !== 'none';
+    var out = [];
+    var matched = null;
+    if (g.matcher === 'on') {
+      MATCHERS.forEach(function (m) { if (!matched && m.re.test(p)) matched = m; });
+      out.push(li('info', matched ? 'Matcher <code>' + matched.src + '</code> matches ' + esc(p) + ', so proxy.ts runs.' : 'No matcher entry matches ' + esc(p) + ', so proxy.ts does not run.'));
+    } else {
+      out.push(li('warn', 'No matcher: proxy.ts runs on every request, including /login, scripts, styles and images.'));
+    }
+    var runs = g.matcher === 'off' || !!matched;
+    if (!runs) {
+      out.push(serveLine(p));
+    } else if (hasCookie) {
+      out.push(li('ok', 'request.cookies.has(\'session\') is true, so <code>NextResponse.next()</code> lets the request continue.' + (g.cookie === 'expired' ? ' proxy.ts does not look inside the cookie, so it cannot tell the token has expired.' : '')));
+      out.push(serveLine(p));
+    } else {
+      out.push(li('bad', 'No session cookie: <code>NextResponse.redirect</code> answers 307 with Location: /login.'));
+      if (g.matcher === 'off') {
+        if (p === '/login') {
+          out.push(li('bad', 'The redirect points at /login itself. proxy.ts runs again on /login, finds no cookie and redirects again. The browser stops with a too-many-redirects error, and nobody can sign in.'));
+        } else {
+          out.push(li('bad', 'The browser follows the redirect to /login, where proxy.ts runs again, finds no cookie and redirects again. The loop never ends.' + (resolve(p).kind === 'static' ? ' Script and style files are redirected too, so even a working sign-in page would load without them.' : '')));
+        }
+      } else {
+        out.push(li('ok', 'The browser follows the redirect to /login. The matcher does not cover /login, so proxy.ts does not run there and the sign-in page loads.'));
+      }
+    }
+    $('#g-out').innerHTML = out.join('');
+  }
+  segHandlers.gcookie = function (v) { g.cookie = v; renderGuard(); };
+  segHandlers.gmatcher = function (v) { g.matcher = v; renderGuard(); };
+  $('#g-path').addEventListener('input', renderGuard);
+  $$('.g-chip').forEach(function (c) { c.addEventListener('click', function () { $('#g-path').value = c.dataset.path; renderGuard(); }); });
+  hl($('#g-code'));
+  renderGuard();
+
+  /* ---------- CORS simulator ---------- */
+  var REQ = {
+    get: { m: 'GET', path: '/v1/users?group=3', preflight: false, ok: 'the list of users' },
+    post: { m: 'POST', path: '/v1/notices', preflight: true, ok: 'the new notice' },
+    patch: { m: 'PATCH', path: '/v1/users/42', preflight: true, ok: 'the updated user' }
+  };
+  function originHint(allowed, origin) {
+    var a = allowed.trim();
+    if (!a) return 'ALLOWED_ORIGIN is empty, so no origin is allowed.';
+    if (a === '*') return '';
+    if (a === origin) return '';
+    if (a.replace(/\/+$/, '') === origin) return 'Remove the trailing slash: an origin has no path.';
+    if (!/^https?:\/\//i.test(a)) return 'Add the scheme: an origin starts with http:// or https://.';
+    var ua, uo;
+    try { ua = new URL(a); uo = new URL(origin); } catch (e) { return 'This value is not a valid origin.'; }
+    if (ua.pathname !== '/' || ua.search) return 'An origin has no path.';
+    if (ua.protocol !== uo.protocol) return 'The scheme differs: ' + ua.protocol.replace(':', '') + ' and ' + uo.protocol.replace(':', '') + ' are different origins.';
+    if (ua.hostname !== uo.hostname) return 'The host differs: ' + ua.hostname + ' and ' + uo.hostname + ' are different hosts.';
+    if (ua.port !== uo.port) return 'The port differs: ' + (ua.port || 'default') + ' and ' + (uo.port || 'default') + '.';
+    return 'The value does not match the page origin exactly.';
+  }
+  function simulate(c) {
+    var r = REQ[c.req];
+    var prod = c.origin.indexOf('https://notices.example.internal') === 0;
+    var res = { events: [], log: [], console: '', verdict: null };
+    if (prod) {
+      res.events.push(['info', 'Same origin: the page and <code>/v1</code> are both on https://notices.example.internal. The browser makes no CORS check, and the middleware settings make no difference here.']);
+      res.events.push(['info', 'nginx matches <code>location /v1/</code> and passes the request to the backend on 127.0.0.1:8000. The cookie goes with it, because same-origin requests carry cookies in either credentials mode.']);
+      res.events.push(['ok', 'current_user accepts the token and the backend answers 200 with ' + r.ok + '.']);
+      res.log.push([r.m, r.path, 200]);
+      res.verdict = ['ok', '200: the page reads the response', 'One origin through nginx. This is the Stage 9 layout.'];
+      return res;
+    }
+    var url = 'http://localhost:8000' + r.path;
+    var pageHost = c.origin.replace(/^https?:\/\//, '').split(':')[0];
+    var sameSite = pageHost === 'localhost';
+    var allowed = c.allowed.trim();
+    var wildcard = allowed === '*';
+    var originAllowed = c.mw && (wildcard || allowed === c.origin);
+    var blockedPrefix = "Access to fetch at '" + url + "' from origin '" + c.origin + "' has been blocked by CORS policy: ";
+    res.events.push(['info', 'Cross-origin: the page is ' + esc(c.origin) + ' and the API is http://localhost:8000. ' + (sameSite ? 'Same host, different port.' : 'Different hosts, so this is also a different site.')]);
+
+    var cookieSent = c.creds === 'include' && sameSite;
+    if (r.preflight) {
+      res.events.push(['info', r.m + ' with a JSON body needs permission first, so the browser sends an OPTIONS preflight.']);
+      var pACAO = !c.mw ? null : (originAllowed ? ((wildcard && !c.acred) ? '*' : c.origin) : null);
+      var pACAC = c.mw && c.acred && pACAO ? 'true' : null;
+      if (!c.mw) {
+        res.log.push(['OPTIONS', r.path, 405]);
+        res.events.push(['bad', 'There is no CORS middleware and no OPTIONS route, so FastAPI answers 405 with no CORS headers.']);
+        res.console = blockedPrefix + "Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.";
+      } else if (!originAllowed) {
+        res.log.push(['OPTIONS', r.path, 400]);
+        res.events.push(['bad', 'The middleware does not find ' + esc(c.origin) + ' in allow_origins, answers 400 (Disallowed CORS origin) and sends no Access-Control-Allow-Origin.']);
+        res.console = blockedPrefix + "Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.";
+      } else if (c.req === 'patch' && !c.patch) {
+        res.log.push(['OPTIONS', r.path, 400]);
+        res.events.push(['bad', 'The origin is allowed, but PATCH is not in allow_methods. The middleware answers 400 (Disallowed CORS method).']);
+        res.console = blockedPrefix + "Response to preflight request doesn't pass access control check: It does not have HTTP ok status.";
+      } else if (c.creds === 'include' && pACAO === '*') {
+        res.log.push(['OPTIONS', r.path, 200]);
+        res.events.push(['bad', 'The answer allows every origin with *, but the fetch sends credentials. The browser refuses a wildcard for a credentialed request.']);
+        res.console = blockedPrefix + "Response to preflight request doesn't pass access control check: The value of the 'Access-Control-Allow-Origin' header in the response must not be the wildcard '*' when the request's credentials mode is 'include'.";
+      } else if (c.creds === 'include' && pACAC !== 'true') {
+        res.log.push(['OPTIONS', r.path, 200]);
+        res.events.push(['bad', 'The origin is allowed, but allow_credentials is off, so the answer has no Access-Control-Allow-Credentials: true. The fetch asked to send credentials, so the browser stops.']);
+        res.console = blockedPrefix + "Response to preflight request doesn't pass access control check: The value of the 'Access-Control-Allow-Credentials' header in the response is '' which must be 'true' when the request's credentials mode is 'include'.";
+      } else {
+        res.log.push(['OPTIONS', r.path, 200]);
+        res.events.push(['ok', 'The middleware answers 200 with Access-Control-Allow-Origin: ' + esc(pACAO) + (pACAC ? ' and Access-Control-Allow-Credentials: true' : '') + '.']);
+      }
+      if (res.console) {
+        res.events.push(['bad', 'The browser stops here. The ' + r.m + ' is never sent, so the backend never runs it.']);
+        res.verdict = ['bad', 'Blocked at the preflight', 'Fix it on the backend: see the console message and the hint under ALLOWED_ORIGIN.'];
+        return res;
+      }
+    } else {
+      res.events.push(['info', 'A GET with no body needs no preflight. The browser sends it now and checks the CORS headers on the response.']);
+    }
+
+    // The real request reaches the backend
+    var status = cookieSent ? 200 : 401;
+    res.events.push([cookieSent ? 'info' : 'warn', cookieSent ? 'The request carries the session cookie.' : (c.creds !== 'include'
+      ? 'The request carries no cookie: without credentials: \'include\', fetch sends no cookies to another origin.'
+      : 'The request carries no cookie: 127.0.0.1 and localhost are different sites, so the SameSite=Lax session cookie is not sent (and a sign-in from this address would not have stored it).')]);
+    res.events.push([status === 200 ? 'ok' : 'warn', status === 200 ? 'current_user accepts the token and the backend answers 200 with ' + r.ok + '.' : 'current_user finds no session cookie and raises 401.']);
+    res.log.push([r.m, r.path, status]);
+
+    // Response headers from the middleware
+    var sACAO = !c.mw ? null : (wildcard ? (c.acred ? c.origin : '*') : (originAllowed ? c.origin : null));
+    var sACAC = c.mw && c.acred ? 'true' : null;
+    if (!sACAO) {
+      res.events.push(['bad', (c.mw ? 'The origin is not in allow_origins' : 'There is no CORS middleware') + ', so the response has no Access-Control-Allow-Origin. The backend ran the request and logged ' + status + ', but the browser does not let the page read the response.']);
+      res.console = blockedPrefix + "No 'Access-Control-Allow-Origin' header is present on the requested resource.";
+    } else if (c.creds === 'include' && sACAO === '*') {
+      res.events.push(['bad', 'The response allows every origin with *, but the fetch sent credentials. The browser refuses the response.']);
+      res.console = blockedPrefix + "The value of the 'Access-Control-Allow-Origin' header in the response must not be the wildcard '*' when the request's credentials mode is 'include'.";
+    } else if (c.creds === 'include' && sACAC !== 'true') {
+      res.events.push(['bad', 'The response has no Access-Control-Allow-Credentials: true, and the fetch sent credentials. The browser refuses the response.']);
+      res.console = blockedPrefix + "The value of the 'Access-Control-Allow-Credentials' header in the response is '' which must be 'true' when the request's credentials mode is 'include'.";
+    }
+    if (res.console) {
+      res.verdict = ['bad', 'Blocked by the browser', 'The backend log looks normal. The fix is still on the backend: see the console message.'];
+      return res;
+    }
+    res.events.push(['ok', 'The response carries Access-Control-Allow-Origin: ' + esc(sACAO) + (sACAC ? ' and Access-Control-Allow-Credentials: true' : '') + ', so the page can read it.']);
+    if (status === 401) {
+      res.events.push(['warn', 'api() sees 401 and sends the visitor to /login.']);
+      res.verdict = ['warn', 'The page reads a 401', c.creds !== 'include'
+        ? 'CORS passed, but the cookie stayed behind. Call the backend only through api(), which sets credentials: \'include\'.'
+        : 'CORS passed, but the cookie stayed behind. Use localhost for both servers in development.'];
+    } else if (wildcard && c.acred) {
+      res.verdict = ['warn', '200, with a wildcard origin', 'It passes because, with allow_credentials=True, the middleware repeats the caller\'s origin, so it answers every origin the same way. FastAPI\'s documentation says not to combine a wildcard with allow_credentials=True. List http://localhost:3000.'];
+    } else {
+      res.verdict = ['ok', '200: the page reads the response', 'This is the development setup from step 5.'];
+    }
+    return res;
+  }
+  var PRESETS = {
+    working: { origin: 'http://localhost:3000', req: 'patch', creds: 'include', mw: true, allowed: 'http://localhost:3000', acred: true, patch: true },
+    nomw: { origin: 'http://localhost:3000', req: 'patch', creds: 'include', mw: false, allowed: 'http://localhost:3000', acred: true, patch: true },
+    slash: { origin: 'http://localhost:3000', req: 'get', creds: 'include', mw: true, allowed: 'http://localhost:3000/', acred: true, patch: true },
+    nocreds: { origin: 'http://localhost:3000', req: 'get', creds: 'same-origin', mw: true, allowed: 'http://localhost:3000', acred: true, patch: true },
+    acred: { origin: 'http://localhost:3000', req: 'patch', creds: 'include', mw: true, allowed: 'http://localhost:3000', acred: false, patch: true },
+    nopatch: { origin: 'http://localhost:3000', req: 'patch', creds: 'include', mw: true, allowed: 'http://localhost:3000', acred: true, patch: false },
+    ip: { origin: 'http://127.0.0.1:3000', req: 'get', creds: 'include', mw: true, allowed: 'http://127.0.0.1:3000', acred: true, patch: true },
+    wild: { origin: 'http://localhost:3000', req: 'get', creds: 'include', mw: true, allowed: '*', acred: true, patch: true },
+    prod: { origin: 'https://notices.example.internal', req: 'patch', creds: 'include', mw: true, allowed: 'https://notices.example.internal', acred: true, patch: true }
+  };
+  function readCors() {
+    return { origin: $('#c-origin').value, req: $('#c-req').value, creds: $('#c-creds').value, mw: $('#c-mw').checked, allowed: $('#c-allowed').value, acred: $('#c-acred').checked, patch: $('#c-patch').checked };
+  }
+  function writeCors(p) {
+    $('#c-origin').value = p.origin; $('#c-req').value = p.req; $('#c-creds').value = p.creds;
+    $('#c-mw').checked = p.mw; $('#c-allowed').value = p.allowed; $('#c-acred').checked = p.acred; $('#c-patch').checked = p.patch;
+  }
+  function renderCors(activePreset) {
+    var c = readCors();
+    $('#c-backend').classList.toggle('is-off', !c.mw);
+    var prod = c.origin.indexOf('https://') === 0;
+    var hint = (!prod && c.mw) ? originHint(c.allowed, c.origin) : '';
+    if (!prod && c.mw && c.allowed.trim() === '*') hint = 'A wildcard with allow_credentials=True is not allowed by FastAPI\'s documentation.';
+    $('#c-hint').textContent = hint;
+    var res = simulate(c);
+    var v = res.verdict;
+    var vEl = $('#c-verdict');
+    vEl.className = 'verdict ' + v[0];
+    vEl.innerHTML = '<b>' + esc(v[1]) + '</b><span>' + esc(v[2]) + '</span>';
+    $('#c-events').innerHTML = res.events.map(function (e) { return li(e[0], e[1]); }).join('');
+    $('#c-log').innerHTML = res.log.map(function (l) { return '<tr><td>' + l[0] + '</td><td>' + esc(l[1]) + '</td><td>' + pill(l[2]) + '</td></tr>'; }).join('');
+    var con = $('#c-console');
+    con.textContent = res.console || 'No errors.';
+    con.classList.toggle('err', !!res.console);
+    $$('.preset').forEach(function (b) { b.classList.toggle('is-on', b.dataset.preset === activePreset); });
+  }
+  ['#c-origin', '#c-req', '#c-creds', '#c-mw', '#c-acred', '#c-patch'].forEach(function (s) { $(s).addEventListener('change', function () { renderCors(null); }); });
+  $('#c-allowed').addEventListener('input', function () { renderCors(null); });
+  $$('.preset').forEach(function (b) { b.addEventListener('click', function () { writeCors(PRESETS[b.dataset.preset]); renderCors(b.dataset.preset); }); });
+  writeCors(PRESETS.working); renderCors('working');
+
+  /* ---------- Code tabs ---------- */
+  var FILES = [
+    { id: 'api', side: 'front', notes: [
+      '<b>BASE.</b> Empty in the release build, so calls go to the relative path /v1 on the page\'s own origin; http://localhost:8000 in development.',
+      '<b>credentials: \'include\'.</b> In development the backend is another origin. The browser sends cookies to another origin, and keeps cookies it sets, only with this option.',
+      '<b>Content-Type only with a body.</b> A GET with no body stays a simple request with no preflight.',
+      '<b>The 401 branch.</b> proxy.ts can see that a cookie exists but not whether the token is valid. When the backend rejects the token, this sends the visitor to sign in. Sign-in calls are excluded so a wrong password shows a message instead of reloading the page.',
+      '<b>ApiError.</b> Pages catch it and show the status and message instead of failing silently.'] },
+    { id: 'apiserver', side: 'front', notes: [
+      '<b>For Server Components and route handlers.</b> They run on the Next.js server, where the relative path /v1 has no host and the browser\'s cookie is not sent with the call.',
+      '<b>API_INTERNAL_URL.</b> No NEXT_PUBLIC_ prefix, so it stays on the server and is read when the code runs: http://127.0.0.1:8000 in .env.development and in the user-notices-web unit on the servers.',
+      '<b>cookies().</b> Async since Next.js 15. It reads the cookies from the request the browser sent to the Next.js server; apiServer() passes the session cookie on in the Cookie header.',
+      '<b>Suspense.</b> A Server Component that calls apiServer() reads request data, so with Cache Components it renders inside Suspense; outside one, npm run build stops with "Next.js encountered uncached or runtime data during prerendering".',
+      '<b>Testing.</b> An async Server Component like this is covered by the Stage 9 end-to-end tests, not by component tests. Try it in the request stepper: On the Next.js server.'] },
+    { id: 'detail', side: 'front', notes: [
+      '<b>\'use client\'.</b> The calls run in the browser and carry the browser\'s cookie.',
+      '<b>Suspense.</b> create-next-app 16.4 turns on Cache Components. With it, a page that reads the URL with useParams() needs a Suspense boundary, or npm run build stops with "Next.js encountered URL data useParams() in a Client Component outside of &lt;Suspense&gt;".',
+      '<b>useParams.</b> Reads the [id] segment from the URL: "42" for /users/42.',
+      '<b>Three states.</b> Error, loading and success each render something. A list page adds a fourth, no data.',
+      '<b>PATCH body.</b> Sends only the fields this page changes: phone and opted_in. Stage 7 needs to know that.'] },
+    { id: 'login', side: 'front', notes: [
+      '<b>No password check here.</b> The page only collects and sends the credentials.',
+      '<b>401 from sign-in.</b> api() does not redirect for /auth/ paths, so the page can show "Email or password is incorrect."',
+      '<b>router.push(\'/users\').</b> A new navigation, so proxy.ts runs and now finds the cookie.'] },
+    { id: 'proxy', side: 'front', notes: [
+      '<b>File and name.</b> proxy.ts sits at the root of frontend/, beside app/, and exports a function named proxy. Next.js 16 renamed this from middleware.',
+      '<b>matcher.</b> The guard runs only on these paths. /users/:path* matches /users and everything under it, so /login stays open. Without a matcher it also runs on scripts, styles and images.',
+      '<b>request.cookies.has(\'session\').</b> Checks only that the cookie exists. The backend\'s current_user checks the token.',
+      '<b>CVE-2025-29927.</b> In 2025 a flaw let requests skip middleware checks in self-hosted Next.js. The backend\'s own token check is one reason it did not expose data.',
+      '<b>Try it.</b> The route guard tester above runs this logic.'] },
+    { id: 'root', side: 'front', notes: [
+      '<b>Not on the Stage 1 list.</b> Without it, the bare address shows a 404 page, so it only sends the visitor on.',
+      '<b>A Server Component.</b> No \'use client\' line: it runs on the server and only redirects.'] },
+    { id: 'fenv', side: 'front', notes: [
+      '<b>NEXT_PUBLIC_API_BASE.</b> Next.js copies the value into the browser code when the build runs. npm run dev loads this file; the release build has no value, so the same build runs in the sandbox and in live.',
+      '<b>API_INTERNAL_URL.</b> Read on the server only. It can use 127.0.0.1 because the server passes the cookie on itself; the browser\'s address stays localhost so the cookie\'s host matches.'] },
+    { id: 'noticeform', side: 'front', notes: [
+      '<b>\'use client\'.</b> The form holds state (the error message) and responds to typing, so it is a Client Component.',
+      '<b>The checks, in order.</b> Empty text first, then a missing or past send time. Each sets the message and returns before onSubmit.',
+      '<b>onSubmit.</b> The form\'s only way out. The New notice page passes a function that calls api(\'/notices\', ...), so the form makes no API call of its own.',
+      '<b>send_at.</b> datetime-local gives a local time; toISOString() sends it in UTC, which the backend expects.',
+      '<b>Try it.</b> The component test panel runs these checks.'] },
+    { id: 'usertable', side: 'front', notes: [
+      '<b>Props only.</b> The page that uses it makes the API call and passes the users in.',
+      '<b>No-data state.</b> An empty list shows "No users in this group." instead of an empty table.',
+      '<b>Link.</b> Each name links to /users/{id}, the User detail page.'] },
+    { id: 'navbar', side: 'front', notes: [
+      '<b>In the root layout.</b> app/layout.tsx renders NavBar above every page, so each of its links is reachable from everywhere.',
+      '<b>Two links.</b> The pages no other link reaches. User detail is reached from a row in UserTable, New notice from Notice history, and Sign in by the guard\'s redirect.',
+      '<b>A Server Component.</b> No \'use client\' line: it holds no state and responds to nothing, and Link works in Server Components.'] },
+    { id: 'vitest', side: 'test', notes: [
+      '<b>tsconfigPaths().</b> Reads the paths in tsconfig.json, so an import that starts with @/ resolves the way it does in Next.js. Vite 8 prints a notice that resolve.tsconfigPaths does the same without the plugin; the guide\'s configuration keeps the plugin.',
+      '<b>react().</b> Compiles JSX in the tests and components.',
+      '<b>environment: \'jsdom\'.</b> A simulated browser, so render() has a document to draw into. Without it every test stops with "ReferenceError: document is not defined".'] },
+    { id: 'noticeformtest', side: 'test', notes: [
+      '<b>afterEach(cleanup).</b> Removes what each test rendered. React Testing Library does this by itself only when Vitest\'s globals are turned on; without the line, the second test finds two forms and stops with "Found multiple elements".',
+      '<b>No API call.</b> onSubmit is a mock (vi.fn()). The form\'s only way out is onSubmit, so a mock that was never called means no request left the page.',
+      '<b>findByRole(\'alert\').</b> Waits up to one second for the message. With no message it fails with "Unable to find role=&quot;alert&quot;".',
+      '<b>The valid case.</b> Without it, a form that rejected all input would pass both error tests.'] },
+    { id: 'usertabletest', side: 'test', notes: [
+      '<b>slice(1).</b> The first row is the header, so the rest are the user rows.',
+      '<b>The link.</b> Checks that each row leads to the right detail page.',
+      '<b>The empty case.</b> Checks the no-data message and that no table is drawn.'] },
+    { id: 'navbartest', side: 'test', notes: [
+      '<b>Its own route list.</b> The test lists the routes itself instead of importing them from the component, so a link removed from the bar fails it: "expected [ \'/users\' ] to include \'/notices\'".',
+      '<b>getAllByRole(\'link\').</b> Reads every link the bar rendered, then checks that each route is among their href values.'] },
+    { id: 'auth', side: 'back', notes: [
+      '<b>Names from Stage 4.</b> app.auth exports verify_credentials(email, password) -> Staff | None, issue_token and current_user.',
+      '<b>204 No Content.</b> Sign-in returns no body; the result is the session cookie.',
+      '<b>httponly.</b> Page scripts cannot read the cookie.',
+      '<b>samesite="lax".</b> The cookie is not sent with requests that other sites start.',
+      '<b>secure.</b> True only when ALLOWED_ORIGIN starts with https://, as it does in the sandbox and live. No separate setting is needed.',
+      '<b>max_age.</b> An example value; set your own session length.'] },
+    { id: 'users', side: 'back', notes: [
+      '<b>Depends(current_user).</b> Dependency injection from Stage 4. It runs before the route body, returns the signed-in Staff, and raises 401 when the cookie is missing or the token is invalid.',
+      '<b>limit and offset.</b> The list is paged. A limit above 200 answers 422, "Input should be less than or equal to 200".',
+      '<b>/groups before /{user_id}.</b> FastAPI tries routes in the order they are declared. Declared after /{user_id}, /v1/users/groups fails with 422, "Input should be a valid integer".',
+      '<b>The author of a notice.</b> The notices route takes it from staff, not from the page.'] },
+    { id: 'main', side: 'back', notes: [
+      '<b>get_settings().allowed_origin.</b> Read through the Settings class from Stage 4, so development and the servers use different values without a code change.',
+      '<b>allow_credentials=True.</b> Adds Access-Control-Allow-Credentials: true, which a fetch with credentials: \'include\' requires.',
+      '<b>Listed methods and headers.</b> FastAPI\'s documentation says they cannot be ["*"] when credentials are allowed. Content-Type is listed because the JSON body sets it.',
+      '<b>Try it.</b> The CORS simulator above shows what each setting changes.'] },
+    { id: 'benv', side: 'back', notes: [
+      '<b>ALLOWED_ORIGIN.</b> The page\'s exact origin. On the servers it is https://notices.example.internal, in /etc/user-notices/backend.env, which systemd loads through EnvironmentFile (Stage 9).',
+      '<b>Restart after changes.</b> get_settings() reads the file once, and uvicorn --reload restarts on code changes, not on .env changes.'] },
+    { id: 'ci', side: 'ci', notes: [
+      '<b>npm ci.</b> Installs exactly what package-lock.json records, and stops with an error if it disagrees with package.json.',
+      '<b>npm audit --omit=dev --audit-level=high.</b> Fails the job on a high or critical finding in the packages the release runs. On October 15 and 16, 2026, the full audit of a new create-next-app 16.4.2 project reported 5 high findings in eslint-config-next\'s dependencies, with no fixed version. Remove --omit=dev once one is published.',
+      '<b>npm test.</b> Runs Vitest once, because GitHub Actions sets the CI variable.',
+      '<b>runs-on: self-hosted.</b> The data center runner the other CI jobs use.'] }
+  ];
+  var SIDE_LABEL = { front: 'front end', test: 'tests', back: 'backend', ci: 'CI' };
+  var tabsEl = $('#code-tabs');
+  FILES.forEach(function (f, i) {
+    var src = $('#src-' + f.id);
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'tab'; b.setAttribute('role', 'tab'); b.id = 'tab-' + f.id;
+    b.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+    b.innerHTML = '<span class="side">' + SIDE_LABEL[f.side] + '</span>' + esc(src.dataset.path.replace(/^(frontend|backend)\//, '').replace(/ \(.*\)$/, ''));
+    b.addEventListener('click', function () { showFile(f.id); });
+    tabsEl.appendChild(b);
+  });
+  var currentCode = '';
+  function showFile(id) {
+    var f = FILES.filter(function (x) { return x.id === id; })[0];
+    var src = $('#src-' + id);
+    $$('.tab', tabsEl).forEach(function (t) { t.setAttribute('aria-selected', t.id === 'tab-' + id ? 'true' : 'false'); });
+    currentCode = src.textContent.replace(/^\n/, '');
+    $('#code-path').textContent = src.dataset.path;
+    var code = $('#code-view');
+    code.className = 'language-' + src.dataset.lang;
+    code.textContent = currentCode;
+    hl(code);
+    $('#code-notes').innerHTML = f.notes.map(function (n) { return '<li>' + n + '</li>'; }).join('');
+    $('#code-copy').textContent = 'Copy';
+  }
+  $('#code-copy').addEventListener('click', function () {
+    var btn = this;
+    var selectIt = function () {
+      var r = document.createRange(); r.selectNodeContents($('#code-view'));
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      btn.textContent = 'Selected: press Ctrl+C or Cmd+C';
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(currentCode).then(function () { btn.textContent = 'Copied'; }, selectIt);
+    } else { selectIt(); }
+  });
+  showFile('api');
+
+  /* ---------- Stage 7 field mapper ---------- */
+  var DB = [
+    { name: 'staff', cols: ['id', 'email', 'password_hash', 'role', 'created_at'] },
+    { name: 'user_groups', cols: ['id', 'name'] },
+    { name: 'users', cols: ['id', 'name', 'phone', 'group_id', 'opted_in', 'updated_at'] },
+    { name: 'notices', cols: ['id', 'author_id', 'group_id', 'text', 'send_at', 'status', 'created_at'] },
+    { name: 'notice_messages', cols: ['id', 'notice_id', 'user_id', 'status', 'provider_message_id', 'sent_at'] },
+    { name: 'notice_summary', view: true, cols: ['notice_id', 'sent count', 'failed count'] }
+  ];
+  var F = [
+    { page: 'Sign in', sends: [['email', 'staff.email', 'Stored in staff.email, which is unique. Sign-in looks the staff member up by it.'], ['password', 'staff.password_hash', 'Never stored as sent. The backend keeps a hash in staff.password_hash, and verify_credentials compares against it.']], reads: [['none: the response sets the session cookie', '', 'Sign-in reads no fields. Its result is the cookie.', true]] },
+    { page: 'Users list', sends: [['group id (query)', 'users.group_id user_groups.id', 'The filter in GET /v1/users?group={id}. It matches users.group_id, which refers to user_groups.id. Stage 7 indexes users.group_id, because PostgreSQL does not index foreign key columns automatically.'], ['limit and offset (query)', '', 'Not stored. limit and offset page through the users rows, at most 200 a page; the backend answers 422 above that.', true]], reads: [['id', 'users.id', 'users.id, the primary key.'], ['name', 'users.name', 'users.name.'], ['phone', 'users.phone', 'users.phone.'], ['group_id', 'users.group_id', 'users.group_id, a foreign key to user_groups.'], ['opted_in', 'users.opted_in', 'users.opted_in.'], ['groups: id and name', 'user_groups.id user_groups.name', 'GET /v1/users/groups reads the id and name of each row in user_groups, for the group filter.']] },
+    { page: 'User detail', sends: [['phone', 'users.phone', 'The PATCH writes users.phone.'], ['opted_in', 'users.opted_in', 'The PATCH writes users.opted_in.']], reads: [['id', 'users.id', 'users.id, the primary key.'], ['name', 'users.name', 'users.name.'], ['phone', 'users.phone', 'users.phone.'], ['group_id', 'users.group_id', 'users.group_id, a foreign key to user_groups.'], ['opted_in', 'users.opted_in', 'users.opted_in.']] },
+    { page: 'New notice', sends: [['text', 'notices.text', 'notices.text.'], ['group_id', 'notices.group_id', 'notices.group_id, a foreign key to user_groups.'], ['send_at', 'notices.send_at', 'notices.send_at, a timestamptz. The scheduler finds due notices through the (status, send_at) index.'], ['author: not sent', 'notices.author_id', 'notices.author_id comes from current_user on the backend, never from the page. A value sent by the page can be changed by whoever uses the page.', true]], reads: [['id', 'notices.id', 'notices.id, the primary key.'], ['status', 'notices.status', 'notices.status: scheduled, sending, sent or failed.']] },
+    { page: 'Notice history', sends: [['notice id (Send now)', 'notices.id', 'POST /v1/notices/{id}/send uses notices.id.']], reads: [['id', 'notices.id', 'notices.id.'], ['text', 'notices.text', 'notices.text.'], ['send_at', 'notices.send_at', 'notices.send_at.'], ['status', 'notices.status', 'notices.status.'], ['sent and failed counts', 'notice_summary.sent count notice_summary.failed count notice_messages.status', 'The notice_summary view counts the rows in notice_messages by status, one row per notice. It is a plain view unless Notice history is measured as slow.']] }
+  ];
+  var fIdx = 0, fAll = [];
+  function chipHtml(c) {
+    var k = 'f' + (fIdx++); fAll.push({ k: k, label: c[0], dest: c[1], text: c[2] });
+    return '<button type="button" class="fchip' + (c[3] ? ' special' : '') + '" data-k="' + k + '">' + esc(c[0]) + '</button>';
+  }
+  $('#f-rows').innerHTML = F.map(function (row) {
+    return '<tr><td>' + esc(row.page) + '</td><td><div class="chips">' + row.sends.map(chipHtml).join('') + '</div></td><td><div class="chips">' + row.reads.map(chipHtml).join('') + '</div></td></tr>';
+  }).join('');
+  $('#f-db').innerHTML = DB.map(function (t) {
+    return '<div class="dbt"><h4>' + t.name + (t.view ? ' <small>view</small>' : '') + '</h4><div class="cols">' + t.cols.map(function (c) { return '<span class="col" data-col="' + esc(t.name + '.' + c) + '">' + esc(c) + '</span>'; }).join('') + '</div></div>';
+  }).join('');
+  function pickField(k) {
+    var it = fAll.filter(function (x) { return x.k === k; })[0];
+    var dests = it.dest ? splitDest(it.dest) : [];
+    $$('.fchip').forEach(function (b) {
+      var o = fAll.filter(function (x) { return x.k === b.dataset.k; })[0];
+      var od = o.dest ? splitDest(o.dest) : [];
+      b.classList.toggle('is-on', b.dataset.k === k || (dests.length && od.some(function (d) { return dests.indexOf(d) !== -1; })));
+    });
+    $$('.col').forEach(function (c) { c.classList.toggle('is-on', dests.indexOf(c.dataset.col) !== -1); });
+    $('#f-dest').innerHTML = '<span class="label">' + esc(it.label) + '</span><span>' + esc(it.text) + '</span>' + (dests.length ? '<span class="mono muted" style="font-size:0.8rem">' + esc(dests.join(', ')) + '</span>' : '');
+  }
+  function splitDest(d) {
+    // destinations are "table.column" separated by spaces; column names in the view contain a space
+    var out = [], parts = d.split(' '), i = 0;
+    while (i < parts.length) {
+      if ((parts[i] === 'notice_summary.sent' || parts[i] === 'notice_summary.failed') && parts[i + 1] === 'count') { out.push(parts[i] + ' count'); i += 2; }
+      else { out.push(parts[i]); i++; }
+    }
+    return out;
+  }
+  $('#f-rows').addEventListener('click', function (e) { var b = e.target.closest('.fchip'); if (b) pickField(b.dataset.k); });
+  pickField(fAll.filter(function (x) { return x.label === 'phone'; })[0].k);
+
+  /* ---------- Drills ---------- */
+  var DRILLS = [
+    { s: 'The Users list shows "Could not load users", and the console shows: blocked by CORS policy: No \'Access-Control-Allow-Origin\' header is present.', q: 'Where does the fix go?', o: ['Add mode: \'no-cors\' to the fetch in api()', 'Add /v1 to the proxy.ts matcher', 'Add the CORS middleware to the backend, with ALLOWED_ORIGIN=http://localhost:3000', 'Move the API call into a shared component'], a: 2, e: 'The browser enforces CORS, and only the backend can allow an origin. mode: \'no-cors\' makes the response unreadable to the page.' },
+    { s: 'Sign-in answers 204, but opening /users sends you back to /login.', q: 'What is the most likely cause?', o: ['verify_credentials rejected the password', 'The fetch was sent without credentials: \'include\', so the cookie was not stored', 'PATCH is missing from allow_methods', 'The NavBar has no link to /users'], a: 1, e: 'A 204 means the backend accepted the password. The browser keeps a cookie from another origin only when the fetch used credentials: \'include\'. Calling the backend only through api() avoids this.' },
+    { s: '/users/42 shows a 404 page, but /users works.', q: 'What is wrong?', o: ['The backend has no GET /v1/users/{id}', 'CORS blocked the page', 'proxy.ts redirected the request', 'The folder is named id instead of [id], or page.tsx is missing'], a: 3, e: 'A 404 page comes from Next.js routing, before any API call. A dynamic segment needs square brackets: app/users/[id]/page.tsx.' },
+    { s: 'Pages open, but every API call returns 401.', q: 'Why does proxy.ts let the pages open?', o: ['proxy.ts only checks that the cookie exists; the token inside is expired or invalid', 'ALLOWED_ORIGIN has a trailing slash', 'package-lock.json was not committed', 'The matcher lists /login'], a: 0, e: 'proxy.ts cannot read the token. current_user can, and it rejects it. Sign in again; if it repeats, put a breakpoint in current_user.' },
+    { s: 'The backend log shows OPTIONS /v1/users/42 405, and no PATCH after it.', q: 'What does the log tell you?', o: ['User 42 does not exist', 'The session cookie expired', 'There is no CORS middleware, so FastAPI has no answer for the preflight', 'nginx is not running'], a: 2, e: 'The browser asked permission with OPTIONS. Without the middleware there is no OPTIONS route, so FastAPI answers 405 and the browser never sends the PATCH.' },
+    { s: 'Everything works at http://localhost:3000. At http://127.0.0.1:3000 the calls fail.', q: 'Why?', o: ['127.0.0.1 and localhost are different hosts, so neither the CORS origin nor the cookie matches', 'Next.js does not run on 127.0.0.1', 'Port 3000 is blocked', 'The token expired'], a: 0, e: 'Use localhost for both servers in development. The CORS simulator\'s 127.0.0.1 preset shows the cookie part.' },
+    { s: 'Developer A\'s fix for a CORS error is allow_origins=["*"].', q: 'What is wrong with it?', o: ['Nothing; it is the recommended setting', 'It disables the preflight', 'It removes the need for proxy.ts', 'FastAPI\'s documentation does not allow a wildcard with allow_credentials=True, and it accepts calls from any origin'], a: 3, e: 'List the exact origin, http://localhost:3000, read from ALLOWED_ORIGIN in .env.' },
+    { s: 'Code review finds if (password === user.password) in a page.', q: 'What do you do?', o: ['Move it into proxy.ts', 'Remove it; the backend\'s verify_credentials is the only password check', 'Keep it as a second check', 'Hash the password in the browser first'], a: 1, e: 'Anything in page code can be read and changed by whoever uses the page. Passwords are checked only in the backend.' },
+    { s: 'npm install --save-dev vitest ... stops with ERESOLVE: Conflicting peer dependency: @types/node.', q: 'What is the fix?', o: ['Run the install again with --force', 'Install @types/node@24 first; create-next-app 16.4 set it to ^20, and Vitest 5 needs ^22 or 24 and later', 'Go back to Next.js 15', 'Delete package-lock.json and install again'], a: 1, e: 'Version 24 matches the Node.js 24 LTS runtime. --force would install a combination that npm reports as conflicting.' },
+    { s: 'npm run build stops: Next.js encountered URL data useParams() in a Client Component outside of <Suspense>.', q: 'What do you change?', o: ['Read the id from window.location instead', 'Wrap the part of the page that calls useParams() in <Suspense fallback={...}>', 'Remove \'use client\' from the page', 'Add \'use client\' to app/layout.tsx'], a: 1, e: 'create-next-app 16.4 turns on Cache Components. With it, URL data read at runtime needs a Suspense boundary. The User detail page wraps its form in Suspense.' },
+    { s: 'GET /v1/users/groups answers 422: Input should be a valid integer.', q: 'What is wrong?', o: ['The user_groups table is empty', 'The session cookie expired', 'The /groups route is declared after /{user_id}, so FastAPI reads groups as a user id', 'CORS blocked the request'], a: 2, e: 'FastAPI tries routes in the order they are declared. Declare /groups before /{user_id}.' },
+    { s: 'The second NoticeForm test fails: Found multiple elements with the role "button" and name "Schedule notice".', q: 'What is missing?', o: ['afterEach(cleanup), so each test starts with an empty page', 'A second NoticeForm in the component', 'The \'use client\' line', 'jsdom in package.json'], a: 0, e: 'React Testing Library cleans up by itself only when Vitest\'s globals are turned on. Without cleanup, the first test\'s form is still on the page.' },
+    { s: 'Code review finds <p dangerouslySetInnerHTML={{ __html: notice.text }} /> in Notice history.', q: 'What do you change?', o: ['Nothing; staff wrote the text', 'Render {notice.text}; React escapes the text it renders', 'Remove the word script from the text first', 'Move it into a Server Component'], a: 1, e: 'dangerouslySetInnerHTML turns escaping off, so HTML in a notice\'s text, and any script it carries, would reach every page that shows the notice. The guide lists this as a common mistake.' },
+    { s: 'npm test stops every test with ReferenceError: document is not defined.', q: 'What is missing?', o: ['test: { environment: \'jsdom\' } in vitest.config.mts', 'The \'use client\' line in the component', 'afterEach(cleanup) in the test file', 'The @/ path in tsconfig.json'], a: 0, e: 'Without the jsdom environment the tests run in plain Node.js, which has no document, so render() has nothing to draw into. The guide names this in step 7.' }
+  ];
+  drillTotal = DRILLS.length;
+  function renderDrills() {
+    $('#drill-list').innerHTML = DRILLS.map(function (d, i) {
+      return '<div class="drill" data-i="' + i + '"><p class="sym">' + esc(d.s) + '</p><p>' + esc(d.q) + '</p><div class="opts">' +
+        d.o.map(function (o, j) { return '<button type="button" class="opt" data-j="' + j + '">' + esc(o) + '</button>'; }).join('') +
+        '</div><p class="feedback" hidden></p></div>';
+    }).join('');
+  }
+  function scoreDrills() {
+    var answered = Object.keys(drillState).length;
+    var right = Object.keys(drillState).filter(function (k) { return drillState[k] === true; }).length;
+    $('#drill-score').textContent = answered + ' of ' + DRILLS.length + ' answered, ' + right + ' correct on the first try';
+    updateProgress();
+  }
+  $('#drill-list').addEventListener('click', function (e) {
+    var b = e.target.closest('.opt'); if (!b) return;
+    var box = b.closest('.drill'); var i = +box.dataset.i; var d = DRILLS[i]; var j = +b.dataset.j;
+    if (!(i in drillState)) drillState[i] = (j === d.a);
+    $$('.opt', box).forEach(function (o) {
+      var oj = +o.dataset.j;
+      if (oj === d.a) o.classList.add('right');
+      else if (oj === j) o.classList.add('wrong');
+      o.disabled = true;
+    });
+    var fb = $('.feedback', box);
+    fb.hidden = false;
+    fb.innerHTML = (j === d.a ? '<span class="pill ok">Correct</span> ' : '<span class="pill bad">Not this one</span> ') + esc(d.e);
+    scoreDrills();
+  });
+  $('#drill-reset').addEventListener('click', function () { drillState = {}; renderDrills(); scoreDrills(); });
+  renderDrills(); scoreDrills();
+
+  /* ---------- Component test panel ---------- */
+  var CT_INPUTS = {
+    empty: { text: '   ', sendAt: '2099-01-01T09:00' },
+    past: { text: 'Office closed on Friday', sendAt: '2020-01-01T09:00' },
+    valid: { text: 'Office closed on Friday', sendAt: '2099-01-01T09:00' }
+  };
+  var CT_TESTS = {
+    empty: { name: 'empty text shows an error and makes no API call', call: "submit('   ', '2099-01-01T09:00')", expect: ['The message reads "Enter the notice text."', 'onSubmit is not called, so no API call is made'] },
+    past: { name: 'a past send time shows an error and makes no API call', call: "submit('Office closed on Friday', '2020-01-01T09:00')", expect: ['The message reads "Choose a send time in the future."', 'onSubmit is not called, so no API call is made'] },
+    valid: { name: 'valid input is passed on once, with the send time in UTC', call: "submit('Office closed on Friday', '2099-01-01T09:00')", expect: ['onSubmit is called once', 'onSubmit receives the text, group_id 1 and the send time in UTC'] }
+  };
+  var ct = { broken: false };
+  // The same checks as NoticeForm, in the same order. broken = "if (!text)" changed to "if (false)".
+  function noticeForm(text, sendAtValue, groupId, broken) {
+    var t = String(text).trim();
+    var sendAt = new Date(String(sendAtValue || ''));
+    if (!broken && !t) return { error: 'Enter the notice text.' };
+    if (isNaN(sendAt.getTime()) || sendAt <= new Date()) return { error: 'Choose a send time in the future.' };
+    return { submitted: { text: t, group_id: groupId, send_at: sendAt.toISOString() } };
+  }
+  function classify(text, sendAtValue) {
+    if (!String(text).trim()) return 'empty';
+    var d = new Date(String(sendAtValue || ''));
+    if (isNaN(d.getTime()) || d <= new Date()) return 'past';
+    return 'valid';
+  }
+  function runTest(key, broken) {
+    var inp = CT_INPUTS[key], r = noticeForm(inp.text, inp.sendAt, 1, broken), res = [];
+    if (key === 'valid') {
+      if (!r.submitted) return [{ ok: false, fail: 'expected onSubmit to be called 1 time, but it was called 0 times' }, { skip: true }];
+      var exp = { text: 'Office closed on Friday', group_id: 1, send_at: new Date('2099-01-01T09:00').toISOString() };
+      var same = JSON.stringify(r.submitted) === JSON.stringify(exp);
+      return [{ ok: true }, { ok: same, fail: same ? '' : 'onSubmit received different values' }];
+    }
+    var want = CT_TESTS[key].expect[0].replace(/^The message reads "(.*)"$/, '$1');
+    if (!r.error) return [{ ok: false, fail: 'Unable to find role="alert"' }, { skip: true }];
+    if (r.error !== want) return [{ ok: false, fail: 'the message was "' + r.error + '"' }, { skip: true }];
+    res.push({ ok: true });
+    res.push({ ok: !r.submitted, fail: r.submitted ? 'onSubmit was called' : '' });
+    return res;
+  }
+  function testFails(key) { return runTest(key, ct.broken).some(function (x) { return x.ok === false; }); }
+  function renderCT() {
+    var text = $('#ct-text').value, sendAt = $('#ct-sendat').value, group = Number($('#ct-group').value);
+    var r = noticeForm(text, sendAt, group, ct.broken);
+    var key = classify(text, sendAt);
+    setSeg('ctpreset', key);
+    $('#ct-alert').textContent = r.error || '';
+    var apiHtml = r.submitted
+      ? '<span class="pill info">POST /v1/notices</span> The New notice page\'s onSubmit sends it, with this body:<pre class="body">' + esc(JSON.stringify(r.submitted, null, 2)) + '</pre>' +
+        (key === 'empty' ? '<span class="hint">With the check removed, a notice with no text reaches the backend.</span>' : '')
+      : '<span class="pill ok">None</span> NoticeForm calls only onSubmit, and onSubmit was not called.';
+    $('#ct-result').innerHTML =
+      '<dt>Message</dt><dd>' + (r.error ? '<span class="pill bad">' + esc(r.error) + '</span>' : 'No message') + '</dd>' +
+      '<dt>onSubmit</dt><dd>' + (r.submitted ? 'Called once' : 'Not called') + '</dd>' +
+      '<dt>API call</dt><dd>' + apiHtml + '</dd>';
+    var t = CT_TESTS[key], res = runTest(key, ct.broken), failed = res.some(function (x) { return x.ok === false; });
+    var custom = !(text === CT_INPUTS[key].text && sendAt === CT_INPUTS[key].sendAt);
+    var lines = t.expect.map(function (e, i) {
+      var x = res[i], dot = x.skip ? '' : (x.ok ? 'ok' : 'bad');
+      var tail = x.skip ? ' <span class="muted">(not reached)</span>' : (x.ok ? '' : ' <span class="muted">(fails: ' + esc(x.fail) + ')</span>');
+      return '<li><span class="dot ' + dot + '"></span><span>' + esc(e) + tail + '</span></li>';
+    }).join('');
+    $('#ct-test').innerHTML = '<span class="label">The test for this input</span>' +
+      '<span class="tname">' + (failed ? '× ' : '✓ ') + esc(t.name) + '</span>' +
+      '<span class="muted" style="font-size:0.86rem">' + (custom ? 'Your input falls under this test. The test itself runs ' : 'The test runs ') + '<code>' + esc(t.call) + '</code>, then checks:</span>' +
+      '<ol class="trace">' + lines + '</ol>';
+    var failing = ['empty', 'past', 'valid'].filter(testFails);
+    var out = '$ npm test\n\n> frontend@0.1.0 test\n> vitest\n\n RUN  v5.0.5 (your frontend folder)\n\n';
+    if (failing.length) {
+      out += ' ❯ __tests__/NoticeForm.test.tsx (3 tests | ' + failing.length + ' failed)\n' +
+        failing.map(function (k) { return '   × ' + CT_TESTS[k].name; }).join('\n') + '\n\n' +
+        failing.map(function (k) { return ' FAIL  __tests__/NoticeForm.test.tsx > ' + CT_TESTS[k].name + '\nTestingLibraryElementError: Unable to find role="alert"'; }).join('\n\n') + '\n\n' +
+        ' Test Files  1 failed | 2 passed (3)\n      Tests  ' + failing.length + ' failed | ' + (6 - failing.length) + ' passed (6)';
+    } else {
+      out += ' Test Files  3 passed (3)\n      Tests  6 passed (6)';
+    }
+    var run = $('#ct-run');
+    run.textContent = out;
+    run.classList.toggle('err', failing.length > 0);
+  }
+  segHandlers.ctpreset = function (v) {
+    $('#ct-text').value = CT_INPUTS[v].text;
+    $('#ct-sendat').value = CT_INPUTS[v].sendAt;
+    $('#ct-group').value = '1';
+    renderCT();
+  };
+  ['#ct-text', '#ct-sendat', '#ct-group'].forEach(function (s) { $(s).addEventListener('input', renderCT); $(s).addEventListener('change', renderCT); });
+  $('#ct-break').addEventListener('change', function () { ct.broken = this.checked; renderCT(); });
+  $('#ct-form').addEventListener('submit', function (e) { e.preventDefault(); renderCT(); });
+  segHandlers.ctpreset('empty');
+
+  /* ---------- Which kind of test? ---------- */
+  var KINDS = [['component', 'Component test'], ['e2e', 'End-to-end test'], ['api', 'API test']];
+  var QUIZ = [
+    { s: 'NoticeForm shows "Enter the notice text." when the text is empty.', a: 'component', e: 'One component, its own input check, no backend. NoticeForm.test.tsx has this test.' },
+    { s: 'A visitor without a session cookie who opens /users lands on /login.', a: 'e2e', e: 'The redirect comes from proxy.ts on the Next.js server. Only a real browser against the running application passes through it. Stage 9 has this test.' },
+    { s: 'GET /v1/users?limit=500 answers 422.', a: 'api', e: 'The page size limit lives in the backend route. A request to that endpoint checks it without a browser.' },
+    { s: 'UserTable shows "No users in this group." when it receives no users.', a: 'component', e: 'One component and the props it receives. UserTable.test.tsx has this test.' },
+    { s: 'A Server Component that awaits apiServer(\'/users/groups\') shows the group names.', a: 'e2e', e: 'Vitest does not support async Server Components, so Next.js recommends end-to-end tests for them.' },
+    { s: 'After a change to the users router, GET /v1/users/groups still returns the groups instead of 422.', a: 'api', e: 'Route order is a backend matter. A request to /v1/users/groups shows whether /groups is still declared before /{user_id}.' },
+    { s: 'A staff member signs in, changes a user\'s phone number and sees "Saved."', a: 'e2e', e: 'Sign-in, the cookie, the page and the backend have to work together. Stage 9 lists this journey.' },
+    { s: 'POST /v1/auth/login with a wrong password answers 401 and sets no session cookie.', a: 'api', e: 'The password check and the cookie belong to the backend route. A request to it shows the status and the headers.' }
+  ];
+  var quizState = {};
+  function renderQuiz() {
+    $('#quiz-list').innerHTML = QUIZ.map(function (q, i) {
+      return '<div class="drill" data-i="' + i + '"><p class="sym">' + esc(q.s) + '</p><div class="opts three">' +
+        KINDS.map(function (k) { return '<button type="button" class="opt" data-k="' + k[0] + '">' + k[1] + '</button>'; }).join('') +
+        '</div><p class="feedback" hidden></p></div>';
+    }).join('');
+  }
+  function scoreQuiz() {
+    var answered = Object.keys(quizState).length;
+    var right = Object.keys(quizState).filter(function (k) { return quizState[k] === true; }).length;
+    $('#quiz-score').textContent = answered + ' of ' + QUIZ.length + ' answered, ' + right + ' correct on the first try';
+  }
+  $('#quiz-list').addEventListener('click', function (e) {
+    var b = e.target.closest('.opt'); if (!b) return;
+    var box = b.closest('.drill'), i = +box.dataset.i, q = QUIZ[i], k = b.dataset.k;
+    if (!(i in quizState)) quizState[i] = (k === q.a);
+    $$('.opt', box).forEach(function (o) {
+      if (o.dataset.k === q.a) o.classList.add('right');
+      else if (o.dataset.k === k) o.classList.add('wrong');
+      o.disabled = true;
+    });
+    var label = KINDS.filter(function (x) { return x[0] === q.a; })[0][1];
+    var fb = $('.feedback', box);
+    fb.hidden = false;
+    fb.innerHTML = (k === q.a ? '<span class="pill ok">Correct</span> ' : '<span class="pill bad">Not this one</span> ') + '<b>' + label + '.</b> ' + esc(q.e);
+    scoreQuiz();
+  });
+  $('#quiz-reset').addEventListener('click', function () { quizState = {}; renderQuiz(); scoreQuiz(); });
+  renderQuiz(); scoreQuiz();
+
+  /* ---------- Open a file in the code section ---------- */
+  $$('[data-open-file]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      showFile(b.dataset.openFile);
+      var sec = document.getElementById('code');
+      if (sec) sec.scrollIntoView();
+      var tab = document.getElementById('tab-' + b.dataset.openFile);
+      if (tab) { try { tab.focus({ preventScroll: true }); } catch (err) { tab.focus(); } }
+    });
+  });
+
+  /* ---------- Section bar highlight ---------- */
+  var links = $$('.bar-nav a');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          links.forEach(function (a) { a.classList.toggle('is-here', a.getAttribute('href') === '#' + en.target.id); });
+        }
+      });
+    }, { rootMargin: '-45% 0px -50% 0px' });
+    $$('section.sec').forEach(function (s) { io.observe(s); });
+  }
+
+  updateProgress();
+})();
+</script>

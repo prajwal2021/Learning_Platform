@@ -1,0 +1,501 @@
+{
+ "slug": "kafka",
+ "name": "Apache Kafka",
+ "category": "Data and AI",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Apache Kafka, in simple terms?",
+    "answer": "Apache Kafka is a distributed event streaming platform used to publish, store, and consume records in near real time. Producers write messages to Kafka topics, and consumers read them independently. It is useful when you need durable event delivery, loose coupling between services, or a stream of data that multiple systems can process.",
+    "real_world": "Teams use Kafka to move orders, payments, logs, or click events between services without one service calling another directly. It helps when downstream systems need the same data at different speeds or at different times.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problem does a Kafka topic solve compared with sending messages directly to another service?"
+   },
+   {
+    "question": "What is a Kafka topic, partition, and offset?",
+    "answer": "A topic is a named stream of records. A partition is an ordered slice of that topic, and each record in a partition gets a monotonically increasing offset. Partitions let Kafka scale throughput and consumers read in parallel, while offsets let consumers track where they are in the stream.",
+    "real_world": "If a topic has one partition, only one consumer in a group can read it at a time. With multiple partitions, you can process more data at once, but ordering is only guaranteed within each partition.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does Kafka guarantee ordering only within a partition?"
+   },
+   {
+    "question": "What is a Kafka producer, and what does it do?",
+    "answer": "A producer is an application that sends records to Kafka topics. It chooses the topic, and often a key, which Kafka can use to decide the partition. Producers are used when a service needs to publish events instead of calling every consumer directly.",
+    "real_world": "A checkout service might produce an `OrderCreated` event after a successful purchase. Other services like inventory, email, and analytics can consume that event without the checkout service knowing about them.",
+    "code_lang": "java",
+    "code": "producer.send(new ProducerRecord<>(\"orders\", \"order-123\", \"created\"));",
+    "follow_up": "What happens if a producer sends the same keyed record many times?"
+   },
+   {
+    "question": "What is a Kafka consumer, and what is a consumer group?",
+    "answer": "A consumer reads records from one or more Kafka topics. A consumer group is a set of consumers that share the work of reading partitions from the same topic, so each partition is assigned to only one consumer in the group at a time. This is how Kafka scales processing horizontally.",
+    "real_world": "A log-processing job may run with several consumer instances so it can keep up with traffic spikes. If one instance dies, another in the group can take over its partitions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens when you add a new consumer to a consumer group?"
+   },
+   {
+    "question": "What does it mean that Kafka stores messages durably?",
+    "answer": "Kafka keeps records on disk for a configured retention period, rather than deleting them as soon as they are read. That means consumers can replay old events, recover after failures, or rebuild derived data. Durability is one reason Kafka is often used as both a transport and a replayable event log.",
+    "real_world": "If a downstream service has a bug and misses a day of events, the team can usually reset its offsets and reprocess the topic instead of asking producers to resend data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What determines when Kafka deletes old records?"
+   },
+   {
+    "question": "How does Kafka differ from a traditional message queue?",
+    "answer": "Kafka is closer to an append-only log than a classic queue. Messages are not removed after one consumer reads them; instead, consumers track offsets and decide what they have processed. This makes Kafka good for fan-out, replay, and multiple independent consumers, while classic queues often focus on point-to-point delivery.",
+    "real_world": "A queue works well for one worker processing each job once. Kafka is better when the same event must feed analytics, search indexing, and notifications at the same time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would a traditional queue be a better fit than Kafka?"
+   },
+   {
+    "question": "What is partitioning used for in Kafka?",
+    "answer": "Partitioning spreads a topic across multiple log segments so Kafka can scale write and read throughput. It also controls ordering: all records with the same key typically go to the same partition, which preserves their relative order. The trade-off is that you get more parallelism, but you lose global ordering across the whole topic.",
+    "real_world": "A payments team might partition by account ID so all events for one account stay in order. That prevents consumers from seeing a withdrawal before the deposit that should have happened first.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the risks of choosing a poor partition key?"
+   },
+   {
+    "question": "What is an offset, and why do consumers need to commit it?",
+    "answer": "An offset is the position of a record within a partition. Consumers commit offsets so Kafka knows how far they have processed, which lets them resume after a restart. If you commit too early, you can lose unprocessed messages; if you commit too late, you may process the same message more than once.",
+    "real_world": "A batch job that writes to a database often commits only after the write succeeds. That reduces the chance of skipping records during a crash, though it may cause duplicates if the job retries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between at-most-once, at-least-once, and exactly-once processing?"
+   },
+   {
+    "question": "What are Kafka brokers and a Kafka cluster?",
+    "answer": "A broker is a Kafka server that stores partitions and serves reads and writes. A cluster is a set of brokers working together to provide scalability and fault tolerance. If one broker fails, replicas on other brokers can continue serving the data, depending on how the topic is configured.",
+    "real_world": "In production, teams run multiple brokers so the system keeps working when a machine or availability zone fails. A single broker is usually only useful for development or learning.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does Kafka replicate partitions across brokers?"
+   },
+   {
+    "question": "What is the most common beginner mistake when using Kafka topics and keys?",
+    "answer": "A common mistake is ignoring message keys and sending everything to a random partition. That can break ordering for related events, such as updates for the same user or order. Another mistake is assuming Kafka will automatically process each event exactly once without understanding consumer commits and retries.",
+    "real_world": "If all events for one customer are spread across partitions, a downstream service may apply updates out of order. That can lead to inconsistent state, duplicate emails, or incorrect billing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose a good key for a Kafka topic?"
+   },
+   {
+    "question": "What is a Kafka record key, and why would you set one?",
+    "answer": "A record key is an optional field used by Kafka to decide which partition a message goes to. If you send the same key for related events, they usually land in the same partition, which preserves their order relative to each other. You use keys when ordering or grouping by an entity matters, such as all events for one user or one order.",
+    "real_world": "Teams often key events by customer ID so all changes for that customer are processed in order. Without a key, related events can be spread across partitions and arrive out of order.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if you always send records with no key?"
+   },
+   {
+    "question": "What is message retention in Kafka?",
+    "answer": "Retention is how long Kafka keeps records before deleting them, based on time, size, or both depending on configuration. Kafka is not primarily about deleting messages after consumption; it keeps them for a period so consumers can replay data if needed. Retention matters because storage cost and replay needs are a trade-off.",
+    "real_world": "A team may keep clickstream data for seven days so a pipeline can be reprocessed if a downstream job fails. If retention is too short, lost consumers cannot catch up.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is retention different from deleting a message after one consumer reads it?"
+   },
+   {
+    "question": "What is a consumer lag in Kafka?",
+    "answer": "Consumer lag is the difference between the latest offset in a partition and the offset a consumer group has processed. It tells you how far behind the consumer is. High lag can mean the consumer is too slow, the partition is overloaded, or there is a downstream dependency problem.",
+    "real_world": "Operations teams watch lag to catch backlog growth before it causes data freshness issues. A spike in lag often shows up when a downstream database becomes slow or unavailable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are common reasons lag keeps increasing?"
+   },
+   {
+    "question": "Why do Kafka partitions matter for performance and ordering?",
+    "answer": "Partitions let Kafka scale by spreading a topic across multiple logs, so producers and consumers can work in parallel. The trade-off is that ordering is only guaranteed within a single partition, not across the whole topic. More partitions can improve throughput, but they also add coordination and operational overhead.",
+    "real_world": "If a team needs high throughput for event ingestion, they often increase partitions to spread the load. But for per-user ordering, they must make sure all events for a user map to the same partition.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you choose a partition count for a new topic?"
+   },
+   {
+    "question": "What happens if a consumer crashes before committing its offset?",
+    "answer": "Kafka will treat the last committed offset as the point to resume from, so the consumer may re-read some messages after restart. That is usually why Kafka applications should be written to handle duplicate processing safely. This is one reason exactly-once behavior is harder than just reading messages.",
+    "real_world": "A payment or billing pipeline can process the same event twice after a crash if it commits offsets after side effects are written. Teams usually design downstream writes to be idempotent or deduplicated.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you make a consumer idempotent?"
+   },
+   {
+    "question": "What is a Kafka consumer poll loop?",
+    "answer": "The poll loop is the basic pattern where a consumer repeatedly calls poll, processes the returned records, and then commits offsets. If the consumer stops polling for too long, it may be considered dead and its partitions can be reassigned. The loop matters because Kafka consumption is usually controlled by the application, not pushed to it.",
+    "real_world": "A slow handler inside the poll loop can cause missed heartbeats or rebalances in a busy service. Engineers often move heavy work off the poll thread to keep consumption healthy.",
+    "code_lang": "python",
+    "code": "while True:\n    records = consumer.poll(1.0)\n    for record in records:\n        process(record)\n    consumer.commit()",
+    "follow_up": "What can go wrong if processing takes longer than expected?"
+   },
+   {
+    "question": "What is a Kafka rebalance?",
+    "answer": "A rebalance happens when Kafka changes which consumer in a group owns which partitions. It can be triggered when a consumer joins, leaves, or becomes unresponsive. Rebalances matter because they can briefly pause consumption and may cause duplicate processing if offsets are not handled carefully.",
+    "real_world": "During a deployment, new consumer instances joining the group can trigger a rebalance and slow down consumption for a short time. In large groups, frequent rebalances can create noticeable instability.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you reduce the impact of frequent rebalances?"
+   },
+   {
+    "question": "What is a compacted topic in Kafka?",
+    "answer": "A compacted topic keeps the latest value for each key instead of retaining every historical record forever. It is useful for changelog or state topics where you care about the most recent value per key, not the full event history. The key trade-off is that old versions can disappear, so it is not a good fit when you need an audit log.",
+    "real_world": "A service may publish the latest user profile state to a compacted topic so another service can rebuild its cache after restart. That consumer only needs the newest value for each user key.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a compacted topic over a normal retained topic?"
+   },
+   {
+    "question": "What is the difference between at-least-once and at-most-once delivery in Kafka clients?",
+    "answer": "At-least-once means messages may be processed more than once, but not usually lost; at-most-once means messages may be lost, but not duplicated by the consumer flow. The difference comes from when offsets are committed relative to processing. Most systems prefer at-least-once and make handlers idempotent, because losing data is often worse than duplicates.",
+    "real_world": "Event pipelines that update databases commonly accept duplicates and use deduplication keys or upserts. Lossy consumption is usually unacceptable for billing, analytics, or audit trails.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What pattern would you use to avoid duplicate side effects?"
+   },
+   {
+    "question": "Why do people say Kafka is not a database?",
+    "answer": "Kafka can persist data and replay it, but it is not meant to replace a general-purpose database. It does not provide rich queries, indexes, or transactional access patterns for arbitrary application reads and writes. Kafka is best used as an event log and transport layer, with databases handling queryable state.",
+    "real_world": "A team may be tempted to read current application state directly from Kafka instead of storing it in a database. That often becomes awkward once they need filtering, joins, or low-latency lookups by many fields.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you pair Kafka with a database in the same system?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide how many partitions a Kafka topic should have?",
+    "answer": "I start from the throughput and concurrency the topic needs, because partitions are the unit of parallelism for both producers and consumers. More partitions can increase throughput, but they also increase broker overhead, rebalance cost, and operational complexity. I also consider ordering requirements, since ordering is only guaranteed within a partition, and whether the key distribution will be balanced. In practice, I choose enough partitions for current load plus headroom, then validate with load tests.",
+    "real_world": "A team may launch with too few partitions and later find that consumers cannot scale beyond a small number of instances. Increasing partitions later is possible, but it can change key-to-partition mapping and complicate testing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you estimate the partition count for a new event stream with uncertain traffic?"
+   },
+   {
+    "question": "What is a Kafka consumer group rebalance, and why can it hurt latency?",
+    "answer": "A rebalance happens when Kafka redistributes partitions across consumers in the same group, usually because members join, leave, or stop heartbeating. During the rebalance, consumption can pause or slow down while ownership is reassigned, which increases end-to-end latency. It matters because frequent rebalances can make a healthy cluster look unstable even when brokers are fine. Common causes are slow consumers, long processing time, or too-aggressive session and poll timing settings.",
+    "real_world": "In production, teams often see lag spikes after deploys because rolling restarts trigger repeated rebalances. If processing is slow enough, consumers can also be kicked out of the group and churn continuously.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What operational signs would tell you a group is rebalancing too often?"
+   },
+   {
+    "question": "How do you choose between manual offset commits and automatic commits?",
+    "answer": "Automatic commits are simpler, but they can acknowledge messages before processing is actually finished, which risks message loss on failure. Manual commits give you more control because you can commit only after work succeeds, which is usually safer for business events. The trade-off is more code and a higher chance of duplicate processing if the consumer crashes before committing. I usually prefer manual commits for anything that updates state or triggers side effects.",
+    "real_world": "This comes up when a consumer writes to a database or calls another service. If the offset is committed too early, a crash can silently drop records that were never handled.",
+    "code_lang": "java",
+    "code": "while (running) {\n  var records = consumer.poll(Duration.ofMillis(100));\n  for (var record : records) process(record);\n  consumer.commitSync();\n}",
+    "follow_up": "How would you make that pattern safer if processing can partially fail?"
+   },
+   {
+    "question": "What happens if a consumer processes messages more slowly than they arrive?",
+    "answer": "Lag grows because new records keep arriving faster than the consumer can finish them. If this continues, the consumer may fall far behind, increase memory and timeout pressure, and eventually affect freshness guarantees. The fix is usually to add consumers, increase partitions if needed, reduce per-message work, or offload heavy processing. It is important to distinguish a temporary spike from a sustained capacity problem.",
+    "real_world": "This shows up after a feature adds expensive enrichment or external API calls in the consumer path. The pipeline still works, but dashboards show stale data and alarms start firing because lag never catches up.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you measure first to find the bottleneck?"
+   },
+   {
+    "question": "What is idempotent processing in a Kafka consumer, and why do you need it?",
+    "answer": "Idempotent processing means reprocessing the same message does not change the final result after the first successful attempt. You need it because Kafka consumers commonly deliver duplicates in real failure scenarios, especially with retries or crashes around offset commits. A common approach is to store a processed-message ID or use upserts so repeated handling is harmless. This is often more practical than trying to guarantee exactly-once across the whole downstream system.",
+    "real_world": "A payment or order service can receive the same event twice after a restart. Without idempotency, it might double-charge a customer or create duplicate records.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement deduplication without creating a new bottleneck?"
+   },
+   {
+    "question": "When would you use a compacted topic instead of a normal retention-based topic?",
+    "answer": "Use compaction when the latest value for each key matters more than the full event history, such as a changelog or current state table. Kafka keeps at least the most recent record for each key, which makes it useful for rebuilding state after a restart. A normal retention-based topic is better when you need the full sequence of events for replay or auditing. The trade-off is that compaction is not a replacement for an immutable event log when history matters.",
+    "real_world": "Teams often use compacted topics to replicate configuration or user profile state to many services. If they used a plain retention topic instead, old entries would eventually disappear and the latest snapshot might be lost on rebuild.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of bugs happen if you expect a compacted topic to behave like a full event log?"
+   },
+   {
+    "question": "How do you debug a Kafka consumer group that has high lag but low CPU usage?",
+    "answer": "Low CPU with high lag usually means the consumer is waiting on something other than local computation, such as I/O, locks, slow downstream services, or too small a fetch/poll pattern. I check whether the consumer is actually polling often enough, whether processing is blocked, and whether partition assignment is balanced across instances. I also look at broker-side metrics and network latency to rule out fetch issues. The key is to separate broker capacity, client throughput, and downstream dependency problems.",
+    "real_world": "A common production case is a consumer that spends most of its time waiting on a database call. Scaling the consumer count does not help much if every instance is blocked on the same slow dependency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What logs or metrics would you inspect first in that situation?"
+   },
+   {
+    "question": "What is the difference between a retry topic and retrying inside the consumer code?",
+    "answer": "Retrying inside the consumer code is simpler, but it ties up the consumer thread and can slow or block the whole partition. A retry topic pattern moves failed messages aside and lets the main consumer continue, which improves throughput and lets you apply backoff or dead-letter handling more cleanly. The downside is more infrastructure and more care needed to preserve ordering where it matters. For systems with flaky downstream dependencies, retry topics are often easier to operate.",
+    "real_world": "If a payment gateway is briefly unavailable, inline retries can freeze a consumer group and build lag quickly. A retry topic lets healthy messages keep flowing while failed ones are delayed and reprocessed later.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent a retry topic design from causing message storms?"
+   },
+   {
+    "question": "How do you test Kafka-based code without relying on a full production-like cluster?",
+    "answer": "I use a mix of unit tests for message handling, integration tests with an embedded or containerized Kafka instance, and contract tests for message schemas. Unit tests catch transformation and error-handling bugs quickly, while integration tests verify serialization, consumer group behavior, and offset handling. I avoid mocking Kafka too heavily because it can hide timing and delivery issues that only appear with a real broker. The goal is to test the behavior that matters, not Kafka internals.",
+    "real_world": "Teams often discover serializer mismatches or bad topic configuration only after deployment if they rely on mocks alone. A small integration test suite usually catches those problems much earlier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you include in an integration test for exactly-once or duplicate-safe processing?"
+   },
+   {
+    "question": "What happens if two consumers in the same group try to read the same partition?",
+    "answer": "Kafka assigns each partition to only one consumer in a group at a time, so the group coordinator will rebalance to resolve the conflict. That protects ordering within the partition, because two consumers would otherwise race and process records out of sequence. If you need multiple workers on the same data, you usually scale by adding partitions rather than sharing one partition concurrently. This is why partitioning strategy directly limits consumer parallelism.",
+    "real_world": "A team may add more pods expecting linear throughput gains, but nothing improves because there are fewer partitions than consumers. The extra instances sit idle after the group settles.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you explain the difference between topic-level throughput and partition-level throughput?"
+   },
+   {
+    "question": "How do you approach designing a Kafka message schema so producers and consumers can evolve independently?",
+    "answer": "Use an explicit schema format and treat changes as part of the contract, not an implementation detail. Prefer backward-compatible changes like adding optional fields over renaming or reusing fields, because consumers may be deployed on different schedules. Versioning matters most when multiple services share a topic and you need safe rollout without coordinated deploys. A schema registry or similar governance tool helps enforce compatibility rules before bad data lands in production.",
+    "real_world": "This comes up when a team adds a field to an event used by several downstream services. Without compatibility rules, one consumer may silently break after a producer deploys.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of schema changes are usually safe, and which ones are risky?"
+   },
+   {
+    "question": "When would you choose a key-based partitioning strategy, and when would you avoid relying on the key for ordering?",
+    "answer": "Use a key when you need all events for one entity to land on the same partition, such as all updates for a customer or order. That gives you ordering per key, but it can create hotspots if one key is much more active than others. If your workload is mostly independent events, spreading traffic more evenly can be better than forcing strict per-entity ordering. The trade-off is between ordering guarantees and throughput balance.",
+    "real_world": "A payments stream often keys by account so debits and credits stay ordered. A clickstream usually does not need that and benefits more from even partition distribution.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you detect and fix a hot partition in production?"
+   },
+   {
+    "question": "What happens if a producer retries a send, and how can that create duplicate messages?",
+    "answer": "If the producer does not have idempotence enabled, a retry can produce the same logical event more than once. That usually happens after a timeout or transient broker error, when the client cannot tell whether the first send succeeded. From the consumer’s point of view, both records are valid unless you add deduplication or idempotent processing. This is why delivery semantics are a system property, not just a producer setting.",
+    "real_world": "This shows up during network blips: the application logs one failure, but the topic ends up with two identical records and downstream counts go off.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design downstream consumers to tolerate duplicates?"
+   },
+   {
+    "question": "How do you decide between a single large consumer group and multiple consumer groups reading the same topic?",
+    "answer": "Use one consumer group when all instances do the same work and you want load balancing across them. Use multiple consumer groups when different applications need their own view of the stream, such as analytics, alerting, and persistence pipelines. The key trade-off is cost versus independence: more groups mean more total read work, but they decouple use cases and failure modes. In practice, a topic is often shared by several groups with different SLAs.",
+    "real_world": "A product team may have one group writing to a database and another feeding a real-time dashboard. If one breaks, the other can keep running independently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What operational risks appear when many groups read the same high-volume topic?"
+   },
+   {
+    "question": "What is the difference between event time and processing time, and why does it matter in Kafka pipelines?",
+    "answer": "Event time is when the thing actually happened; processing time is when your consumer saw it. They differ when data arrives late, is retried, or gets buffered, which is common in real systems. If you aggregate by processing time, late events can land in the wrong window or be missed from the intended metric. Choosing event time makes analytics more correct, but you need watermarking or lateness handling.",
+    "real_world": "This matters in fraud detection and metrics dashboards where late-arriving events can change the result after the fact. A pipeline based on processing time often looks simpler but gives inconsistent business numbers.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle late events in a windowed aggregation?"
+   },
+   {
+    "question": "How do you troubleshoot a Kafka producer that has high latency but no obvious broker errors?",
+    "answer": "Check whether the client is batching effectively, whether the partition count is causing skew, and whether the producer is waiting on acknowledgments from a slow path. High latency can come from small batches, DNS or network issues, or a throttled broker rather than a code bug. It also helps to look at record size and compression, since many tiny messages often perform worse than fewer batched ones. The goal is to separate client-side delay from broker-side backpressure.",
+    "real_world": "A service may look healthy in logs but still build user-visible delay because sends are waiting on the network or on a slow leader partition. This often appears after a traffic spike or a broker maintenance event.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you check first on both the producer and the broker?"
+   },
+   {
+    "question": "What do you gain and lose by enabling compression on Kafka producers?",
+    "answer": "Compression usually reduces network usage and broker disk I/O, which can improve throughput for payloads with repeated structure. The trade-off is extra CPU on the producer and consumer side to compress and decompress data. It tends to help most when messages are small to medium and similar in shape, and less when payloads are already compressed or very small. In practice, compression is often a net win in streaming systems.",
+    "real_world": "Teams often turn it on when a topic starts saturating network links before CPU is the bottleneck. It can also lower storage costs for high-volume event pipelines.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether compression is actually helping in your workload?"
+   },
+   {
+    "question": "What is the purpose of a dead-letter topic, and when should you send records there instead of retrying forever?",
+    "answer": "A dead-letter topic captures records that repeatedly fail processing so they do not block healthy traffic. You use it when the failure is likely data-specific or needs manual inspection, such as malformed payloads or unexpected business rules. Retrying forever hides the bad record and can stall a consumer group if the same message keeps failing. The main trade-off is moving fast versus preserving a path for later recovery.",
+    "real_world": "This is common when one bad event format suddenly appears after a producer change. Without a dead-letter path, the consumer may keep crashing on the same record and never progress.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What information would you include in a dead-letter record to make debugging easier?"
+   },
+   {
+    "question": "How do you handle backpressure in a Kafka consumer when downstream storage or APIs are slower than Kafka?",
+    "answer": "You need to decouple polling from slow processing as much as possible, or explicitly pause consumption when your backlog grows. If you keep polling but process too slowly, you risk growing memory usage or triggering rebalances if you stop polling long enough. Another option is to batch writes downstream so each Kafka poll does more useful work per message. The right choice depends on whether the bottleneck is CPU, network, or the external system.",
+    "real_world": "This is a common issue when a consumer writes to a database that becomes saturated. Kafka keeps delivering data, but the app starts to lag and may eventually fall out of the group.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent a paused consumer from missing its heartbeat deadlines?"
+   },
+   {
+    "question": "How do you test consumer logic for ordering, retries, and duplicate handling without mocking away Kafka behavior too much?",
+    "answer": "Use a real broker in tests when you need to verify integration-level behavior, especially offset commits, retries, and duplicate delivery. Unit tests are still useful for pure transformation and idempotency logic, but they will not catch group coordination or serialization issues. The best approach is usually a mix: small unit tests for business rules and a few integration tests that exercise the real client against a test broker. That gives confidence without making the test suite too slow.",
+    "real_world": "Teams often discover a commit or retry bug only after deployment because the unit tests never exercised actual broker semantics. A lightweight integration test catches those regressions earlier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which Kafka behaviors do you think are worth covering in integration tests specifically?"
+   },
+   {
+    "question": "What happens when a topic has more partitions than active consumers in a group, and is that always a problem?",
+    "answer": "Some consumers will get multiple partitions while others may get just one, and any extra consumers beyond the partition count will sit idle. That is not automatically bad; it only becomes a problem if you expected more parallelism or if the partition ownership is badly skewed. The real limit is that a partition can only be actively processed by one consumer in a group at a time. So partition count sets the ceiling for parallel consumer throughput.",
+    "real_world": "This often surprises teams when they scale pods horizontally and see no throughput gain. The topic simply does not have enough partitions to use all the consumers.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you plan partition count if you expect traffic growth over the next year?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you walk me through Kafka's replication protocol and what the leader, followers, ISR, and high watermark actually mean for durability and reads?",
+    "answer": "Each partition has one leader and zero or more followers that fetch from the leader. The in-sync replica set is the replicas that are keeping up closely enough to be considered safe for leadership; Kafka advances the high watermark only for data replicated to all ISR members, and consumers normally read only up to that point. That means an acknowledged write is not necessarily visible until replication catches up, depending on ack mode and ISR state. The trade-off is latency versus durability: tighter replication requirements reduce data loss risk but can stall writes when replicas fall behind.",
+    "real_world": "A common incident is a broker disk slowdown shrinking ISR, which suddenly increases producer errors or latency because partitions can no longer meet the required replication guarantees.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when producers use acks=all and a replica falls out of ISR?"
+   },
+   {
+    "question": "How do Kafka's idempotent producer and transactions work under the hood, and what problems do they actually solve versus not solve?",
+    "answer": "Idempotent production tags records with producer identity and sequence numbers per partition so broker-side retries do not create duplicates for the same session. Transactions extend that by atomically writing to multiple partitions and committing consumer offsets together, so downstream read-process-write pipelines can achieve exactly-once semantics within Kafka. They do not make your external database writes magically exactly-once; once you leave Kafka, you still need idempotency or a transactional boundary you control. The cost is more coordinator state, longer error paths, and operational complexity during failures.",
+    "real_world": "This matters in stream processing jobs that read from one topic and write to another: without transactions, a restart between output write and offset commit can duplicate outputs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure cases cause a transactional producer to get fenced, and why is that useful?"
+   },
+   {
+    "question": "What is leader election in Kafka, and what are the trade-offs between clean and unclean leader election during failures?",
+    "answer": "When a partition leader fails, Kafka elects a new leader from replicas. If election is limited to ISR members, you preserve acknowledged data but may keep the partition unavailable if no in-sync replica exists. Unclean leader election allows an out-of-sync replica to become leader, restoring availability faster but potentially losing acknowledged records that never reached that replica. It's the classic availability-versus-consistency trade-off, and most systems handling money or state changes prefer avoiding data loss over quick recovery.",
+    "real_world": "Teams sometimes discover this only after a broker outage: either producers were blocked for minutes waiting for safe leadership, or data vanished because an out-of-sync replica was promoted.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect after the fact that a partition leader change caused data loss risk?"
+   },
+   {
+    "question": "What exactly happens during a log flush, fsync, and page cache write in Kafka, and why can a broker acknowledge data that is not yet on physical disk?",
+    "answer": "Kafka appends records to the OS page cache first, which is fast because it's mostly memory-backed sequential I/O. The broker can acknowledge writes after they are appended and replicated according to the configured durability rules, even if the kernel has not flushed them to stable storage yet. Actual persistence to disk depends on the OS flush path and storage subsystem, so a machine or power failure can still lose recently acknowledged data if replicas share the same fate or replication was insufficient. Kafka relies heavily on replication rather than synchronous fsync on every record because per-message fsync would crush throughput.",
+    "real_world": "This shows up after power events or cloud host crashes: operators are surprised that acknowledged messages disappeared from a single-broker dev cluster or under-replicated topic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is RAID or fast SSD not a substitute for replication in Kafka?"
+   },
+   {
+    "question": "How do min.insync.replicas and acks interact, and what failure mode are you protecting against when you tune them together?",
+    "answer": "acks=all tells the producer to wait for the leader to confirm replication to the required replicas, and min.insync.replicas defines how many in-sync replicas must be available for a partition to accept that write. Together they protect against the case where a leader accepts data but too few healthy replicas have it, so a failover could lose acknowledged records. If min.insync.replicas is too low, durability is weaker; if it's too high for your replication factor and failure budget, writes become unavailable during routine broker issues. The setting has to match your replication factor and tolerated failures, not just copy a template.",
+    "real_world": "A classic production bug is replication factor 3 with min.insync.replicas 1: everything looks fine until a leader dies and recently acknowledged data is missing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "For replication factor 3, what availability and durability trade-off do you get from min.insync.replicas 2?"
+   },
+   {
+    "question": "How does the fetch path work for consumers at the broker and network level, and which knobs usually matter most for throughput versus tail latency?",
+    "answer": "Consumers issue fetch requests that can wait until enough data accumulates or a timeout expires, then brokers return batches from partition logs. Larger fetches and batching improve throughput by amortizing request overhead and decompression cost, while shorter waits and smaller batches reduce end-to-end latency at the cost of more requests and CPU. The main levers are fetch sizes, wait times, number of partitions per consumer, and how many records the application can process per poll without triggering instability. The hard part is tuning for tail latency without exploding broker request rates.",
+    "real_world": "In low-traffic topics, aggressive batching can add hundreds of milliseconds of avoidable latency; in high-throughput pipelines, tiny fetches can saturate CPU and network long before disks matter.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What symptoms tell you the bottleneck is consumer fetch sizing rather than application processing?"
+   },
+   {
+    "question": "What changes operationally and performance-wise when a cluster runs in KRaft mode instead of using ZooKeeper?",
+    "answer": "KRaft moves metadata management into Kafka itself, with a quorum of controllers storing the metadata log instead of relying on ZooKeeper. That simplifies the architecture and removes an extra distributed system, but controller quorum health and metadata log behavior become central to cluster availability. Operationally, broker registration, topic changes, ACL updates, and leadership metadata all depend on that internal quorum, so controller sizing and placement matter a lot. The main win is fewer moving parts; the trade-off is that teams need to understand Kafka's own control plane more deeply.",
+    "real_world": "During migrations, teams often validate data traffic but forget metadata-heavy events like mass partition reassignments or topic creation bursts, which stress the controller path differently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What cluster behaviors would you watch closely during a ZooKeeper-to-KRaft migration rehearsal?"
+   },
+   {
+    "question": "If you need to move partitions between brokers, how do you think about partition reassignment, throttling, and the risks to client traffic?",
+    "answer": "Reassignment copies replica data across the network and disk subsystem while the cluster is still serving reads and writes, so it's easy to create self-inflicted latency. The safe approach is to throttle replication traffic, stage moves gradually, and watch ISR churn, request latency, network saturation, and disk utilization. Moving many hot partitions at once can cause leaders or followers to fall behind, which then impacts producers and consumers even if the migration itself 'succeeds.' The trade-off is migration speed versus user-facing stability.",
+    "real_world": "Rebalancing a cluster after adding brokers often looks harmless on paper, but an unthrottled reassignment can spike produce latency and trigger cascading consumer lag.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose which partitions to move first when the cluster is badly imbalanced?"
+   },
+   {
+    "question": "What are the practical limits and trade-offs around very large messages in Kafka, and why do experienced teams usually avoid them?",
+    "answer": "Large records stress every layer: producer batching, broker memory, request handling, replication, consumer fetches, and garbage collection or allocator pressure in clients. They reduce batch efficiency, increase end-to-end latency variance, and make retries expensive because resending one failed request can mean resending a huge payload. They also force coordinated configuration increases across producers, brokers, replicas, and consumers, which raises operational risk. The usual pattern is to keep Kafka events small and put bulk blobs in object storage with a reference in the event.",
+    "real_world": "A single oversized event can get accepted by one layer and rejected by another, leading to confusing partial failures where producers retry forever and consumers never see the data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you must support large payloads, which components need aligned size limits?"
+   },
+   {
+    "question": "How do log compaction tombstones and segment cleaning actually behave, and what edge cases surprise people in production?",
+    "answer": "In a compacted topic, Kafka keeps the latest record per key over time, and a tombstone is a record with a key and null value that marks deletion. Compaction is not immediate and works at the segment level, so old values and tombstones can coexist for a while; consumers may still read superseded data until cleaning catches up. Tombstones themselves are also retained only for a window, after which the delete marker can disappear. The gotcha is assuming compaction gives an instantly accurate key-value store view; it gives eventual cleanup, not point-in-time consistency.",
+    "real_world": "This bites state rebuilds: a service replaying a compacted topic may see old records if it starts before cleaning has caught up, or miss historical deletes once tombstones have aged out.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a bootstrap process if a compacted topic alone is not sufficient for a full historical rebuild?"
+   },
+   {
+    "question": "How does Kafka preserve or lose ordering when you have retries, multiple in-flight requests, and broker errors on the producer side?",
+    "answer": "Kafka only guarantees order within a partition, and even that can be broken by producer behavior if retries are enabled and multiple requests are in flight to the same partition. A later batch can succeed while an earlier batch is retried, so the retried records land after newer ones. Idempotent producers avoid duplicates and also constrain sequencing so order is preserved per partition under retries, but only within the limits of a single producer session. The trade-off is a bit less parallelism and more coordination on the producer side.",
+    "real_world": "A common incident is seeing status=SHIPPED before status=PAID for the same order because the producer retried one batch after a transient error while another batch had already been acknowledged.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If strict per-key ordering matters, how would you configure the producer and partitioning strategy?"
+   },
+   {
+    "question": "What actually happens on the broker when a producer sends a batch, from append to acknowledgement, and where does latency usually come from?",
+    "answer": "The request is routed to the partition leader, validated, appended to the leader's log, replicated to followers depending on the required acknowledgement level, and then acknowledged back to the client. Most latency comes from batching behavior, network hops, follower replication delay, and disk or page-cache pressure when the broker is busy, not from a single record append itself. If compression is enabled, CPU can also become material on both producer and broker. Tail latency usually spikes first when followers fall behind or request queues build up.",
+    "real_world": "In production, teams often blame disk first, but the bigger issue is frequently replication wait time or overloaded network threads causing p99 send latency to jump while average latency still looks fine.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether producer-side batching or broker-side replication is the dominant source of send latency?"
+   },
+   {
+    "question": "How do rack awareness and follower placement affect Kafka durability and availability, and what can still go wrong even if replicas are spread across zones?",
+    "answer": "Rack awareness tries to place replicas for a partition on brokers in different failure domains so one zone loss does not take out all replicas. That improves resilience, but it does not guarantee availability if too many replicas are down, leaders are concentrated badly after failures, or clients require stronger acknowledgement than the surviving ISR can satisfy. Cross-zone replication also adds latency and network cost. You are trading failure isolation against write latency and operational complexity.",
+    "real_world": "A team can lose a full availability zone and still see write outages because topics were configured with strict durability settings and the remaining in-sync replicas were not enough to accept writes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What topic-level settings would you review before a planned zone maintenance event?"
+   },
+   {
+    "question": "What is fetch-from-follower, when would you use it, and what consistency or performance trade-offs does it introduce?",
+    "answer": "Fetch-from-follower lets consumers read from replica followers instead of always hitting the leader, usually to reduce cross-rack traffic or spread read load. The trade-off is that followers can lag, so consumers may see higher read latency, less fresh data, or more complexity around which offsets are safely readable. It can help when read locality matters more than the freshest possible view. You need to be careful with assumptions about read-your-writes or very tight end-to-end latency.",
+    "real_world": "This matters in multi-zone clusters where analytics consumers in each zone would otherwise pull all data from leaders in another zone and saturate inter-zone links.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether follower reads are safe for a given workload?"
+   },
+   {
+    "question": "How do static membership and cooperative rebalancing change consumer group behavior, and what problems do they solve versus not solve?",
+    "answer": "Static membership reduces unnecessary rebalances by giving a consumer instance a stable identity, so brief restarts do not look like a permanent group membership change. Cooperative rebalancing further reduces disruption by moving partitions incrementally instead of revoking everything at once. Together they help stateful or slow-starting consumers avoid stop-the-world pauses, but they do not fix bad poll-loop design, long processing that exceeds group timeouts, or hotspots caused by uneven partitions. They reduce churn; they do not create capacity.",
+    "real_world": "These features are especially useful for Kafka Streams or cache-heavy consumers that take minutes to warm local state and would otherwise thrash on every rolling deploy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure mode can static membership make worse if a dead instance is not detected promptly?"
+   },
+   {
+    "question": "If a broker dies suddenly, how do producer and consumer clients typically experience the failure, and what determines whether they recover quickly or stall?",
+    "answer": "Clients talking to the dead broker see request failures or timeouts until metadata refresh points them at the new leaders. Recovery speed depends on leader election time, client retry behavior, metadata refresh, DNS or load balancer behavior if used, and whether enough replicas stayed in sync to elect or accept writes. Consumers may see partitions temporarily unavailable and then resume from the new leader; producers may block, error, or retry depending on configuration. The painful cases are usually not the crash itself but the seconds or minutes of instability after it.",
+    "real_world": "During broker loss, one noisy symptom is producer thread pools filling up because sends wait on metadata or retries, which can cascade into application timeouts even after Kafka leadership has recovered.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What client metrics would you watch during a broker failure to separate metadata issues from quota or replication issues?"
+   },
+   {
+    "question": "How do quotas work in Kafka, and how can they both protect a cluster and accidentally create a production incident?",
+    "answer": "Kafka quotas rate-limit client produce, fetch, or request usage so one tenant or buggy client cannot monopolize broker resources. They protect shared clusters, but if quotas are too low or applied unevenly, they can create feedback loops like growing lag, retry storms, or timeouts that look like broker failures. Quotas need to match expected burst patterns, not just averages. They are a guardrail, not a substitute for capacity planning.",
+    "real_world": "A common incident is onboarding a new backfill job without adjusting quotas; producers get throttled, retries pile up, and downstream systems misinterpret the latency as a cluster outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish healthy quota throttling from genuine broker saturation?"
+   },
+   {
+    "question": "What is the impact of many small partitions versus fewer large partitions on broker internals and end-to-end performance?",
+    "answer": "Too many partitions increase metadata size, file handles, memory overhead, controller work, replica fetcher load, and the amount of coordination during leader elections or reassignments. They can also hurt produce and fetch efficiency because batching gets fragmented across many logs. Fewer larger partitions are usually better for broker efficiency, but they limit consumer parallelism and can create hotspots if keys are skewed. The right choice balances throughput, failover behavior, and operational overhead, not just consumer count.",
+    "real_world": "Teams often discover that a cluster with modest data volume is unstable because it has hundreds of thousands of partitions, causing long recovery times and high controller load during routine rolling restarts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you inherited a cluster with far too many partitions, how would you reduce risk before trying to consolidate them?"
+   },
+   {
+    "question": "How do transactional writes interact with external systems like databases or REST APIs, and why is 'exactly once' usually narrower than people think?",
+    "answer": "Kafka transactions can atomically commit produced records and consumer offsets within Kafka, but they do not automatically make side effects in external systems atomic. If you update a database and then commit Kafka, or the reverse, there is still a gap unless you use a pattern like an outbox or make the external operation idempotent. So 'exactly once' typically means exactly-once processing within Kafka's boundaries, not across every integrated system. The practical design is usually atomicity in one system and deduplication in the others.",
+    "real_world": "A classic bug is charging a customer in a payment API and then crashing before the Kafka transaction commits; after restart the event is retried unless the payment operation is idempotent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you compare the transactional consumer-producer pattern with the outbox pattern for a service that also writes to Postgres?"
+   },
+   {
+    "question": "What broker-side metrics and symptoms do you correlate first when diagnosing a Kafka incident with rising latency, growing lag, and no obvious hard failures?",
+    "answer": "I first correlate request queue time, network processor utilization, produce and fetch purgatory or request latency, replica lag, under-replicated partitions, page-cache or disk IO pressure, and controller or metadata activity. The key is to separate causes: overloaded brokers, slow replication, hot partitions, client retry storms, or throttling can all present as generic lag and latency. Looking at only consumer lag is too late and too coarse. You want to find where time started accumulating in the pipeline.",
+    "real_world": "In real incidents, under-replicated partitions rising together with request queue growth often points to a replication bottleneck, while stable replication with hot-network threads suggests client traffic imbalance or partition hotspots.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If only one topic shows severe lag while broker-wide metrics look mostly healthy, what would you investigate next?"
+   }
+  ]
+ }
+}

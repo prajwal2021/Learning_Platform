@@ -1,0 +1,330 @@
+{
+  "slug": "replica-lag-grows-every-night",
+  "title": "The read replica falls further behind every night",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "databases",
+    "postgresql",
+    "replication",
+    "analytics",
+    "slo"
+  ],
+  "scenario": "Every night at 02:00, a BI query runs for 90 minutes on the read replica. During that window, replication lag grows from 3 seconds to more than 45 minutes. The primary continues writing 18,000 rows/second, and WAL replay on the replica slows while the long snapshot is active. Morning users see stale dashboards and occasional query cancellations.",
+  "goal": "Find the cause of the nightly lag and choose a fix that preserves fresh operational reads without losing BI capability.",
+  "concepts": [
+    {
+      "key": "read-replica",
+      "name": "Read replica",
+      "summary": "A read replica is a copy of a database that follows changes from the primary database. Applications often send read-only traffic to it to reduce load on the primary.",
+      "used_here": "The replica serves dashboards and also runs the nightly BI query."
+    },
+    {
+      "key": "replication-lag",
+      "name": "Replication lag",
+      "summary": "Replication lag is how far behind a replica is compared with the primary. It can be measured in time, bytes, or un-replayed log position.",
+      "used_here": "Lag rises from about 3 seconds to over 45 minutes while the BI query is active."
+    },
+    {
+      "key": "wal",
+      "name": "Write-ahead log (WAL)",
+      "summary": "A write-ahead log records database changes before they are applied to data files. Replicas receive and replay this log to stay current with the primary.",
+      "used_here": "The primary keeps generating WAL from 18,000 row writes per second, and the replica falls behind while replay slows."
+    },
+    {
+      "key": "snapshot-isolation",
+      "name": "Snapshot isolation",
+      "summary": "Snapshot isolation lets a query read a consistent view of the database as of one point in time. Long snapshots can keep old row versions visible and can conflict with cleanup or replay work.",
+      "used_here": "The 90-minute BI query holds a long snapshot on the replica while the replica is trying to replay WAL."
+    },
+    {
+      "key": "hot-standby-conflict",
+      "name": "Hot standby conflict",
+      "summary": "A hot standby conflict happens when a read query on a replica conflicts with changes the replica must replay. The database must either delay replay or cancel the query, depending on settings.",
+      "used_here": "The BI query can slow WAL replay, and users later see query cancellations when the replica tries to catch up."
+    },
+    {
+      "key": "analytics-replica",
+      "name": "Analytics replica or warehouse",
+      "summary": "An analytics replica or warehouse is a separate system for long-running reporting queries. It is designed so analytical work does not interfere with operational reads.",
+      "used_here": "Moving BI work there separates 90-minute reporting snapshots from the replica used for fresh dashboards."
+    },
+    {
+      "key": "query-timeout",
+      "name": "Query timeout",
+      "summary": "A query timeout stops queries that run longer than an allowed duration. It protects shared systems from one query consuming resources or holding a snapshot too long.",
+      "used_here": "A BI query duration cap prevents future reports from holding snapshots long enough to create large lag."
+    },
+    {
+      "key": "slo",
+      "name": "Service level objective (SLO)",
+      "summary": "An SLO is a measurable reliability target for a service. It defines what users can expect and what engineers should alert on.",
+      "used_here": "Replica freshness can be treated as an SLO, such as keeping operational read lag below a chosen threshold."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the right signal",
+      "question": "At 02:20, the incident starts again. The primary is healthy, writes continue at 18,000 rows/second, and dashboards read from the replica. Which first check best separates the likely causes of the growing lag?",
+      "concept_keys": [
+        "read-replica",
+        "replication-lag",
+        "wal"
+      ],
+      "options": [
+        {
+          "text": "Check only the primary write rate and lock waits because replication lag starts at the source.",
+          "correct": false,
+          "hint": "The primary write rate matters, but the incident says the primary remains healthy. A replica can fall behind even when the source is behaving normally.",
+          "id": "a"
+        },
+        {
+          "text": "Increase the replica instance size so it has more CPU and memory for the nightly workload.",
+          "correct": false,
+          "hint": "More capacity can help some bottlenecks, but it does not identify whether the delay is caused by receiving changes, applying changes, or active reads.",
+          "id": "b"
+        },
+        {
+          "text": "Compare WAL receive lag, WAL replay lag, and currently running queries on the replica.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Restart the replica to clear old sessions and force it to reconnect to the primary.",
+          "correct": false,
+          "hint": "A restart may remove evidence you need during a repeating incident. First collect signals that distinguish where time is being spent.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The first check should split replication into receipt, replay, and reader activity. If WAL is arriving but not being replayed quickly while a long query is running, the problem is on the replica side, not primary write throughput. Restarting is tempting because it may temporarily clear the symptom, but it destroys the active-query evidence and may just defer the next recurrence."
+    },
+    {
+      "title": "Interpret the measurements",
+      "question": "You find that during the BI run the replica receives WAL from the primary within 2 to 4 seconds, but replay delay grows past 20 minutes by 02:45. A single BI query has been running since 02:00 on the replica. What does this most strongly indicate?",
+      "concept_keys": [
+        "replication-lag",
+        "wal",
+        "snapshot-isolation",
+        "hot-standby-conflict"
+      ],
+      "options": [
+        {
+          "text": "The network link from primary to replica is saturated and needs more bandwidth.",
+          "correct": false,
+          "hint": "Network trouble usually appears before or during transfer. Look at which part of the replication path is still staying close to real time.",
+          "id": "a"
+        },
+        {
+          "text": "The primary is blocked by the BI query and cannot generate WAL fast enough.",
+          "correct": false,
+          "hint": "The BI query is running on the replica, not the primary. The primary is still accepting writes at the stated rate.",
+          "id": "b"
+        },
+        {
+          "text": "The replica is receiving changes but applying them slowly while the long read snapshot is active.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Dashboard clients are caching old results and making the replica look stale.",
+          "correct": false,
+          "hint": "Client caching can make users see old data, but it would not explain replay delay growing to 20 minutes on the replica itself.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The measurements show WAL transport is mostly current at 2 to 4 seconds, while replay delay grows past 20 minutes. That points to apply/replay being held back or slowed on the replica during the long snapshot. The network option is tempting, but a saturated link would show up as WAL not being received promptly."
+    },
+    {
+      "title": "Name the root cause",
+      "question": "By 03:30 the BI query has completed, but the replica is still catching up and dashboards remain stale. Which root cause best explains the full incident pattern?",
+      "concept_keys": [
+        "read-replica",
+        "replication-lag",
+        "snapshot-isolation",
+        "hot-standby-conflict"
+      ],
+      "options": [
+        {
+          "text": "The primary write volume is too high for any replica design because 18,000 rows/second always creates 45 minutes of lag.",
+          "correct": false,
+          "hint": "A high write rate raises the cost of catching up, but the lag appears only during the 90-minute reporting window. That timing is important.",
+          "id": "a"
+        },
+        {
+          "text": "The BI query is stale because it starts from an old snapshot and should be retried after replay catches up.",
+          "correct": false,
+          "hint": "The BI query’s own snapshot age is not the user-facing problem. The replica’s replay position is behind for everyone who depends on it.",
+          "id": "b"
+        },
+        {
+          "text": "The dashboards should query the primary because replicas are never suitable for operational reads.",
+          "correct": false,
+          "hint": "Replicas can serve operational reads when their freshness target and workload are controlled. The issue is the workload mix and the lack of isolation.",
+          "id": "c"
+        },
+        {
+          "text": "The system mixes long-running analytics snapshots with a replica that is expected to provide fresh operational reads.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The root cause is workload mixing: a 90-minute analytics read holds a long snapshot on the same replica that must also stay fresh for dashboards. After 03:30, the query is gone, but the replica still has to replay the backlog accumulated while writes continued at 18,000 rows/second. Blaming the write rate alone misses why the lag is tightly coupled to the nightly BI window."
+    },
+    {
+      "title": "Stop the immediate user impact safely",
+      "question": "It is 02:50 on the next night. The BI query is still running, replay delay is already 28 minutes, and dashboard freshness is the priority for the incident. What is the safest immediate mitigation?",
+      "concept_keys": [
+        "replication-lag",
+        "snapshot-isolation",
+        "hot-standby-conflict",
+        "query-timeout"
+      ],
+      "options": [
+        {
+          "text": "Cancel the running BI query on the replica, let replay catch up, and notify BI users that the report was interrupted.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Promote the replica to primary so dashboards read from a writable database with no replay delay.",
+          "correct": false,
+          "hint": "Promotion changes the topology and can risk data divergence if done for the wrong reason. It does not make a lagging copy magically contain the missing changes.",
+          "id": "b"
+        },
+        {
+          "text": "Increase dashboard query timeouts so users wait through cancellations while the BI query completes.",
+          "correct": false,
+          "hint": "Longer waits do not reduce the replay backlog. They may hide errors while users still receive old data.",
+          "id": "c"
+        },
+        {
+          "text": "Pause primary writes until the replica has applied enough WAL to satisfy dashboard freshness.",
+          "correct": false,
+          "hint": "Stopping writes protects freshness only by creating a broader outage. An incident mitigation should avoid impacting the write path unless there is no safer choice.",
+          "id": "d"
+        }
+      ],
+      "explanation": "At 02:50 the BI query is still active and replay is already 28 minutes behind, so canceling that query removes the immediate conflict and lets the replica prioritize catching up. It is a controlled impact to BI users rather than stale operational dashboards for everyone. Promoting the replica is tempting during replica incidents, but a lagging replica is missing recent WAL and promotion is not a safe freshness fix."
+    },
+    {
+      "title": "Choose the durable architecture change",
+      "question": "After the incident, the team wants nightly BI to continue but dashboard reads must stay fresh. Which durable change best addresses the root cause?",
+      "concept_keys": [
+        "read-replica",
+        "analytics-replica",
+        "query-timeout",
+        "slo"
+      ],
+      "options": [
+        {
+          "text": "Move BI workloads to a dedicated analytics replica or warehouse, keep dashboard traffic on the operational replica, and enforce a maximum BI query duration.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Double CPU and memory on the current replica and keep both BI and dashboards on it to avoid more systems.",
+          "correct": false,
+          "hint": "More resources may reduce some contention, but one long snapshot can still interfere with replay behavior. The failure mode is not only raw CPU or memory.",
+          "id": "b"
+        },
+        {
+          "text": "Point all dashboards at the primary and reserve the read replica only for BI queries.",
+          "correct": false,
+          "hint": "This protects BI from dashboards, but it moves operational read load back onto the write path. It also gives up the replica’s role without creating an isolated analytics path.",
+          "id": "c"
+        },
+        {
+          "text": "Run the BI query later at 04:00 so fewer users notice stale dashboards during the lag period.",
+          "correct": false,
+          "hint": "Changing the time can reduce visibility, but the same replay backlog can still exist when users arrive. The root workload conflict remains.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The durable fix is isolation: long BI snapshots run on a system designed for analytics, while operational dashboards use a replica managed for freshness. A maximum BI query duration adds a guardrail so a report cannot create unbounded lag on shared infrastructure. Scaling the same replica is the tempting shortcut, but it does not remove the snapshot and replay conflict that caused the incident."
+    },
+    {
+      "title": "Set intentional conflict behavior",
+      "question": "The operational replica still may see occasional long ad hoc reads. Which policy best matches the requirement that dashboards should stay fresh?",
+      "concept_keys": [
+        "hot-standby-conflict",
+        "replication-lag",
+        "query-timeout",
+        "slo"
+      ],
+      "options": [
+        {
+          "text": "Disable cancellations entirely so dashboard queries always return instead of failing during catch-up.",
+          "correct": false,
+          "hint": "Avoiding cancellations can make errors less visible, but it does not guarantee current data. Freshness and availability need an explicit trade-off.",
+          "id": "a"
+        },
+        {
+          "text": "Configure the replica to always delay replay until every read query finishes, regardless of duration.",
+          "correct": false,
+          "hint": "That protects readers but allows lag to grow without a useful bound. It conflicts with a freshness target.",
+          "id": "b"
+        },
+        {
+          "text": "Set all dashboard queries to use longer statement timeouts than BI queries so dashboards win under load.",
+          "correct": false,
+          "hint": "Statement timeouts affect how long a query may run, not whether WAL replay is allowed to proceed when a snapshot conflicts with it.",
+          "id": "c"
+        },
+        {
+          "text": "Configure the replica to favor replay after a short bounded wait, cancel conflicting reads that exceed it, and document the trade-off.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "If dashboard freshness is the priority, the replica should not wait indefinitely for conflicting reads. A short bounded wait followed by cancellation makes the trade-off explicit: some reads fail so replay can keep up. Always delaying replay is tempting because it avoids canceling queries, but it recreates the same stale-dashboard failure mode."
+    },
+    {
+      "title": "Prove the fix stays fixed",
+      "question": "What monitoring and success criteria should the team add after moving BI away from the operational replica?",
+      "concept_keys": [
+        "replication-lag",
+        "wal",
+        "slo",
+        "analytics-replica"
+      ],
+      "options": [
+        {
+          "text": "Alert only on CPU above 90% on the replica because lag is caused by insufficient compute capacity.",
+          "correct": false,
+          "hint": "CPU is useful context, but the incident’s user impact was stale data. Monitor the symptom users care about directly.",
+          "id": "a"
+        },
+        {
+          "text": "Check once each morning whether dashboards look current and file a ticket if users report stale data.",
+          "correct": false,
+          "hint": "Manual checks and user reports are late signals. A freshness target should be measured continuously enough to catch the nightly pattern.",
+          "id": "b"
+        },
+        {
+          "text": "Alert when operational replica replay lag breaches the freshness SLO, track WAL receive versus replay delay, and verify BI queries no longer run there.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Monitor only the analytics warehouse duration because BI was the workload that triggered the incident.",
+          "correct": false,
+          "hint": "BI duration matters, but the protected service is the operational read path. You still need to know whether that replica is staying current.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The success criteria should measure the promised behavior: operational replica freshness. Tracking receive versus replay delay preserves the diagnostic split from the incident, and verifying BI queries no longer run there confirms the workload isolation is real. CPU-only alerting is tempting, but a replica can violate freshness for reasons that are not captured by a simple CPU threshold."
+    }
+  ],
+  "takeaway": "A read replica used for fresh operational reads should not also host unbounded analytics snapshots. Separate long-running BI work from freshness-sensitive reads, set intentional conflict and timeout policies, and alert on replication lag as a user-facing SLO.",
+  "review_issues": [
+    "Step 4: The scenario and concept descriptions already reveal later answers by stating that the nightly BI query runs on the read replica and that WAL replay slows while the long snapshot is active; this gives away the root cause tested in steps 2 and 3 and strongly points to the mitigation in step 4.",
+    "Step 1: The explanation says that if WAL is arriving but not being replayed quickly while a long query is running, the problem is on the replica side. This substantially reveals the answer to step 2 before the learner reaches it."
+  ]
+}

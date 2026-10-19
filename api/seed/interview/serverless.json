@@ -1,0 +1,477 @@
+{
+ "slug": "serverless",
+ "name": "Serverless",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What does \"serverless\" mean in practice?",
+    "answer": "Serverless means you still run code on servers, but the cloud provider manages the server provisioning, scaling, and much of the operational work. As a developer, you focus on functions or managed services instead of maintaining VMs. The main trade-off is less infrastructure management for more platform constraints, such as execution limits and state handling.",
+    "real_world": "Teams use serverless for APIs, webhooks, and background jobs where traffic is spiky and they want to avoid keeping idle servers running.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is serverless different from running the same code on a container or VM?"
+   },
+   {
+    "question": "What is a function as a service, or FaaS?",
+    "answer": "FaaS is a serverless model where you deploy small units of code that run in response to an event or request. The platform starts the function when needed, then may shut it down when idle. It is useful for event-driven work, but it is a poor fit for long-running processes or workloads that need full control over the runtime.",
+    "real_world": "A common use is processing an image after it is uploaded to object storage, or handling an HTTP request in an API endpoint.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of workloads are a bad fit for FaaS?"
+   },
+   {
+    "question": "What is an event trigger in serverless?",
+    "answer": "An event trigger is the thing that starts the function, such as an HTTP request, a message in a queue, a file upload, or a scheduled timer. The trigger defines when the platform invokes your code and often what data it receives. Picking the right trigger matters because it affects latency, reliability, and how you handle retries.",
+    "real_world": "If a payment event is sent to a queue, a function can consume it and update your database without a constantly running worker.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose between an HTTP trigger and a queue trigger?"
+   },
+   {
+    "question": "What is a cold start?",
+    "answer": "A cold start is the extra delay when the platform has to create a fresh runtime environment before running a serverless function. It can happen after inactivity, during scale-up, or when the runtime and dependencies are large. It matters because it adds latency to the first request, especially for user-facing APIs.",
+    "real_world": "A login endpoint might feel slow on the first request after a quiet period, even if the function is fast once it is warm.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are some practical ways to reduce cold start impact?"
+   },
+   {
+    "question": "When would you choose a serverless function instead of a long-running service?",
+    "answer": "Choose serverless when the workload is intermittent, event-driven, or easy to split into short pieces of work. It is also useful when you want to avoid managing scaling and server upkeep. A long-running service is better when you need persistent connections, predictable low latency, or continuous CPU usage.",
+    "real_world": "A nightly report generator is a good fit for serverless, while a real-time chat backend is usually better as a service.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What operational signals would tell you that serverless is the wrong choice?"
+   },
+   {
+    "question": "Can you show a simple idempotent function example, and why it matters?",
+    "answer": "An idempotent function can be run more than once with the same input without causing duplicate side effects. This matters because serverless platforms and event sources often retry on failures, so duplicate deliveries are normal. A common pattern is to use a unique event or request ID and ignore repeats.",
+    "real_world": "This prevents double-charging a customer or creating duplicate orders when a queue message is processed twice.",
+    "code_lang": "python",
+    "code": "seen = set()\n\ndef handler(event):\n    event_id = event[\"id\"]\n    if event_id in seen:\n        return {\"status\": \"duplicate\"}\n    seen.add(event_id)\n    return {\"status\": \"processed\"}",
+    "follow_up": "How would you make that safe if the function can run on multiple instances?"
+   },
+   {
+    "question": "What is a common mistake when handling retries in serverless?",
+    "answer": "A common mistake is assuming a failed event will be delivered only once, or that a timeout means the work did not happen. In reality, many triggers retry automatically, so your code must tolerate duplicate execution. The fix is to make side effects idempotent and to use durable storage or dead-letter handling for failures.",
+    "real_world": "Without retry-safe design, a transient database outage can turn one failed event into many duplicate writes after recovery.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a dead-letter queue, and when would you use one?"
+   },
+   {
+    "question": "What is the difference between synchronous and asynchronous invocation?",
+    "answer": "Synchronous invocation waits for the function to finish and returns the result to the caller, which is common for HTTP APIs. Asynchronous invocation accepts the request and processes it later, which is common for background jobs and event pipelines. The trade-off is immediate feedback versus better decoupling and buffering.",
+    "real_world": "A web form submit might use synchronous invocation to validate input, while thumbnail generation can run asynchronously after upload.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would asynchronous processing be safer than a direct API call?"
+   },
+   {
+    "question": "What is infrastructure as code in a serverless setup?",
+    "answer": "Infrastructure as code means defining functions, permissions, triggers, and related cloud resources in files instead of clicking in a console. It makes environments repeatable, reviewable, and easier to deploy consistently across dev and production. For serverless, this is especially important because the app often depends on several managed services working together.",
+    "real_world": "Teams use it to create the same function, queue, and database wiring in every environment without manual setup drift.",
+    "code_lang": "yaml",
+    "code": "Resources:\n  MyFunction:\n    Type: AWS::Serverless::Function\n    Properties:\n      Handler: app.handler\n      Runtime: python3.11",
+    "follow_up": "What problems can happen if you manage serverless resources manually instead of with code?"
+   },
+   {
+    "question": "How is serverless pricing usually calculated, and what should you watch out for on the bill?",
+    "answer": "Serverless is usually billed by requests, execution time, memory or CPU allocation, and sometimes data transfer or other managed services around it. That makes it cheap for spiky or low-traffic workloads, but costs can rise fast with high request volume, long-running handlers, or chatty workflows that call many services. The key is to watch both function usage and the downstream services the function depends on.",
+    "real_world": "A team may move an API to serverless and be surprised that a noisy client or a polling loop drives up costs far more than the function runtime itself. Billing alerts often catch this before it becomes a budget issue.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of workloads tend to be unexpectedly expensive in serverless?"
+   },
+   {
+    "question": "What does it mean for a serverless function to be stateless?",
+    "answer": "Stateless means you should not rely on memory from one invocation being available in the next one. Each run should be able to start from the event and external data only, because instances can be reused, replaced, or scaled independently. If you need durable data, store it in a database, cache, or object store instead of in-process state.",
+    "real_world": "A common bug is keeping a counter or session object in a global variable and assuming it will always be correct. It may seem to work in testing, then break when the platform scales out or reuses containers differently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need to keep user session state, where would you store it?"
+   },
+   {
+    "question": "What is an environment variable in a serverless function, and when is it useful?",
+    "answer": "An environment variable is a configuration value passed into the function at runtime, such as a service endpoint, log level, or feature flag. It helps keep configuration out of code and lets you vary behavior across environments like dev, staging, and production. Secrets should usually be managed with a dedicated secret store rather than hard-coded in the function.",
+    "real_world": "Teams often use environment variables to point the same function code at different databases in different stages. A misconfigured value can send test traffic to production or break deployments, so validation matters.",
+    "code_lang": "javascript",
+    "code": "export const handler = async () => {\n  const stage = process.env.STAGE || 'dev';\n  return { statusCode: 200, body: `running in ${stage}` };\n};",
+    "follow_up": "How would you handle secrets differently from non-sensitive configuration?"
+   },
+   {
+    "question": "What is a timeout in a serverless function, and why does it matter?",
+    "answer": "A timeout is the maximum amount of time the platform lets a function run before stopping it. It matters because a slow dependency or infinite loop can waste money, cause retries, and create partial work if the function is interrupted. A good function should fail fast, use sensible timeouts for downstream calls, and be designed for retryable work.",
+    "real_world": "If a function calls a third-party API with no timeout, it may hang until the platform kills it. That can cascade into retries and duplicate side effects if the operation is not idempotent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should you do when a function is close to timing out?"
+   },
+   {
+    "question": "What is the difference between stateless compute and a managed stateful service in a serverless architecture?",
+    "answer": "Serverless compute is usually stateless and short-lived, while managed stateful services store durable data or coordination for you. In practice, your function handles business logic, and the database, queue, or object store holds the state that must survive retries and scaling events. That separation is one of the main design ideas in serverless systems.",
+    "real_world": "A checkout flow might use a function to validate an order, but the order record itself lives in a database. That makes the logic easier to scale and safer to retry.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What managed services commonly store state for serverless applications?"
+   },
+   {
+    "question": "What is a queue in a serverless system used for?",
+    "answer": "A queue buffers work between producers and consumers, letting you decouple one request from the processing of that request. It is useful when tasks are slow, bursty, or need retry handling without blocking the caller. The trade-off is eventual processing instead of immediate completion, so the system must handle duplicates and delayed execution.",
+    "real_world": "A web app may accept file uploads quickly and put image processing jobs on a queue for later resizing. That keeps the user-facing path fast even if the backend is temporarily overloaded.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why are queue consumers often written to be idempotent?"
+   },
+   {
+    "question": "What is a deployment package in serverless, and what mistake do juniors often make with it?",
+    "answer": "A deployment package is the code and dependencies you upload so the platform can run your function. A common mistake is bundling too much, which increases deployment time, can slow cold starts, and may include unused libraries or local-only files. Keeping the package small and dependency list tight usually improves reliability and speed.",
+    "real_world": "Build pipelines sometimes accidentally ship test fixtures, node_modules bloat, or debug tools into production. That makes builds slower and can push package size into platform limits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you reduce the size of a function bundle?"
+   },
+   {
+    "question": "What is a dead-letter queue in serverless systems?",
+    "answer": "A dead-letter queue is a place for messages that could not be processed successfully after retries. It helps you avoid losing failed events and gives you a way to inspect and reprocess them later. It matters because serverless workflows often rely on automatic retries, and without a dead-letter path, failures can be silent or hard to diagnose.",
+    "real_world": "If a payment event keeps failing because of bad input or a downstream outage, the dead-letter queue can hold it for later investigation instead of dropping it. That makes production debugging much easier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should you log or store when something ends up in a dead-letter queue?"
+   },
+   {
+    "question": "What is a scheduled serverless function, and when would you use one?",
+    "answer": "A scheduled function runs on a timer instead of being triggered by a request or event. It is useful for periodic jobs like cleanup, report generation, synchronization, or health checks. The key caution is that the job should still be safe to retry and should not assume it runs exactly once or exactly on time.",
+    "real_world": "Teams often use scheduled functions for daily billing exports or removing expired records. If the job is slow or overlaps with the next run, they need a guard to prevent duplicate work.",
+    "code_lang": "yaml",
+    "code": "schedule: rate(5 minutes)\nfunction:\n  handler: src/cleanup.handler",
+    "follow_up": "How would you prevent two scheduled runs from processing the same data at once?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide whether to put logic in a single serverless function or split it into several smaller ones?",
+    "answer": "Split functions by change rate, ownership, and failure boundaries, not just by lines of code. A smaller function is easier to scale, test, and retry independently, but too much splitting increases latency, deployment complexity, and observability work. If one path always runs together and shares the same timeout and permissions, keeping it together is often simpler. If steps fail independently or have different scaling needs, separate them.",
+    "real_world": "A team might start with one Lambda for an order workflow, then split out image processing because it times out and needs a different memory profile. The split reduces noisy failures in the main checkout path.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you keep those smaller functions from becoming hard to trace end to end?"
+   },
+   {
+    "question": "What is a good way to handle a function that sometimes takes longer than its configured timeout?",
+    "answer": "First check whether the work is actually suitable for synchronous execution; if not, move the long-running part to an async worker or queue-backed step. If it must stay synchronous, optimize the slow dependency, batch external calls, or return partial progress and continue elsewhere. Increasing the timeout is sometimes fine, but it can hide bottlenecks and make failures slower to detect. The right fix depends on whether the delay is in your code, a downstream service, or network I/O.",
+    "real_world": "This often shows up when a payment or export endpoint starts timing out under load because it waits on an API or database call. Teams then move the slow part to a background job and return a tracking ID.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether the time is being spent in your code or in a downstream service?"
+   },
+   {
+    "question": "How do you think about retries in serverless when the downstream system is not idempotent?",
+    "answer": "You should assume retries will happen and design the side effect so repeating it is safe, or add a deduplication layer. If the downstream system cannot be made idempotent, use a unique request token, transaction record, or outbox pattern to ensure only one logical action is applied. Blind retries can create duplicate charges, duplicate emails, or repeated writes. The trade-off is extra state and complexity versus correctness.",
+    "real_world": "A function that creates shipping labels may be retried after a timeout, producing duplicate labels and billing the customer twice. Teams usually add an idempotency key stored with the order to prevent that.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you store to deduplicate requests across retries?"
+   },
+   {
+    "question": "What is the difference between using a queue and using an event bus in a serverless architecture?",
+    "answer": "A queue is for work distribution and typically ensures one consumer handles each message, which is useful for buffering and controlling load. An event bus is for fan-out and decoupling producers from multiple consumers that each react to the same event. Queues are better when you need backpressure and ordered processing per message group, while event buses are better when several independent workflows should respond to one business event. The choice depends on whether you need task processing or event propagation.",
+    "real_world": "A checkout system may put invoice generation on a queue, but publish an order-created event to notify analytics, email, and shipping services. Mixing the two patterns usually causes either lost flexibility or unnecessary coupling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use both together in the same workflow?"
+   },
+   {
+    "question": "How do you debug a serverless function that works locally but fails only in the cloud?",
+    "answer": "Compare the runtime, dependencies, IAM permissions, network access, and environment variables between local and cloud runs. Then inspect logs and tracing around the failing request, because the cloud failure is often a permissions issue, missing secret, different file path, or timeout on a managed dependency. Local environments often hide cold starts, packaging issues, and regional network restrictions. Reproducing with the same runtime image or deployment artifact usually narrows the gap quickly.",
+    "real_world": "A function may read a file from the working directory locally but fail after deployment because that file was not packaged. Another common case is code that reaches a private database locally but lacks VPC or security group access in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What cloud-specific checks would you do first before changing application code?"
+   },
+   {
+    "question": "What trade-offs do you make when choosing between putting shared code in a library versus duplicating it across functions?",
+    "answer": "A shared library reduces repetition and helps keep behavior consistent, but it can also create release coupling across many functions. Duplication can be acceptable for very small bits of logic when independent deployments matter more than reuse. In serverless, a large shared dependency can also increase package size and cold start time. The best choice depends on how often the code changes and how costly coordinated updates would be.",
+    "real_world": "If all functions depend on the same auth helper, a shared library makes sense until one team needs to change it urgently and suddenly every function has to redeploy. Some teams keep a tiny stable utility package and duplicate volatile business rules.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you version a shared library so one function can move faster than the others?"
+   },
+   {
+    "question": "What should you test in a serverless function beyond the business logic itself?",
+    "answer": "Test the event shape, boundary conditions, and interactions with external services, not just pure computation. You also want contract tests for payloads, permission checks, and failure paths such as retries, malformed input, and missing secrets. For integration tests, validate the deployed function against a real queue, storage bucket, or API where practical. This catches packaging and configuration issues that unit tests will miss.",
+    "real_world": "A function may pass unit tests but fail in production because the event payload from the trigger includes fields the test never used, or because a required permission was missing. Integration tests often catch these issues before deployment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you keep those tests fast enough for CI?"
+   },
+   {
+    "question": "What happens if a serverless function writes to a database and then crashes before returning success?",
+    "answer": "If the platform or caller retries, the same request may run again, so the write must be safe to repeat or detect duplicates. If the first write committed, a second attempt may create duplicate rows or conflicting updates unless you use an idempotency key, unique constraint, or transactional pattern. If the write did not commit, the retry is useful and should complete the work. The key point is that function completion and side effects are not the same thing.",
+    "real_world": "This is a common cause of duplicate customer records after a timeout or transient failure. Teams usually add a unique external request ID and enforce it at the database layer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the database schema to enforce that safely?"
+   },
+   {
+    "question": "How do you monitor a serverless workload so you can tell whether slowdowns are caused by the function or by its dependencies?",
+    "answer": "Track function duration, errors, throttles, and concurrency, but also dependency latency for databases, APIs, and queues. Distributed tracing is especially useful because it shows where time is spent across the call chain. If duration grows while invocation count stays flat, look at downstream latency or cold starts; if throttles rise, look at concurrency limits or downstream saturation. Good monitoring separates platform symptoms from application symptoms.",
+    "real_world": "A team might see elevated latency and assume the function is slow, when the real issue is a database connection bottleneck during a traffic spike. Traces usually reveal the slow segment immediately.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you alert on first for a production serverless API?"
+   },
+   {
+    "question": "When would you choose a Step Functions-style workflow or orchestrator instead of chaining serverless functions yourself?",
+    "answer": "Use an orchestrator when the process has multiple steps, branching, waits, compensation logic, or human-visible state. Chaining functions manually can work for simple pipelines, but it becomes hard to resume, retry, or audit each stage. An orchestrator gives you explicit state, clearer failure handling, and better visibility into long-running workflows. The trade-off is more managed-service complexity and sometimes higher latency or cost per workflow.",
+    "real_world": "Order fulfillment often needs payment, inventory, packing, shipping, and rollback if one step fails. A workflow engine makes those transitions easier to observe and recover than ad hoc function-to-function calls.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kind of workflows would you still keep as simple direct function invocations?"
+   },
+   {
+    "question": "How do you handle secrets in a serverless function without baking them into the deployment package or environment variables?",
+    "answer": "Use a managed secrets store or parameter store and fetch the secret at runtime, ideally with caching if the function is reused. Environment variables are fine for non-sensitive config, but secrets there are easier to leak through logs, screenshots, or overly broad read access. The key trade-off is latency versus security and operational simplicity. You also want least-privilege access so the function can read only the specific secret it needs.",
+    "real_world": "This comes up when rotating database passwords or API keys without redeploying every function. Teams often discover leaked secrets only after a broad IAM role or debug log exposes them.",
+    "code_lang": "python",
+    "code": "import os\n\ndef handler(event, context):\n    secret_name = os.environ['SECRET_NAME']\n    # fetch from secrets manager or parameter store here\n    return {\"ok\": True, \"secret_ref\": secret_name}",
+    "follow_up": "How would you cache a secret safely in a warm function instance?"
+   },
+   {
+    "question": "What is a good way to make a serverless function safe to run more than once for the same event?",
+    "answer": "Design it so repeated processing produces the same final state, usually by using a stable idempotency key and checking whether the work already succeeded. For side effects like payments or email, store the event or request ID before acting, or use a conditional write so only the first attempt wins. This matters because retries, duplicate deliveries, and manual replays happen in production. The trade-off is a bit more storage and logic for much better reliability.",
+    "real_world": "Duplicate webhook deliveries are common, and without idempotency you can charge a customer twice or send the same email many times. Many teams discover this only after a retry storm or a partial outage.",
+    "code_lang": "javascript",
+    "code": "const processed = new Set();\n\nexport async function handler(event) {\n  if (processed.has(event.id)) return { status: 'duplicate' };\n  processed.add(event.id);\n  // do work once\n  return { status: 'ok' };\n}",
+    "follow_up": "What would you use instead of an in-memory set in production?"
+   },
+   {
+    "question": "How do you decide whether to put a serverless function behind an API gateway or expose it through an event source directly?",
+    "answer": "Use an API gateway when you need HTTP semantics, auth, request validation, throttling, and a stable public endpoint. Use direct event sources when the producer is another managed service and you want less plumbing and lower latency. The trade-off is control versus simplicity: gateways add features and cost, while direct integrations are simpler but less flexible. The choice usually depends on whether humans or systems are calling it and how much request management you need.",
+    "real_world": "Public endpoints for mobile apps usually need an API gateway, while an object-upload trigger or queue consumer usually does not. Teams often start direct, then add a gateway when authentication and rate limiting become necessary.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the operational differences between auth at the gateway and auth inside the function?"
+   },
+   {
+    "question": "What happens if a serverless function exhausts memory, and how should you diagnose it?",
+    "answer": "The platform typically terminates the invocation, so you may see a failed request, an error log, or a generic out-of-memory signal depending on the provider. The right response is to check memory metrics, payload size, batch size, and any unbounded buffering or recursion in the code. If failures correlate with larger events or more parallelism, the function is probably doing too much per invocation. You often fix it by streaming data, reducing batch size, or increasing memory so CPU scaling also improves.",
+    "real_world": "This shows up when teams process large files or JSON payloads and suddenly get intermittent failures after a traffic increase. It is also common when libraries load entire objects into memory instead of reading incrementally.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish a memory leak from a single oversized request?"
+   },
+   {
+    "question": "How would you test a serverless function that depends on cloud services without hitting the real services in every test?",
+    "answer": "Use a mix of unit tests with mocks, contract tests against the service API shape, and a small number of integration tests in a real cloud environment. Mocking keeps feedback fast, but it should not be the only layer because it can hide auth, serialization, and permissions issues. The main trade-off is speed versus confidence. For higher-risk flows, test the exact IAM permissions and event payloads you expect in production.",
+    "real_world": "Teams often have green unit tests but broken deployments because the function cannot access a queue, bucket, or secret in the target account. A thin integration suite catches those problems before release.",
+    "code_lang": "python",
+    "code": "def test_handler_sends_message(mocker):\n    sqs = mocker.Mock()\n    handler({\"id\": 1}, None, sqs)\n    sqs.send_message.assert_called_once()",
+    "follow_up": "What would you include in a contract test for the event payload?"
+   },
+   {
+    "question": "When would you use a function URL or direct function endpoint instead of an API gateway?",
+    "answer": "Use it for simple, internal, low-overhead endpoints where you do not need advanced API management features. An API gateway is better when you need custom auth flows, request transformation, usage plans, or a unified public API surface. The trade-off is lower complexity and cost versus fewer controls and less observability at the edge. In a real project, direct endpoints can be a good fit for internal admin tools or lightweight integrations.",
+    "real_world": "A team may use a direct function endpoint for an internal webhook receiver, then move to an API gateway once external partners need auth and rate limiting. That avoids paying for a full gateway until the traffic and requirements justify it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What security controls would you add if you used a direct function endpoint?"
+   },
+   {
+    "question": "How do you safely deploy a new version of a serverless function without risking all traffic at once?",
+    "answer": "Use staged traffic shifting, canary deployment, or aliases so only a small percentage of requests hit the new version first. Watch error rate, latency, and downstream failures before increasing traffic. The main benefit is catching regressions with limited blast radius. The trade-off is slower rollout and more deployment complexity, but it is usually worth it for production workloads.",
+    "real_world": "This matters when a dependency change or serialization bug only appears under live traffic. A canary can stop a bad release before it affects every invocation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would make you automatically roll back the deployment?"
+   },
+   {
+    "question": "What is a common cause of unexpected latency in a serverless system besides cold starts?",
+    "answer": "Network-bound dependencies are a frequent cause: database calls, external APIs, DNS lookups, and repeated client initialization can dominate request time. Another common issue is doing unnecessary work on every invocation, such as rebuilding SDK clients or loading large config objects. The important idea is to separate function compute time from dependency latency. In practice, profiling and tracing usually show the bottleneck quickly.",
+    "real_world": "A function may look slow even though its own code is tiny because it spends most of the time waiting on a database in another region. Teams often fix the issue by moving dependencies closer or reducing round trips.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you reduce the impact of a slow downstream dependency?"
+   },
+   {
+    "question": "What should you do if a serverless function needs to process a large file or a long stream of events?",
+    "answer": "Do not try to load everything into memory or assume one invocation will finish the entire job. Use chunking, streaming, or a workflow that splits the work into smaller tasks and persists progress between steps. The trade-off is more orchestration and state management, but much better reliability and scaling. This pattern also makes retries and partial failures easier to recover from.",
+    "real_world": "Log processing, media conversion, and large CSV imports often fail when a single function tries to handle the whole file. Breaking the job into chunks prevents timeouts and memory spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you resume the job after one chunk fails?"
+   },
+   {
+    "question": "How do you keep configuration manageable as a serverless application grows across multiple functions and environments?",
+    "answer": "Separate config by environment, keep only non-sensitive values in deployment config, and centralize shared settings where it makes sense. Avoid copying the same values into many function definitions because drift becomes hard to detect. The trade-off is between a single source of truth and some coupling to shared config management. A practical approach is to version config changes the same way you version code and review them together.",
+    "real_world": "This matters when staging and production use different endpoints, feature flags, or region-specific resources. Without discipline, one function ends up pointing at the wrong database or queue after a deploy.",
+    "code_lang": "yaml",
+    "code": "env:\n  STAGE: prod\n  LOG_LEVEL: info\n  SECRET_NAME: /payments/prod/db-password",
+    "follow_up": "How would you detect configuration drift before it causes an outage?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does concurrency scaling actually work for serverless functions, and what bottlenecks show up before the platform limit does?",
+    "answer": "A platform can usually start many function instances quickly, but your real bottlenecks are often downstream: database connection limits, API rate limits, NAT or egress saturation, and queue visibility timeouts. Burst handling also depends on trigger type, because queue-backed consumers usually scale with polling and batching behavior rather than instantly matching backlog. Reserved or maximum concurrency is often used to protect dependencies, even though it intentionally slows drain time. The trade-off is throughput versus stability of the rest of the system.",
+    "real_world": "A team sees queue lag explode after a traffic spike, not because functions could not scale, but because thousands of concurrent invocations overwhelmed Postgres with too many short-lived connections.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you pick a safe concurrency limit for a function that writes to a relational database?"
+   },
+   {
+    "question": "What happens under the hood when a serverless function reuses an execution environment, and what bugs does that create?",
+    "answer": "A warm execution environment can retain initialized SDK clients, cached config, open sockets, files in temporary storage, and module-level variables across invocations. That is good for latency, but it also means accidental shared mutable state can leak data between requests or make behavior nondeterministic. You should treat in-memory reuse as an optimization, never as durable state, and make cached objects safe for concurrent or repeated use. Cleanup matters for temp files and long-lived connections.",
+    "real_world": "Teams have leaked tenant-specific data by storing request context in a global variable that was unexpectedly reused by later invocations in the same container.",
+    "code_lang": "javascript",
+    "code": "let lastUser;\n\nexport async function handler(event) {\n  lastUser = event.userId;\n  return { current: event.userId, previous: lastUser };\n}",
+    "follow_up": "Which kinds of objects are safe and useful to initialize outside the handler?"
+   },
+   {
+    "question": "How do you handle database connections from highly parallel serverless functions without melting the database?",
+    "answer": "The core problem is that each execution environment may open its own connection pool, so scaling function instances can multiply connections far beyond what the database can handle. Common mitigations are using a proxy or pooler, reducing in-function pool size, reusing a single client per environment, and capping function concurrency. For some workloads, replacing direct OLTP writes with queue buffering or batch writes is the safer design. The trade-off is lower peak parallelism in exchange for predictable database health.",
+    "real_world": "A workload that looked fine in staging can fail in production when hundreds of warm instances each create several idle connections and hit the database max_connections limit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your answer differ for a relational database versus a key-value store?"
+   },
+   {
+    "question": "How do partial batch failures work with queue-triggered serverless consumers, and why are they easy to get wrong?",
+    "answer": "With batched messages, one invocation may process several records, and if you fail the whole batch after partially succeeding, the successful records are often delivered again. Good consumers track success at the record level when the platform supports it, or they make every record idempotent and only acknowledge work after durable completion. Batch size changes the blast radius: larger batches improve efficiency but increase duplicate work and latency variance on failure. Ordering guarantees, if any, can also be affected by how failures are retried.",
+    "real_world": "A consumer processed 90 out of 100 messages, then threw on one bad record; the entire batch retried, causing duplicate emails and inventory adjustments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you quarantine a poison message without stalling the rest of the queue?"
+   },
+   {
+    "question": "How would you diagnose a latency incident in a serverless API when p95 suddenly doubles but average duration barely changes?",
+    "answer": "That shape usually means a subset of requests is slow, so I would break latency down by trigger, route, memory size, downstream call, and whether the runtime was in a freshly initialized environment or a reused one. Then I would compare function duration to end-to-end request latency to see whether the gateway, auth layer, DNS, or downstream services are contributing. Tail latency often comes from dependency contention, connection setup, payload size outliers, or throttling rather than average compute time. The key is tracing one request across components, not staring only at aggregate function metrics.",
+    "real_world": "A production incident can look like a function problem, but traces may show the extra time is actually in token verification and a slow third-party API only hit by one route.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which metrics would you put on a dashboard to separate platform latency from dependency latency?"
+   },
+   {
+    "question": "When does increasing memory on a serverless function improve performance even if you are not running out of memory?",
+    "answer": "On many platforms, more memory also gives you more CPU and sometimes better network throughput, so CPU-bound work, compression, JSON parsing, encryption, and startup-heavy runtimes can get faster. That can reduce billed duration enough that a larger memory setting is cost-neutral or even cheaper. The right choice is empirical: benchmark several memory sizes using realistic payloads and compare both latency and total cost. More memory is not a fix for lock contention, bad queries, or slow downstream services.",
+    "real_world": "A team cut p95 from seconds to hundreds of milliseconds by raising memory on a Java-based function because startup and serialization were CPU-limited, not RAM-limited.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What workload patterns usually benefit most from memory tuning experiments?"
+   },
+   {
+    "question": "What are the failure modes around at-least-once delivery in serverless event pipelines besides simple duplicate processing?",
+    "answer": "Beyond duplicates, you can get reordering, long delays before redelivery, split-brain side effects across multiple systems, and hidden drops when retention windows expire or filters misroute events. Exactly-once is usually not something the whole pipeline gives you; you approximate it with idempotent state changes, deduplication keys, transactional boundaries where possible, and replayable logs. You also need observability around age of event, retry count, and poison-record rates. The trade-off is extra storage and coordination in return for predictable recovery behavior.",
+    "real_world": "An order pipeline can bill the customer, fail before emitting the shipping event, and then replay later out of order, so payment and fulfillment drift unless you model state transitions carefully.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a deduplication key when the producer does not give you a stable event ID?"
+   },
+   {
+    "question": "How do VPC networking choices affect serverless performance and reliability?",
+    "answer": "Putting functions in private networking can be necessary for internal resources, but it adds moving parts like ENI attachment or other network plumbing, route tables, DNS resolution, NAT, and subnet IP capacity. Those can increase startup latency, create hard-to-see throttles, and cause outages when IPs or NAT ports are exhausted. If only some dependencies require private access, isolate those paths instead of putting every function into the same private network by default. The trade-off is security and connectivity versus startup speed, operational complexity, and cost.",
+    "real_world": "A private function fleet scaled during an incident and then failed in waves because the subnets did not have enough addresses for the burst of execution environments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would tell you the problem is network exhaustion rather than application code?"
+   },
+   {
+    "question": "What should you think about when choosing batch size and visibility timeout for a queue-driven serverless consumer?",
+    "answer": "Batch size controls efficiency versus failure blast radius, while visibility timeout must be longer than worst-case processing plus retry jitter, or the same message can reappear while still being worked on. Large batches can improve cost and throughput, but they make tail latency and duplicate reprocessing worse when one record is slow or bad. I usually start from per-record processing time distribution, desired queue drain rate, and downstream rate limits, then validate with load tests. The wrong settings create duplicate work, queue thrash, and misleading success metrics.",
+    "real_world": "A team set a short visibility timeout based on average duration, then under peak load the same messages were processed concurrently by multiple function instances.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tune these settings differently for CPU-heavy work versus I/O-heavy work?"
+   },
+   {
+    "question": "How do you decide whether a serverless workload has outgrown FaaS and should move to containers or a long-running service?",
+    "answer": "I look for hard mismatches with the execution model: frequent long-running work, expensive startup, high steady-state throughput where per-invocation overhead dominates, the need for custom networking or agents, or very tight control over concurrency and connection reuse. I also compare operational cost: if you are essentially running constant traffic, always-on compute can be cheaper and easier to tune. The decision is not just cost; it is about whether the failure model and scaling behavior still fit the workload. Many systems stay event-driven but move the hot path to containers while keeping glue logic serverless.",
+    "real_world": "An image-processing pipeline may start well on FaaS, but once traffic becomes constant and each job needs heavyweight native libraries, a container service can deliver lower latency and fewer packaging constraints.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you collect for a month before recommending that migration?"
+   },
+   {
+    "question": "How do you control backpressure in a serverless pipeline when one downstream dependency has a much lower throughput than the event source can produce?",
+    "answer": "You usually need an explicit buffer and a concurrency cap between the producer and the fragile dependency. In practice that means a queue or stream, a consumer concurrency limit, and often smaller batches so failures isolate cleanly. The goal is to keep the platform from scaling faster than the database, third-party API, or legacy service can absorb. Without that, serverless auto-scaling just moves the outage downstream.",
+    "real_world": "A common incident is an upstream burst causing thousands of function invocations that all hammer the same database or payment API, turning a brief spike into a prolonged outage. Teams often fix it by inserting a queue and setting reserved or max concurrency on the consumer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose the initial concurrency cap if the downstream system has no published rate limit?"
+   },
+   {
+    "question": "What are the trade-offs between using a queue and using a stream as the event source for serverless consumers?",
+    "answer": "A queue is better when you want simple decoupling, load smoothing, and independent message handling with no ordering guarantees beyond limited cases. A stream is better when you need ordered consumption within partitions, replay, and multiple consumers reading the same event log. The trade-off is that streams push you to think about shard or partition hot spots, checkpointing, and consumer lag, while queues are simpler but less expressive for event history. Your choice affects failure recovery and scaling behavior more than the function code itself.",
+    "real_world": "Teams often start with a queue for background jobs, then later need replay or multiple independent consumers and realize a stream would have fit better. The reverse also happens: a stream adds operational complexity when all they needed was durable buffering.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do partition keys or message group keys change the scaling characteristics of those two options?"
+   },
+   {
+    "question": "What problems do hot partitions cause in serverless event processing, and how do you mitigate them?",
+    "answer": "Hot partitions happen when too many events map to the same ordering key or shard, so one slice of the workload becomes the bottleneck while the rest of the system sits idle. With ordered processing, one slow or poison event can also block everything behind it on that partition. Mitigations include choosing a better partition key, spreading high-volume tenants across multiple keys, and isolating workloads with very different traffic patterns. The hard trade-off is between preserving ordering semantics and achieving parallelism.",
+    "real_world": "A single enterprise customer or popular product ID can dominate traffic and create lag for only that partition, which is easy to miss if you only look at global throughput. Teams often discover it during launches when one key suddenly gets 100x normal volume.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you intentionally break ordering to recover throughput?"
+   },
+   {
+    "question": "How would you design a serverless API to stay within a strict p99 latency target under bursty traffic?",
+    "answer": "I would keep the synchronous path thin: validate, authorize, do the minimum critical read or write, and push everything else async. Then I would minimize package size, avoid dependency-heavy initialization, reuse clients across invocations, and be careful with network hops like VPC egress or cross-region calls. For burst handling, I would use provisioned capacity only where the latency objective justifies its cost, and put hard concurrency or rate controls in front of fragile dependencies. Hitting p99 is mostly about removing tail-latency amplifiers, not just making median execution fast.",
+    "real_world": "Production APIs often meet average latency goals while still breaching SLOs because a small percentage of requests trigger expensive auth checks, connection setup, or downstream retries. The fix is usually architectural, not a micro-optimization inside the handler.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you break down first to find where the p99 tail is coming from?"
+   },
+   {
+    "question": "What are the risks of doing large amounts of work in the initialization phase outside the handler, and when is it still the right choice?",
+    "answer": "Initialization work is paid on cold starts and can dominate startup time if you load heavy frameworks, large configs, or expensive SDK setup. But doing some work there is still correct when it can be safely reused across invocations, like database client creation, HTTP connection pools, or immutable lookup tables. The risk is also correctness: mutable global state can leak between requests and create cross-request bugs. I treat init as a cache for safe reusable resources, not as a place for request-specific state.",
+    "real_world": "A common optimization is moving SDK client creation out of the handler, but teams sometimes also cache tenant-specific data globally and accidentally serve the wrong tenant after environment reuse. That bug only appears under warm traffic, so it can be painful to reproduce.",
+    "code_lang": "javascript",
+    "code": "let client;\nexport const handler = async (event) => {\n  client ??= createApiClient();\n  // Safe to reuse the client\n  const tenantId = event.headers['x-tenant-id'];\n  // Do not cache tenant-specific mutable data globally\n  return client.fetchForTenant(tenantId);\n};",
+    "follow_up": "What kinds of objects are unsafe to cache globally even if reuse improves latency?"
+   },
+   {
+    "question": "How do you prevent one noisy tenant or endpoint from consuming all available serverless capacity in a multi-tenant system?",
+    "answer": "You need fairness controls outside the function code, because the platform will happily scale the hottest traffic first. Typical controls are per-tenant rate limits, separate queues or partitions for high-value workloads, reserved concurrency for critical functions, and sometimes account or service-level isolation for the largest tenants. The trade-off is utilization versus blast radius: shared pools are cheaper, but isolation protects your SLOs. In multi-tenant systems, capacity governance is part of the product design, not just infrastructure.",
+    "real_world": "Without tenant-aware throttling, one customer backfill or a buggy integration can starve interactive traffic for everyone else. Teams often only add isolation after a painful incident where internal admin jobs consumed the same concurrency pool as customer APIs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to isolate by function, by queue, or by cloud account?"
+   },
+   {
+    "question": "How do you handle exactly-once business effects in a serverless workflow when the platform only gives you at-least-once execution?",
+    "answer": "I design for exactly-once effects, not exactly-once execution. That usually means a durable deduplication key, conditional writes or unique constraints at the state boundary, and making downstream side effects either idempotent or delayed until state is committed. If two invocations race, one should win and the other should observe that the effect already exists. The key is pushing uniqueness checks into durable storage rather than trusting invocation semantics.",
+    "real_world": "Payment capture, inventory reservation, and email sending are classic cases where a duplicate invocation is acceptable only if the business side effect happens once. Teams often discover that request IDs in logs are not enough unless they are enforced in storage.",
+    "code_lang": "sql",
+    "code": "INSERT INTO payments (idempotency_key, order_id, amount)\nVALUES (:key, :order_id, :amount)\nON CONFLICT (idempotency_key) DO NOTHING;",
+    "follow_up": "What do you do when the downstream system does not support idempotency keys or conditional updates?"
+   },
+   {
+    "question": "What are the main trade-offs between a monorepo-style shared runtime layer and fully self-contained function packages?",
+    "answer": "A shared layer or runtime package reduces duplication and can speed up patching common code, but it also couples many functions to the same release and can create surprise breakage. Self-contained packages give stronger isolation and easier rollback per function, at the cost of larger artifacts and repeated dependency updates. The operational question is who owns compatibility: platform teams often prefer shared components, while product teams prefer independent deployability. At scale, versioning discipline matters more than the packaging style itself.",
+    "real_world": "A bad shared library release can break dozens of unrelated functions at once, which is a very different blast radius from a single bad function deploy. On the other hand, security patching is much faster when common dependencies are centralized.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you version and roll out a shared layer to avoid a fleet-wide incident?"
+   },
+   {
+    "question": "What does event filtering at the source buy you in serverless systems, and what are its limits?",
+    "answer": "Source-side filtering reduces unnecessary invocations, cost, and downstream noise by dropping irrelevant events before compute is allocated. It is especially valuable when event volume is high but only a small subset matters to a given consumer. The limit is that filtering is not business validation; if the criteria are too broad you still pay for bad events, and if too narrow you can silently lose needed work. I use it as a coarse routing tool, then still validate inside the function.",
+    "real_world": "Teams often save substantial cost by filtering storage or bus events by prefix, type, or metadata instead of waking up a function for every event. The gotcha is treating filters as the only guard and missing cases after schema changes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make changes to event filters safely when producers evolve their payloads?"
+   },
+   {
+    "question": "How do you reason about multi-region serverless failover, especially for asynchronous workloads?",
+    "answer": "Compute failover is usually easier than state and event failover. For async systems, you need to decide whether regions run active-active or active-passive, how events are routed during a failover, and whether duplicate processing across regions is acceptable. The hard parts are replicated state, ordering guarantees, and replay after a partial regional outage where some events were accepted but not fully processed. A realistic design usually prefers regional independence with clear recovery procedures over pretending failover is instantaneous and lossless.",
+    "real_world": "A real incident pattern is one region recovering while delayed retries and replayed events race with work already processed in the secondary region. If deduplication and reconciliation are weak, failover fixes availability but corrupts business state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What data and event-path assumptions would you validate first before claiming your serverless system is truly multi-region?"
+   }
+  ]
+ }
+}

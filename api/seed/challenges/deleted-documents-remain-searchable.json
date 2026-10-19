@@ -1,0 +1,309 @@
+{
+  "slug": "deleted-documents-remain-searchable",
+  "title": "Deleted documents remain searchable for hours",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "search",
+    "consistency",
+    "privacy",
+    "outbox",
+    "incident-response"
+  ],
+  "scenario": "Users delete private documents from the primary database, but search still returns snippets for 2 to 6 hours. The API deletes the document row inside a database transaction, then after commit makes a best-effort in-process call to enqueue a search-index delete. During deploy restarts, about 0.3% of those post-commit enqueue calls are lost.",
+  "goal": "Make every private-document delete reliably remove the search result within 5 minutes, including during deploy restarts.",
+  "concepts": [
+    {
+      "key": "database-transaction",
+      "name": "Database transaction",
+      "summary": "A database transaction groups writes so they commit together or roll back together. It is the boundary where the database can guarantee atomicity.",
+      "used_here": "The document row is deleted inside the API transaction, but the search delete request happens after that transaction has already committed."
+    },
+    {
+      "key": "search-index",
+      "name": "Search index",
+      "summary": "A search index is a separate data store optimized for text queries. It usually copies data from the main database and can become stale if updates are missed.",
+      "used_here": "The index still contains deleted document snippets after the primary database row is gone."
+    },
+    {
+      "key": "post-commit-side-effect",
+      "name": "Post-commit side effect",
+      "summary": "A post-commit side effect is work attempted after the main database transaction succeeds. If the process dies before or during that work, the database change may be committed while the side effect is lost.",
+      "used_here": "The API commits the delete, then tries to enqueue a search delete from process memory; deploy restarts lose about 0.3% of those attempts."
+    },
+    {
+      "key": "durable-delivery",
+      "name": "Durable delivery",
+      "summary": "Durable delivery means work is stored somewhere persistent before a worker processes it. Retries can continue after process crashes or deploys.",
+      "used_here": "The search delete needs to survive API restarts and be retried until the index confirms it was applied."
+    },
+    {
+      "key": "transactional-outbox",
+      "name": "Transactional outbox",
+      "summary": "A transactional outbox stores an event or work item in the same database transaction as the business change. A separate worker reads the stored item and delivers it with retries.",
+      "used_here": "A delete tombstone can be written atomically with the document delete, so the indexer has a durable record to process."
+    },
+    {
+      "key": "change-data-capture",
+      "name": "Change data capture",
+      "summary": "Change data capture reads committed database changes from a log or stream. It can publish those changes to downstream systems without relying on application memory.",
+      "used_here": "CDC is an alternative way to obtain durable delete events from the database commit stream."
+    },
+    {
+      "key": "tombstone",
+      "name": "Tombstone",
+      "summary": "A tombstone is a durable record saying that an entity was deleted. It keeps enough identity information to remove or suppress stale copies elsewhere.",
+      "used_here": "The search pipeline needs the deleted document ID even after the document row itself has been removed."
+    },
+    {
+      "key": "idempotency",
+      "name": "Idempotency",
+      "summary": "An idempotent operation can be safely repeated without changing the final result beyond the first successful application. This is important when workers retry after failures.",
+      "used_here": "Deleting the same document ID from the search index more than once should still be safe."
+    },
+    {
+      "key": "repair-scan",
+      "name": "Repair scan",
+      "summary": "A repair scan compares systems and fixes differences after a bug has already created bad state. It is useful when no reliable history exists for past missed events.",
+      "used_here": "Because the scenario does not guarantee a durable history of old deleted IDs, stale index entries may need to be found by comparing search IDs with the database."
+    },
+    {
+      "key": "lag-metric",
+      "name": "Lag metric",
+      "summary": "A lag metric measures how far behind an asynchronous pipeline is. It helps distinguish normal delay from stuck or lost work.",
+      "used_here": "The team needs to measure how long delete tombstones wait before the search index applies them."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the failure boundary",
+      "question": "You are on call and need the fastest useful first check. Which evidence should you gather first?",
+      "concept_keys": [
+        "database-transaction",
+        "search-index",
+        "post-commit-side-effect"
+      ],
+      "options": [
+        {
+          "text": "Check whether read replicas are lagging behind the primary during document delete traffic spikes.",
+          "correct": false,
+          "hint": "Replica lag can explain stale database reads, but the report says the database row is deleted while search still returns a snippet. Focus on the copy of data used by search.",
+          "id": "a"
+        },
+        {
+          "text": "Compare recent database deletes with search-delete enqueue and indexer logs around deploy restart windows.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Increase logging in the API delete handler to capture request payloads and user permissions.",
+          "correct": false,
+          "hint": "Permissions bugs can expose documents, but here the document is deleted and still present in search. The first check should test whether the delete reached the indexing path.",
+          "id": "c"
+        },
+        {
+          "text": "Profile the search query path to see whether snippet generation is slower for private documents.",
+          "correct": false,
+          "hint": "The symptom is stale data returned for hours, not slow query execution. Start where the database and search index can diverge.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The key boundary is between the committed database delete and the separate search-index delete. Comparing database deletes to enqueue and indexer records around deploys can show whether events disappear before the indexer sees them. Query profiling is tempting because users see search results, but it does not explain why a deleted row remains searchable for 2 to 6 hours."
+    },
+    {
+      "title": "Interpret the mismatch",
+      "question": "The comparison shows that affected document IDs were deleted in the database, but there is no enqueue record or indexer attempt for many of them. The missing records cluster around deploy restarts and are about 0.3% of deletes. What does that most strongly indicate?",
+      "concept_keys": [
+        "post-commit-side-effect",
+        "durable-delivery",
+        "search-index"
+      ],
+      "options": [
+        {
+          "text": "The database transaction is rolling back while the API still returns success to the user.",
+          "correct": false,
+          "hint": "If the transaction rolled back, the row would still exist in the database. The observed state is the opposite: the database delete committed.",
+          "id": "a"
+        },
+        {
+          "text": "The search index is applying delete requests too slowly because its normal backlog is several hours long.",
+          "correct": false,
+          "hint": "A slow consumer would usually leave an enqueue record and a growing queue or lag metric. Here the missing IDs never entered the indexing path.",
+          "id": "b"
+        },
+        {
+          "text": "The search ranking layer is boosting old snippets above fresh index documents.",
+          "correct": false,
+          "hint": "Ranking changes which documents appear first, but it does not create an indexer record for a delete that was never enqueued. Explain the missing handoff first.",
+          "id": "c"
+        },
+        {
+          "text": "The API sometimes loses the search-delete handoff after the database commit succeeds.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The deleted rows are gone from the database, but the corresponding search-delete work was never recorded. The clustering around restarts matches a post-commit in-process handoff being interrupted. A slow indexer would still have durable queued work to inspect; these 0.3% of deletes are missing before that point."
+    },
+    {
+      "title": "Choose the durable fix",
+      "question": "You need to change the design so a committed document delete cannot lose the corresponding search delete during a restart. Which fix is correct for production?",
+      "concept_keys": [
+        "database-transaction",
+        "durable-delivery",
+        "transactional-outbox",
+        "change-data-capture",
+        "tombstone",
+        "search-index"
+      ],
+      "options": [
+        {
+          "text": "Run a full search reindex every hour so missed deletes are eventually corrected by the next rebuild.",
+          "correct": false,
+          "hint": "Periodic rebuilding can reduce how long bad state lasts, but it still leaves private snippets visible until the next run completes. Check whether the mechanism can meet the required deletion window.",
+          "id": "a"
+        },
+        {
+          "text": "Add more retries to the best-effort post-commit enqueue call in the API process.",
+          "correct": false,
+          "hint": "Retries help only while the process is alive and still remembers the work. The incident happens when the process is restarted during the handoff.",
+          "id": "b"
+        },
+        {
+          "text": "Call the search service synchronously from the API before returning success for the database delete.",
+          "correct": false,
+          "hint": "This narrows one timing gap but creates difficult cases when the search call times out, the database commits, or the process dies. It also couples delete availability to the search service.",
+          "id": "c"
+        },
+        {
+          "text": "Write a durable delete tombstone in the same commit as the database delete, or read it from the database commit stream, then deliver it to search with retries.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The fix is to make the delete intent part of the durable database commit, either by writing a tombstone in the same transaction or by consuming the committed delete from a reliable database change stream. A worker can then retry delivery to the search index until it succeeds. A synchronous search call is tempting, but it still leaves ambiguous failure cases and makes the API depend on search availability."
+    },
+    {
+      "title": "Design the worker semantics",
+      "question": "Assume you choose a transactional delete-tombstone table. Which worker behavior is safest?",
+      "concept_keys": [
+        "transactional-outbox",
+        "tombstone",
+        "idempotency",
+        "durable-delivery",
+        "search-index",
+        "lag-metric"
+      ],
+      "options": [
+        {
+          "text": "Store only the deleted document title in each tombstone and let the worker delete matching search snippets by text.",
+          "correct": false,
+          "hint": "Search deletion needs a stable identity. Text fields can be duplicated, edited, tokenized, or omitted from the index.",
+          "id": "a"
+        },
+        {
+          "text": "Read unprocessed tombstones, mark them processed before calling search, and rely on API logs to replay failures.",
+          "correct": false,
+          "hint": "Marking work complete before the side effect creates another loss window. Ask what happens if the worker dies after the mark but before the index update.",
+          "id": "b"
+        },
+        {
+          "text": "Batch tombstones in memory for five minutes and drop the batch if the search service rejects it twice.",
+          "correct": false,
+          "hint": "Batching can improve throughput, but dropping failed work violates reliable delivery. Private deletes need retry behavior that survives transient search failures.",
+          "id": "c"
+        },
+        {
+          "text": "Read unprocessed tombstones, delete each document ID from the search index idempotently, and mark the tombstone processed only after the search delete succeeds.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The worker should treat the tombstone as the durable source of pending work and only mark it processed after the index confirms the delete. The search delete should be idempotent so retries after timeouts or crashes are safe. Marking processed first is a common but dangerous optimization because it recreates a lost-update window."
+    },
+    {
+      "title": "Roll out without creating a new gap",
+      "question": "You need to deploy the fix while stale results may already exist. The scenario does not guarantee an audit log or any durable list of old deleted document IDs. What is the safest rollout plan?",
+      "concept_keys": [
+        "transactional-outbox",
+        "tombstone",
+        "repair-scan",
+        "database-transaction",
+        "search-index",
+        "durable-delivery"
+      ],
+      "options": [
+        {
+          "text": "Wait for the next full reindex to clear stale entries, then switch the API to the new delete path after the index is clean.",
+          "correct": false,
+          "hint": "This leaves privacy-sensitive snippets visible for the duration of the rebuild cycle. It also does not protect new deletes that happen before the switch.",
+          "id": "a"
+        },
+        {
+          "text": "Deploy the tombstone schema and worker, enable the transactional writer for all new deletes before retiring the old path, then run a repair scan that removes search entries whose document IDs no longer exist in the database.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Backfill tombstones for old deletes first, drain them, and only then enable the transactional writer for new deletes.",
+          "correct": false,
+          "hint": "During that sequence, new deletes still use the old lossy path. Also check whether the system actually has a reliable source of old deleted IDs to backfill.",
+          "id": "c"
+        },
+        {
+          "text": "Deploy the worker first and keep the existing post-commit enqueue path until the stale search results stop appearing.",
+          "correct": false,
+          "hint": "A worker cannot process durable work that is never written. Keeping the old handoff leaves the restart loss window in place.",
+          "id": "d"
+        }
+      ],
+      "explanation": "New deletes must be protected first, otherwise the rollout can create fresh lost events while you are repairing old ones. Because the scenario does not establish a durable history of deleted IDs, the old bad state should be repaired by comparing the search index to the authoritative database and deleting index entries whose IDs no longer exist. Backfilling old tombstones first sounds careful, but it assumes data that may not exist and leaves the 0.3% restart loss active for new deletes."
+    },
+    {
+      "title": "Prove the incident is fixed",
+      "question": "After rollout, which confirmation set best shows the system now meets the 5-minute deletion goal?",
+      "concept_keys": [
+        "transactional-outbox",
+        "tombstone",
+        "lag-metric",
+        "search-index",
+        "repair-scan",
+        "durable-delivery"
+      ],
+      "options": [
+        {
+          "text": "The hourly full reindex completes successfully, and the number of indexed documents decreases after each run.",
+          "correct": false,
+          "hint": "A successful rebuild does not show that the live delete pipeline works during deploy restarts. The target is a 5-minute deletion guarantee, not eventual cleanup hours later.",
+          "id": "a"
+        },
+        {
+          "text": "The search-delete worker queue is usually empty, and no users have filed new tickets today.",
+          "correct": false,
+          "hint": "A quiet queue and no tickets are useful signals, but they do not prove every database delete created durable work or that search applied it within the target window.",
+          "id": "b"
+        },
+        {
+          "text": "Every database delete creates exactly one durable tombstone in the same commit, tombstone-to-index lag stays under 5 minutes, synthetic deletes disappear from search, and repair scans find no indexed IDs missing from the database.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The API delete endpoint latency is unchanged, and the search cluster CPU remains below 60% during peak traffic.",
+          "correct": false,
+          "hint": "Performance health matters, but this incident is about correctness across systems. You need evidence that deletes are not lost and that stale index entries converge.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The confirmation must cover both halves of the guarantee: durable creation of delete work and timely application to search. A 1:1 database-delete to tombstone check catches lost handoffs, lag under 5 minutes catches stuck delivery, synthetic tests verify user-visible behavior, and repair scans detect remaining stale index rows. An empty queue alone can be misleading if work was never written."
+    }
+  ],
+  "takeaway": "When one committed change must drive another system, do not rely on an in-process best-effort call after commit. Record the intent durably with the database change, then deliver it with idempotent retries and measure lag. For old damage, repair from an authoritative source; do not assume you can backfill deleted IDs unless a durable history actually exists.",
+  "review_issues": []
+}

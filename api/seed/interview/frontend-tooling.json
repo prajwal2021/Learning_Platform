@@ -1,0 +1,485 @@
+{
+ "slug": "frontend-tooling",
+ "name": "Frontend build tooling (Vite, Webpack, npm)",
+ "category": "Frontend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a package manager and a bundler?",
+    "answer": "A package manager like npm installs and manages third-party dependencies for your project. A bundler like Webpack takes your source files and dependencies and produces browser-friendly output, usually combining modules and transforming assets. You often use both together: npm to get the tools, and the bundler to build the app.",
+    "real_world": "A common mistake is thinking `npm install` makes code runnable in the browser. It only downloads packages; you still need a build step when your app uses modern JavaScript modules, TypeScript, JSX, or imported assets.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose not to use a bundler at all?"
+   },
+   {
+    "question": "What problem does Vite solve compared with older build tools?",
+    "answer": "Vite is designed to make local development faster by serving source files directly and using native ES modules in the browser. For production builds, it still bundles and optimizes the app. The main benefit is quicker startup and faster hot module replacement during development.",
+    "real_world": "Teams switching from slower dev servers often notice long startup times and slow reloads on large apps. Vite reduces that pain, especially when the codebase grows and the old tool has to process everything up front.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between Vite in development and in production?"
+   },
+   {
+    "question": "What does `npm install` do, and what files does it usually affect?",
+    "answer": "`npm install` downloads dependencies listed in `package.json` and updates the local `node_modules` folder. It may also update `package-lock.json` to record the exact versions installed. That lock file helps make installs reproducible across machines and CI.",
+    "real_world": "If two developers run install at different times without a lock file, they can end up with slightly different dependency versions and different bugs. The lock file reduces that drift.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is `package-lock.json` useful in a team or CI environment?"
+   },
+   {
+    "question": "What is the purpose of `package.json` in a frontend project?",
+    "answer": "`package.json` describes the project metadata and scripts, and it lists dependencies and devDependencies. It is the main place npm uses to understand how to install and run the project. In frontend work, it usually also defines commands like `dev`, `build`, and `test`.",
+    "real_world": "When a new engineer joins a project, `package.json` is often the first file they inspect to learn how the app is started and built. Missing or confusing scripts can slow onboarding and lead to running the wrong command.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between dependencies and devDependencies?"
+   },
+   {
+    "question": "What is the difference between `dependencies` and `devDependencies`?",
+    "answer": "`dependencies` are packages needed for the app to run in production, while `devDependencies` are only needed for development and build-time tasks. Examples of dev dependencies include bundlers, linters, and test tools. This distinction helps keep production installs smaller and clearer.",
+    "real_world": "If a runtime package is accidentally placed in `devDependencies`, a production deployment that installs only production packages can fail at runtime. The reverse usually just adds unnecessary weight to local installs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give examples of packages that belong in each category?"
+   },
+   {
+    "question": "What is hot module replacement in Vite or Webpack?",
+    "answer": "Hot module replacement, or HMR, updates a changed module in the browser without reloading the whole page. That preserves app state and makes development faster and less disruptive. It is especially useful for UI work where you want immediate feedback.",
+    "real_world": "Without HMR, every small CSS or component edit can reset the page and lose form input or component state. With HMR, the feedback loop is much tighter and debugging is easier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can HMR sometimes fail to preserve state?"
+   },
+   {
+    "question": "What does Webpack mean when it talks about loaders and plugins?",
+    "answer": "Loaders transform individual files before they are added to the bundle, such as turning TypeScript or JSX into JavaScript. Plugins hook into the build process more broadly and can change how bundles are created, optimized, or emitted. A simple way to remember it is: loaders process files, plugins extend the build pipeline.",
+    "real_world": "If a team needs to import Sass or TypeScript in a Webpack app, they usually add loaders so those file types can be handled. If they need minification, HTML generation, or environment injection, they often use plugins.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you describe a case where you would use a plugin instead of a loader?"
+   },
+   {
+    "question": "Why do frontend builds often need source maps?",
+    "answer": "Source maps let you debug the original source code instead of the transformed bundle. That matters because production builds are usually minified and combined, which makes them hard to read. With source maps, browser devtools can point you back to the original file and line.",
+    "real_world": "When a bug only happens in production, source maps can make the difference between a quick fix and guessing inside a minified bundle. Teams often restrict their use carefully because they can expose source code details.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the trade-offs of shipping source maps in production?"
+   },
+   {
+    "question": "What is the difference between `npm run dev` and `npm run build` in a typical frontend project?",
+    "answer": "`npm run dev` usually starts a development server with fast rebuilds, readable output, and HMR. `npm run build` usually creates an optimized production bundle with minification, tree shaking, and asset hashing. The exact commands depend on the project, but that split is the common pattern.",
+    "real_world": "New developers sometimes deploy the dev server by mistake because it looks like the app works locally. In production you usually want the build output served by a static server or backend, not the dev server.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is the production build different from what you see in development?"
+   },
+   {
+    "question": "What is a common mistake people make when importing files in a Vite or Webpack app?",
+    "answer": "A common mistake is assuming every import works exactly like Node.js or that the browser can load any file directly. In a frontend build, the bundler must understand the import, so file paths, extension handling, and asset imports have to follow the tool’s rules. Another common mistake is mixing relative and alias-based paths inconsistently.",
+    "real_world": "A broken import can stop an entire app from building even though the code looks fine in an editor. This often happens when someone renames a file, changes case, or copies an import path from a different environment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug an import that works in one environment but not another?"
+   },
+   {
+    "question": "What is a frontend build step, and why do we need one at all?",
+    "answer": "A build step turns the code you write into code the browser can run efficiently. It usually handles things like transforming modern JavaScript or TypeScript, bundling modules, minifying files, and processing assets like CSS or images. This matters because browsers do not all support the same syntax or file types, and shipping many unoptimized files can hurt performance. In small projects you can skip some of it, but most real apps need it.",
+    "real_world": "A team may write code using TypeScript and modern syntax, then discover older browsers or deployment targets cannot run it directly. The build step makes that code usable in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which parts of the build step are handled by the browser, and which parts are handled by the toolchain?"
+   },
+   {
+    "question": "What is `npm` used for in a frontend project?",
+    "answer": "`npm` is used to install and manage JavaScript packages and to run project scripts. It reads `package.json` to know what dependencies the project needs and what commands are available, like start, test, or build. It is not the same thing as the browser or the bundler; it is the package and script manager. Most frontend projects rely on it to keep dependencies consistent across machines.",
+    "real_world": "When a new developer joins a project, `npm install` is often the first step to recreate the same local setup from `package.json` and the lockfile.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between `npm install`, `npm ci`, and `npm update`?"
+   },
+   {
+    "question": "What is a lockfile, like `package-lock.json`, and why is it important?",
+    "answer": "A lockfile records the exact dependency versions that were installed, including nested dependencies. That makes installs repeatable, so the same project does not silently get different code on different machines or on different days. Without it, a fresh install can pull newer compatible versions and introduce bugs unexpectedly. Teams usually commit it so builds are stable.",
+    "real_world": "A production bug can appear only after a clean install on CI because a transitive package changed version. The lockfile prevents that class of surprise.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What can go wrong if a project does not commit its lockfile?"
+   },
+   {
+    "question": "What does `npm install <package>` do compared with adding a package to `package.json` manually?",
+    "answer": "`npm install <package>` installs the package and updates `package.json` and the lockfile for you. Manually editing `package.json` only changes the manifest; it does not download the package or update the lockfile. In practice, you use the npm command because it keeps the manifest and installed files in sync. Manually editing is easy to get wrong.",
+    "real_world": "A developer may add a dependency name by hand, then wonder why imports fail locally. The package was never actually installed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if you remove a package from `package.json` but not from `node_modules`?"
+   },
+   {
+    "question": "What is the `node_modules` folder, and why should you usually not commit it?",
+    "answer": "`node_modules` contains the installed packages for the project. It is usually not committed because it can be very large, platform-specific in some cases, and fully reproducible from `package.json` and the lockfile. Committing it makes repositories huge and can create inconsistent behavior if the folder gets out of sync. The normal practice is to ignore it in version control.",
+    "real_world": "A repository with committed `node_modules` is slower to clone and review, and updates become messy when different developers install different dependency trees.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does a lockfile help replace the need to commit `node_modules`?"
+   },
+   {
+    "question": "What does it mean to import a default export versus a named export?",
+    "answer": "A default export is the main export from a module, and you import it without braces. Named exports are exported by name and must be imported with the same name, usually inside braces. This matters because mixing them up causes runtime or compile-time errors. The module author chooses the export style, and the import must match it.",
+    "real_world": "New developers often write the wrong import form and get errors like “does not provide an export.” That usually means the export style and import syntax do not match.",
+    "code_lang": "javascript",
+    "code": "// lib.js\nexport default function sum(a, b) { return a + b; }\nexport const pi = 3.14;\n\n// app.js\nimport sum, { pi } from './lib.js';\nconsole.log(sum(1, 2), pi);",
+    "follow_up": "Can a module have both default and named exports?"
+   },
+   {
+    "question": "What is the difference between relative and absolute imports in a frontend project?",
+    "answer": "A relative import starts with `./` or `../` and points to a file based on the current file’s location. An absolute import usually resolves from a configured base path or alias, so it is shorter and easier to move around. Relative imports are simple and work everywhere, while aliases improve readability in deeper folder structures. The trade-off is that aliases require tool configuration.",
+    "real_world": "In a large app, deeply nested relative paths become hard to read and easy to break during refactors. Aliases reduce that path clutter.",
+    "code_lang": "javascript",
+    "code": "// relative\nimport Button from '../../components/Button';\n\n// alias, if configured\nimport Button from '@/components/Button';",
+    "follow_up": "How do bundlers know how to resolve an alias like `@/`?"
+   },
+   {
+    "question": "What is an environment variable in a frontend build, and why use one?",
+    "answer": "An environment variable is a value provided to the app at build time or runtime to change behavior without changing code. Frontend projects often use them for things like API base URLs, feature flags, or app mode. They matter because you usually want different settings for local development, staging, and production. The main caution is that anything shipped to the browser should be treated as public.",
+    "real_world": "A team may point the same app code at different backend APIs in development and production by changing environment variables rather than editing source files.",
+    "code_lang": "javascript",
+    "code": "// Example usage depends on the toolchain\nconst apiUrl = process.env.API_URL;\nconsole.log(apiUrl);",
+    "follow_up": "What should never be stored in frontend environment variables?"
+   },
+   {
+    "question": "What does tree shaking mean in a frontend build?",
+    "answer": "Tree shaking is the removal of code that is imported but never used, so the final bundle is smaller. It works best with static ES module imports because the build tool can analyze what is actually referenced. This matters for performance, especially when you depend on large libraries. It is not automatic for every module format or every coding style.",
+    "real_world": "A project that imports a whole utility library can ship far more code than needed. Tree shaking can reduce that size if the imports are written in a way the bundler can analyze.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why do ES modules help tree shaking more than CommonJS?"
+   },
+   {
+    "question": "What is the difference between development mode and production mode in a frontend toolchain?",
+    "answer": "Development mode is optimized for fast feedback, while production mode is optimized for shipping. In dev, tools usually favor quick rebuilds, readable errors, and live updates; in production, they often minify, optimize, and remove debugging overhead. That distinction matters because the same app can behave differently in terms of performance and error output. You should always test the production build before release.",
+    "real_world": "A site can feel fine during local development but fail after production minification or optimization. Building in production mode before deployment catches those issues early.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of problems only appear after a production build?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "When would you choose a bundler configuration with multiple entry points instead of a single app entry, and what trade-offs does that create?",
+    "answer": "Use multiple entry points when you are shipping several independently loaded pages or widgets that do not share the same runtime path. It can reduce unnecessary JavaScript on each page, but it makes caching, shared dependency management, and build output organization more complex. In a single-page app, one entry is usually simpler unless you have a clear performance or deployment reason to split it.",
+    "real_world": "This comes up in a product with a marketing site, admin dashboard, and embedded customer widget living in the same repo. Teams often discover that a single bundle forces every page to pay for code it never uses.",
+    "code_lang": "javascript",
+    "code": "// webpack.config.js\nmodule.exports = {\n  entry: {\n    app: './src/app.js',\n    admin: './src/admin.js',\n  },\n};",
+    "follow_up": "How do shared chunks affect caching when you have multiple entry points?"
+   },
+   {
+    "question": "How do you decide whether a dependency should be bundled into the main application or loaded lazily?",
+    "answer": "Bundle it into the main app if it is needed for first render or almost every user path. Load it lazily if it is used rarely, is large, or is behind a feature that many users never open. The trade-off is faster initial load versus extra latency the first time the lazy code is needed.",
+    "real_world": "A rich text editor, charting library, or PDF viewer is a common lazy-load candidate because it can add a lot of weight to the initial bundle. Teams usually spot this only after measuring slow first-load times in production.",
+    "code_lang": "javascript",
+    "code": "const Editor = React.lazy(() => import('./Editor'));\n\nfunction Page() {\n  return <React.Suspense fallback={null}><Editor /></React.Suspense>;\n}",
+    "follow_up": "What can go wrong with lazy-loaded chunks in production deployments?"
+   },
+   {
+    "question": "What is the practical difference between npm install, npm ci, and npm update?",
+    "answer": "`npm install` resolves and installs packages, and it may update the lockfile if package ranges changed. `npm ci` is for clean, reproducible installs from an existing lockfile and is usually faster in CI because it fails if the lockfile and manifest disagree. `npm update` tries to move dependencies to newer compatible versions, which is useful for maintenance but can introduce unexpected changes.",
+    "real_world": "Build pipelines often use `npm ci` to avoid flaky installs caused by a drifting lockfile. Developers use `npm install` locally when adding or changing dependencies.",
+    "code_lang": "bash",
+    "code": "npm ci\nnpm install\nnpm update",
+    "follow_up": "When would `npm ci` fail even though `npm install` works?"
+   },
+   {
+    "question": "Why do teams sometimes use package aliases or exact versions instead of broad semver ranges?",
+    "answer": "Aliases are useful when you need two versions of a package side by side, or when you want a clearer name for a dependency in the codebase. Exact versions reduce surprise in production because a fresh install will not silently pick up a newer compatible release. The trade-off is less automatic update flexibility, so you need a deliberate upgrade process.",
+    "real_world": "This matters when a major package ships a breaking change under the same major range, or when two libraries depend on incompatible versions of the same utility. It is common in migrations and in monorepos with legacy and new code living together.",
+    "code_lang": "json",
+    "code": "{\n  \"dependencies\": {\n    \"lodash\": \"4.17.21\",\n    \"lodash-es\": \"npm:lodash-es@4.17.21\"\n  }\n}",
+    "follow_up": "How do you decide when to loosen a version range again?"
+   },
+   {
+    "question": "What is the difference between externalizing a dependency and bundling it, and when would you externalize one?",
+    "answer": "Bundling includes the dependency in your output, while externalizing assumes it will be provided at runtime another way. You externalize for things like host-app shared libraries, CDN-delivered assets, or server-rendered environments where including the library twice is wasteful. The trade-off is smaller bundles and shared caching versus tighter deployment coupling and the risk that the runtime copy is missing or mismatched.",
+    "real_world": "This matters in microfrontend setups and in libraries published for consumption by other apps. A mismatch between the app’s runtime dependency and the bundle’s expectation can produce hard-to-debug runtime errors.",
+    "code_lang": "javascript",
+    "code": "module.exports = {\n  externals: {\n    react: 'React',\n  },\n};",
+    "follow_up": "What problems can happen if the host app and the bundle use different versions?"
+   },
+   {
+    "question": "How do you debug a Vite or Webpack build that suddenly becomes much slower after a dependency change?",
+    "answer": "First identify whether the slowdown is in dependency optimization, transpilation, type checking, minification, or source-map generation. Then compare before and after output, remove the suspected dependency, and check whether a plugin or loader started running on more files than expected. Build performance problems usually come from processing too much code, doing the same work repeatedly, or including expensive transforms that are unnecessary in that environment.",
+    "real_world": "A common incident is adding a large ESM package that causes a build tool to spend much longer scanning and transforming dependencies. Another is a loader rule accidentally matching vendor code and re-transpiling everything.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tooling or logs do you look at first to find the slow stage?"
+   },
+   {
+    "question": "What is code splitting, and how is it different from just adding more bundles?",
+    "answer": "Code splitting is intentionally dividing the dependency graph so that code is loaded only when needed, often through dynamic imports. Simply having more bundles does not guarantee a performance win if they are all loaded up front or if the split points are poor. Good splitting reduces initial download and parse time, but too many tiny chunks can increase request overhead and complexity.",
+    "real_world": "This is important for dashboards, editors, and routes that are not visible on first load. Teams often over-split and end up with many small requests that are worse than one well-sized bundle.",
+    "code_lang": "javascript",
+    "code": "button.addEventListener('click', async () => {\n  const mod = await import('./heavy-feature.js');\n  mod.run();\n});",
+    "follow_up": "How do route-based splits differ from component-based splits?"
+   },
+   {
+    "question": "What are the risks of putting application secrets or server-only values into frontend environment variables?",
+    "answer": "Anything shipped to the browser should be treated as public, even if it comes from an environment variable at build time. Secrets exposed in frontend code can be inspected from the bundle, network tab, or source maps. The right approach is to keep secrets on the server and expose only non-sensitive configuration needed by the client.",
+    "real_world": "This often happens when a team uses a build-time API key or private token in a frontend app and later discovers it was embedded in the distributed JavaScript. It can lead to credential leaks or unauthorized API usage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you separate build-time config from runtime config in a frontend app?"
+   },
+   {
+    "question": "When would you prefer a plugin over a loader in Webpack, and what is each one responsible for?",
+    "answer": "Use a loader when you need to transform a specific file type as it is imported, such as transpiling or converting assets. Use a plugin when you need to tap into the bundler lifecycle or affect the build as a whole, such as emitting files, defining globals, or generating HTML. Loaders are about per-file transformation; plugins are about build orchestration and compilation behavior.",
+    "real_world": "A common mistake is trying to solve a compilation-wide problem with a loader, which makes the rule fragile and hard to reason about. In larger projects, keeping these responsibilities separate makes the build easier to maintain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can a single build feature require both a loader and a plugin?"
+   },
+   {
+    "question": "How do you approach debugging a failing frontend build that works locally but fails in CI?",
+    "answer": "Start by comparing Node version, package manager version, and install method, because CI often uses a clean environment while local machines reuse cached state. Then inspect whether the failure is due to a missing optional dependency, a case-sensitive import path, a different environment variable, or a lockfile mismatch. The main goal is to make local and CI runs as close as possible so failures are reproducible before merge.",
+    "real_world": "This is one of the most common release blockers in frontend teams. A build that passes on a developer laptop but fails in CI usually points to hidden state or environment assumptions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes would you make to keep CI and local builds deterministic?"
+   },
+   {
+    "question": "How would you decide between using Vite and Webpack for a new frontend project?",
+    "answer": "I’d start from the project shape and team needs. Vite is usually a better default for modern app development because it is simpler to configure and gives fast dev startup, while Webpack is still a good fit when you need a very mature plugin ecosystem or an existing complex setup. The trade-off is usually convenience and speed versus deep customization and legacy compatibility.",
+    "real_world": "A team migrating a dashboard from an older stack may keep Webpack because of a custom asset pipeline, while a greenfield SPA can usually move faster with Vite. In reviews, this choice affects how quickly new developers can run and change the app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are examples of cases where Vite is not the best fit?"
+   },
+   {
+    "question": "What causes a frontend build to start failing only after a package upgrade, even though the app still runs in development?",
+    "answer": "That usually means the production build is exercising a different code path, stricter module resolution, or a minifier/transpilation step that dev mode does not. A package upgrade can also change its entry points, export shape, or browser support assumptions. I’d check the build output, the package’s release notes, and whether the app relies on undocumented behavior.",
+    "real_world": "This often shows up when a library changes from CommonJS to ESM or stops shipping a browser-ready build. Teams notice it only when release builds break in CI or after deployment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you isolate whether the problem is in your code or in the upgraded dependency?"
+   },
+   {
+    "question": "What is the difference between CommonJS and ES modules from the point of view of a frontend bundler?",
+    "answer": "ES modules have static import/export syntax, so bundlers can analyze them more accurately for tree shaking and dependency graphs. CommonJS uses runtime `require` and `module.exports`, which makes static analysis harder and sometimes forces compatibility transforms. In practice, mixed module formats can affect bundle size, build speed, and whether a package works cleanly in the browser build.",
+    "real_world": "This comes up when a library publishes both formats or when a project imports a Node-oriented package into the browser bundle. Build tools may warn, transform, or fail depending on how the package is packaged.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does that affect named imports from a CommonJS package?"
+   },
+   {
+    "question": "How do you choose between importing a large utility library as a whole versus importing only the functions you need?",
+    "answer": "Prefer the smallest import shape that still keeps the code maintainable, because whole-library imports can pull in dead code or block tree shaking depending on the package format. Named, per-function imports are often better for bundle size, but they can be awkward if the package’s API is not designed for it. I’d check the generated bundle rather than assume the import style is equivalent.",
+    "real_world": "A common production issue is a bundle that grows by hundreds of kilobytes after someone changes one import line. This matters most on mobile or slow networks, where a small import decision affects load time.",
+    "code_lang": "javascript",
+    "code": "// Better if the package supports it\nimport debounce from 'lodash/debounce';\n\n// Often worse for bundle size\nimport _ from 'lodash';\nconst debounced = _.debounce(fn, 200);",
+    "follow_up": "How can you verify whether tree shaking is actually removing unused code?"
+   },
+   {
+    "question": "What do you look for when a Vite or Webpack app loads slowly in development before you even touch the page?",
+    "answer": "I look at dependency count, expensive plugins, large pre-bundled packages, and whether source maps or type checking are happening in the main process. Slow startup is often caused by scanning too many modules, overly broad file watching, or a dependency that forces extra transforms. The goal is to separate dev-server startup cost from browser render cost.",
+    "real_world": "Teams feel this as a long wait after every restart, which makes debugging painful. It often appears after adding a big design system or a workspace package.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What concrete metrics or logs would you use to find the slow step?"
+   },
+   {
+    "question": "How would you handle a third-party package that ships untranspiled modern JavaScript and breaks in older browsers?",
+    "answer": "I’d either transpile that dependency as part of the build or replace it with one that publishes browser-compatible output. The key is that `node_modules` is not always safe to exclude from transpilation if a package targets newer syntax than your support matrix allows. This is a compatibility decision, not just a build performance decision.",
+    "real_world": "This often shows up when a package starts using optional chaining or newer syntax and users on older browsers get a blank page. Teams usually catch it through browser testing or production error reports.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the downsides of transpiling dependencies?"
+   },
+   {
+    "question": "When would you use an npm workspace setup, and what problem does it solve?",
+    "answer": "Workspaces are useful when one repository contains multiple related packages or apps that need to share code and versioning. They reduce duplication by linking packages together locally and make it easier to run install and scripts from the root. The trade-off is more coordination around dependency boundaries and release management.",
+    "real_world": "A team with a web app, a component library, and a shared utilities package can keep them in one repo and test changes together. Without workspaces, they often end up copying code or juggling local package installs.",
+    "code_lang": "json",
+    "code": "{\n  \"private\": true,\n  \"workspaces\": [\"packages/*\", \"apps/*\"]\n}",
+    "follow_up": "How do workspaces change how you debug dependency version conflicts?"
+   },
+   {
+    "question": "How do you debug a bundle that suddenly got much larger after a code change?",
+    "answer": "I’d compare the bundle before and after, then identify which modules were added or grew the most. Common causes are importing from a broader entry point, pulling in a side-effectful module, or accidentally including a development-only dependency in production code. The important part is to confirm whether the size change is from code, duplicated dependencies, or a lost optimization.",
+    "real_world": "A bundle-size regression can quietly hurt conversion rates or increase mobile crash rates after deployment. Teams often catch it in CI with a size budget or during release review.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether the regression is caused by one dependency or by many small changes?"
+   },
+   {
+    "question": "How do frontend tests interact with your build toolchain, and what usually breaks when the configuration is wrong?",
+    "answer": "Tests often need the same module resolution, aliases, transforms, and environment setup as the app build. If the test runner does not match the build config, imports may fail, CSS or asset mocks may be wrong, or modern syntax may not be transformed consistently. A good setup keeps shared config where possible so the app and tests see the same module graph behavior.",
+    "real_world": "This shows up when a component test passes in Vite but fails in Jest, or when a mock path works in the app but not in tests. It slows teams down because they have to debug tooling instead of product code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you share between build and test config, and what should stay separate?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Walk me through what actually happens when Vite serves a module in development, from the browser request to transformed code coming back.",
+    "answer": "Vite uses the browser’s native ESM graph in dev, so it serves source files on demand instead of pre-bundling the whole app. When the browser requests a module, Vite resolves the import, runs it through its plugin pipeline, rewrites import specifiers, and returns JavaScript the browser can execute directly. Dependencies are usually pre-bundled separately to reduce request count and handle CommonJS interop. The trade-off is very fast startup and targeted invalidation, but more dependence on browser module loading and correct module graph bookkeeping.",
+    "real_world": "This matters when a page reload triggers hundreds of network requests or when a plugin unexpectedly transforms the same file twice. Teams hit subtle bugs when virtual modules, aliases, and symlinked packages change how Vite resolves the graph.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does Vite pre-bundle dependencies with esbuild instead of just serving every dependency file as-is?"
+   },
+   {
+    "question": "How does Webpack decide which modules end up in which chunk, and what are the main levers you use to control that?",
+    "answer": "Webpack starts from entry points, builds a dependency graph, and then applies chunking rules based on static entries, dynamic imports, runtime boundaries, and optimization settings such as splitChunks. Shared modules can be extracted into separate chunks, and async import boundaries usually create additional chunks automatically. The levers are entry design, dynamic import placement, cache group rules, and whether you want a single runtime or multiple runtimes. The trade-off is between cache reuse and fewer duplicated bytes versus more requests and more complex loading behavior.",
+    "real_world": "A common production issue is accidentally creating many tiny async chunks that increase latency more than they save in transfer size. Another is over-aggressive vendor splitting that causes cache churn because supposedly shared chunks change on every deploy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals tell you your splitChunks strategy is over-splitting or under-splitting?"
+   },
+   {
+    "question": "What are the failure modes around content hashing and long-term caching in frontend builds?",
+    "answer": "Content hashing works only if chunk contents and references are stable, so small changes should not invalidate unrelated assets. Failures happen when runtime manifests, module ID assignment, banner timestamps, or non-deterministic plugin output make hashes churn across builds. That defeats CDN and browser caching because users redownload large files that did not meaningfully change. Good setups isolate the runtime, keep module and chunk IDs deterministic, and verify repeatable builds for identical source input.",
+    "real_world": "Teams often notice this as a traffic spike after every deploy even when application code barely changed. In incident reviews, the cause is often that one config change made the main vendor chunk hash change on every build.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prove whether a build is deterministic or not?"
+   },
+   {
+    "question": "If a package has side effects, how does that affect tree shaking, and what can go wrong if the metadata is wrong?",
+    "answer": "Tree shaking is safest when modules are statically analyzable and unused imports can be dropped without changing behavior. If a package performs work at module top level, registers globals, or patches prototypes, the bundler may need to keep imports even when no exports are used. Marking a package as side-effect free when it is not can remove required code and cause production-only bugs; marking everything as having side effects leaves dead code in the bundle. The key is accurate package metadata and keeping top-level module behavior minimal.",
+    "real_world": "This shows up when a CSS import, polyfill, or analytics registration disappears only in production builds. A team may pass all dev testing but ship a broken minified bundle because the optimizer removed what looked unused.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you audit a third-party package before trusting its sideEffects metadata?"
+   },
+   {
+    "question": "What are the hard parts of mixing ESM and CommonJS in a modern frontend build, beyond just syntax differences?",
+    "answer": "The real issues are semantics and static analysis. CommonJS can compute exports dynamically and load conditionally, which makes tree shaking and precise dependency analysis weaker than with ESM. Default import behavior can also differ depending on interop rules, and packages with dual builds may expose different code through different resolution conditions. That means the same dependency can behave differently in dev, test, and production if the toolchain resolves different entry points.",
+    "real_world": "A common incident is a package working in Vite dev but breaking in SSR, Jest, or a Webpack production build because each environment picked a different module format or export map path.",
+    "code_lang": "javascript",
+    "code": "// cjs.js\nmodule.exports = { value: 1 }\n\n// esm.js\nimport foo from './cjs.js'\nconsole.log(foo.value)",
+    "follow_up": "How do package exports and conditional exports change the resolution story here?"
+   },
+   {
+    "question": "How would you reason about the cost of source maps in production, both for build performance and operational risk?",
+    "answer": "Source maps add CPU, memory, and output size during build, especially for large minified bundles, because the tool has to preserve mappings through many transforms. Operationally, publishing them can greatly improve debugging, but it can also expose source structure if they are publicly accessible. The decision is usually whether to generate full maps, hidden maps, or none, based on incident response needs and how artifacts are distributed. For large apps, source map generation can be a meaningful share of total build time.",
+    "real_world": "Teams often discover their slowest CI step is minification plus source map generation, not transpilation. On the security side, public source maps have exposed internal comments, API paths, and implementation details through misconfigured CDNs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose hidden source maps over fully public ones?"
+   },
+   {
+    "question": "What is module federation or remote loading trying to solve, and what trade-offs would make you avoid it?",
+    "answer": "It lets independently deployed frontend parts share runtime-loaded modules, which is useful when multiple teams need separate release cadences without republishing a single bundle. The trade-offs are runtime coupling, version negotiation complexity, more failure modes at startup, and harder local development and observability. Shared dependencies can reduce duplicate downloads, but mismatches can also cause subtle runtime bugs. I would avoid it unless organizational boundaries and deployment independence clearly outweigh the operational complexity.",
+    "real_world": "In production, a remote entry timing out or serving an incompatible shared React version can break only one route and be hard to reproduce. Teams adopt it when dozens of deployments across business units make a single coordinated frontend release impractical.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a federated frontend fail gracefully when a remote is unavailable?"
+   },
+   {
+    "question": "What are the main causes of memory spikes or out-of-memory failures in frontend builds, and how do you investigate them?",
+    "answer": "Large module graphs, expensive source maps, parallel minification, huge JSON or asset imports, and plugins that keep too much state can all blow up memory. I first identify whether the spike is during dependency install, graph construction, transpilation, or minification, then narrow it with build profiles, reduced parallelism, and plugin isolation. Incremental or cached builds can hide the issue locally, so CI often exposes it first. The fix is usually structural: reduce graph size, split work, stream assets differently, or remove pathological plugins.",
+    "real_world": "A classic failure is a build passing on a developer laptop but being killed in a constrained CI container during minification. Another is importing generated locale data or design tokens as giant JS objects and doubling heap usage unexpectedly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of imports or plugin patterns have you seen create disproportionate heap usage?"
+   },
+   {
+    "question": "How do you think about symlinks, workspaces, and linked packages in Vite or Webpack, and why do they cause strange bugs?",
+    "answer": "Symlinks change module identity and resolution roots, so the same dependency can be included more than once if the tool treats linked packages as separate trees. That is especially painful for singleton libraries like React, where duplicate copies can break hooks or context. Workspaces help by hoisting and keeping versions aligned, but bundler resolution still needs to be configured consistently for aliases, preserve-symlinks behavior, and dependency optimization. The underlying issue is whether two import paths resolve to the same physical package instance.",
+    "real_world": "Teams often hit this when a locally linked design system works until hooks throw invalid usage errors because app and library each bundled their own React. It also appears as CSS duplication or two copies of a state library with isolated stores.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you confirm that duplicate React copies are the actual cause of a runtime bug?"
+   },
+   {
+    "question": "Suppose your CI sometimes publishes broken frontend assets even though the build step itself succeeded. What failure modes in the build-and-deploy pipeline would you look for?",
+    "answer": "I would check for non-atomic deploys, partial uploads, HTML pointing at assets from a different build, CDN propagation races, and cleanup jobs deleting still-referenced files. Frontend deploy correctness depends on the build output being treated as an immutable set, especially when filenames are content-hashed. If HTML or server templates go live before all referenced assets are available everywhere, users get intermittent 404s or chunk load errors. The fix is usually atomic release semantics, immutable asset storage, and keeping old assets available until no active HTML references them.",
+    "real_world": "This is a common production incident with SPAs: users who loaded an old shell try to fetch a lazily loaded chunk that was deleted during deploy. Another variant is multi-region object storage where one region serves the new index.html before the corresponding JS files have replicated.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What rollout strategy would you use to avoid chunk load errors during zero-downtime deploys?"
+   },
+   {
+    "question": "How does Vite pre-bundling with esbuild actually help dev-server performance, and what kinds of dependency graphs still make it struggle?",
+    "answer": "Vite pre-bundles dependencies to turn many small or CommonJS-heavy packages into a smaller set of ESM modules the browser can load efficiently. That avoids repeated on-demand transforms and cuts request fan-out, especially for packages with deep internal imports. It still struggles when dependencies are highly dynamic, have many conditional entry paths, or invalidate often in a monorepo, because the optimizer has to rescan and rebuild its cache. The trade-off is fast steady-state dev against occasional expensive optimizer runs.",
+    "real_world": "A common incident is a repo that feels instant for one engineer and painfully slow for another because the dependency optimizer cache is invalidated by linked packages, lockfile churn, or differing Node environments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals tell you the bottleneck is dependency optimization rather than application HMR or browser rendering?"
+   },
+   {
+    "question": "When a Webpack build becomes CPU-bound, how do you figure out whether the time is going into parsing, transforming, chunk optimization, or minification?",
+    "answer": "I profile by phase instead of guessing: enable detailed build stats, compare incremental versus clean builds, and isolate expensive plugins or minimizers. Parsing and loader transforms usually scale with module count, while chunk optimization and minification spike later in the compilation and often correlate with large generated assets. A quick test is to disable minification or source maps and see if the wall time collapses. That tells you whether to reduce transpilation scope, cache transforms, or tune chunking and minimizers.",
+    "real_world": "In production repos, teams often blame Babel when the real cost is terser or source-map generation on a few very large chunks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics from Webpack stats do you actually inspect first?"
+   },
+   {
+    "question": "What can go wrong with persistent build caches in Vite or Webpack, and how do you make cache hits safe instead of flaky?",
+    "answer": "Persistent caches speed up rebuilds, but they can serve stale outputs if invalidation keys miss inputs like environment variables, Node version, linked package contents, loader options, or generated files. The worst failures are non-deterministic: one machine reuses bad artifacts while CI does a clean build and gets different output. Safe caching means making all real inputs part of the cache key, keeping tool versions pinned, and having a clean-build path in CI to catch drift. I also treat cache directories as disposable, never authoritative.",
+    "real_world": "Teams see \"works after deleting cache\" bugs because a plugin reads external config or filesystem state that the cache layer does not know about.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a cache key for a monorepo frontend build?"
+   },
+   {
+    "question": "How do export conditions in package.json affect frontend bundling, and why do they sometimes break only in one environment?",
+    "answer": "Export conditions let a package expose different entry points for browser, node, import, require, development, or production. Bundlers and runtimes do condition resolution differently enough that you can accidentally pick different code paths in dev, build, test, and SSR. That leads to subtle issues like using a Node-targeted file in the browser or a development build in production. The fix is to know which conditions your tool honors and verify resolution explicitly for the package that's failing.",
+    "real_world": "A package can work in client dev but fail in SSR because one path references window and another path references fs, and different condition sets select each file.",
+    "code_lang": "json",
+    "code": "{\n  \"exports\": {\n    \".\": {\n      \"browser\": \"./dist/browser.js\",\n      \"import\": \"./dist/index.mjs\",\n      \"require\": \"./dist/index.cjs\"\n    }\n  }\n}",
+    "follow_up": "How is this different from the older main and module fields in practice?"
+   },
+   {
+    "question": "In a large frontend monorepo, how do you prevent duplicated dependencies from silently ending up in the browser bundle?",
+    "answer": "I check for duplicates at the resolution layer first, not just in the final bundle, because multiple semver ranges, linked packages, or mismatched peer dependencies can pull in parallel copies. In the browser that can mean bigger bundles, duplicated polyfills, and worse, two copies of stateful libraries like React. Prevention is mostly dependency hygiene: align versions, enforce peers correctly, and use workspace constraints or overrides sparingly and deliberately. Then verify at bundle-analysis time that deduping actually happened.",
+    "real_world": "A classic production bug is invalid hook calls from shipping two React copies after introducing an internal package with the wrong dependency declaration.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between fixing this with package-manager resolution rules versus bundler aliases?"
+   },
+   {
+    "question": "What are the hard parts of running parallel frontend builds in CI, and how do race conditions show up even when each individual build is correct?",
+    "answer": "Parallel builds compete on shared state: output directories, cache folders, generated manifests, and package-manager stores. If two jobs write the same assets or mutate a shared cache without isolation, you get missing files, mixed manifests, or non-reproducible bundles that are hard to replay. The safest pattern is immutable inputs, isolated workspaces per job, and an explicit publish step that assembles artifacts after all builds finish. Concurrency helps throughput, but only when the filesystem and cache boundaries are designed for it.",
+    "real_world": "I've seen asset manifests point to files from another job because two targets emitted into the same directory and one overwrote the other's hashed files.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which build artifacts would you treat as append-only versus job-local?"
+   },
+   {
+    "question": "How do you decide whether to transpile dependencies in a frontend build, and what are the performance and correctness trade-offs?",
+    "answer": "By default I avoid transpiling all dependencies because it can multiply build time and memory usage, especially with Babel-based pipelines. I only include packages that need it: libraries shipping syntax the target browsers cannot run, problematic module formats, or code that relies on transforms like JSX or decorators. The trade-off is correctness versus cost; broad transpilation is safer for compatibility but can make dev and CI dramatically slower. The right answer is targeted allowlists with a clear browser support policy.",
+    "real_world": "A single dependency shipping modern syntax can break older browsers in production, but transpiling the whole dependency tree can turn a 30-second build into minutes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your answer differ between a Vite app and a Webpack app targeting legacy browsers?"
+   },
+   {
+    "question": "What is the purpose of an asset manifest in a frontend build, and what failure modes have you seen around it in production?",
+    "answer": "An asset manifest maps logical entry names to emitted files, usually hashed JS and CSS, so servers or templates can reference the right assets after each build. It becomes critical once filenames are content-hashed and chunks are split, because the server can no longer guess names. Failures happen when the manifest and uploaded files get out of sync, when multiple builds race and overwrite it, or when the backend caches an old manifest while the CDN serves new files. Then pages reference missing chunks and fail only after deploy.",
+    "real_world": "This often shows up as intermittent 404s for chunk files right after deployment, especially with blue-green or multi-region rollouts.",
+    "code_lang": "json",
+    "code": "{\n  \"app.js\": \"/assets/app.a1b2c3.js\",\n  \"app.css\": \"/assets/app.d4e5f6.css\"\n}",
+    "follow_up": "How would you deploy to avoid manifest-asset mismatches during a rolling release?"
+   },
+   {
+    "question": "If a package relies on top-level side effects just by being imported, what bundling and ordering problems can that create beyond tree shaking?",
+    "answer": "Top-level side effects make evaluation order matter, so splitting, lazy loading, or module deduplication can change behavior even when the code still type-checks and bundles. Problems show up when a module patches globals, registers custom elements, adds CSS, or mutates shared singletons, because moving it into a different chunk can delay or duplicate that effect. It also makes SSR and client hydration riskier if import order differs across environments. The fix is to isolate side-effectful imports and make initialization explicit where possible.",
+    "real_world": "A real production issue is a polyfill or global registration ending up in an async chunk, so the main app runs before the environment is patched.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect whether a side-effectful package was evaluated too late?"
+   },
+   {
+    "question": "How do you reason about npm lifecycle scripts as part of the build pipeline, and what risks do they introduce for reproducibility and security?",
+    "answer": "Lifecycle scripts are effectively code execution during install and publish, so they can change artifacts outside the visible build command. That hurts reproducibility when native binaries, generated files, or environment-dependent steps run implicitly on one machine but not another. It also increases supply-chain risk because transitive dependencies can execute scripts during installation. In mature pipelines, teams minimize script reliance, make required generation explicit in CI, and treat install-time execution as a security boundary.",
+    "real_world": "This matters when a package works locally because a postinstall generated files, but CI using a different install mode or cached artifacts never ran that script and the build fails later.",
+    "code_lang": "json",
+    "code": "{\n  \"scripts\": {\n    \"postinstall\": \"node scripts/generate.js\",\n    \"prepare\": \"npm run build\"\n  }\n}",
+    "follow_up": "What differences between local installs, CI installs, and publishing make these scripts especially tricky?"
+   }
+  ]
+ }
+}

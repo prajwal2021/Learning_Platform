@@ -1,0 +1,362 @@
+{
+  "slug": "daily-digest-runs-32-times",
+  "title": "The daily digest job runs 32 times every morning",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "cron",
+    "distributed-systems",
+    "idempotency",
+    "job-scheduling",
+    "kubernetes"
+  ],
+  "scenario": "At 08:00 UTC, users see 32 total copies of the daily digest row in their activity history: 1 intended row and 31 extra duplicate rows. Email sending is suppressed after the first email per user, so the mail volume did not increase. The service was scaled from 4 to 32 pods last night, and each pod runs the same in-process cron scheduler. The same uncoordinated scheduler existed before the scale-up, so earlier mornings likely produced 4 total copies, but the activity history view was not monitored closely enough to catch it. The digest job takes about 11 minutes and has no distributed lock and no idempotent output key.",
+  "goal": "Find the root cause, choose a safe production fix, and define how to prove the digest runs once per day per user.",
+  "concepts": [
+    {
+      "key": "pod",
+      "name": "Pod",
+      "summary": "A pod is a running instance of an application in Kubernetes. If an application is scaled to many pods, each pod runs its own copy of the process.",
+      "used_here": "The digest service has 32 running pods, and each one can run its own scheduler code."
+    },
+    {
+      "key": "in-process-cron",
+      "name": "In-process cron",
+      "summary": "An in-process cron is a timer inside an application process that runs code on a schedule. Every running copy of the process has its own timer unless the code coordinates with others.",
+      "used_here": "Each digest service pod has the same 08:00 scheduled task inside the app."
+    },
+    {
+      "key": "application-logs",
+      "name": "Application logs",
+      "summary": "Application logs record events emitted by a service while it runs. They can show which instance did a specific action and when it happened.",
+      "used_here": "Logs can show whether one pod or many pods started the digest job at 08:00."
+    },
+    {
+      "key": "database-rows",
+      "name": "Database rows",
+      "summary": "Database rows are records stored in a table. Duplicate rows happen when the system writes multiple records for the same logical event.",
+      "used_here": "The activity history table contains multiple digest rows for the same user and date."
+    },
+    {
+      "key": "singleton-job",
+      "name": "Singleton job",
+      "summary": "A singleton job is work that should run once for the whole system, not once per server. It needs coordination when the service has multiple replicas.",
+      "used_here": "The daily digest generation should happen once per digest date, not once per pod."
+    },
+    {
+      "key": "feature-flag",
+      "name": "Feature flag",
+      "summary": "A feature flag is a runtime setting that enables or disables behavior without changing code. It is often used to reduce risk during incidents.",
+      "used_here": "The scheduler can be disabled on general service pods during mitigation."
+    },
+    {
+      "key": "external-scheduler",
+      "name": "External scheduler",
+      "summary": "An external scheduler triggers scheduled work from outside the application replicas. Examples include platform schedulers, workflow systems, or a dedicated scheduler service.",
+      "used_here": "It is one possible way to keep the trigger separate from the horizontally scaled web pods."
+    },
+    {
+      "key": "job-queue",
+      "name": "Job queue",
+      "summary": "A job queue stores units of work so workers can claim and process them. A shared queue can coordinate work across many workers.",
+      "used_here": "It is considered as a durable place to put digest work before workers execute it."
+    },
+    {
+      "key": "unique-job-key",
+      "name": "Unique job key",
+      "summary": "A unique job key identifies one logical job so duplicate submissions can be rejected or collapsed. It is useful when multiple callers might try to create the same work.",
+      "used_here": "It is used in the scheduling design to avoid multiple copies of the same daily work item."
+    },
+    {
+      "key": "idempotency",
+      "name": "Idempotency",
+      "summary": "An idempotent operation can be retried or repeated without changing the final result after the first successful attempt. It is important when jobs can restart or run twice.",
+      "used_here": "Digest generation should not create extra user-visible rows if the job is retried or accidentally started twice."
+    },
+    {
+      "key": "unique-constraint",
+      "name": "Unique constraint",
+      "summary": "A unique constraint is a database rule that prevents two rows from having the same value for selected columns. It makes duplicate writes fail or become no-ops, depending on the write statement.",
+      "used_here": "It is part of the database-write design for digest activity rows."
+    },
+    {
+      "key": "upsert",
+      "name": "Upsert",
+      "summary": "An upsert is a database write that inserts a row or updates/ignores an existing matching row. It is commonly used with a unique constraint.",
+      "used_here": "It can make repeated digest row writes safe."
+    },
+    {
+      "key": "transaction",
+      "name": "Transaction",
+      "summary": "A transaction groups database changes so they commit together or roll back together. It prevents partially applied state when something fails.",
+      "used_here": "It matters when recording durable job state and related writes."
+    },
+    {
+      "key": "metrics",
+      "name": "Metrics",
+      "summary": "Metrics are numeric measurements collected over time, such as job starts or rows written. They help confirm behavior and trigger alerts.",
+      "used_here": "Metrics can show whether the digest is running once and whether duplicate rows stop appearing."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the scope of execution",
+      "question": "It is 08:10 UTC and the activity history table is filling with digest rows. What should you check first to determine whether this is one bad execution or many concurrent executions?",
+      "concept_keys": [
+        "application-logs",
+        "pod",
+        "in-process-cron",
+        "database-rows"
+      ],
+      "options": [
+        {
+          "text": "Inspect the email suppression logs to confirm that only one digest email was sent for each user.",
+          "correct": false,
+          "hint": "Email suppression tells you about the mail side effect, not how many producers wrote activity rows. The user-visible problem is in the activity history records.",
+          "id": "a"
+        },
+        {
+          "text": "Check browser requests to see whether clients refreshed the activity page and inserted rows repeatedly.",
+          "correct": false,
+          "hint": "Client refreshes can duplicate some workflows, but digest generation is described as a server-side scheduled job. Start where the write is initiated.",
+          "id": "b"
+        },
+        {
+          "text": "Look for slow database queries during the 11-minute job window to see if retries created extra rows.",
+          "correct": false,
+          "hint": "Retries can create duplicates, but first you need to know how many independent job executions started. A slow query view may miss the scheduler-level cause.",
+          "id": "c"
+        },
+        {
+          "text": "Group the 08:00 digest start and insert logs by pod name and compare them with the 32 running pods.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Grouping logs by pod directly tests whether the scheduled job ran once or once per replica. With 32 pods, seeing 32 separate 08:00 starts points to concurrent producers rather than one job retrying. The email logs are tempting because mail volume stayed normal, but suppression can hide duplicate emails while duplicate database writes still happen."
+    },
+    {
+      "title": "Identify the root cause",
+      "question": "You find that all 32 pods logged `daily_digest started` at 08:00 UTC and each pod inserted rows for the same digest date. What is the most likely root cause?",
+      "concept_keys": [
+        "pod",
+        "in-process-cron",
+        "singleton-job"
+      ],
+      "options": [
+        {
+          "text": "The 11-minute runtime overlaps with the next cron interval, so the same pod starts the digest repeatedly before finishing.",
+          "correct": false,
+          "hint": "Overlap is a real scheduling failure mode, but the job starts at 08:00 daily and the observed multiplier matches the pod count. Look at the number of producers, not just the duration.",
+          "id": "a"
+        },
+        {
+          "text": "A singleton scheduled task is running independently inside every service replica, with no coordination between replicas.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "The database isolation level allowed 32 transactions to read stale state and all decide to insert the same digest rows.",
+          "correct": false,
+          "hint": "Database isolation can matter, but the evidence says 32 separate scheduled executions started at the same minute. The cause begins before the insert statement.",
+          "id": "c"
+        },
+        {
+          "text": "The email suppression system acknowledged the first send too early and caused the application to retry the digest job.",
+          "correct": false,
+          "hint": "The mail system explains why users did not receive 32 emails. It does not explain why every pod started the scheduled work.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The multiplier matches the number of pods: 32 pods produced 32 total copies, meaning 1 intended row and 31 extras. A daily digest is a singleton job, but an in-process cron runs in every replica unless it is coordinated. The database isolation explanation is less likely because the logs already show 32 independent job starts before any row-level race matters."
+    },
+    {
+      "title": "Reconcile the earlier 4-pod behavior",
+      "question": "The team asks why the incident appeared only after scaling from 4 pods to 32 pods, since the same in-process cron existed before. What is the most accurate conclusion to guide the investigation?",
+      "concept_keys": [
+        "pod",
+        "in-process-cron",
+        "database-rows"
+      ],
+      "options": [
+        {
+          "text": "Before the scale-up there were probably 4 total copies per user per day, and the scale-up raised that to 32 total copies.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Before the scale-up duplicates were impossible because the email suppression system would also suppress database writes.",
+          "correct": false,
+          "hint": "The incident shows email suppression and activity history writes are separate side effects. Suppressing one does not prove the other was suppressed.",
+          "id": "b"
+        },
+        {
+          "text": "Before the scale-up there were 4 extra duplicate rows, and the scale-up added 32 extra duplicate rows.",
+          "correct": false,
+          "hint": "Be careful with totals versus extras. If one row is intended, the number of extra duplicates is one less than the number of total copies.",
+          "id": "c"
+        },
+        {
+          "text": "Before the scale-up there were no duplicates because Kubernetes runs an in-process cron on only one pod by default.",
+          "correct": false,
+          "hint": "Kubernetes does not automatically coordinate timers inside application processes. Each replica runs the same application code unless the app disables it.",
+          "id": "d"
+        }
+      ],
+      "explanation": "With 4 uncoordinated pods, the expected result was 4 total copies per user per day: 1 intended row and 3 extras. After scaling to 32 pods, the same bug became 32 total copies: 1 intended row and 31 extras. The tempting counting mistake is to call all 32 rows duplicates, but one of those rows is the intended digest row."
+    },
+    {
+      "title": "Stop tomorrow’s duplicate run",
+      "question": "You need a safe mitigation before tomorrow’s 08:00 UTC run while the durable design is being built. Which action best reduces risk without relying on timing luck?",
+      "concept_keys": [
+        "feature-flag",
+        "pod",
+        "in-process-cron",
+        "singleton-job"
+      ],
+      "options": [
+        {
+          "text": "Add a random 0 to 10 minute sleep before the digest job starts so one pod usually finishes first.",
+          "correct": false,
+          "hint": "Random delay reduces simultaneous starts but does not create ownership. Restarts, slow runs, and unlucky timing can still produce multiple writers.",
+          "id": "a"
+        },
+        {
+          "text": "Move half the pods to 08:05 and half the pods to 08:10 so the 08:00 spike is spread out.",
+          "correct": false,
+          "hint": "Spreading starts lowers the burst but still runs the same logical job multiple times. The problem is the number of executions, not only their timing.",
+          "id": "b"
+        },
+        {
+          "text": "Scale the whole service down to one pod from 07:55 to 08:15 and scale it back up after the job starts.",
+          "correct": false,
+          "hint": "This can reduce duplicates, but it couples user traffic capacity to a batch job and can fail if the 11-minute job is still running during scaling. Prefer isolating the scheduled behavior from request-serving replicas.",
+          "id": "c"
+        },
+        {
+          "text": "Disable the scheduler on all general service pods and run exactly one controlled scheduler instance for the digest.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Disabling the cron on all normal pods and running one controlled scheduler instance removes the per-replica multiplier for the next run. It is an operational mitigation, not the final design, but it does not depend on random sleeps or races. Scaling the whole service to one pod is tempting, but it risks production capacity and still mixes web serving with scheduled work."
+    },
+    {
+      "title": "Choose durable job execution",
+      "question": "The service already has a shared worker system. Which durable scheduling design best supports 32 web pods while ensuring only one daily digest job is created for a digest date?",
+      "concept_keys": [
+        "external-scheduler",
+        "job-queue",
+        "unique-job-key",
+        "transaction"
+      ],
+      "options": [
+        {
+          "text": "Let every web pod enqueue a digest job at 08:00, and have workers process the queue faster than duplicates can accumulate.",
+          "correct": false,
+          "hint": "A queue does not remove duplicates by itself. If every replica submits the same work, workers will still see many copies unless creation is coordinated.",
+          "id": "a"
+        },
+        {
+          "text": "Have the first worker that starts write a local file named for the digest date and skip the job if the file exists.",
+          "correct": false,
+          "hint": "Local files are not shared across pods and disappear when containers are replaced. Coordination state must be visible to all contenders.",
+          "id": "b"
+        },
+        {
+          "text": "Have an external trigger create one queue item with a deterministic job key for the digest date, recording that job durably before workers claim it.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Keep the in-process cron in every pod, but make each pod check its hostname and allow the lexicographically first hostname to run.",
+          "correct": false,
+          "hint": "Hostnames can change during deployments and restarts, and every pod may not have a consistent view of all peers. This is not a durable coordination mechanism.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A single durable queue item keyed by digest date lets many workers exist without creating many logical jobs. The uniqueness check must be in shared durable state, not in each pod’s memory or filesystem. Simply putting all 32 pod submissions into a queue is a common trap: it serializes work, but it does not make duplicate work disappear."
+    },
+    {
+      "title": "Make the output idempotent",
+      "question": "Even with one durable daily job, workers can crash and retry after writing some activity rows. What database change makes the digest row output safe to repeat?",
+      "concept_keys": [
+        "idempotency",
+        "unique-constraint",
+        "upsert",
+        "database-rows"
+      ],
+      "options": [
+        {
+          "text": "Rely on the email suppression key because it already prevents users from receiving more than one digest email.",
+          "correct": false,
+          "hint": "Email suppression protects the email side effect. The activity history table needs its own protection.",
+          "id": "a"
+        },
+        {
+          "text": "Add a deterministic uniqueness rule for the logical digest row and write with an insert-or-ignore or upsert pattern.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Before inserting each digest row, query whether a matching row exists and insert only when the query returns none.",
+          "correct": false,
+          "hint": "A separate check-then-insert can race when two attempts overlap. The database needs to enforce the rule at write time.",
+          "id": "c"
+        },
+        {
+          "text": "Run a cleanup task after the digest job that deletes duplicate activity rows created during retries.",
+          "correct": false,
+          "hint": "Cleanup can repair some damage after users see it, but it does not make the write path safe. Retried jobs should converge to the correct state immediately.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A uniqueness rule on the logical digest identity, combined with an upsert or insert-ignore write, makes repeated attempts converge to one row. This protects against retries, partial failures, and accidental overlapping executions. A check-then-insert is tempting, but without a database-enforced uniqueness rule two attempts can both observe no row and both insert."
+    },
+    {
+      "title": "Prove the fix worked",
+      "question": "After implementing the coordinated queue trigger and idempotent digest row writes, what verification plan best proves the production risk is reduced?",
+      "concept_keys": [
+        "metrics",
+        "job-queue",
+        "idempotency",
+        "database-rows"
+      ],
+      "options": [
+        {
+          "text": "Deploy the change and watch CPU usage during the 11-minute window to make sure the batch load is lower than before.",
+          "correct": false,
+          "hint": "Lower CPU can be a useful secondary signal, but it does not prove correctness. You need direct evidence about job cardinality and row cardinality.",
+          "id": "a"
+        },
+        {
+          "text": "Wait until the next morning and confirm that the email provider still sends only one digest email per user.",
+          "correct": false,
+          "hint": "The email provider did not expose the original failure. Verification must inspect the job and database effects that were broken.",
+          "id": "b"
+        },
+        {
+          "text": "Compare the number of running pods with the number of digest rows and accept the fix if the counts no longer match.",
+          "correct": false,
+          "hint": "The absence of a pod-count multiplier is helpful, but it is not enough. A broken scheduler could still create two or more jobs independent of pod count.",
+          "id": "c"
+        },
+        {
+          "text": "Run a staging test with 32 service instances and forced duplicate trigger attempts, then verify one queued job and one digest row per user and alert on any duplicate count above zero.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The verification should reproduce the old failure mode: many instances and multiple trigger attempts. Passing means the system creates one durable job for the date and the database stores one logical digest row per user, even under retries. Email-only verification is misleading because email suppression already hid the duplicate work during the incident."
+    }
+  ],
+  "takeaway": "Do not run singleton scheduled work independently inside every horizontally scaled replica. Use durable coordination for the job trigger and make the job’s outputs idempotent with database-enforced uniqueness. Mitigations can stop the next run, but the lasting fix must be safe under scaling, retries, restarts, and overlapping attempts.",
+  "review_issues": []
+}

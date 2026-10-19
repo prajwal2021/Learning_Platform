@@ -1,0 +1,2571 @@
+<title>Stage 4 Workbook</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column under a sticky step strip; each step reads as a worksheet: lead, steps, example, try it, check */
+:root {
+  --paper: #f3f5f7;
+  --surface: #ffffff;
+  --ink: #16202a;
+  --muted: #56636f;
+  --line: #d7dde4;
+  --line-strong: #98a5b2;
+  --tint: #e9edf1;
+  --accent: #1c6884;
+  --accent-soft: #dfedf3;
+  --on-accent: #ffffff;
+  --try: #94600f;
+  --try-soft: #faf0dc;
+  --try-line: #e3c48a;
+  --good: #2b7549;
+  --good-soft: #e1f1e6;
+  --bad: #ac4234;
+  --bad-soft: #f8e5e1;
+  --code-bg: #eef2f5;
+  --syn-kw: #1c6884;
+  --syn-str: #8a5710;
+  --syn-com: #6f7c88;
+  --syn-fn: #5a45ad;
+  --syn-num: #a0452f;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --radius: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f141a; --surface: #151c24; --ink: #e3e8ed; --muted: #9ba7b3; --line: #27313c; --line-strong: #52606e; --tint: #1b232c;
+    --accent: #6cb7d3; --accent-soft: #15303b; --on-accent: #0b1218; --try: #e3aa52; --try-soft: #2b2214; --try-line: #6a5226;
+    --good: #66c18c; --good-soft: #13281c; --bad: #ea8372; --bad-soft: #331b17; --code-bg: #121920;
+    --syn-kw: #6cb7d3; --syn-str: #e3aa52; --syn-com: #7f8b97; --syn-fn: #b6a8f2; --syn-num: #ea8372;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f141a; --surface: #151c24; --ink: #e3e8ed; --muted: #9ba7b3; --line: #27313c; --line-strong: #52606e; --tint: #1b232c;
+  --accent: #6cb7d3; --accent-soft: #15303b; --on-accent: #0b1218; --try: #e3aa52; --try-soft: #2b2214; --try-line: #6a5226;
+  --good: #66c18c; --good-soft: #13281c; --bad: #ea8372; --bad-soft: #331b17; --code-bg: #121920;
+  --syn-kw: #6cb7d3; --syn-str: #e3aa52; --syn-com: #7f8b97; --syn-fn: #b6a8f2; --syn-num: #ea8372;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 16.5px; line-height: 1.6; }
+.wrap { max-width: 780px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: var(--accent); text-underline-offset: 2px; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 0.3em; overflow-wrap: anywhere; }
+h1, h2 { font-family: var(--font-display); text-wrap: balance; letter-spacing: -0.01em; line-height: 1.15; }
+h2 { font-size: clamp(1.6rem, 4vw, 2rem); font-weight: 700; margin: 0.2rem 0 0.75rem; }
+h3 { font-size: 1.05rem; font-weight: 700; margin: 2rem 0 0.6rem; text-wrap: balance; }
+h4 { font-size: 1rem; margin: 0 0 0.35rem; }
+p { margin: 0 0 0.9rem; }
+ol, ul { margin: 0 0 1rem; padding-left: 1.4rem; }
+li { margin-bottom: 0.35rem; }
+li::marker { color: var(--muted); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* Masthead */
+.masthead { padding-block: 40px 28px; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 0.6rem; }
+.eyebrow .stage { color: var(--accent); font-weight: 600; }
+.masthead h1 { font-size: clamp(2.3rem, 7vw, 3.4rem); font-weight: 700; margin: 0; }
+.masthead .sub { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.15rem, 3vw, 1.4rem); color: var(--accent); margin: 0.2rem 0 1.1rem; }
+.masthead .lead { max-width: 64ch; }
+.progress { margin-top: 1.4rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 10px; }
+.progress-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
+.progress-head p { margin: 0; font-size: 0.9rem; color: var(--muted); }
+.meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 24px; }
+.meters > div { display: flex; flex-direction: column; justify-content: space-between; }
+.meter-label { display: flex; justify-content: space-between; gap: 8px; font-size: 0.92rem; margin-bottom: 4px; }
+.meter-label strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.meter-bar { height: 8px; background: var(--tint); border-radius: 99px; overflow: hidden; }
+.meter-bar span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width 0.3s ease; }
+.reset-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.9rem; }
+
+/* Sticky section strip */
+.strip { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); border-block: 1px solid var(--line); }
+.strip-inner { display: flex; gap: 6px; overflow-x: auto; padding-block: 8px; scrollbar-width: thin; }
+.strip a { flex: 0 0 auto; font-family: var(--font-mono); font-size: 0.8rem; text-decoration: none; color: var(--ink); border: 1px solid var(--line); background: var(--surface); padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+.strip a:hover { border-color: var(--accent); }
+.strip a[aria-current="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+/* Sections */
+section { padding-block: 44px 20px; border-bottom: 1px solid var(--line); scroll-margin-top: 56px; }
+.step-num { font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent); letter-spacing: 0.04em; margin: 0; }
+.lead { font-size: 1.06rem; }
+.note { color: var(--muted); font-size: 0.93rem; }
+
+/* Reading levels: Basics, Going deeper, Scenario */
+.level { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin: 1.6rem 0 1.4rem; min-width: 0; }
+.level-label { display: inline-block; font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 0.2rem; }
+.level h3 { margin: 0 0 0.6rem; }
+.level > *:last-child { margin-bottom: 0; }
+.levels-key { list-style: none; padding: 0; display: grid; gap: 6px; }
+.levels-key li { margin: 0; padding-left: 0; }
+.levels-key .level-label { margin-right: 6px; }
+
+/* Code */
+.code { position: relative; margin: 0 0 1.1rem; }
+.code pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; overflow-x: auto; font-family: var(--font-mono); font-size: 13.2px; line-height: 1.55; }
+.code pre code { background: none; border: 0; padding: 0; font-size: inherit; overflow-wrap: normal; }
+.code-file { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); margin: 0 0 4px; }
+.copy { position: absolute; top: 8px; right: 8px; font: 600 0.75rem var(--font-body); color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+.copy:hover { color: var(--accent); border-color: var(--accent); }
+.hljs-keyword, .hljs-built_in, .hljs-literal { color: var(--syn-kw); }
+.hljs-string { color: var(--syn-str); }
+.hljs-comment, .hljs-meta { color: var(--syn-com); font-style: italic; }
+.hljs-title, .hljs-title.function_, .hljs-title.class_ { color: var(--syn-fn); }
+.hljs-number { color: var(--syn-num); }
+.hljs-attr, .hljs-variable { color: var(--syn-kw); }
+
+/* Tabs */
+.tabs { margin: 0 0 1.1rem; }
+.tablist { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.tablist button { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.tablist button[aria-selected="true"] { color: var(--ink); background: var(--surface); border-color: var(--line-strong); font-weight: 600; }
+
+/* Tables */
+.table-scroll { overflow-x: auto; margin: 0 0 1.1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.93rem; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { background: var(--tint); font-weight: 700; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.gap { background: var(--bad-soft); color: var(--bad); font-weight: 700; }
+td.filled { background: var(--good-soft); }
+td.nowrap { white-space: nowrap; }
+
+/* Check lists */
+ul.checks { list-style: none; padding-left: 0; }
+ul.checks li { position: relative; padding-left: 1.6rem; }
+ul.checks li::before { content: ""; position: absolute; left: 0.15rem; top: 0.42em; width: 0.8rem; height: 0.8rem; border: 1.5px solid var(--line-strong); border-radius: 3px; }
+
+/* Try it */
+.try { background: var(--try-soft); border: 1px solid var(--try-line); border-radius: var(--radius); padding: 16px; margin: 1.6rem 0 1.4rem; }
+.try-label { display: inline-block; font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--try); margin: 0 0 0.3rem; }
+.try > p { font-size: 0.95rem; }
+.quiz { display: grid; gap: 10px; }
+.q-item { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-width: 0; }
+.q-prompt { margin: 0 0 8px; }
+.q-prompt pre { margin: 0; white-space: pre-wrap; font-family: var(--font-mono); font-size: 12.8px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.q-prompt .q-note { display: block; color: var(--muted); font-size: 0.88rem; margin-top: 4px; }
+.q-options { display: flex; flex-wrap: wrap; gap: 6px; }
+.opt { font: inherit; font-size: 0.9rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 99px; padding: 5px 12px; cursor: pointer; text-align: left; }
+.opt.mono { font-family: var(--font-mono); font-size: 0.8rem; }
+.opt:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
+.opt[disabled] { cursor: default; }
+.opt.is-correct { background: var(--good-soft); border-color: var(--good); color: var(--ink); font-weight: 700; }
+.opt.is-wrong { background: var(--bad-soft); border-color: var(--bad); color: var(--ink); text-decoration: line-through; }
+.q-feedback { margin: 8px 0 0; font-size: 0.92rem; }
+.q-feedback:empty { display: none; }
+.q-feedback .tag { font-weight: 700; }
+.q-feedback .tag.ok { color: var(--good); }
+.q-feedback .tag.no { color: var(--bad); }
+.quiz-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.score { margin: 0; font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+.btn { font: 600 0.88rem var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+.btn:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
+.btn[disabled] { opacity: 0.45; cursor: default; }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.btn.primary:hover:not([disabled]) { color: var(--on-accent); filter: brightness(1.08); }
+.btn.link { border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; font-weight: 400; }
+
+/* Figures */
+figure { margin: 1.4rem 0; }
+figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 8px; }
+figcaption strong { color: var(--ink); }
+.fig-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; }
+.fig-scroll svg { display: block; width: 100%; min-width: 600px; height: auto; font-family: var(--font-body); }
+.d-box { fill: none; stroke: var(--line-strong); stroke-width: 1.25; }
+.d-tint { fill: var(--tint); stroke: var(--line-strong); stroke-width: 1.25; }
+.d-accent { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+.d-edge { fill: none; stroke: var(--line-strong); stroke-width: 1.25; }
+.d-dash { stroke-dasharray: 5 4; }
+.d-head { fill: var(--line-strong); }
+.d-text { fill: var(--ink); font-size: 12.5px; }
+.d-quiet { fill: var(--muted); font-size: 11.5px; }
+.d-name { fill: var(--ink); font-size: 13px; font-weight: 700; }
+
+/* Figure 1: step map */
+.stepmap { list-style: none; padding: 0; margin: 1.2rem 0 0.4rem; display: grid; gap: 0; }
+.stepmap li { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); position: relative; padding-bottom: 14px; }
+.stepmap li:not(:last-child)::after { content: ""; position: absolute; left: 26px; bottom: 0; height: 14px; border-left: 1.5px solid var(--line-strong); }
+.sm-card { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: start; gap: 4px; text-decoration: none; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px 10px 0; }
+a.sm-card:hover { border-color: var(--accent); }
+.sm-num { font-family: var(--font-mono); font-weight: 600; color: var(--accent); text-align: center; padding-top: 1px; }
+.sm-name { display: block; font-weight: 700; }
+.sm-out { display: block; color: var(--muted); font-size: 0.92rem; }
+.sm-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.sm-in, .sm-guide { display: inline-block; font-size: 0.8rem; border: 1px solid var(--line); border-radius: 99px; padding: 1px 9px; color: var(--ink); }
+.sm-in { background: var(--tint); }
+.sm-guide { background: var(--surface); font-family: var(--font-mono); font-size: 0.74rem; color: var(--muted); }
+.stepmap li.sm-next .sm-card { background: var(--accent-soft); border: 2px solid var(--accent); }
+
+/* Figure 3: request trace */
+.trace { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+.trace-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.seg button { font: 0.84rem var(--font-body); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.trace-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
+.lane { display: grid; gap: 6px; }
+.layer { border: 1.5px solid var(--line); border-radius: var(--radius); padding: 8px 12px; background: var(--paper); transition: border-color 0.2s, background-color 0.2s, opacity 0.2s; }
+.layer .l-name { font-weight: 700; font-size: 0.93rem; }
+.layer .l-file { font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); }
+.layer.is-on { border-color: var(--accent); background: var(--accent-soft); }
+.layer.is-off { opacity: 0.45; }
+.layer.is-off .l-name::after { content: "  not reached"; font-weight: 400; font-size: 0.78rem; color: var(--muted); }
+.layer.deps { border-style: dashed; }
+.lane-arrow { text-align: center; color: var(--line-strong); font-size: 0.8rem; line-height: 1; }
+.layer .side-note { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+.narration { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; min-height: 5.5em; }
+.narration .n-count { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); margin: 0 0 2px; }
+.narration p { margin: 0; }
+.status-chip { display: inline-block; margin-top: 6px; font-family: var(--font-mono); font-size: 0.8rem; border-radius: 99px; padding: 1px 10px; border: 1px solid var(--line); }
+.status-chip.good { background: var(--good-soft); border-color: var(--good); }
+.status-chip.bad { background: var(--bad-soft); border-color: var(--bad); }
+.trace-nav { display: flex; gap: 8px; }
+
+/* Folder explorer */
+.explorer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+.tree { list-style: none; padding: 0; margin: 0; font-family: var(--font-mono); font-size: 0.82rem; min-width: 0; }
+.tree li { margin: 0; }
+.tree button { display: block; width: 100%; text-align: left; font: inherit; color: var(--ink); background: none; border: 0; border-radius: 4px; padding: 3px 6px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tree button:hover { background: var(--tint); }
+.tree button[aria-pressed="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+.tree .d1 { padding-left: 20px; } .tree .d2 { padding-left: 36px; } .tree .d3 { padding-left: 52px; }
+.tree .later { color: var(--muted); }
+.tree .new::after { content: "new"; margin-left: 6px; font-family: var(--font-body); font-size: 0.7rem; color: var(--accent); border: 1px solid var(--accent); border-radius: 99px; padding: 0 5px; }
+.detail { border-left: 1px solid var(--line); padding-left: 14px; min-width: 0; }
+.detail .d-path { font-family: var(--font-mono); font-weight: 600; margin: 0 0 6px; overflow-wrap: anywhere; }
+.detail dl { margin: 0; display: grid; gap: 6px; }
+.detail dt { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.detail dd { margin: 0; font-size: 0.93rem; }
+
+/* Figure 6 and 7 flows, and the pull request chain */
+.flow { display: grid; gap: 0; margin: 1.2rem 0 0.4rem; }
+.flow-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 0 14px; align-items: center; }
+.flow-q, .flow-a, .flow-end { border-radius: var(--radius); padding: 10px 12px; }
+.flow-q { background: var(--surface); border: 1px solid var(--line-strong); }
+.flow-q .q { font-weight: 700; display: block; }
+.flow-q .ex { font-size: 0.86rem; color: var(--muted); }
+.flow-a { background: var(--tint); border: 1px solid var(--line-strong); position: relative; }
+.flow-a::before { content: "yes"; position: absolute; left: -14px; top: 50%; transform: translate(-50%, -150%); font-size: 0.75rem; color: var(--muted); }
+.flow-a .a { font-weight: 700; display: block; font-size: 0.93rem; }
+.flow-a code { font-size: 0.8rem; }
+.flow-no { font-size: 0.75rem; color: var(--muted); padding: 4px 0 4px 18px; border-left: 1.5px solid var(--line-strong); margin-left: 24px; }
+.flow-end { background: var(--surface); border: 1px solid var(--line-strong); }
+.chain { list-style: none; padding: 0; margin: 1.2rem 0 0.4rem; display: grid; gap: 0; }
+.chain li { margin: 0; position: relative; padding-bottom: 12px; }
+.chain li:not(:last-child)::after { content: ""; position: absolute; left: 24px; bottom: 0; height: 12px; border-left: 1.5px solid var(--line-strong); }
+.chain .c-card { background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 10px 12px; }
+.chain .c-card.end { background: var(--accent-soft); border: 2px solid var(--accent); }
+.chain .c-name { font-weight: 700; display: block; }
+.chain .c-aside { margin-top: 8px; font-size: 0.86rem; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 6px; }
+
+/* Checkpoint and branch rule ticks */
+.ck-list { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: 8px; }
+.ck-list li { margin: 0; }
+.ck { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; }
+.ck input { width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--accent); }
+.ck .ck-item { font-weight: 700; display: block; }
+.ck .ck-how { display: block; font-size: 0.9rem; color: var(--muted); }
+.ck .wb { font-weight: 400; font-size: 0.8rem; color: var(--try); }
+.ck:has(input:checked) { border-color: var(--good); background: var(--good-soft); }
+
+/* Details */
+details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; margin: 0 0 10px; }
+details > summary { cursor: pointer; font-weight: 700; }
+details[open] > summary { margin-bottom: 8px; }
+details > *:last-child { margin-bottom: 0; }
+.qa summary { font-weight: 400; }
+.qa summary .qn { font-family: var(--font-mono); color: var(--accent); margin-right: 6px; }
+
+.sources { list-style: none; padding: 0; }
+.sources li { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 4px; }
+.sources .sn { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); padding-top: 2px; }
+.sources a { overflow-wrap: anywhere; }
+
+footer { padding-block: 28px 48px; color: var(--muted); font-size: 0.88rem; }
+
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  .explorer { grid-template-columns: minmax(0, 1fr); }
+  .detail { border-left: 0; border-top: 1px solid var(--line); padding-left: 0; padding-top: 10px; }
+  .flow-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .flow-a { margin-left: 24px; }
+  .flow-a::before { left: -14px; top: -2px; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
+}
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <p class="eyebrow"><span class="stage">Stage 4 of 10</span> &middot; Core Build Starter Guide 3.1</p>
+    <h1>Stage 4 Workbook</h1>
+    <p class="sub">Structure the backend</p>
+    <p class="lead">Stage 4 ends with a repository that holds the lock files, a protected main branch with CI, the folder tree, the interfaces and a main.py index, and a design that an AI assistant has critiqued. This workbook breaks the stage into eight steps, 4.1 to 4.8. Each step has how to do it, the User Notices files it produces, an exercise, and how to check it. No function bodies are written in Stage 4; Stage 5 writes them from the interfaces.</p>
+    <div class="progress" aria-label="Your progress">
+      <div class="progress-head">
+        <strong>Your progress</strong>
+        <p>Saved in this browser only</p>
+      </div>
+      <div class="meters">
+        <div>
+          <div class="meter-label"><span>Exercises finished</span><strong id="m-ex-text">0 of 9</strong></div>
+          <div class="meter-bar"><span id="m-ex-bar"></span></div>
+        </div>
+        <div>
+          <div class="meter-label"><span>Branch rule settings ticked</span><strong id="m-br-text">0 of 8</strong></div>
+          <div class="meter-bar"><span id="m-br-bar"></span></div>
+        </div>
+        <div>
+          <div class="meter-label"><span>Checkpoint items ticked</span><strong id="m-ck-text">0 of 11</strong></div>
+          <div class="meter-bar"><span id="m-ck-bar"></span></div>
+        </div>
+      </div>
+      <div class="reset-row">
+        <button type="button" class="btn link" id="reset-ask">Clear my answers and ticks</button>
+        <span id="reset-confirm" hidden>Clear everything? <button type="button" class="btn" id="reset-yes">Clear</button> <button type="button" class="btn" id="reset-no">Keep</button></span>
+        <span id="reset-done" class="note" hidden>Cleared.</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="strip" aria-label="Sections">
+  <div class="wrap strip-inner" id="strip">
+    <a href="#overview">Overview</a>
+    <a href="#start">Before you start</a>
+    <a href="#s41">4.1 Repository</a>
+    <a href="#s42">4.2 Branch rules</a>
+    <a href="#s43">4.3 Pattern</a>
+    <a href="#s44">4.4 Folders</a>
+    <a href="#s45">4.5 Interfaces</a>
+    <a href="#s46">4.6 Injection</a>
+    <a href="#s47">4.7 Index</a>
+    <a href="#s48">4.8 Critique</a>
+    <a href="#checkpoint">Checkpoint</a>
+    <a href="#practice">Practice</a>
+    <a href="#selfcheck">Self-check</a>
+    <a href="#sources">Sources</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="overview" aria-labelledby="h-overview">
+  <div class="wrap">
+    <p class="step-num">Overview</p>
+    <h2 id="h-overview">The eight steps</h2>
+    <p>Each step uses the output of the step above it. The grey tags show where a step also takes an output from Stages 1 to 3. Step 4.2 covers two of the guide's steps, branch rules and CI, so from 4.3 on the guide's step number is one higher than the workbook's. Select a step to go to it.</p>
+    <figure>
+      <ol class="stepmap">
+        <li><a class="sm-card" href="#s41"><span class="sm-num">4.1</span><span><span class="sm-name">Create the repository</span><span class="sm-out">.env.example, lock file, settings.py and the gitleaks hook</span><span class="sm-meta"><span class="sm-guide">Guide step 1</span><span class="sm-in">Uses the Stage 2 settings list and the Stage 3 versions</span></span></span></a></li>
+        <li><a class="sm-card" href="#s42"><span class="sm-num">4.2</span><span><span class="sm-name">Set the branch rules and CI</span><span class="sm-out">main protected; gitleaks, pip-audit and tests required</span><span class="sm-meta"><span class="sm-guide">Guide steps 2 and 3</span></span></span></a></li>
+        <li><a class="sm-card" href="#s43"><span class="sm-num">4.3</span><span><span class="sm-name">Choose the pattern</span><span class="sm-out">Routers, services, data layer; calls go down only</span><span class="sm-meta"><span class="sm-guide">Guide step 4</span><span class="sm-in">Uses the Stage 2 stack</span></span></span></a></li>
+        <li><a class="sm-card" href="#s44"><span class="sm-num">4.4</span><span><span class="sm-name">Create folders by role</span><span class="sm-out">One folder per role, one file per area in each</span><span class="sm-meta"><span class="sm-guide">Guide step 5</span><span class="sm-in">Uses the Stage 1 screens, data and external services</span></span></span></a></li>
+        <li><a class="sm-card" href="#s45"><span class="sm-num">4.5</span><span><span class="sm-name">Write the interfaces</span><span class="sm-out">Protocols and stub functions: names, inputs, returns, errors</span><span class="sm-meta"><span class="sm-guide">Guide step 6</span><span class="sm-in">Uses the Stage 1 screens</span></span></span></a></li>
+        <li><a class="sm-card" href="#s46"><span class="sm-num">4.6</span><span><span class="sm-name">Decide what is injected</span><span class="sm-out">Session, signed-in staff, settings, service providers</span><span class="sm-meta"><span class="sm-guide">Guide step 7</span></span></span></a></li>
+        <li><a class="sm-card" href="#s47"><span class="sm-num">4.7</span><span><span class="sm-name">Write main.py as the index</span><span class="sm-out">One router per area, each with a comment naming its files</span><span class="sm-meta"><span class="sm-guide">Guide step 8</span></span></span></a></li>
+        <li><a class="sm-card" href="#s48"><span class="sm-num">4.8</span><span><span class="sm-name">Critique the design</span><span class="sm-out">Each finding fixed, assigned to a stage, or rejected</span><span class="sm-meta"><span class="sm-guide">Guide step 9</span><span class="sm-in">Uses the decisions from Stages 1 to 3</span></span></span></a></li>
+        <li class="sm-next"><div class="sm-card"><span class="sm-num">5</span><span><span class="sm-name">Stage 5. Build the skeleton</span><span class="sm-out">Function skeleton written from the revised interfaces</span></span></div></li>
+      </ol>
+      <figcaption><strong>Figure 1.</strong> The eight steps of Stage 4, the earlier outputs each one uses, and the hand-off to Stage 5.</figcaption>
+    </figure>
+
+    <h3>Three kinds of block</h3>
+    <p>The workbook uses the guide's labels:</p>
+    <ul class="levels-key">
+      <li><span class="level-label">Basics</span> Plain definitions of the terms a section uses, placed before the section uses them. Read them first if the terms are new to you, and skip them if not.</li>
+      <li><span class="level-label">Going deeper</span> A comparison or reference table, followed by the default to use when no requirement points elsewhere.</li>
+      <li><span class="level-label">Scenario</span> A situation, the choice or the commands, and the reason. Decisions are rows in a table. Procedures are numbered steps with the exact commands and what you see.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="start" aria-labelledby="h-start">
+  <div class="wrap">
+    <p class="step-num">Before you start</p>
+    <h2 id="h-start">Inputs and tools</h2>
+    <p>Stage 4 uses four outputs from Stages 1 to 3, three installed tools and a GitHub account. Have each one ready before 4.1.</p>
+    <ul class="checks">
+      <li>Stage 1 screens list, with what the user does on each screen</li>
+      <li>Stage 1 stored data and external services</li>
+      <li>Stage 2 stack table and settings list (for User Notices: DATABASE_URL, SESSION_SECRET, SMS_API_URL, SMS_API_KEY and ALLOWED_ORIGIN)</li>
+      <li>Stage 3 version table, with the exact version of every dependency</li>
+      <li>Git 2.56, Python 3.14 and an editor with a Python debugger installed</li>
+      <li>A GitHub account that can create a repository for the organization and change its settings (4.2)</li>
+    </ul>
+    <p class="note">Node.js is needed from Stage 6, and PostgreSQL from Stage 5 if the stub uses a local database, otherwise from Stage 7. Go does not need to be installed: pre-commit downloads it the first time the gitleaks hook runs (4.1).</p>
+  </div>
+</section>
+
+<section id="s41" aria-labelledby="h41">
+  <div class="wrap">
+    <p class="step-num">Step 4.1</p>
+    <h2 id="h41">Create the repository</h2>
+    <p class="lead">Run git init before any file exists and commit .gitignore first, so the .env file is excluded before it is written. This step also pins every dependency in a lock file, commits a .env.example that names every setting, turns on a secret scan that runs before each commit, and gives the code one file to read settings from.</p>
+
+    <div class="level">
+      <p class="level-label">Basics</p>
+      <h3>Secrets</h3>
+      <p>A secret is any value that gives access to something: a password, an API key, a token, a signing key, or a connection string that contains a password. The rules start with the first commit:</p>
+      <ul>
+        <li>Secrets live in .env on each developer's machine and in the server's secrets file (Stage 9), never in the code or in any committed file.</li>
+        <li>.env.example lists every setting with a placeholder value, so the names are documented and the values are not.</li>
+        <li>A secret scanner such as gitleaks runs before each commit (Sources 48 and 49), and the repository host's push protection, where it is available, blocks pushes that contain a known kind of secret (Source 50).</li>
+        <li>A secret that reaches a commit is treated as exposed. Rotate it first (Stage 10), then remove it from the files in a new commit. Rewrite the history only when the organization requires it (Working in Git); rewriting does not remove copies already in other clones (Source 51).</li>
+      </ul>
+      <p>A pre-commit hook is a script that Git runs each time you commit. If the script fails, Git does not make the commit. pre-commit is a tool that installs that script and runs the checks listed in .pre-commit-config.yaml (Source W1).</p>
+      <p>In User Notices, the secrets are the database password inside DATABASE_URL, SESSION_SECRET and SMS_API_KEY.</p>
+    </div>
+
+    <h3>Steps</h3>
+    <ol>
+      <li>Create the project folder and run git init -b main in it, so the first branch is named main.</li>
+      <li>Write .gitignore at the repository root and commit it.</li>
+      <li>Create the backend folder and a virtual environment inside it, and install pip-tools and pre-commit into the virtual environment.</li>
+      <li>Write backend/requirements.in with the libraries chosen in Stage 3, one per line with its version range. Generate the lock file, requirements.txt, with pip-compile, and install from it.</li>
+      <li>Write backend/.env with the Stage 2 settings and your local values. Write backend/.env.example with the same names and placeholder values. .env.example is committed so others know which settings exist; .env stays on your machine.</li>
+      <li>Write app/settings.py, the one file that reads settings.</li>
+      <li>Write backend/.python-version with the Stage 3 Python version, and a short README.md. frontend/.nvmrc is written with the front end in Stage 6.</li>
+      <li>Write .pre-commit-config.yaml at the repository root and run pre-commit install, so gitleaks scans each commit in this clone. Every developer runs pre-commit install once in each clone.</li>
+      <li>Commit. These commits stay on your machine until 4.2 pushes them to main. From 4.2 on, every change reaches main through a pull request.</li>
+    </ol>
+
+    <h3>Commands</h3>
+    <div class="code"><pre><code class="language-bash">mkdir user-notices
+cd user-notices
+git init -b main
+# write .gitignore (below), then:
+git add .gitignore
+git commit -m "Add .gitignore"
+
+mkdir -p backend/app
+cd backend
+python3.14 -m venv .venv
+.venv/bin/pip install pip-tools pre-commit
+# write requirements.in (below), then:
+.venv/bin/pip-compile requirements.in    # writes requirements.txt with every version pinned
+.venv/bin/pip install -r requirements.txt
+touch app/__init__.py
+# write .env, .env.example and app/settings.py (below), then:
+echo "3.14" &gt; .python-version
+cd ..
+# write README.md and .pre-commit-config.yaml (below), then:
+backend/.venv/bin/pre-commit install
+git add .
+git status                               # .env and .venv/ must not be listed
+git commit -m "Add settings, lock file and secret scan"</code></pre></div>
+    <p class="note">On Windows, create the virtual environment with py -3.14 -m venv .venv, use .venv\Scripts\ in place of .venv/bin/, and create the small files in the editor.</p>
+    <p>pre-commit install prints pre-commit installed at .git/hooks/pre-commit. The first commit after it takes a few minutes: pre-commit downloads Go if it is not installed and builds gitleaks, then reuses that build (Source W1). The commit then prints this line before Git's own output:</p>
+    <div class="code"><pre><code class="language-text">Detect hardcoded secrets.................................................Passed</code></pre></div>
+
+    <h3>Example: User Notices</h3>
+    <p>The files this step writes. Select a file to see it.</p>
+    <div class="tabs" data-tabs>
+      <div class="tablist" role="tablist" aria-label="Files written in 4.1">
+        <button type="button" role="tab" id="t41-1" aria-controls="p41-1" aria-selected="true">.gitignore</button>
+        <button type="button" role="tab" id="t41-4" aria-controls="p41-4" aria-selected="false">requirements.in</button>
+        <button type="button" role="tab" id="t41-2" aria-controls="p41-2" aria-selected="false">.env</button>
+        <button type="button" role="tab" id="t41-3" aria-controls="p41-3" aria-selected="false">.env.example</button>
+        <button type="button" role="tab" id="t41-5" aria-controls="p41-5" aria-selected="false">settings.py</button>
+        <button type="button" role="tab" id="t41-6" aria-controls="p41-6" aria-selected="false">.pre-commit-config.yaml</button>
+        <button type="button" role="tab" id="t41-7" aria-controls="p41-7" aria-selected="false">README and versions</button>
+      </div>
+      <div role="tabpanel" id="p41-1" aria-labelledby="t41-1">
+        <p class="code-file">user-notices/.gitignore</p>
+        <div class="code"><pre><code class="language-text"># Settings and keys
+.env
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+# Front end, from Stage 6
+node_modules/
+.next/</code></pre></div>
+      </div>
+      <div role="tabpanel" id="p41-4" aria-labelledby="t41-4" hidden>
+        <p class="code-file">backend/requirements.in, the direct dependencies</p>
+        <div class="code"><pre><code class="language-text"># Replace each &lt;version&gt; with the version in your Stage 3 table.
+# ~= accepts that version and later patch releases of it: fastapi~=0.143.2
+# accepts 0.143.2, 0.143.3 and so on, but not 0.144.0.
+fastapi~=&lt;version&gt;
+uvicorn[standard]~=&lt;version&gt;
+sqlalchemy[asyncio]~=&lt;version&gt;
+alembic~=&lt;version&gt;
+psycopg[binary]~=&lt;version&gt;
+pydantic-settings~=&lt;version&gt;
+httpx~=&lt;version&gt;
+pytest~=&lt;version&gt;
+pytest-asyncio~=&lt;version&gt;</code></pre></div>
+        <p>The Stage 3 example table names FastAPI, SQLAlchemy, Alembic and psycopg. Add the other five to your version table: uvicorn runs the service, pydantic-settings reads the settings, httpx is the HTTP client for the SMS provider and for FastAPI's test client, and pytest with pytest-asyncio runs the tests. The asyncio extra on SQLAlchemy installs greenlet, which SQLAlchemy's async session needs; without it, importing sqlalchemy.ext.asyncio fails from Stage 5 on. pip-compile picks the newest version each range allows, and writes requirements.txt with these and every library they depend on, each at an exact version (Source 52). Commit both files.</p>
+        <p>To update a library later, change its range in requirements.in, run pip-compile again, run the tests, and commit requirements.in and requirements.txt together. requirements.txt comes from pip-compile only: do not write it with pip freeze, and do not edit it by hand.</p>
+      </div>
+      <div role="tabpanel" id="p41-2" aria-labelledby="t41-2" hidden>
+        <p class="code-file">backend/.env, on your machine only</p>
+        <div class="code"><pre><code class="language-text">DATABASE_URL=postgresql+psycopg://usernotices_app_a:local-password@localhost:5432/user_notices
+SESSION_SECRET=&lt;the output of the command in .env.example&gt;
+SMS_API_URL=https://test.sms-provider.example/v1
+SMS_API_KEY=&lt;the provider's test key&gt;
+ALLOWED_ORIGIN=http://localhost:3000</code></pre></div>
+      </div>
+      <div role="tabpanel" id="p41-3" aria-labelledby="t41-3" hidden>
+        <p class="code-file">backend/.env.example, committed</p>
+        <div class="code"><pre><code class="language-text"># Copy to .env and fill in the values. Never commit .env.
+DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:5432/DATABASE
+# Generate with: python3.14 -c "import secrets; print(secrets.token_urlsafe(32))"
+SESSION_SECRET=
+SMS_API_URL=https://SMS-PROVIDER-HOST/v1
+SMS_API_KEY=
+ALLOWED_ORIGIN=http://localhost:3000</code></pre></div>
+      </div>
+      <div role="tabpanel" id="p41-5" aria-labelledby="t41-5" hidden>
+        <p class="code-file">backend/app/settings.py</p>
+        <div class="code"><pre><code class="language-python"># app/settings.py
+from functools import lru_cache
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class Settings(BaseSettings):
+    """Every setting the application reads, from the environment or from .env.
+    Each name here is also in .env.example."""
+    model_config = SettingsConfigDict(env_file=".env")
+
+    database_url: str      # DATABASE_URL
+    session_secret: str    # SESSION_SECRET: signs the session cookie
+    sms_api_url: str       # SMS_API_URL
+    sms_api_key: str       # SMS_API_KEY
+    allowed_origin: str    # ALLOWED_ORIGIN: the front end's address, for CORS
+
+@lru_cache
+def get_settings() -&gt; Settings:
+    """Read the settings once; later calls return the same object."""
+    return Settings()</code></pre></div>
+        <p>Field names match the names in .env, ignoring case. The .env path is read relative to the folder the service starts in, which is backend/. A missing setting raises a validation error that names it when the settings are first read; the first test, in 4.2, checks this. On the servers, the systemd units load the same names from /etc/user-notices/backend.env (Stage 9), and environment variables take priority over the .env file.</p>
+      </div>
+      <div role="tabpanel" id="p41-6" aria-labelledby="t41-6" hidden>
+        <p class="code-file">.pre-commit-config.yaml, at the repository root</p>
+        <div class="code"><pre><code class="language-yaml"># .pre-commit-config.yaml: checks that run before each commit.
+# Turn them on in each clone with: backend/.venv/bin/pre-commit install
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks</code></pre></div>
+        <p>The gitleaks hook runs gitleaks git --pre-commit --redact --staged --verbose: it scans the changes staged for this commit and prints REDACTED in place of each secret it finds (Source 49). pre-commit autoupdate moves rev to the newest gitleaks release (Source W1); make that change in its own pull request, together with the version in ci.yml (4.2).</p>
+      </div>
+      <div role="tabpanel" id="p41-7" aria-labelledby="t41-7" hidden>
+        <p>backend/.python-version holds 3.14; frontend/.nvmrc is written with the front end in Stage 6. README.md says what the application does, how to run it, and where to start reading:</p>
+        <p class="code-file">README.md, at the repository root</p>
+        <div class="code"><pre><code class="language-text"># User Notices
+
+Staff sign in, browse registered users, and schedule SMS notices to groups of users.
+
+## Run the backend
+
+From backend/, after copying .env.example to .env and filling in the values:
+
+    .venv/bin/uvicorn app.main:app --reload
+
+## Where to start reading
+
+backend/app/main.py lists each area of the backend and the files that hold it.</code></pre></div>
+      </div>
+    </div>
+
+    <p>The settings Stage 4 lists:</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Setting</th><th>What it holds</th><th>Read by</th><th>Secret</th></tr></thead>
+        <tbody>
+          <tr><td>DATABASE_URL</td><td>The connection string for PostgreSQL</td><td>get_session (4.6)</td><td>Yes: it contains the password</td></tr>
+          <tr><td>SESSION_SECRET</td><td>The key that signs the session cookie</td><td>issue_token and current_user in app/auth/ (4.5)</td><td>Yes</td></tr>
+          <tr><td>SMS_API_URL</td><td>The SMS provider's API address</td><td>get_sms_client (4.6)</td><td>No</td></tr>
+          <tr><td>SMS_API_KEY</td><td>The key for the SMS provider</td><td>get_sms_client (4.6)</td><td>Yes</td></tr>
+          <tr><td>ALLOWED_ORIGIN</td><td>The front end's address</td><td>The CORS setup (Stage 6)</td><td>No</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Later stages add MIGRATION_DATABASE_URL (Stage 7), REDIS_URL (Stage 8), SMS_ALLOWLIST (Stage 9) and SENTRY_DSN (Stage 10), and the front end server reads API_INTERNAL_URL. Each new setting goes into .env.example and settings.py in the same pull request.</p>
+
+    <div class="try">
+      <p class="try-label">Try it</p>
+      <h4>Commit or keep out?</h4>
+      <p>Decide for each file whether it goes into the repository.</p>
+      <div class="quiz" data-ex="commit"></div>
+      <div class="quiz-foot"><p class="score" aria-live="polite"></p><button type="button" class="btn" data-restart="commit">Start again</button></div>
+    </div>
+
+    <h3>Example: a commit that gitleaks blocks</h3>
+    <p>To try the provider's API by hand, a developer writes a scratch script with the provider's test key pasted in, and commits it:</p>
+    <div class="code"><pre><code class="language-python"># backend/try_sms.py: trying the provider's API by hand
+import httpx
+
+SMS_API_KEY = "&lt;the test key, pasted from the provider's console&gt;"</code></pre></div>
+    <div class="code"><pre><code class="language-bash">git add backend/try_sms.py
+git commit -m "Try the SMS provider"</code></pre></div>
+    <p>What the commit printed. The key was a test value; gitleaks prints REDACTED in its place, and the times will differ:</p>
+    <div class="code"><pre><code class="language-text">Detect hardcoded secrets.................................................Failed
+- hook id: gitleaks
+- exit code: 1
+
+○
+    │╲
+    │ ○
+    ○ ░
+    ░    gitleaks
+
+Finding:     SMS_API_KEY = "REDACTED"
+Secret:      REDACTED
+RuleID:      generic-api-key
+Entropy:     4.538910
+File:        backend/try_sms.py
+Line:        4
+Fingerprint: backend/try_sms.py:generic-api-key:4
+
+6:51PM INF 0 commits scanned.
+6:51PM INF scanned ~99 bytes (99 bytes) in 224ms
+6:51PM WRN leaks found: 1</code></pre></div>
+    <p>Git made no commit: git log still ends at the previous commit, and the file is still staged. Unstage the file and take the key out:</p>
+    <div class="code"><pre><code class="language-bash">git restore --staged backend/try_sms.py
+rm backend/try_sms.py     # or change it to read get_settings().sms_api_key</code></pre></div>
+    <p>The key never reached a commit, so it does not need to be rotated. If it had, follow the scenario below.</p>
+    <p>gitleaks finds known patterns, not every way of writing a key. In the same test it did not flag the key written as a default in the Settings class (<code>sms_api_key: str = "..."</code>). Check 5 of the Stage 5 security checklist covers what the scanner misses.</p>
+
+    <div class="level">
+      <p class="level-label">Scenario</p>
+      <h3>A key reached a commit</h3>
+      <p>A developer cloned the repository on a new laptop, did not run pre-commit install, and committed backend/try_sms.py with the test key on a branch. On the pull request, CI's gitleaks job (4.2) failed with leaks found: 1 and printed a Fingerprint line that starts with the commit's hash.</p>
+      <ol>
+        <li>Rotate the key first. Create a new key in the provider's console, put it in your .env and in the servers' secrets files, then revoke the old key; Stage 10 has the routine. Until the old key is revoked, anyone with a copy of the commit can use it (Sources 48 and 51).</li>
+        <li>Remove the file in a new commit on the same branch:
+          <div class="code"><pre><code class="language-bash">git rm backend/try_sms.py
+git commit -m "Remove the scratch script"
+git push</code></pre></div>
+          CI's gitleaks job still fails, because it reads every commit on the branch and the earlier commit still holds the key.</li>
+        <li>Record the finding as handled. Copy the Fingerprint line from the CI log into .gitleaksignore at the repository root, with a comment that says when the key was revoked, and commit it:
+          <div class="code"><pre><code class="language-text"># Test SMS key committed on the try-sms branch; revoked at the provider on 2026-10-15.
+af5d4b6a890d0532923e6e5394f6b258c9c64bfe:backend/try_sms.py:generic-api-key:4</code></pre></div>
+          The fingerprint names one commit, file, rule and line, so gitleaks skips only that finding. A key added anywhere else still fails the check.</li>
+        <li>Push. The gitleaks check passes, and the pull request is reviewed and merged as usual.</li>
+        <li>Rewrite the history only when the organization requires it (Working in Git). Rewriting does not remove copies already in other clones (Source 51).</li>
+      </ol>
+      <p>The same steps apply when the committed file is .env: change every key it held, then remove it with git rm --cached backend/.env.</p>
+    </div>
+
+    <h3>Check</h3>
+    <ul class="checks">
+      <li>From the repository root, <code>git check-ignore -v backend/.env</code> prints the .gitignore line that excludes it.</li>
+      <li><code>git status</code> lists neither .env nor .venv.</li>
+      <li><code>git ls-files</code> lists backend/.env.example, backend/requirements.in, backend/requirements.txt and .pre-commit-config.yaml.</li>
+      <li>Every library line in requirements.txt has an exact version (==).</li>
+      <li>From backend/, <code>.venv/bin/python -c "from app.settings import get_settings; print(get_settings().allowed_origin)"</code> prints http://localhost:3000.</li>
+      <li>A commit prints Detect hardcoded secrets followed by Passed.</li>
+    </ul>
+
+    <h3>Common mistakes</h3>
+    <ul>
+      <li>Writing .env before .gitignore exists, so the first git add includes it.</li>
+      <li>Putting real values in .env.example.</li>
+      <li>Committing the .env file. If it happens, change every key it held, then remove it from the repository (Scenario: A key reached a commit).</li>
+      <li>Committing package.json or requirements.in without its lock file, so each install resolves different versions.</li>
+      <li>Writing requirements.txt with pip freeze or editing it by hand, so it no longer matches requirements.in.</li>
+      <li>Installing a library with pip install without adding it to requirements.in, so it is missing from requirements.txt and from every other machine.</li>
+      <li>Committing in a new clone before running pre-commit install, so no scan runs there. CI's gitleaks job still scans every commit (4.2).</li>
+    </ul>
+  </div>
+</section>
+
+<section id="s42" aria-labelledby="h42">
+  <div class="wrap">
+    <p class="step-num">Step 4.2</p>
+    <h2 id="h42">Set the branch rules and CI</h2>
+    <p class="lead">Push the repository to GitHub, protect main, and add a CI workflow whose checks main requires. After this step, every change reaches main through a pull request that passes gitleaks, pip-audit and the backend tests.</p>
+
+    <div class="level">
+      <p class="level-label">Basics</p>
+      <h3>Branches, pull requests and checks</h3>
+      <ul>
+        <li>A branch is a named line of commits. main holds the reviewed and tested code; each change is made on its own short-lived branch.</li>
+        <li>A pull request asks to merge a branch into main. It shows the changes, the checks that ran on them, and the reviews.</li>
+        <li>CI (continuous integration) is the set of checks the hosting service runs on every push. On GitHub, a workflow file in .github/workflows/ lists jobs, and each job reports a check that passes or fails.</li>
+        <li>A required check must pass before a pull request can be merged.</li>
+        <li>A protected branch has rules that GitHub enforces, such as requiring a pull request and passing checks before merging. GitHub blocks force pushes to protected branches by default (Source 59).</li>
+        <li>A force push replaces the history of a branch on GitHub. On main it would remove commits that other people already have.</li>
+        <li>An approval is a review that accepts a pull request. The author of a pull request cannot approve it (Source W6).</li>
+      </ul>
+    </div>
+
+    <h3>Steps</h3>
+    <ol>
+      <li>Create an empty repository on GitHub for the organization, without a README, license or .gitignore, so the first push is accepted as it is.</li>
+      <li>Add it as the remote and push main.</li>
+      <li>Protect main with the settings in the checklist below. Leave the required checks for step 5: GitHub can require a check only after it has completed successfully in the repository within the past seven days (Source W5).</li>
+      <li>On a branch, add .github/workflows/ci.yml, .github/pull_request_template.md, .github/CODEOWNERS and the first test. Push the branch and open a pull request; the three CI checks run on it.</li>
+      <li>When the checks pass, review the pull request against the Stage 5 security checklist and merge it. Then edit the rule for main and add gitleaks, pip-audit and tests as required checks.</li>
+      <li>From then on, every commit, including the one at each checkpoint, goes on a short-lived branch with one change. If branches and pull requests are new to you, read Working in Git before Stage 5.</li>
+    </ol>
+
+    <figure>
+      <ol class="chain">
+        <li><div class="c-card"><span class="c-name">1. Branch from main</span><code>git switch -c add-ci</code>, one change per branch</div></li>
+        <li><div class="c-card"><span class="c-name">2. Commit</span>pre-commit runs gitleaks on the staged changes</div></li>
+        <li><div class="c-card"><span class="c-name">3. Push and open a pull request</span><code>git push -u origin add-ci</code>, then <code>gh pr create</code></div></li>
+        <li><div class="c-card"><span class="c-name">4. CI runs the required checks</span>gitleaks, pip-audit and tests on the pull request<div class="c-aside">Checks fail: fix on the branch, commit and push again. CI runs again on the new commit.</div></div></li>
+        <li><div class="c-card"><span class="c-name">5. Review</span>Against the Stage 5 security checklist; 0 approvals with one developer, 1 with two</div></li>
+        <li><div class="c-card end"><span class="c-name">6. Squash and merge into main</span>The branch is deleted after merging<div class="c-aside"><code>git push origin main</code> is rejected by the rule for main, and so is a force push.</div></div></li>
+      </ol>
+      <figcaption><strong>Figure 2.</strong> A change reaches main only through a pull request with passing checks.</figcaption>
+    </figure>
+
+    <h3>Commands</h3>
+    <p>Step 2, with ORG replaced by the organization's GitHub name:</p>
+    <div class="code"><pre><code class="language-bash">git remote add origin https://github.com/ORG/user-notices.git
+git push -u origin main</code></pre></div>
+    <p>Step 4, the first pull request:</p>
+    <div class="code"><pre><code class="language-bash">git switch -c add-ci
+mkdir -p .github/workflows backend/tests
+touch backend/tests/__init__.py
+# write ci.yml, pull_request_template.md, CODEOWNERS and test_settings.py (below), then:
+(cd backend &amp;&amp; .venv/bin/python -m pytest)
+git add .github backend/tests
+git commit -m "Add CI, pull request template and CODEOWNERS"
+git push -u origin add-ci
+gh pr create --fill     # or open the pull request from the branch's page on GitHub</code></pre></div>
+    <p>After the pull request is merged (Working in Git):</p>
+    <div class="code"><pre><code class="language-bash">git switch main
+git pull
+git branch -D add-ci</code></pre></div>
+
+    <h3 id="branch-rules">Branch protection on main</h3>
+    <p>In the repository on GitHub, open Settings, then Branches, then Add classic branch protection rule, and enter main as the branch name pattern (Source W2). GitHub also offers rulesets, and a branch protection rule can be converted to one (Source 59). Protected branches are available for public repositories, and for private repositories on GitHub Pro, Team and Enterprise plans (Source 59). Tick each setting as you set it; the ticks are saved in this browser.</p>
+    <ul class="ck-list" id="br-list">
+      <li><label class="ck" for="br1"><input type="checkbox" id="br1"><span><span class="ck-item">Require a pull request before merging</span><span class="ck-how">Every change reaches main through a pull request.</span></span></label></li>
+      <li><label class="ck" for="br2"><input type="checkbox" id="br2"><span><span class="ck-item">Require approvals: 0 with one developer, 1 when a second developer joins</span><span class="ck-how">With one developer, review each pull request yourself against the Stage 5 security checklist.</span></span></label></li>
+      <li><label class="ck" for="br3"><input type="checkbox" id="br3"><span><span class="ck-item">Dismiss stale pull request approvals when new commits are pushed: on with two developers</span><span class="ck-how">An approval covers the commits that were reviewed, not commits pushed after it.</span></span></label></li>
+      <li><label class="ck" for="br4"><input type="checkbox" id="br4"><span><span class="ck-item">Require review from Code Owners: off with one developer, on with two</span><span class="ck-how">With one developer, nobody else can give the code owner approval.</span></span></label></li>
+      <li><label class="ck" for="br5"><input type="checkbox" id="br5"><span><span class="ck-item">Require status checks to pass before merging, with gitleaks, pip-audit and tests</span><span class="ck-how">Add the checks after the first pull request has run them (step 5).</span></span></label></li>
+      <li><label class="ck" for="br6"><input type="checkbox" id="br6"><span><span class="ck-item">Require branches to be up to date before merging</span><span class="ck-how">The checks run against the latest main.</span></span></label></li>
+      <li><label class="ck" for="br7"><input type="checkbox" id="br7"><span><span class="ck-item">Do not allow bypassing the above settings</span><span class="ck-how">The rules apply to administrators too.</span></span></label></li>
+      <li><label class="ck" for="br8"><input type="checkbox" id="br8"><span><span class="ck-item">Allow force pushes and Allow deletions left unticked</span><span class="ck-how">main cannot be force-pushed or deleted.</span></span></label></li>
+    </ul>
+    <p>In Settings, General, allow squash merging only, and have GitHub delete each branch once it is merged (Working in Git).</p>
+
+    <div class="level">
+      <p class="level-label">Scenario</p>
+      <h3>One developer or two</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Team</th><th>Required approvals</th><th>Review from Code Owners</th><th>Who reviews each pull request</th><th>Reason</th></tr></thead>
+          <tbody>
+            <tr><td>One developer</td><td>0</td><td>Off</td><td>The author, against the Stage 5 security checklist, before merging</td><td>A rule that requires an approval would block every merge, because nobody else can give it</td></tr>
+            <tr><td>Two developers</td><td>1, with stale approvals dismissed</td><td>On; CODEOWNERS lists both developers</td><td>The other developer</td><td>The author cannot approve their own pull request (Source W6), so each change is read by a second person</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The pull request and the required checks stay on in both cases, so main only receives changes that passed CI.</p>
+    </div>
+
+    <h3>Example: User Notices</h3>
+    <p>User Notices has two developers, Developer A and Developer B. The rule for main requires a pull request with one approving review, review from Code Owners and the three passing checks, and blocks force pushes. Select a file to see it.</p>
+    <div class="tabs" data-tabs>
+      <div class="tablist" role="tablist" aria-label="Files written in 4.2">
+        <button type="button" role="tab" id="t42-1" aria-controls="p42-1" aria-selected="true">ci.yml</button>
+        <button type="button" role="tab" id="t42-2" aria-controls="p42-2" aria-selected="false">test_settings.py</button>
+        <button type="button" role="tab" id="t42-3" aria-controls="p42-3" aria-selected="false">pull_request_template.md</button>
+        <button type="button" role="tab" id="t42-4" aria-controls="p42-4" aria-selected="false">CODEOWNERS</button>
+      </div>
+      <div role="tabpanel" id="p42-1" aria-labelledby="t42-1">
+        <p class="code-file">.github/workflows/ci.yml</p>
+        <div class="code"><pre><code class="language-yaml"># .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-24.04
+    env:
+      GITLEAKS_VERSION: "8.30.1"
+      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # every commit, so a key added and later removed is still found
+      - name: Install gitleaks
+        run: |
+          curl -sSfL -o gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+      - name: Scan every commit
+        run: ./gitleaks git --redact --verbose
+
+  pip-audit:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: backend/.python-version
+      - run: python -m pip install pip-audit==2.10.1
+      - run: pip-audit -r requirements.txt
+
+  tests:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: backend/.python-version
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - run: python -m pytest</code></pre></div>
+        <ul>
+          <li>The three jobs report the checks gitleaks, pip-audit and tests, the names that main requires.</li>
+          <li>gitleaks: fetch-depth: 0 fetches every commit, so the scan finds a key that was committed and later removed, or committed in a clone without the pre-commit hook. The job checks the downloaded release against the SHA-256 sum published with it.</li>
+          <li>pip-audit: checks each library pinned in requirements.txt against known vulnerabilities, and fails when it finds one (Source W3).</li>
+          <li>tests: installs requirements.txt and runs python -m pytest from backend/. pytest fails when it collects no tests, so the job needs at least one test before Stage 5; test_settings.py is that test.</li>
+          <li>python-version-file reads backend/.python-version, so CI runs the project's Python version.</li>
+          <li>The jobs run on GitHub's Ubuntu 24.04 runners. Stage 6 adds the front end checks, Stage 7 the integration tests, and Stage 9 the end-to-end tests, the release build and the deploy to the sandbox (a second copy of the deployment, used for testing, set up in Stage 9).</li>
+          <li>To update gitleaks, change GITLEAKS_VERSION and GITLEAKS_SHA256 here and rev in .pre-commit-config.yaml in the same pull request.</li>
+        </ul>
+      </div>
+      <div role="tabpanel" id="p42-2" aria-labelledby="t42-2" hidden>
+        <p class="code-file">backend/tests/test_settings.py, the first test</p>
+        <div class="code"><pre><code class="language-python"># tests/test_settings.py
+import pytest
+from pydantic import ValidationError
+from app.settings import Settings
+
+TEST_VALUES = {
+    "DATABASE_URL": "postgresql+psycopg://user:password@localhost:5432/test",
+    "SESSION_SECRET": "test-only",
+    "SMS_API_URL": "https://sms.test/v1",
+    "SMS_API_KEY": "test-only",
+    "ALLOWED_ORIGIN": "http://localhost:3000",
+}
+
+def set_test_values(monkeypatch):
+    for name, value in TEST_VALUES.items():
+        monkeypatch.setenv(name, value)
+
+def test_settings_are_read_from_the_environment(monkeypatch):
+    set_test_values(monkeypatch)
+    settings = Settings(_env_file=None)  # ignore any local .env
+    assert settings.allowed_origin == "http://localhost:3000"
+
+def test_a_missing_setting_is_named(monkeypatch):
+    set_test_values(monkeypatch)
+    monkeypatch.delenv("SMS_API_KEY")
+    with pytest.raises(ValidationError, match="sms_api_key"):
+        Settings(_env_file=None)</code></pre></div>
+        <p>The tests set their own values, so they pass in CI, where there is no .env file, and on a machine with one.</p>
+      </div>
+      <div role="tabpanel" id="p42-3" aria-labelledby="t42-3" hidden>
+        <p class="code-file">.github/pull_request_template.md</p>
+        <div class="code"><pre><code class="language-markdown">## What changed
+
+&lt;!-- One change per pull request: what it does and why. --&gt;
+
+## How it was tested
+
+&lt;!-- The tests added or run, and anything checked by hand. --&gt;
+
+## Security checklist (Stage 5)
+
+- [ ] 1. Each endpoint checks, in the backend, that the caller may act on this record
+- [ ] 2. Request models list only the fields a caller may set
+- [ ] 3. Input is checked on the server
+- [ ] 4. Queries use the ORM or bound parameters
+- [ ] 5. No key, password or internal address in the code, the tests or an error message
+- [ ] 6. Errors show no internal detail, and a failed check denies the request
+- [ ] 7. Sign-in failures and denied requests are logged; passwords, tokens and full phone numbers are not
+- [ ] 8. Each new package exists, is the one intended, is pinned in the lock file and passes pip-audit or npm audit
+- [ ] 9. No dangerouslySetInnerHTML with user data; server functions check authorization
+- [ ] 10. Lists are paged; expensive endpoints are rate limited; uploads have a size limit
+
+## Migration
+
+- [ ] No migration
+- [ ] Includes a migration (Stage 7). How it is undone:</code></pre></div>
+        <p>The security checklist is the ten checks of the Stage 5 security checklist in short form. GitHub fills each new pull request's description with the template once the file is on the default branch (Source W4).</p>
+      </div>
+      <div role="tabpanel" id="p42-4" aria-labelledby="t42-4" hidden>
+        <p class="code-file">.github/CODEOWNERS</p>
+        <div class="code"><pre><code class="language-text"># Who must review changes to which paths. The last matching line wins.
+# Replace the names with the developers' GitHub usernames.
+*    @developer-a @developer-b</code></pre></div>
+        <p>Each owner needs write access to the repository (Source W7). Either developer's approval meets the code owner rule, and the author cannot approve their own pull request, so each change is approved by the other developer. With one developer, the file lists only that developer and Review from Code Owners stays off. Working in Git adds a line that gives backend/migrations/ its own reviewer.</p>
+      </div>
+    </div>
+
+    <h3>Check</h3>
+    <ul class="checks">
+      <li><code>git push origin main</code> from your machine is rejected, because main requires a pull request.</li>
+      <li>The pull request that added ci.yml shows the gitleaks, pip-audit and tests checks passing.</li>
+      <li>The rule for main lists gitleaks, pip-audit and tests as required checks.</li>
+      <li>A new pull request opens with the template's headings in its description.</li>
+    </ul>
+
+    <h3>Common mistakes</h3>
+    <ul>
+      <li>Requiring an approval, or review from Code Owners, with one developer. The author cannot approve their own pull request, so nothing can be merged.</li>
+      <li>Renaming a job in ci.yml without updating the required checks. Pull requests then wait for a check that never reports, and cannot be merged.</li>
+      <li>Leaving Do not allow bypassing the above settings unticked, so administrators can still push to main directly.</li>
+      <li>Keeping a branch open for weeks with several changes on it. Each branch holds one change and is merged within a day or two (Working in Git).</li>
+    </ul>
+
+    <div class="level" id="key-files">
+      <p class="level-label">Going deeper</p>
+      <h3>Key project files</h3>
+      <p>What each common file is for, whether it is committed, and the step or stage that creates it in User Notices. Backend paths are relative to backend/, and front end paths to frontend/; .github/, deploy/ and .pre-commit-config.yaml sit at the repository root.</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>File</th><th>Purpose</th><th>Committed</th><th>Created in</th></tr></thead>
+          <tbody>
+            <tr><td>requirements.in</td><td>The Python libraries you chose directly, with version ranges. pip-compile reads it</td><td>Yes</td><td><a href="#s41">4.1</a></td></tr>
+            <tr><td>requirements.txt</td><td>The backend lock file: the exact version of every library, including the libraries your libraries use. Generated by pip-compile, not edited by hand (Source 52)</td><td>Yes</td><td><a href="#s41">4.1</a></td></tr>
+            <tr><td>pyproject.toml</td><td>Project metadata, the Python version required, and settings for tools such as pytest. It can hold the dependency list instead of requirements.in (Source 53)</td><td>Yes</td><td>Not created in this workbook</td></tr>
+            <tr><td>.python-version</td><td>The Python version for the project, read by version managers such as uv and pyenv</td><td>Yes</td><td><a href="#s41">4.1</a></td></tr>
+            <tr><td>.venv/</td><td>The virtual environment: the packages installed on one machine</td><td>No</td><td><a href="#s41">4.1</a></td></tr>
+            <tr><td>.env</td><td>Settings and secrets for one machine</td><td>No</td><td><a href="#s41">4.1</a></td></tr>
+            <tr><td>.env.example</td><td>Every setting name, with placeholder values</td><td>Yes</td><td><a href="#s41">4.1</a></td></tr>
+            <tr><td>app/main.py</td><td>Creates the application and lists each area: the index</td><td>Yes</td><td><a href="#s47">4.7</a></td></tr>
+            <tr><td>tests/conftest.py</td><td>Shared pytest fixtures, such as a test client or a stub store</td><td>Yes</td><td>Stage 5</td></tr>
+            <tr><td>alembic.ini, migrations/env.py, migrations/versions/</td><td>Alembic's settings, the script that connects migrations to the models, and one file per migration (Source 54). env.py reads the database address from the environment, so no password is written in alembic.ini</td><td>Yes</td><td>Stage 7</td></tr>
+            <tr><td>package.json</td><td>The front end's packages as version ranges, such as ^16.4.0, and its scripts: dev, build, test (Source 55)</td><td>Yes</td><td>Stage 6</td></tr>
+            <tr><td>package-lock.json</td><td>The front end lock file: the exact version of every installed package, including indirect ones. npm ci installs exactly this and stops with an error if it disagrees with package.json (Sources 56 and 57)</td><td>Yes</td><td>Stage 6</td></tr>
+            <tr><td>node_modules/</td><td>The installed front end packages</td><td>No</td><td>Stage 6</td></tr>
+            <tr><td>next.config.ts</td><td>Next.js settings, such as standalone output for deployment</td><td>Yes</td><td>Stage 6</td></tr>
+            <tr><td>tsconfig.json</td><td>TypeScript settings</td><td>Yes</td><td>Stage 6</td></tr>
+            <tr><td>proxy.ts</td><td>The route guard that runs before each matched request</td><td>Yes</td><td>Stage 6</td></tr>
+            <tr><td>app/ (front end)</td><td>One folder per route, each with a page file</td><td>Yes</td><td>Stage 6</td></tr>
+            <tr><td>public/</td><td>Files served as they are, such as icons</td><td>Yes</td><td>Stage 6</td></tr>
+            <tr><td>.next/</td><td>The front end build output</td><td>No</td><td>Stage 6</td></tr>
+            <tr><td>.nvmrc</td><td>The Node.js version for the project, read by nvm</td><td>Yes</td><td>Stage 6</td></tr>
+            <tr><td>.gitignore</td><td>What Git must not track: .env, .venv/, node_modules/, .next/</td><td>Yes</td><td><a href="#s41">4.1</a></td></tr>
+            <tr><td>README.md</td><td>What the application does, how to run it, and where to start reading</td><td>Yes</td><td><a href="#s41">4.1</a></td></tr>
+            <tr><td>CHANGELOG.md</td><td>Notable changes in each release, written for people (Source 58)</td><td>Yes</td><td>Stage 9, with the first release</td></tr>
+            <tr><td>.github/workflows/*.yml</td><td>CI: the tests and checks that run on each push and pull request</td><td>Yes</td><td><a href="#s42">4.2</a></td></tr>
+            <tr><td>.github/CODEOWNERS</td><td>Who must review changes to which folders</td><td>Yes</td><td><a href="#s42">4.2</a></td></tr>
+            <tr><td>.pre-commit-config.yaml</td><td>Checks that run before each commit, such as the secret scanner</td><td>Yes</td><td><a href="#s41">4.1</a></td></tr>
+            <tr><td>.github/pull_request_template.md</td><td>The questions every pull request answers: what changed, how it was tested, the security checklist, and any migration</td><td>Yes</td><td><a href="#s42">4.2</a></td></tr>
+            <tr><td>deploy/</td><td>The systemd units, the nginx configuration and deploy.sh</td><td>Yes</td><td>Stage 9</td></tr>
+            <tr><td>RUNBOOK.md</td><td>The operations routines and the incident steps</td><td>Yes</td><td>Stage 10</td></tr>
+            <tr><td>Optional: uv.lock</td><td>The lock file uv writes, when the project uses uv instead of pip-tools</td><td>Yes</td><td>Only when the project uses uv</td></tr>
+            <tr><td>Optional: Dockerfile, compose.yaml, .dockerignore</td><td>When the application runs in containers: how to build the image, how to run the containers together, and what to leave out of the build</td><td>Yes</td><td>Only when the application runs in containers</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Default.</strong> User Notices uses pip-tools, with requirements.in and requirements.txt in backend/. Create .python-version with the Stage 3 Python version in 4.1, and .nvmrc with the Node.js version when the front end is created in Stage 6. The files marked as optional are needed only if the project uses uv or containers.</p>
+    </div>
+
+    <div class="try">
+      <p class="try-label">Try it</p>
+      <h4>Lock file or not?</h4>
+      <p>All four files are committed, and each pair is committed together. Decide which ones are lock files.</p>
+      <div class="quiz" data-ex="lockfile"></div>
+      <div class="quiz-foot"><p class="score" aria-live="polite"></p><button type="button" class="btn" data-restart="lockfile">Start again</button></div>
+    </div>
+  </div>
+</section>
+
+<section id="s43" aria-labelledby="h43">
+  <div class="wrap">
+    <p class="step-num">Step 4.3</p>
+    <h2 id="h43">Choose the pattern</h2>
+    <p class="lead">User Notices uses the layered pattern: routers receive requests, services do the work, and the data layer talks to the database. A call goes down one layer at a time and the result comes back up; no layer calls the layer above it. Write the pattern and the table below into the design document before creating any folder.</p>
+
+    <h3>What each layer does</h3>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Layer</th><th>Folder</th><th>Does</th><th>Does not</th></tr></thead>
+        <tbody>
+          <tr><td>Router</td><td><code>routers/</code></td><td>Reads the request; checks the body against a Pydantic model; receives injected dependencies; calls one service function; returns the response and status code</td><td>Run SQL, call the SMS provider, or apply business rules</td></tr>
+          <tr><td>Service</td><td><code>services/</code></td><td>Applies the business rules; calls the data layer and external services; raises an error when a rule fails</td><td>Read the HTTP request or build the HTTP response</td></tr>
+          <tr><td>Data layer</td><td><code>db/</code></td><td>Reads and writes rows through the database session; returns Pydantic models</td><td>Apply business rules or call external services</td></tr>
+          <tr><td>Auth</td><td><code>auth/</code></td><td>Checks credentials, issues tokens, identifies the signed-in staff member</td><td>Read or change users or notices</td></tr>
+          <tr><td>Interfaces</td><td><code>interfaces/</code></td><td>Declares the functions each layer offers: names, inputs, return types, errors</td><td>Contain working code</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Errors cross the layers in one direction. A service raises a plain Python error (ValueError for a broken rule, LookupError for a missing record), and the router turns it into an HTTP status (400, 404). HTTP stays in the routers, so a service can also be called from a test or, in Stage 8, from a task-queue job.</p>
+
+    <h3>Example: one request through the layers</h3>
+    <p>Step through a request for a new notice. Choose a case, then use Next.</p>
+    <figure>
+      <div class="trace" id="trace">
+        <div class="trace-controls">
+          <div class="seg" role="group" aria-label="Case">
+            <button type="button" data-case="ok" aria-pressed="true">Valid notice</button>
+            <button type="button" data-case="past" aria-pressed="false">Send time in the past</button>
+            <button type="button" data-case="anon" aria-pressed="false">Not signed in</button>
+          </div>
+          <div class="trace-nav">
+            <button type="button" class="btn" id="trace-back">Back</button>
+            <button type="button" class="btn primary" id="trace-next">Next</button>
+          </div>
+        </div>
+        <div class="trace-grid">
+          <div class="lane">
+            <div class="layer" data-layer="browser"><div class="l-name">Browser</div><div class="l-file">New notice page</div></div>
+            <div class="lane-arrow" aria-hidden="true">&#8597;</div>
+            <div class="layer deps" data-layer="deps"><div class="l-name">Dependencies</div><div class="l-file">current_user, get_notice_service</div><div class="side-note">FastAPI runs these through Depends before the router's function (4.6).</div></div>
+            <div class="lane-arrow" aria-hidden="true">&#8597;</div>
+            <div class="layer" data-layer="router"><div class="l-name">Router</div><div class="l-file">routers/notices.py: create_notice</div></div>
+            <div class="lane-arrow" aria-hidden="true">&#8597;</div>
+            <div class="layer" data-layer="service"><div class="l-name">Service</div><div class="l-file">services/notices.py: schedule_notice</div></div>
+            <div class="lane-arrow" aria-hidden="true">&#8597;</div>
+            <div class="layer" data-layer="data"><div class="l-name">Data layer</div><div class="l-file">NoticeStore: add_notice</div></div>
+            <div class="lane-arrow" aria-hidden="true">&#8597;</div>
+            <div class="layer" data-layer="storage"><div class="l-name">Storage</div><div class="l-file">Stub in Stage 5; PostgreSQL from Stage 7</div></div>
+          </div>
+        </div>
+        <div class="narration" aria-live="polite">
+          <p class="n-count" id="trace-count">Step 1 of 6</p>
+          <p id="trace-text">The New notice page sends POST /v1/notices with the text, group and send time. The browser adds the session cookie.</p>
+          <span class="status-chip" id="trace-status" hidden></span>
+        </div>
+      </div>
+      <figcaption><strong>Figure 3.</strong> Scheduling a notice: one request through the router, service and data layer, in three cases.</figcaption>
+    </figure>
+
+    <div class="try">
+      <p class="try-label">Try it</p>
+      <h4>Which layer does this?</h4>
+      <p>Pick the layer that owns each job, using the table above.</p>
+      <div class="quiz" data-ex="layer"></div>
+      <div class="quiz-foot"><p class="score" aria-live="polite"></p><button type="button" class="btn" data-restart="layer">Start again</button></div>
+    </div>
+
+    <h3>Choose differently when</h3>
+    <p>.NET work uses MVC (model, view, controller) instead of layers. AI-heavy code, such as a RAG chatbot, mostly moves and extracts data; use classes there only where they help.</p>
+
+    <h3>Check</h3>
+    <ul class="checks">
+      <li>The design document names the pattern in one line.</li>
+      <li>The table of what each layer does and does not do is in the design document.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="s44" aria-labelledby="h44">
+  <div class="wrap">
+    <p class="step-num">Step 4.4</p>
+    <h2 id="h44">Create folders by role</h2>
+    <p class="lead">Group the Stage 1 screens into areas, then give each area one file in each role folder it needs. User Notices has three areas (sign-in, users, notices), one external service (the SMS provider) and a data layer.</p>
+
+    <h3>Steps</h3>
+    <ol>
+      <li>Group the screens into areas. An area is a set of screens that work on the same data. Users list and User detail both work on users, so they form one area.</li>
+      <li>Give each area a router file, and a service file if it has business rules. Sign-in has no service file; its logic goes in auth/.</li>
+      <li>Give each external service its own service file, so no other file calls the provider directly.</li>
+      <li>Put the data layer in db/: session.py for the connection now, models.py for the tables in Stage 7.</li>
+      <li>Give each area an interface file in interfaces/, written in 4.5.</li>
+      <li>Keep tests/, which 4.2 created for the first test. Stage 5 adds a test for each function.</li>
+      <li>Create only the roles the application has today. A folder for task-queue jobs, for example, is added in Stage 8, and only if the load test calls for a queue.</li>
+    </ol>
+
+    <figure>
+      <div class="fig-scroll">
+        <svg viewBox="0 44 760 476" role="img" aria-label="Each screen maps to one area, and each area to one file per role">
+          <defs><marker id="f3-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="d-head" d="M0 0L10 5L0 10z"/></marker></defs>
+          <text class="d-quiet" x="24" y="58">Stage 1 screens and lists</text>
+          <text class="d-quiet" x="272" y="58">Areas</text>
+          <text class="d-quiet" x="480" y="58">Files in the role folders</text>
+          <g marker-end="url(#f3-arrow)">
+            <path class="d-edge" d="M224 104H272" marker-end="url(#f3-arrow)"/><path class="d-edge" d="M224 174H272" marker-end="url(#f3-arrow)"/><path class="d-edge" d="M224 218H272" marker-end="url(#f3-arrow)"/><path class="d-edge" d="M224 278H272" marker-end="url(#f3-arrow)"/><path class="d-edge" d="M224 322H272" marker-end="url(#f3-arrow)"/><path class="d-edge" d="M224 392H272" marker-end="url(#f3-arrow)"/><path class="d-edge" d="M224 472H272" marker-end="url(#f3-arrow)"/>
+            <path class="d-edge" d="M432 104H480" marker-end="url(#f3-arrow)"/><path class="d-edge" d="M432 196H480" marker-end="url(#f3-arrow)"/><path class="d-edge" d="M432 300H480" marker-end="url(#f3-arrow)"/><path class="d-edge" d="M432 392H480" marker-end="url(#f3-arrow)"/><path class="d-edge" d="M432 472H480" marker-end="url(#f3-arrow)"/>
+          </g>
+          <rect class="d-box" x="24" y="86" width="200" height="36" rx="8"/><text class="d-text" x="40" y="108">Sign in</text>
+          <rect class="d-box" x="24" y="156" width="200" height="36" rx="8"/><text class="d-text" x="40" y="178">Users list</text>
+          <rect class="d-box" x="24" y="200" width="200" height="36" rx="8"/><text class="d-text" x="40" y="222">User detail</text>
+          <rect class="d-box" x="24" y="260" width="200" height="36" rx="8"/><text class="d-text" x="40" y="282">New notice</text>
+          <rect class="d-box" x="24" y="304" width="200" height="36" rx="8"/><text class="d-text" x="40" y="326">Notice history</text>
+          <rect class="d-box" x="24" y="374" width="200" height="36" rx="8"/><text class="d-text" x="40" y="396">SMS provider (external)</text>
+          <rect class="d-box" x="24" y="454" width="200" height="36" rx="8"/><text class="d-text" x="40" y="476">Stored data and logs</text>
+          <rect class="d-tint" x="272" y="72" width="160" height="64" rx="8"/><text class="d-name" x="352" y="109" text-anchor="middle">Sign-in</text>
+          <rect class="d-tint" x="272" y="152" width="160" height="88" rx="8"/><text class="d-name" x="352" y="201" text-anchor="middle">Users</text>
+          <rect class="d-tint" x="272" y="256" width="160" height="88" rx="8"/><text class="d-name" x="352" y="305" text-anchor="middle">Notices</text>
+          <rect class="d-tint" x="272" y="360" width="160" height="64" rx="8"/><text class="d-name" x="352" y="397" text-anchor="middle">SMS sending</text>
+          <rect class="d-tint" x="272" y="440" width="160" height="64" rx="8"/><text class="d-name" x="352" y="477" text-anchor="middle">Data layer</text>
+          <rect class="d-box" x="480" y="72" width="256" height="64" rx="8"/><text class="d-text" x="496" y="93">routers/auth.py</text><text class="d-text" x="496" y="110">auth/</text><text class="d-text" x="496" y="127">interfaces/auth.py</text>
+          <rect class="d-box" x="480" y="152" width="256" height="88" rx="8"/><text class="d-text" x="496" y="182">routers/users.py</text><text class="d-text" x="496" y="200">services/users.py</text><text class="d-text" x="496" y="218">interfaces/users.py</text>
+          <rect class="d-box" x="480" y="256" width="256" height="88" rx="8"/><text class="d-text" x="496" y="286">routers/notices.py</text><text class="d-text" x="496" y="304">services/notices.py</text><text class="d-text" x="496" y="322">interfaces/notices.py</text>
+          <rect class="d-box" x="480" y="360" width="256" height="64" rx="8"/><text class="d-text" x="496" y="387">services/sms.py</text><text class="d-text" x="496" y="405">interfaces/sms.py</text>
+          <rect class="d-box" x="480" y="440" width="256" height="64" rx="8"/><text class="d-text" x="496" y="467">db/session.py</text><text class="d-text" x="496" y="485">db/models.py, in Stage 7</text>
+        </svg>
+      </div>
+      <figcaption><strong>Figure 4.</strong> User Notices: Stage 1 screens grouped into areas, and the files each area gets. Sign-in has no service file because auth/ holds its logic. The SMS provider has no screen, so it gets a service file and an interface but no router.</figcaption>
+    </figure>
+
+    <h3>Commands</h3>
+    <p>From backend/:</p>
+    <div class="code"><pre><code class="language-bash">mkdir -p app/interfaces app/auth app/routers app/services app/db tests
+touch app/__init__.py app/interfaces/__init__.py app/auth/__init__.py \
+      app/routers/__init__.py app/services/__init__.py app/db/__init__.py \
+      tests/__init__.py</code></pre></div>
+    <p>The empty <code>__init__.py</code> files mark each folder as a Python package, so the application, pytest and a type checker all import app.routers.notices the same way. app/__init__.py (4.1) and tests/__init__.py (4.2) exist already; touch leaves them as they are. On Windows, create the empty files in the editor.</p>
+
+    <h3>Example: the repository after 4.4</h3>
+    <p>Select a file or folder to see what it holds and which step writes it. Files marked new are new in this version of the workbook.</p>
+    <div class="explorer" id="explorer">
+      <ul class="tree" id="tree" aria-label="Repository files"></ul>
+      <div class="detail" aria-live="polite">
+        <p class="d-path" id="ex-path">backend/app/main.py</p>
+        <dl>
+          <dt>Written in</dt><dd id="ex-when">4.7</dd>
+          <dt>What it holds</dt><dd id="ex-what">The index: one router per area, each with a comment naming its files.</dd>
+        </dl>
+      </div>
+    </div>
+
+    <h3>Check</h3>
+    <ul class="checks">
+      <li>Every Stage 1 screen belongs to exactly one area.</li>
+      <li>Every area has a router file, and every external service has its own service file.</li>
+      <li>No folder exists for a role the application does not have yet.</li>
+    </ul>
+
+    <h3>Common mistakes</h3>
+    <ul>
+      <li>Folders named after screens (users_list/, user_detail/). Two screens that work on the same data then hold two copies of the same service code.</li>
+      <li>Calling the SMS provider from a router, or from services/notices.py, instead of through services/sms.py.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="s45" aria-labelledby="h45">
+  <div class="wrap">
+    <p class="step-num">Step 4.5</p>
+    <h2 id="h45">Write the interfaces</h2>
+    <p class="lead">An interface lists a set of functions with their names, inputs, return types and errors, and no bodies. The Stage 5 skeleton copies these signatures, the assistant fills the bodies against them, and the unit tests check them. In Python, write each interface as a typing.Protocol class in the area's file in interfaces/, or as stub functions with type hints and a docstring, as app/auth/ does for sign-in.</p>
+
+    <h3>Steps</h3>
+    <p>Work through the screens one action at a time.</p>
+    <ol>
+      <li>Take one thing a user does on a screen, for example scheduling a notice on New notice.</li>
+      <li>Name the function after the action: schedule_notice.</li>
+      <li>List the inputs the action needs, with their types: text: str, group_id: int, send_at: datetime, author_id: int.</li>
+      <li>Decide what it returns. Return a Pydantic model such as NoticeSummary, not a database row, so the interface does not depend on the Stage 7 tables.</li>
+      <li>Write the errors in the docstring: which inputs it rejects and which error it raises.</li>
+      <li>Add the function to the Protocol class for its area.</li>
+      <li>Give the data layer an interface too. The service calls a NoticeStore, never PostgreSQL directly, so the Stage 5 stub and the Stage 7 database can each stand behind it.</li>
+      <li>Fill in the screen-to-interface table. An empty cell is a missing function.</li>
+    </ol>
+
+    <h3>How a Protocol works</h3>
+    <p>A Protocol class declares methods without bodies. Any class with methods of the same names and signatures satisfies it, without inheriting from it. In Stage 5 the Notices class in services/notices.py satisfies NoticeService, and InMemoryNoticeStore in tests/stubs.py satisfies NoticeStore. get_notice_service (4.6) is declared to return a NoticeService, so from Stage 5 on a type checker such as mypy reports any difference between the Notices class and the interface. mypy needs its pydantic plugin (plugins = pydantic.mypy) to read the Settings class.</p>
+
+    <figure>
+      <div class="fig-scroll">
+        <svg viewBox="0 44 760 512" role="img" aria-label="Each layer calls an interface, so what stands behind it can be swapped">
+          <defs><marker id="f4-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="d-head" d="M0 0L10 5L0 10z"/></marker></defs>
+          <path class="d-edge" d="M330 112V144" marker-end="url(#f4-arrow)"/>
+          <path class="d-edge" d="M330 288V312H200V336" marker-end="url(#f4-arrow)"/>
+          <path class="d-edge" d="M430 288V312H560V336" marker-end="url(#f4-arrow)"/>
+          <path class="d-edge d-dash" d="M430 232V200" marker-end="url(#f4-arrow)"/>
+          <path class="d-edge d-dash" d="M108 440V392" marker-end="url(#f4-arrow)"/>
+          <path class="d-edge d-dash" d="M292 440V392" marker-end="url(#f4-arrow)"/>
+          <path class="d-edge d-dash" d="M468 440V392" marker-end="url(#f4-arrow)"/>
+          <path class="d-edge d-dash" d="M652 440V392" marker-end="url(#f4-arrow)"/>
+          <rect class="d-box" x="230" y="56" width="300" height="56" rx="8"/><text class="d-name" x="246" y="80">Router: create_notice</text><text class="d-quiet" x="246" y="99" style="font-size:12.5px">routers/notices.py</text>
+          <rect class="d-accent" x="230" y="144" width="300" height="56" rx="8"/><text class="d-name" x="246" y="168">NoticeService</text><text class="d-text" x="246" y="187">interfaces/notices.py</text>
+          <rect class="d-box" x="230" y="232" width="300" height="56" rx="8"/><text class="d-name" x="246" y="256">Notices class</text><text class="d-quiet" x="246" y="275" style="font-size:12.5px">services/notices.py, written in Stage 5</text>
+          <rect class="d-accent" x="60" y="336" width="280" height="56" rx="8"/><text class="d-name" x="76" y="360">NoticeStore</text><text class="d-text" x="76" y="379">interfaces/notices.py</text>
+          <rect class="d-accent" x="420" y="336" width="280" height="56" rx="8"/><text class="d-name" x="436" y="360">SmsClient</text><text class="d-text" x="436" y="379">interfaces/sms.py</text>
+          <rect class="d-box" x="24" y="440" width="168" height="56" rx="8"/><text class="d-name" x="36" y="464">InMemoryNoticeStore</text><text class="d-quiet" x="36" y="483">tests/stubs.py</text>
+          <rect class="d-box" x="208" y="440" width="168" height="56" rx="8"/><text class="d-name" x="220" y="464">SQLAlchemy store</text><text class="d-quiet" x="220" y="483">From Stage 7</text>
+          <rect class="d-box" x="384" y="440" width="168" height="56" rx="8"/><text class="d-name" x="396" y="464">Provider client</text><text class="d-quiet" x="396" y="483">services/sms.py</text>
+          <rect class="d-box" x="568" y="440" width="168" height="56" rx="8"/><text class="d-name" x="580" y="464">FakeSmsClient</text><text class="d-quiet" x="580" y="483">tests/stubs.py</text>
+          <line class="d-edge" x1="24" y1="528" x2="56" y2="528"/><text class="d-quiet" x="64" y="532">calls</text>
+          <line class="d-edge d-dash" x1="120" y1="528" x2="152" y2="528"/><text class="d-quiet" x="160" y="532">implements</text>
+          <rect class="d-accent" x="256" y="520" width="24" height="16" rx="4"/><text class="d-quiet" x="288" y="532">interface, written in 4.5</text>
+        </svg>
+      </div>
+      <figcaption><strong>Figure 5.</strong> The interfaces in the notices area and the classes that implement them. The router and the Notices class only see the shaded interfaces. Replacing InMemoryNoticeStore with the Stage 7 store, or the provider client with FakeSmsClient, changes no code above the interface.</figcaption>
+    </figure>
+
+    <h3>Example: User Notices</h3>
+    <p>The interfaces below are the first draft, before the critique in 4.8. Section 4.8 shows the changes the critique led to. Select a file to see it.</p>
+    <div class="tabs" data-tabs>
+      <div class="tablist" role="tablist" aria-label="Interface files">
+        <button type="button" role="tab" id="t44-1" aria-controls="p44-1" aria-selected="true">notices.py</button>
+        <button type="button" role="tab" id="t44-2" aria-controls="p44-2" aria-selected="false">users.py</button>
+        <button type="button" role="tab" id="t44-3" aria-controls="p44-3" aria-selected="false">auth</button>
+        <button type="button" role="tab" id="t44-4" aria-controls="p44-4" aria-selected="false">sms.py</button>
+      </div>
+      <div role="tabpanel" id="p44-1" aria-labelledby="t44-1">
+        <p class="note">interfaces/notices.py extends the interface in the guide with NewNotice, the model for what the New notice page sends, and NoticeStore, the data-layer interface.</p>
+        <div class="code"><pre><code class="language-python"># app/interfaces/notices.py
+from datetime import datetime
+from typing import Protocol
+from pydantic import BaseModel
+
+class NewNotice(BaseModel):
+    """What the New notice page sends."""
+    text: str
+    group_id: int
+    send_at: datetime  # timezone-aware, UTC
+
+class NoticeSummary(BaseModel):
+    id: int
+    text: str
+    send_at: datetime
+    status: str  # scheduled, sending, sent or failed
+
+class Recipient(BaseModel):
+    user_id: int
+    phone: str
+
+class NoticeService(Protocol):
+    async def schedule_notice(self, text: str, group_id: int,
+                              send_at: datetime, author_id: int) -&gt; NoticeSummary:
+        """Store a notice with status scheduled. Sends nothing.
+        Raises ValueError for empty text, an unknown group or a past send time."""
+        ...
+
+    async def list_notices(self, limit: int = 50) -&gt; list[NoticeSummary]:
+        """Newest first, at most limit notices."""
+        ...
+
+    async def send_notice(self, notice_id: int) -&gt; None:
+        """Send the notice to the users in its group.
+        Raises LookupError if the notice does not exist."""
+        ...
+
+class NoticeStore(Protocol):
+    """Notice data: an in-memory stub in Stage 5, PostgreSQL from Stage 7."""
+    async def group_exists(self, group_id: int) -&gt; bool: ...
+    async def add_notice(self, text: str, group_id: int,
+                         send_at: datetime, author_id: int) -&gt; NoticeSummary: ...
+    async def get_notice(self, notice_id: int) -&gt; NoticeSummary | None: ...
+    async def list_notices(self, limit: int) -&gt; list[NoticeSummary]: ...
+    async def list_recipients(self, notice_id: int) -&gt; list[Recipient]: ...
+    async def set_status(self, notice_id: int, status: str) -&gt; None: ...</code></pre></div>
+      </div>
+      <div role="tabpanel" id="p44-2" aria-labelledby="t44-2" hidden>
+        <div class="code"><pre><code class="language-python"># app/interfaces/users.py
+from datetime import datetime
+from typing import Protocol
+from pydantic import BaseModel
+from app.interfaces.auth import Staff
+
+class Group(BaseModel):
+    id: int
+    name: str
+
+class UserSummary(BaseModel):
+    """One row of the Users list."""
+    id: int
+    name: str
+    phone: str
+    group_id: int
+    opted_in: bool
+
+class User(UserSummary):
+    """One user, as the User detail page shows it."""
+    updated_at: datetime
+
+class UserUpdate(BaseModel):
+    """Fields the User detail page can change. A field that is not sent is not changed."""
+    name: str | None = None
+    phone: str | None = None
+    opted_in: bool | None = None
+
+class UserService(Protocol):
+    async def list_groups(self) -&gt; list[Group]:
+        """Every group, by name. Used by the group filter and the New notice form."""
+        ...
+
+    async def list_users(self, group_id: int | None = None) -&gt; list[UserSummary]:
+        """Users in one group, or all users when group_id is None."""
+        ...
+
+    async def get_user(self, user_id: int) -&gt; User:
+        """Raises LookupError if the user does not exist."""
+        ...
+
+    async def update_user(self, user_id: int, changes: UserUpdate, staff: Staff) -&gt; User:
+        """Apply the changes, record who made them, and return the updated user.
+        Raises LookupError for an unknown user,
+        PermissionError unless staff.role is editor."""
+        ...</code></pre></div>
+        <p>List rows are UserSummary; the detail page gets User, which adds updated_at. update_user takes the signed-in staff member, so the service can check the role and record who made the change in audit_log (Stage 7). UserUpdate holds only the fields a caller may change, so a request cannot move a user to another group (check 2 of the Stage 5 security checklist). The data layer for users follows the same shape as NoticeStore: a UserStore Protocol with the reads and writes these functions need.</p>
+      </div>
+      <div role="tabpanel" id="p44-3" aria-labelledby="t44-3" hidden>
+        <p class="note">interfaces/auth.py holds the Staff model. Sign-in is three plain functions, so app/auth/ writes its interface as stub functions with type hints and a docstring; Stage 5 writes their bodies.</p>
+        <div class="code"><pre><code class="language-python"># app/interfaces/auth.py
+from pydantic import BaseModel
+
+class Staff(BaseModel):
+    """A signed-in staff member."""
+    id: int
+    email: str
+    role: str  # viewer or editor</code></pre></div>
+        <div class="code"><pre><code class="language-python"># app/auth/__init__.py: what auth/ offers the rest of the backend.
+# Stub functions with type hints and a docstring; the bodies are written in Stage 5.
+from app.interfaces.auth import Staff
+from app.auth.current_user import current_user
+
+async def verify_credentials(email: str, password: str) -&gt; Staff | None:
+    """Return the staff member if the email and password match, otherwise None."""
+    ...
+
+def issue_token(staff: Staff) -&gt; str:
+    """Return a session token for the staff member, signed with SESSION_SECRET.
+    POST /v1/auth/login puts it in a cookie named session and returns 204 No Content."""
+    ...
+
+__all__ = ["current_user", "issue_token", "verify_credentials"]</code></pre></div>
+        <p class="note">current_user is in app/auth/current_user.py (4.6).</p>
+      </div>
+      <div role="tabpanel" id="p44-4" aria-labelledby="t44-4" hidden>
+        <div class="code"><pre><code class="language-python"># app/interfaces/sms.py
+from typing import Protocol
+
+class SmsError(Exception):
+    """The SMS provider rejected a message."""
+
+class SmsClient(Protocol):
+    async def send(self, phone: str, text: str) -&gt; str:
+        """Send one message and return the provider's message id.
+        Raises SmsError if the provider rejects it."""
+        ...</code></pre></div>
+        <p>SmsClient is the name Stages 4, 5 and 9 use for the provider client. The class that calls the provider lives in services/sms.py; tests/stubs.py holds FakeSmsClient, which records each message instead of sending it.</p>
+      </div>
+    </div>
+
+    <h3>Screen-to-interface table</h3>
+    <p>This is the first pass of the table, with its two empty cells marked. Use the button to see the fix.</p>
+    <div class="table-scroll">
+      <table id="gap-table">
+        <thead><tr><th>Screen</th><th>Action</th><th>Function</th><th>Endpoint (Stage 6)</th></tr></thead>
+        <tbody>
+          <tr><td>Sign in</td><td>Sign in</td><td>verify_credentials, then issue_token, in app/auth/</td><td><code>POST /v1/auth/login</code>: 204 No Content and a cookie named session</td></tr>
+          <tr><td>Users list</td><td>Choose a group to filter by</td><td class="gap" data-gap="fn">None yet</td><td class="gap" data-gap="ep">None yet</td></tr>
+          <tr><td>Users list</td><td>List the users in a group</td><td>UserService.list_users</td><td><code>GET /v1/users?group={id}</code></td></tr>
+          <tr><td>User detail</td><td>View a user</td><td>UserService.get_user</td><td><code>GET /v1/users/{id}</code></td></tr>
+          <tr><td>User detail</td><td>Edit a user</td><td>UserService.update_user</td><td><code>PATCH /v1/users/{id}</code></td></tr>
+          <tr><td>New notice</td><td>Choose a group</td><td class="gap" data-gap="fn">None yet</td><td class="gap" data-gap="ep">None yet</td></tr>
+          <tr><td>New notice</td><td>Schedule a notice</td><td>NoticeService.schedule_notice</td><td><code>POST /v1/notices</code></td></tr>
+          <tr><td>Notice history</td><td>List notices</td><td>NoticeService.list_notices</td><td><code>GET /v1/notices</code></td></tr>
+          <tr><td>Notice history</td><td>Send now</td><td>NoticeService.send_notice</td><td><code>POST /v1/notices/{id}/send</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><button type="button" class="btn" id="gap-toggle" aria-pressed="false">Show the fix</button></p>
+    <p>list_groups and <code>GET /v1/users/groups</code> were added to fill the two empty cells; add that call to your Stage 6 route table. In routers/users.py, declare the /groups route before /{user_id}. FastAPI matches routes in the order they are declared, so otherwise a request for /v1/users/groups matches /{user_id} first and fails with 422.</p>
+
+    <div class="try">
+      <p class="try-label">Try it</p>
+      <h4>Check the signature</h4>
+      <p>Each signature below is written for an interface file. Pick what is wrong with it, or confirm it follows the rules.</p>
+      <div class="quiz" data-ex="signature"></div>
+      <div class="quiz-foot"><p class="score" aria-live="polite"></p><button type="button" class="btn" data-restart="signature">Start again</button></div>
+    </div>
+
+    <h3>Check</h3>
+    <ul class="checks">
+      <li>Every action on every screen has a function in the table, and no cell is empty.</li>
+      <li>Every function names its inputs and its return type, and its docstring names its errors.</li>
+      <li>Every return type is a Pydantic model or a plain type, not a database row.</li>
+      <li>The Notices class receives a NoticeStore; it never opens a database session itself.</li>
+    </ul>
+
+    <h3>Common mistakes</h3>
+    <ul>
+      <li>Returning SQLAlchemy objects from a service, so every router and test depends on the Stage 7 tables.</li>
+      <li>Writing the interfaces after the code, so they describe what was written instead of what the screens need.</li>
+      <li>Leaving errors out of the docstrings, so the assistant decides them in Stage 5.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="s46" aria-labelledby="h46">
+  <div class="wrap">
+    <p class="step-num">Step 4.6</p>
+    <h2 id="h46">Decide what is injected</h2>
+    <p class="lead">Inject what belongs to one request or comes from configuration, and import everything else. A function declares what it needs with Depends, and FastAPI supplies it each time the endpoint is called (Source 5). In this step you list the injected dependencies and write their signatures; their bodies come in Stage 5.</p>
+
+    <h3>Steps</h3>
+    <ol>
+      <li>For each value a function needs, ask the three questions in Figure 6.</li>
+      <li>List each injected dependency: its name, what it provides, the file it lives in, and what uses it.</li>
+      <li>Write each dependency's signature and docstring, with ... as the body.</li>
+      <li>Note the helpers that are imported instead, so nobody wraps them in Depends later.</li>
+    </ol>
+
+    <figure>
+      <div class="flow">
+        <div class="flow-row">
+          <div class="flow-q"><span class="q">1. Is it opened and closed for each request?</span><span class="ex">Example: a database session</span></div>
+          <div class="flow-a"><span class="a">Inject with Depends</span><code>get_session</code></div>
+        </div>
+        <div class="flow-no">no</div>
+        <div class="flow-row">
+          <div class="flow-q"><span class="q">2. Does it come from the request itself?</span><span class="ex">Example: the signed-in staff member, from the cookie</span></div>
+          <div class="flow-a"><span class="a">Inject with Depends</span><code>current_user</code></div>
+        </div>
+        <div class="flow-no">no</div>
+        <div class="flow-row">
+          <div class="flow-q"><span class="q">3. Is it configuration, or built on one of these?</span><span class="ex">Example: settings; a service on this request's session</span></div>
+          <div class="flow-a"><span class="a">Inject with Depends</span><code>get_settings</code>, <code>get_notice_service</code></div>
+        </div>
+        <div class="flow-no">no to all three</div>
+        <div class="flow-end"><strong>Import it.</strong> Plain helpers and types: a phone-number formatter, Pydantic models, Protocol classes.</div>
+      </div>
+      <figcaption><strong>Figure 6.</strong> Three questions decide between Depends and an import. Ask them in order.</figcaption>
+    </figure>
+
+    <div class="try">
+      <p class="try-label">Try it</p>
+      <h4>Depends or import?</h4>
+      <p>Apply the three questions to each value a User Notices function needs.</p>
+      <div class="quiz" data-ex="inject"></div>
+      <div class="quiz-foot"><p class="score" aria-live="polite"></p><button type="button" class="btn" data-restart="inject">Start again</button></div>
+    </div>
+
+    <h3>Example: User Notices</h3>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Dependency</th><th>Provides</th><th>File</th><th>Used by</th></tr></thead>
+        <tbody>
+          <tr><td><code>get_settings</code></td><td>The Settings object, read once</td><td>app/settings.py</td><td>get_session, get_sms_client, issue_token and current_user, the CORS setup in Stage 6</td></tr>
+          <tr><td><code>get_session</code></td><td>A database session, opened for one request and closed after it</td><td>app/db/session.py</td><td>The service providers</td></tr>
+          <tr><td><code>current_user</code></td><td>The signed-in staff member, or a 401 response</td><td>app/auth/current_user.py</td><td>Every users and notices endpoint</td></tr>
+          <tr><td><code>get_sms_client</code></td><td>The SmsClient for the provider at SMS_API_URL, using SMS_API_KEY</td><td>app/services/sms.py</td><td>get_notice_service</td></tr>
+          <tr><td><code>get_user_service</code></td><td>The UserService for this request, on this request's session</td><td>app/services/users.py</td><td>routers/users.py</td></tr>
+          <tr><td><code>get_notice_service</code></td><td>The NoticeService for this request, on this request's session and the SMS client</td><td>app/services/notices.py</td><td>routers/notices.py</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Imported, not injected: the Pydantic models (NewNotice, UserSummary, User, UserUpdate and the others), the Protocol classes, verify_credentials and issue_token from app/auth/, which routers/auth.py calls, and plain helpers such as one that formats phone numbers.</p>
+
+    <p>Four of the signatures as written in Stage 4, and how Stage 5 uses them. Select a file to see it.</p>
+    <div class="tabs" data-tabs>
+      <div class="tablist" role="tablist" aria-label="Dependency code">
+        <button type="button" role="tab" id="t45-1" aria-controls="p45-1" aria-selected="true">db/session.py</button>
+        <button type="button" role="tab" id="t45-2" aria-controls="p45-2" aria-selected="false">auth/current_user.py</button>
+        <button type="button" role="tab" id="t45-6" aria-controls="p45-6" aria-selected="false">services/sms.py</button>
+        <button type="button" role="tab" id="t45-3" aria-controls="p45-3" aria-selected="false">services/notices.py</button>
+        <button type="button" role="tab" id="t45-4" aria-controls="p45-4" aria-selected="false">Router in Stage 5</button>
+        <button type="button" role="tab" id="t45-5" aria-controls="p45-5" aria-selected="false">Test in Stage 5</button>
+      </div>
+      <div role="tabpanel" id="p45-1" aria-labelledby="t45-1">
+        <div class="code"><pre><code class="language-python"># app/db/session.py
+from collections.abc import AsyncIterator
+from sqlalchemy.ext.asyncio import AsyncSession
+
+async def get_session() -&gt; AsyncIterator[AsyncSession]:
+    """Open a database session for one request, yield it,
+    and close it when the request is finished."""
+    ...</code></pre></div>
+      </div>
+      <div role="tabpanel" id="p45-2" aria-labelledby="t45-2" hidden>
+        <div class="code"><pre><code class="language-python"># app/auth/current_user.py
+from fastapi import Request
+from app.interfaces.auth import Staff
+
+async def current_user(request: Request) -&gt; Staff:
+    """Read the session cookie and return the signed-in staff member.
+    Raises HTTPException with status 401 if there is no valid session."""
+    ...</code></pre></div>
+      </div>
+      <div role="tabpanel" id="p45-6" aria-labelledby="t45-6" hidden>
+        <div class="code"><pre><code class="language-python"># app/services/sms.py: the provider only; the provider client is written in Stage 5
+from typing import Annotated
+from fastapi import Depends
+from app.interfaces.sms import SmsClient
+from app.settings import Settings, get_settings
+
+async def get_sms_client(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -&gt; SmsClient:
+    """Return the client for the SMS provider at SMS_API_URL, using SMS_API_KEY."""
+    ...</code></pre></div>
+      </div>
+      <div role="tabpanel" id="p45-3" aria-labelledby="t45-3" hidden>
+        <div class="code"><pre><code class="language-python"># app/services/notices.py: the provider only; the Notices class is written in Stage 5
+from typing import Annotated
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.session import get_session
+from app.interfaces.notices import NoticeService
+from app.interfaces.sms import SmsClient
+from app.services.sms import get_sms_client
+
+async def get_notice_service(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    sms: Annotated[SmsClient, Depends(get_sms_client)],
+) -&gt; NoticeService:
+    """Return the notice service for this request, built on this
+    request's session and the SMS client."""
+    ...</code></pre></div>
+      </div>
+      <div role="tabpanel" id="p45-4" aria-labelledby="t45-4" hidden>
+        <p class="note">FastAPI runs current_user and get_notice_service before create_notice, and passes in their results.</p>
+        <div class="code"><pre><code class="language-python"># app/routers/notices.py, as Stage 5 writes it
+from typing import Annotated
+from fastapi import APIRouter, Depends, HTTPException
+from app.auth.current_user import current_user
+from app.interfaces.auth import Staff
+from app.interfaces.notices import NewNotice, NoticeService, NoticeSummary
+from app.services.notices import get_notice_service
+
+router = APIRouter(prefix="/notices", tags=["notices"])
+
+CurrentStaff = Annotated[Staff, Depends(current_user)]
+NoticeServiceDep = Annotated[NoticeService, Depends(get_notice_service)]
+
+@router.post("", status_code=201)
+async def create_notice(body: NewNotice, staff: CurrentStaff,
+                        service: NoticeServiceDep) -&gt; NoticeSummary:
+    try:
+        return await service.schedule_notice(body.text, body.group_id,
+                                             body.send_at, author_id=staff.id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error</code></pre></div>
+      </div>
+      <div role="tabpanel" id="p45-5" aria-labelledby="t45-5" hidden>
+        <p class="note">Because the router receives both through Depends, a Stage 5 test can replace them without changing the router.</p>
+        <div class="code"><pre><code class="language-python"># in a Stage 5 test or fixture
+from app.main import app
+from app.auth.current_user import current_user
+from app.interfaces.auth import Staff
+from app.services.notices import Notices, get_notice_service
+from tests.stubs import InMemoryNoticeStore
+
+app.dependency_overrides[current_user] = lambda: Staff(id=1, email="test@example.org", role="editor")
+app.dependency_overrides[get_notice_service] = lambda: Notices(InMemoryNoticeStore(group_ids=[1]))</code></pre></div>
+      </div>
+    </div>
+
+    <h3>Check</h3>
+    <ul class="checks">
+      <li>Every injected dependency is in the table, with what it provides and the file it lives in.</li>
+      <li>Each one passes the questions in Figure 6; no plain helper is in the table.</li>
+      <li>Each one has a signature and a docstring.</li>
+    </ul>
+
+    <h3>Common mistakes</h3>
+    <ul>
+      <li>Wrapping a plain helper in Depends. A helper that formats phone numbers is imported.</li>
+      <li>Opening a database session inside a service function instead of receiving one. A test cannot replace it, and nothing guarantees it is closed.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="s47" aria-labelledby="h47">
+  <div class="wrap">
+    <p class="step-num">Step 4.7</p>
+    <h2 id="h47">Write main.py as the index</h2>
+    <p class="lead">main.py creates the application and includes one router per area, with a comment above each line saying what the area does and which files hold it. A developer who has never seen the code reads main.py, finds the area, and opens its files.</p>
+
+    <h3>Steps</h3>
+    <ol>
+      <li>In each router file, create the router with its path prefix and tag. Add no endpoints yet; Stage 5 adds them.</li>
+      <li>In main.py, include each router under /v1, with its comment above it.</li>
+      <li>Start the application once, to confirm that every file the index names exists and imports.</li>
+      <li>Add tests/test_main.py, which imports app.main, so the tests check in CI fails on any pull request that breaks the index.</li>
+      <li>From now on, change a comment in the same commit as any file it names.</li>
+    </ol>
+
+    <h3>Example: User Notices</h3>
+    <div class="tabs" data-tabs>
+      <div class="tablist" role="tablist" aria-label="Index files">
+        <button type="button" role="tab" id="t46-1" aria-controls="p46-1" aria-selected="true">main.py</button>
+        <button type="button" role="tab" id="t46-2" aria-controls="p46-2" aria-selected="false">The three routers</button>
+        <button type="button" role="tab" id="t46-3" aria-controls="p46-3" aria-selected="false">Start it</button>
+        <button type="button" role="tab" id="t46-4" aria-controls="p46-4" aria-selected="false">test_main.py</button>
+      </div>
+      <div role="tabpanel" id="p46-1" aria-labelledby="t46-1">
+        <p class="note">With the users comment updated for list_groups (4.5).</p>
+        <div class="code"><pre><code class="language-python"># app/main.py
+from fastapi import FastAPI
+from app.routers import auth, users, notices
+
+app = FastAPI(title="User Notices")
+
+# Each router sets its own path, for example APIRouter(prefix="/notices").
+# Sign-in and tokens: routers/auth.py, auth/
+app.include_router(auth.router, prefix="/v1")
+# List, view and edit users; list groups: routers/users.py, services/users.py
+app.include_router(users.router, prefix="/v1")
+# Notices: routers/notices.py, services/notices.py, services/sms.py
+app.include_router(notices.router, prefix="/v1")</code></pre></div>
+      </div>
+      <div role="tabpanel" id="p46-2" aria-labelledby="t46-2" hidden>
+        <div class="code"><pre><code class="language-python"># app/routers/auth.py
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/auth", tags=["auth"])</code></pre></div>
+        <div class="code"><pre><code class="language-python"># app/routers/users.py
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/users", tags=["users"])</code></pre></div>
+        <div class="code"><pre><code class="language-python"># app/routers/notices.py
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/notices", tags=["notices"])</code></pre></div>
+      </div>
+      <div role="tabpanel" id="p46-3" aria-labelledby="t46-3" hidden>
+        <p class="note">From backend/:</p>
+        <div class="code"><pre><code class="language-bash">.venv/bin/python -c "import app.main"     # fails if a file the index names is missing
+.venv/bin/uvicorn app.main:app --reload   # then open http://127.0.0.1:8000/docs</code></pre></div>
+        <p>At the end of Stage 4 the /docs page loads and lists no operations. Each endpoint appears there as Stage 5 adds it.</p>
+      </div>
+      <div role="tabpanel" id="p46-4" aria-labelledby="t46-4" hidden>
+        <p class="code-file">backend/tests/test_main.py</p>
+        <div class="code"><pre><code class="language-python"># tests/test_main.py
+from fastapi.testclient import TestClient
+from app.main import app
+
+def test_every_file_the_index_names_imports():
+    # Importing app.main above fails if a router file is missing.
+    assert TestClient(app).get("/docs").status_code == 200</code></pre></div>
+        <p>Commit main.py, the router files and the test on a branch, and merge them through a pull request. From then on, the tests check covers the index.</p>
+      </div>
+    </div>
+
+    <h3>Reading the index</h3>
+    <figure>
+      <ol class="chain">
+        <li><div class="c-card"><span class="c-name">1. The task</span>Fix how notices are scheduled</div></li>
+        <li><div class="c-card"><span class="c-name">2. Read app/main.py</span><code># Notices: routers/notices.py, services/notices.py, services/sms.py</code><div class="c-aside">services/sms.py is also listed. The schedule_notice docstring says it sends nothing, so it is not opened for this task.</div></div></li>
+        <li><div class="c-card"><span class="c-name">3. Open routers/notices.py</span>create_notice receives POST /v1/notices</div></li>
+        <li><div class="c-card end"><span class="c-name">4. Open services/notices.py</span>schedule_notice applies the rules; set the breakpoint here</div></li>
+      </ol>
+      <figcaption><strong>Figure 7.</strong> From a task to the function, by reading the index in main.py.</figcaption>
+    </figure>
+
+    <div class="try">
+      <p class="try-label">Try it</p>
+      <h4>Which file do you open first?</h4>
+      <p>Use the comments in main.py above to pick the first file for each problem.</p>
+      <div class="quiz" data-ex="index"></div>
+      <div class="quiz-foot"><p class="score" aria-live="polite"></p><button type="button" class="btn" data-restart="index">Start again</button></div>
+    </div>
+
+    <h3>Keeping the index current</h3>
+    <ul>
+      <li>A commit that adds, moves or renames a file in an area updates that area's comment in the same commit.</li>
+      <li>A new area adds its router file, its include_router line and its comment in one commit.</li>
+      <li>A code review reads any change to main.py against the files the pull request touches.</li>
+    </ul>
+
+    <h3>Check</h3>
+    <ul class="checks">
+      <li><code>.venv/bin/python -c "import app.main"</code> runs without an error, /docs loads, and tests/test_main.py passes in CI.</li>
+      <li>Every router line has a comment naming what the area does and its files, and every file it names exists.</li>
+    </ul>
+
+    <h3>Common mistakes</h3>
+    <ul>
+      <li>Not updating main.py when files move, so the index points to files that no longer exist.</li>
+      <li>A comment that names the area but not its files, such as <code># Notices</code>, so the reader still has to search.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="s48" aria-labelledby="h48">
+  <div class="wrap">
+    <p class="step-num">Step 4.8</p>
+    <h2 id="h48">Critique the design</h2>
+    <p class="lead">Write the decisions from Stages 1 to 4 into one short design document, ask an AI assistant to find its weaknesses, and record a decision for every finding before Stage 5. Changing an interface now means editing the document and one file; after Stage 5 it also means changing the code and tests built on it.</p>
+
+    <h3>Steps</h3>
+    <ol>
+      <li>Write the design document from the template below, with the interface files pasted in full.</li>
+      <li>Give it to the assistant with the prompt below.</li>
+      <li>Record one decision for each finding: fix now, assign to a later stage, or reject with a reason (Figure 8).</li>
+      <li>Make the fixes in the design document and in the interface files.</li>
+      <li>Commit the revised design document in the repository, for example as docs/design.md, together with the interface changes, and merge it through a pull request.</li>
+    </ol>
+
+    <h3>Design document template</h3>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Section</th><th>Contents</th><th>From</th></tr></thead>
+        <tbody>
+          <tr><td>Purpose</td><td>Who uses the application and for what, in two or three sentences</td><td>Stage 1</td></tr>
+          <tr><td>Screens</td><td>Each screen and what the user does on it</td><td>Stage 1</td></tr>
+          <tr><td>Data and external services</td><td>What is stored, what is logged, what the application calls</td><td>Stage 1</td></tr>
+          <tr><td>Load</td><td>Registered users, concurrent requests, and bursts</td><td>Stage 1</td></tr>
+          <tr><td>Constraints and target</td><td>Mandated tools, where data may live, where the application runs</td><td>Stage 1</td></tr>
+          <tr><td>Stack</td><td>One tool per layer, with its reason</td><td>Stage 2</td></tr>
+          <tr><td>Versions</td><td>The version table and the breaking-change rule</td><td>Stage 3</td></tr>
+          <tr><td>Repository rules</td><td>The settings and secrets rules, the branch rules on main, and the CI checks</td><td>4.1, 4.2</td></tr>
+          <tr><td>Structure</td><td>The pattern, the table of what each layer does, the folder tree</td><td>4.3, 4.4</td></tr>
+          <tr><td>Interfaces</td><td>Each interface file in full, and the screen-to-interface table</td><td>4.5</td></tr>
+          <tr><td>Injected dependencies</td><td>The table from 4.6</td><td>4.6</td></tr>
+          <tr><td>Open questions</td><td>Anything not yet decided</td><td>Any stage</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>The prompt</h3>
+    <div class="code"><pre><code class="language-text">You are reviewing the design of a backend before any code is written.
+The design document follows. List its weaknesses under these headings:
+1. Requirements that no interface covers.
+2. Interfaces or files that no requirement needs.
+3. Places where one layer does another layer's work.
+4. Error cases with no defined behavior.
+5. Security gaps, including anything the front end is trusted to check.
+6. Risks at the load stated in the document, including the bursts.
+For each weakness, name the section it affects and the change you suggest.
+Do not write code. Do not suggest tools that the constraints rule out.
+
+[paste the design document here]</code></pre></div>
+
+    <figure>
+      <div class="fig-scroll">
+        <svg viewBox="0 44 760 580" role="img" aria-label="Every finding gets one written decision before Stage 5 starts">
+          <defs><marker id="f7-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="d-head" d="M0 0L10 5L0 10z"/></marker></defs>
+          <path class="d-edge" d="M380 112V144" marker-end="url(#f7-arrow)"/>
+          <path class="d-edge" d="M380 200V232" marker-end="url(#f7-arrow)"/>
+          <path class="d-edge" d="M380 288V328" marker-end="url(#f7-arrow)"/>
+          <path class="d-edge" d="M380 308H136V328" marker-end="url(#f7-arrow)"/>
+          <path class="d-edge" d="M380 308H624V328" marker-end="url(#f7-arrow)"/>
+          <path class="d-edge" d="M136 416V436H380"/>
+          <path class="d-edge" d="M624 416V436H380"/>
+          <path class="d-edge" d="M380 416V456" marker-end="url(#f7-arrow)"/>
+          <path class="d-edge" d="M380 512V544" marker-end="url(#f7-arrow)"/>
+          <rect class="d-box" x="200" y="56" width="360" height="56" rx="8"/><text class="d-name" x="216" y="80">Write the design document</text><text class="d-quiet" x="216" y="99" style="font-size:12.5px">Stages 1 to 4, with the interface files in full</text>
+          <rect class="d-box" x="200" y="144" width="360" height="56" rx="8"/><text class="d-name" x="216" y="168">Ask an assistant for weaknesses</text><text class="d-quiet" x="216" y="187" style="font-size:12.5px">The prompt in this section; no code</text>
+          <rect class="d-box" x="200" y="232" width="360" height="56" rx="8"/><text class="d-name" x="216" y="256">Decide each finding</text><text class="d-quiet" x="216" y="275" style="font-size:12.5px">One decision per finding, written down</text>
+          <rect class="d-box" x="24" y="328" width="224" height="88" rx="8"/><text class="d-name" x="40" y="352">Fix now</text><text class="d-text" x="40" y="372" style="font-size:12px">Change an interface or the</text><text class="d-text" x="40" y="388" style="font-size:12px">structure before Stage 5</text><text class="d-quiet" x="40" y="404" style="font-size:12px">User Notices: 3 findings</text>
+          <rect class="d-box" x="268" y="328" width="224" height="88" rx="8"/><text class="d-name" x="284" y="352">Later stage</text><text class="d-text" x="284" y="372" style="font-size:12px">Record the stage that</text><text class="d-text" x="284" y="388" style="font-size:12px">handles it, and why</text><text class="d-quiet" x="284" y="404" style="font-size:12px">User Notices: 2 findings</text>
+          <rect class="d-box" x="512" y="328" width="224" height="88" rx="8"/><text class="d-name" x="528" y="352">Reject</text><text class="d-text" x="528" y="372" style="font-size:12px">Record why it does not</text><text class="d-text" x="528" y="388" style="font-size:12px">apply to this application</text><text class="d-quiet" x="528" y="404" style="font-size:12px">User Notices: 1 finding</text>
+          <rect class="d-box" x="200" y="456" width="360" height="56" rx="8"/><text class="d-name" x="216" y="480">Revise and merge</text><text class="d-quiet" x="216" y="499" style="font-size:12.5px">Design document and interface files, through a pull request</text>
+          <rect class="d-accent" x="200" y="544" width="360" height="56" rx="8"/><text class="d-name" x="216" y="568">Stage 5</text><text class="d-text" x="216" y="587">Skeleton built from the revised interfaces</text>
+        </svg>
+      </div>
+      <figcaption><strong>Figure 8.</strong> The critique, from the design document to a decision on every finding. The counts are from the User Notices example below.</figcaption>
+    </figure>
+
+    <div class="try">
+      <p class="try-label">Try it</p>
+      <h4>Decide each finding</h4>
+      <p>Six findings from a critique of the User Notices first draft. Pick the decision you would record; the feedback shows the decision and change made in the example.</p>
+      <div class="quiz" data-ex="triage"></div>
+      <div class="quiz-foot"><p class="score" aria-live="polite"></p><button type="button" class="btn" data-restart="triage">Start again</button></div>
+    </div>
+
+    <details>
+      <summary>All six decisions in one table</summary>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Finding</th><th>Decision</th><th>Change</th></tr></thead>
+          <tbody>
+            <tr><td>list_users returns every user in a group. A group can hold 5,000 users, and there are 60,000 user records.</td><td>Fix now</td><td>list_users takes limit and offset, and the router rejects a limit above the maximum page size (check 10 of the Stage 5 security checklist). The Users list call becomes <code>GET /v1/users?group={id}&amp;limit=50&amp;offset=0</code>.</td></tr>
+            <tr><td>Neither send_notice nor list_recipients says whether users who have not opted in receive a notice.</td><td>Fix now</td><td>Both docstrings state that only users with opted_in true are included.</td></tr>
+            <tr><td>Stage 1 requires one send record per message, kept as a log, and no interface writes it.</td><td>Fix now</td><td>NoticeStore gets record_message, called once per message.</td></tr>
+            <tr><td>send_notice sends up to 5,000 messages inside one request.</td><td>Stage 8</td><td>The load test measures it. If sending moves to a task queue, send_notice keeps its signature.</td></tr>
+            <tr><td>Nothing starts a scheduled notice at its send time.</td><td>Stage 8</td><td>A scheduler finds the notices due to send, using the (status, send_at) index added in Stage 7.</td></tr>
+            <tr><td>Users and notices share one service and one database, so a fault in one area affects the other.</td><td>Reject</td><td>150 staff accounts and 40 concurrent requests. One service and one database meet that load, and a second service is one more thing to deploy and maintain.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+
+    <h3>The interface lines after the three fixes</h3>
+    <div class="tabs" data-tabs>
+      <div class="tablist" role="tablist" aria-label="Revised interface lines">
+        <button type="button" role="tab" id="t47-1" aria-controls="p47-1" aria-selected="true">users.py</button>
+        <button type="button" role="tab" id="t47-2" aria-controls="p47-2" aria-selected="false">notices.py</button>
+      </div>
+      <div role="tabpanel" id="p47-1" aria-labelledby="t47-1">
+        <div class="code"><pre><code class="language-python"># app/interfaces/users.py, after the critique
+    async def list_users(self, group_id: int | None = None,
+                         limit: int = 50, offset: int = 0) -&gt; list[UserSummary]:
+        """Users in one group, or all users when group_id is None, ordered by name.
+        Returns at most limit users, skipping the first offset.
+        The router rejects a limit above the maximum page size."""
+        ...</code></pre></div>
+      </div>
+      <div role="tabpanel" id="p47-2" aria-labelledby="t47-2" hidden>
+        <div class="code"><pre><code class="language-python"># app/interfaces/notices.py, after the critique
+    async def send_notice(self, notice_id: int) -&gt; None:
+        """Send the notice to each user in its group with opted_in true,
+        and record one message per user.
+        Raises LookupError if the notice does not exist."""
+        ...
+
+class NoticeStore(Protocol):
+    # The methods from 4.5, with list_recipients documented and record_message added:
+    async def list_recipients(self, notice_id: int) -&gt; list[Recipient]:
+        """Users in the notice's group with opted_in true."""
+        ...
+
+    async def record_message(self, notice_id: int, user_id: int, status: str,
+                             provider_message_id: str | None) -&gt; None:
+        """Store one send record. status is sent or failed."""
+        ...</code></pre></div>
+      </div>
+    </div>
+    <p>Merge the revised design document and interface files through a pull request. Stage 5 builds its skeleton from this version.</p>
+
+    <h3>Check</h3>
+    <ul class="checks">
+      <li>Every finding has one decision: fixed, assigned to a named stage, or rejected with a reason.</li>
+      <li>Every fix appears in the design document and in the interface files.</li>
+      <li>The revised version is merged to main.</li>
+    </ul>
+
+    <h3>Common mistakes</h3>
+    <ul>
+      <li>Accepting every finding. Some suggestions conflict with the constraints or add layers the load does not need; reject those with the reason written down.</li>
+      <li>Giving the assistant a summary instead of the full interface files, so a missing function is not visible to it.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="checkpoint" aria-labelledby="h-ck">
+  <div class="wrap">
+    <p class="step-num">Checkpoint</p>
+    <h2 id="h-ck">Stage 4 checkpoint</h2>
+    <p>Stage 5 starts when every item below passes. Tick each one as you confirm it; the ticks are saved in this browser. The items are the guide's Stage 4 checkpoint; the item marked (workbook) is added by this workbook.</p>
+    <ul class="ck-list" id="ck-list">
+      <li><label class="ck" for="ck1"><input type="checkbox" id="ck1"><span><span class="ck-item">Repository initialized with the backend lock file; .env and the virtual environment excluded by .gitignore</span><span class="ck-how"><code>git check-ignore -v backend/.env</code> prints a rule. <code>git ls-files</code> lists requirements.in and requirements.txt, and does not list .env.</span></span></label></li>
+      <li><label class="ck" for="ck9"><input type="checkbox" id="ck9"><span><span class="ck-item">.env.example committed; a secret scanner runs before each commit</span><span class="ck-how"><code>git ls-files</code> lists backend/.env.example and .pre-commit-config.yaml. A commit prints Detect hardcoded secrets followed by Passed.</span></span></label></li>
+      <li><label class="ck" for="ck10"><input type="checkbox" id="ck10"><span><span class="ck-item">main protected: a pull request and passing checks required, and a review with two or more developers</span><span class="ck-how"><code>git push origin main</code> is rejected. The rule for main requires a pull request and the three checks. With two or more developers it also requires one approving review; with one developer, you review each pull request yourself against the Stage 5 security checklist (4.2).</span></span></label></li>
+      <li><label class="ck" for="ck11"><input type="checkbox" id="ck11"><span><span class="ck-item">CI runs on each push and pull request, and its checks are required on main</span><span class="ck-how">The last pull request shows gitleaks, pip-audit and tests passing, and the rule for main lists all three.</span></span></label></li>
+      <li><label class="ck" for="ck2"><input type="checkbox" id="ck2"><span><span class="ck-item">Pattern named</span><span class="ck-how">The design document names the pattern and has the table of what each layer does and does not do.</span></span></label></li>
+      <li><label class="ck" for="ck3"><input type="checkbox" id="ck3"><span><span class="ck-item">Folders created by role</span><span class="ck-how">Every Stage 1 screen belongs to one area, every area has a router file, and every external service has its own service file.</span></span></label></li>
+      <li><label class="ck" for="ck4"><input type="checkbox" id="ck4"><span><span class="ck-item">Interfaces written for each folder</span><span class="ck-how">The screen-to-interface table has no empty cell, and every docstring names its errors.</span></span></label></li>
+      <li><label class="ck" for="ck5"><input type="checkbox" id="ck5"><span><span class="ck-item">Injected dependencies listed <span class="wb">(workbook)</span></span><span class="ck-how">The 4.6 table names each one, and each one has a signature and a docstring.</span></span></label></li>
+      <li><label class="ck" for="ck6"><input type="checkbox" id="ck6"><span><span class="ck-item">main.py includes each router, with a comment naming what it does and its files</span><span class="ck-how"><code>.venv/bin/python -c "import app.main"</code> runs without an error, and tests/test_main.py passes in CI.</span></span></label></li>
+      <li><label class="ck" for="ck7"><input type="checkbox" id="ck7"><span><span class="ck-item">Design critiqued by an assistant, and revised</span><span class="ck-how">Every finding has a decision, and every fix is in the interface files.</span></span></label></li>
+      <li><label class="ck" for="ck8"><input type="checkbox" id="ck8"><span><span class="ck-item">Work committed</span><span class="ck-how"><code>git status</code> reports a clean working tree, and every change is merged to main through a pull request.</span></span></label></li>
+    </ul>
+  </div>
+</section>
+
+<section id="practice" aria-labelledby="h-pr">
+  <div class="wrap">
+    <p class="step-num">Practice</p>
+    <h2 id="h-pr">Room Bookings</h2>
+    <p class="lead">Apply Stage 4 to a second application, then compare your work with the model answer. Room Bookings uses the same stack as User Notices.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Item</th><th>Requirement</th></tr></thead>
+        <tbody>
+          <tr><td>Screens</td><td>Sign in; Rooms list; Room calendar, with the bookings for one room on one day; New booking, with room, start and end time; My bookings, with a Cancel action</td></tr>
+          <tr><td>Stored data</td><td>Staff accounts; rooms (name, floor, seats); bookings (room, staff member, start, end, status)</td></tr>
+          <tr><td>External services</td><td>The organization's mail server, which sends a confirmation email for each booking</td></tr>
+          <tr><td>Load</td><td>400 staff accounts and at most 30 concurrent requests. No bursts</td></tr>
+          <tr><td>Constraints</td><td>Next.js, Python, FastAPI and PostgreSQL, on the organization's servers; code on GitHub</td></tr>
+          <tr><td>Team</td><td>Two developers, Developer A and Developer B</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Tasks</h3>
+    <ol>
+      <li>List which files are committed and which are kept out of the repository.</li>
+      <li>Write the branch rules for main for a team of two, and the CODEOWNERS file.</li>
+      <li>Group the screens into areas and write the folder tree.</li>
+      <li>Write the BookingService interface.</li>
+      <li>List the injected dependencies.</li>
+      <li>Write main.py.</li>
+      <li>Write three findings a design critique could raise, with a decision for each. Reject at least one of them, with the reason.</li>
+    </ol>
+
+    <div class="try">
+      <p class="try-label">Try it</p>
+      <h4>Task 3: sort the screens into areas</h4>
+      <p>Pick the area each screen or service belongs to.</p>
+      <div class="quiz" data-ex="rbAreas"></div>
+      <div class="quiz-foot"><p class="score" aria-live="polite"></p><button type="button" class="btn" data-restart="rbAreas">Start again</button></div>
+    </div>
+
+    <div class="try">
+      <p class="try-label">Try it</p>
+      <h4>Task 7: decide the findings</h4>
+      <p>Three findings a critique of Room Bookings could raise. One of them is rejected.</p>
+      <div class="quiz" data-ex="rbFindings"></div>
+      <div class="quiz-foot"><p class="score" aria-live="polite"></p><button type="button" class="btn" data-restart="rbFindings">Start again</button></div>
+    </div>
+
+    <h3>Model answer</h3>
+    <p>Write the tasks yourself first, then open each part to compare.</p>
+    <details>
+      <summary>Task 1: Committed and kept out</summary>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>File or folder</th><th>Committed</th><th>Reason</th></tr></thead>
+          <tbody>
+            <tr><td>.gitignore, .pre-commit-config.yaml, README.md</td><td>Yes</td><td>What Git must not track, the secret scan for every clone, and how to run the application</td></tr>
+            <tr><td>.github/workflows/ci.yml, .github/pull_request_template.md, .github/CODEOWNERS</td><td>Yes</td><td>CI, the questions every pull request answers, and the reviewers</td></tr>
+            <tr><td>backend/.env.example</td><td>Yes</td><td>Every setting name with a placeholder: DATABASE_URL, SESSION_SECRET, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD and ALLOWED_ORIGIN</td></tr>
+            <tr><td>backend/requirements.in and backend/requirements.txt</td><td>Yes, together</td><td>The libraries chosen directly, and the lock file</td></tr>
+            <tr><td>backend/.python-version</td><td>Yes</td><td>The Python version. frontend/.nvmrc is written with the front end in Stage 6</td></tr>
+            <tr><td>backend/app/ and backend/tests/</td><td>Yes</td><td>The code and its tests</td></tr>
+            <tr><td>backend/.env</td><td>No</td><td>Settings and secrets for one machine, including the mail server password</td></tr>
+            <tr><td>backend/.venv/</td><td>No</td><td>Built on each machine from requirements.txt</td></tr>
+            <tr><td>__pycache__/ and .pytest_cache/</td><td>No</td><td>Written by Python and pytest on each machine</td></tr>
+            <tr><td>frontend/node_modules/ and frontend/.next/</td><td>No</td><td>Installed packages and build output, from Stage 6</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <details>
+      <summary>Task 2: Branch rules for a team of two</summary>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Setting</th><th>Value</th><th>Reason</th></tr></thead>
+          <tbody>
+            <tr><td>Require a pull request before merging</td><td>On</td><td>Every change reaches main through a pull request</td></tr>
+            <tr><td>Require approvals</td><td>1</td><td>The developer who did not write the change reads it; the author cannot approve their own pull request (Source W6)</td></tr>
+            <tr><td>Dismiss stale pull request approvals when new commits are pushed</td><td>On</td><td>An approval covers the commits that were reviewed, not commits pushed after it</td></tr>
+            <tr><td>Require review from Code Owners</td><td>On</td><td>CODEOWNERS lists both developers, so the other developer's approval meets this rule too</td></tr>
+            <tr><td>Require status checks to pass before merging</td><td>gitleaks, pip-audit and tests</td><td>The checks from ci.yml</td></tr>
+            <tr><td>Require branches to be up to date before merging</td><td>On</td><td>The checks run against the latest main</td></tr>
+            <tr><td>Do not allow bypassing the above settings</td><td>On</td><td>The rules apply to administrators too</td></tr>
+            <tr><td>Allow force pushes and Allow deletions</td><td>Off</td><td>main cannot be force-pushed or deleted</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="code"><pre><code class="language-text"># .github/CODEOWNERS
+# Who must review changes to which paths. The last matching line wins.
+*    @developer-a @developer-b</code></pre></div>
+    </details>
+    <details>
+      <summary>Task 3: Areas and folder tree</summary>
+      <p>Areas: sign-in (Sign in), rooms (Rooms list, Room calendar) and bookings (New booking, My bookings). The mail server gets its own service file.</p>
+      <div class="code"><pre><code class="language-text">room-bookings/
+  .gitignore
+  .pre-commit-config.yaml
+  .github/          # workflows/ci.yml, pull_request_template.md, CODEOWNERS
+  README.md
+  backend/
+    .env
+    .env.example
+    .python-version
+    requirements.in
+    requirements.txt
+    app/
+      settings.py
+      main.py
+      interfaces/     # auth.py, rooms.py, bookings.py, mail.py
+      auth/           # verify_credentials, issue_token, current_user
+      routers/        # auth.py, rooms.py, bookings.py
+      services/       # rooms.py, bookings.py, mail.py
+      db/             # session.py; models.py in Stage 7
+    tests/            # test_settings.py, test_main.py
+  frontend/           # added in Stage 6</code></pre></div>
+    </details>
+    <details>
+      <summary>Task 4: BookingService interface</summary>
+      <div class="code"><pre><code class="language-python"># app/interfaces/bookings.py
+from datetime import datetime
+from typing import Protocol
+from pydantic import BaseModel
+
+class Booking(BaseModel):
+    id: int
+    room_id: int
+    staff_id: int
+    starts_at: datetime
+    ends_at: datetime
+    status: str  # booked or cancelled
+
+class BookingService(Protocol):
+    async def create_booking(self, room_id: int, starts_at: datetime,
+                             ends_at: datetime, staff_id: int) -&gt; Booking:
+        """Book a room and send the confirmation email.
+        Raises ValueError if the end is not after the start, the start is in
+        the past, or the room is already booked for part of that time.
+        Raises LookupError for an unknown room."""
+        ...
+
+    async def list_my_bookings(self, staff_id: int) -&gt; list[Booking]:
+        """The staff member's bookings from today on, earliest first."""
+        ...
+
+    async def cancel_booking(self, booking_id: int, staff_id: int) -&gt; Booking:
+        """Cancel a booking. Raises LookupError if it does not exist,
+        PermissionError if it belongs to another staff member."""
+        ...</code></pre></div>
+      <p>The Room calendar's function, list_room_bookings(room_id, day), belongs to RoomService in interfaces/rooms.py, because the screen is in the rooms area.</p>
+    </details>
+    <details>
+      <summary>Task 5: Injected dependencies</summary>
+      <p>Injected: get_settings, get_session, current_user, get_mail_client, get_room_service and get_booking_service. Imported: the Pydantic models, the Protocol classes, verify_credentials and issue_token from app/auth/, and any date-formatting helpers.</p>
+    </details>
+    <details>
+      <summary>Task 6: main.py</summary>
+      <div class="code"><pre><code class="language-python"># app/main.py
+from fastapi import FastAPI
+from app.routers import auth, rooms, bookings
+
+app = FastAPI(title="Room Bookings")
+
+# Sign-in and tokens: routers/auth.py, auth/
+app.include_router(auth.router, prefix="/v1")
+# Rooms list and room calendar: routers/rooms.py, services/rooms.py
+app.include_router(rooms.router, prefix="/v1")
+# Book, list and cancel bookings; confirmation email:
+# routers/bookings.py, services/bookings.py, services/mail.py
+app.include_router(bookings.router, prefix="/v1")</code></pre></div>
+    </details>
+    <details>
+      <summary>Task 7: Findings</summary>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Finding</th><th>Decision</th></tr></thead>
+          <tbody>
+            <tr><td>Two staff members can book the same room for overlapping times if both requests arrive together, because a check in the service alone does not stop it.</td><td>Stage 7: an exclusion constraint on the bookings table rejects overlapping times for the same room. create_booking already raises ValueError for a clash.</td></tr>
+            <tr><td>If the mail server is down, create_booking fails after the booking is stored.</td><td>Fix now: the docstring states that the booking is kept and the email failure is logged; the email does not decide whether the booking succeeds.</td></tr>
+            <tr><td>Bookings could run as a separate service with its own database, so a fault in rooms does not stop bookings.</td><td>Reject: 400 staff accounts and 30 concurrent requests, with no bursts. One service and one database meet that load, and a second service is one more thing to deploy and maintain.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section id="selfcheck" aria-labelledby="h-sc">
+  <div class="wrap">
+    <p class="step-num">Self-check</p>
+    <h2 id="h-sc">Self-check answers explained</h2>
+    <p>Questions 1 to 4 are the guide's Stage 4 self-check; 5 and 6 are added here. Answer each one, then open it to compare.</p>
+    <details class="qa">
+      <summary><span class="qn">1</span>The users router and the notices router both need the staff member who is signed in. Is that dependency injection or an import?</summary>
+      <p><strong>Answer.</strong> Dependency injection. current_user reads the session cookie of the request being handled, so its result is different for every request. Both routers declare it with Depends(current_user), and FastAPI runs it before each endpoint (4.6, Figure 6).</p>
+    </details>
+    <details class="qa">
+      <summary><span class="qn">2</span>Both routers use a helper that formats phone numbers. Dependency injection or an import?</summary>
+      <p><strong>Answer.</strong> An import. The helper takes a string and returns a string; nothing in it depends on the request or on configuration (Figure 6).</p>
+    </details>
+    <details class="qa">
+      <summary><span class="qn">3</span>A new developer has to fix how notices are scheduled. Where do they start reading?</summary>
+      <p><strong>Answer.</strong> main.py. The comment above the notices router names routers/notices.py, where create_notice receives the request, and services/notices.py, where schedule_notice applies the rules (4.7, Figure 7).</p>
+    </details>
+    <details class="qa">
+      <summary><span class="qn">4</span>A teammate's install produced different front end package versions from yours, although package.json is the same. What is missing, and which command installs exactly what it records?</summary>
+      <p><strong>Answer.</strong> package-lock.json, either not committed or not used. package.json holds version ranges, so each npm install can resolve different versions. Commit package-lock.json and install with npm ci, which installs exactly what the lock file records and stops with an error if it disagrees with package.json (Going deeper: Key project files; Source 57).</p>
+    </details>
+    <details class="qa">
+      <summary><span class="qn">5</span>A teammate wants to call the SMS provider from routers/notices.py to save a file. What do you tell them?</summary>
+      <p><strong>Answer.</strong> Routers do not call external services (4.3). The call goes in services/sms.py behind SmsClient, so the provider's details stay in one file and a test can use FakeSmsClient instead (Figure 5).</p>
+    </details>
+    <details class="qa">
+      <summary><span class="qn">6</span>Why does schedule_notice return a NoticeSummary instead of a database row?</summary>
+      <p><strong>Answer.</strong> The interface is written before the tables exist. A Pydantic model keeps the routers and tests independent of the Stage 7 tables, and FastAPI returns it as JSON (4.5).</p>
+    </details>
+  </div>
+</section>
+
+<section id="sources" aria-labelledby="h-src">
+  <div class="wrap">
+    <p class="step-num">Sources</p>
+    <h2 id="h-src">Sources</h2>
+    <p>Checked on October 16, 2026. Numbered sources are the guide's, with the guide's numbers. Sources W1 to W7 are cited only in this workbook.</p>
+    <ul class="sources">
+      <li><span class="sn">5</span><a href="https://fastapi.tiangolo.com/tutorial/dependencies/">FastAPI: Dependencies</a></li>
+      <li><span class="sn">48</span><a href="https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html">OWASP Cheat Sheet Series: Secrets Management</a></li>
+      <li><span class="sn">49</span><a href="https://github.com/gitleaks/gitleaks">Gitleaks</a></li>
+      <li><span class="sn">50</span><a href="https://docs.github.com/en/code-security/secret-scanning/introduction/about-push-protection">GitHub Docs: About push protection</a></li>
+      <li><span class="sn">51</span><a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository">GitHub Docs: Removing sensitive data from a repository</a></li>
+      <li><span class="sn">52</span><a href="https://pip-tools.pypa.io/en/stable/">pip-tools</a></li>
+      <li><span class="sn">53</span><a href="https://packaging.python.org/en/latest/guides/writing-pyproject-toml/">Python Packaging User Guide: Writing your pyproject.toml</a></li>
+      <li><span class="sn">54</span><a href="https://alembic.sqlalchemy.org/en/latest/tutorial.html">Alembic: Tutorial</a></li>
+      <li><span class="sn">55</span><a href="https://docs.npmjs.com/cli/v12/configuring-npm/package-json">npm Docs: package.json</a></li>
+      <li><span class="sn">56</span><a href="https://docs.npmjs.com/cli/v12/configuring-npm/package-lock-json">npm Docs: package-lock.json</a></li>
+      <li><span class="sn">57</span><a href="https://docs.npmjs.com/cli/v12/commands/npm-ci">npm Docs: npm ci</a></li>
+      <li><span class="sn">58</span><a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog 1.1.0</a></li>
+      <li><span class="sn">59</span><a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches">GitHub Docs: About protected branches</a></li>
+      <li><span class="sn">W1</span><a href="https://pre-commit.com/">pre-commit</a></li>
+      <li><span class="sn">W2</span><a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/managing-a-branch-protection-rule">GitHub Docs: Managing a branch protection rule</a></li>
+      <li><span class="sn">W3</span><a href="https://github.com/pypa/pip-audit">pip-audit</a></li>
+      <li><span class="sn">W4</span><a href="https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository">GitHub Docs: Creating a pull request template for your repository</a></li>
+      <li><span class="sn">W5</span><a href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks">GitHub Docs: Troubleshooting required status checks</a></li>
+      <li><span class="sn">W6</span><a href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/approving-a-pull-request-with-required-reviews">GitHub Docs: Approving a pull request with required reviews</a></li>
+      <li><span class="sn">W7</span><a href="https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners">GitHub Docs: About code owners</a></li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Stage 4 Workbook, October 16, 2026. A companion to Stage 4 of the Core Build Starter Guide, version 3.1. The commands and files in 4.1, 4.2 and 4.7 were run with Python 3.14.6, Git 2.43, gitleaks 8.30.1, pip-audit 2.10.1 and actionlint 1.7.12. The steps on GitHub itself were not run.</p>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var store = {
+    get: function (k) { try { return window.localStorage.getItem("s4wb:" + k); } catch (e) { return null; } },
+    set: function (k, v) { try { window.localStorage.setItem("s4wb:" + k, v); } catch (e) {} },
+    del: function (k) { try { window.localStorage.removeItem("s4wb:" + k); } catch (e) {} }
+  };
+
+  /* Exercise data: options per exercise, one answer index per item.
+     Saved answers are stored by exercise id and item index, so new items go at the end of a list. */
+  var EX = {
+    commit: {
+      options: ["Commit", "Keep out"],
+      items: [
+        { p: "<code>.gitignore</code>", a: 0, why: "Commit it first, before any other file, so .env is excluded before it exists." },
+        { p: "<code>backend/.env</code>", a: 1, why: "It holds your local values and real keys. Only .env.example is committed." },
+        { p: "<code>backend/.env.example</code>", a: 0, why: "Same names as .env with placeholder values, so others know which settings exist." },
+        { p: "<code>backend/requirements.in</code>", a: 0, why: "The libraries chosen in Stage 3, one per line with its version range. Commit it with requirements.txt." },
+        { p: "<code>backend/requirements.txt</code>", a: 0, why: "The lock file. Every machine installs the same versions from it." },
+        { p: "<code>backend/.venv/</code>", a: 1, why: "Each machine builds its own virtual environment from requirements.txt." },
+        { p: "<code>backend/app/settings.py</code>", a: 0, why: "It reads settings from the environment and contains none of them." },
+        { p: "<code>__pycache__/</code>", a: 1, why: "Python writes these compiled files on each machine." },
+        { p: "<code>frontend/package-lock.json</code>", a: 0, why: "The front end lock file. Commit it with package.json; npm ci installs exactly what it records." },
+        { p: "<code>frontend/node_modules/</code>", a: 1, why: "The installed front end packages. npm ci rebuilds them on each machine from package-lock.json." },
+        { p: "<code>.pre-commit-config.yaml</code>", a: 0, why: "Every clone needs the same gitleaks hook; each developer runs pre-commit install once." },
+        { p: "<code>uv.lock</code>", a: 0, why: "uv's lock file, used only when the project uses uv instead of pip-tools. A lock file is always committed." },
+        { p: "<code>.github/workflows/ci.yml</code>", a: 0, why: "GitHub runs CI from the copy in the repository, and main requires its checks." }
+      ]
+    },
+    layer: {
+      options: ["Router", "Service", "Data layer", "Auth"],
+      items: [
+        { p: "Returns the new notice as JSON with status 201", a: 0, why: "Building the HTTP response is the router's job." },
+        { p: "Rejects a send time in the past", a: 1, why: "A business rule. schedule_notice in services/notices.py checks it." },
+        { p: "Writes the notice row through the database session", a: 2, why: "Only the data layer talks to the database." },
+        { p: "Checks an email and password against the staff accounts", a: 3, why: "verify_credentials in app/auth/ checks credentials." },
+        { p: "Turns a ValueError into a 400 response", a: 0, why: "Services raise plain Python errors; routers turn them into HTTP status codes." },
+        { p: "Calls the SMS provider through SmsClient", a: 1, why: "send_notice calls SmsClient.send. Routers never call external services." },
+        { p: "Reads the session cookie to find the signed-in staff member", a: 3, why: "current_user in app/auth/ identifies the signed-in staff member." },
+        { p: "Returns the opted-in users in a notice's group", a: 2, why: "list_recipients on NoticeStore reads them from the database." }
+      ]
+    },
+    signature: {
+      options: ["Follows the rules", "Returns a database row", "Missing types", "Errors not named"],
+      items: [
+        { p: "<pre><code>async def get_user(self, user_id: int) -&gt; UserRow: ...</code></pre><span class=\"q-note\">UserRow is the SQLAlchemy model in db/models.py.</span>", a: 1, why: "Return a Pydantic model such as User, so the interface does not depend on the Stage 7 tables." },
+        { p: "<pre><code>async def update_user(self, user_id, changes, staff):\n    \"\"\"Raises LookupError for an unknown user,\n    PermissionError unless staff.role is editor.\"\"\"</code></pre>", a: 2, why: "Every input and the return value need a type: user_id: int, changes: UserUpdate, staff: Staff, returning User." },
+        { p: "<pre><code>async def cancel_booking(self, booking_id: int, staff_id: int) -&gt; Booking:\n    \"\"\"Cancel a booking.\"\"\"</code></pre>", a: 3, why: "The docstring must say what happens for an unknown booking or someone else's booking, or the assistant decides in Stage 5." },
+        { p: "<pre><code>async def list_notices(self, limit: int = 50) -&gt; list[NoticeSummary]:\n    \"\"\"Newest first, at most limit notices.\"\"\"</code></pre>", a: 0, why: "Typed inputs, a Pydantic return type and a docstring. It has no error case to name." },
+        { p: "<pre><code>async def get_user(self, user_id: int) -&gt; User:\n    \"\"\"Raises LookupError if the user does not exist.\"\"\"</code></pre>", a: 0, why: "This is the version in interfaces/users.py." }
+      ]
+    },
+    inject: {
+      options: ["Inject with Depends", "Import"],
+      items: [
+        { p: "A database session for the request", a: 0, why: "Question 1: it is opened and closed for each request. get_session supplies it." },
+        { p: "The signed-in staff member", a: 0, why: "Question 2: it comes from the request's cookie. current_user supplies it." },
+        { p: "The Settings object", a: 0, why: "Question 3: it is configuration. get_settings supplies it, and a test can replace it." },
+        { p: "The NoticeService for this request", a: 0, why: "Question 3: it is built on this request's session. get_notice_service supplies it." },
+        { p: "The SmsClient for the provider, using SMS_API_KEY", a: 0, why: "Question 3: it is built from the settings. get_sms_client supplies it." },
+        { p: "A helper that formats phone numbers", a: 1, why: "No to all three questions. It takes a string and returns a string." },
+        { p: "The NewNotice model, used as a type", a: 1, why: "A Pydantic model is a type. It is imported where it is used." },
+        { p: "The NoticeService Protocol, used in an annotation", a: 1, why: "Protocol classes are types. The value behind them is what Depends supplies." }
+      ]
+    },
+    index: {
+      mono: true,
+      options: ["routers/notices.py", "services/notices.py", "services/users.py", "services/sms.py", "auth/"],
+      items: [
+        { p: "Scheduling accepts a send time in the past.", a: 1, why: "schedule_notice in services/notices.py applies the rules. Set the breakpoint there." },
+        { p: "POST /v1/notices returns 404 instead of 201.", a: 0, why: "The path comes from the router's prefix and the route in routers/notices.py." },
+        { p: "Sign-in rejects a correct email and password.", a: 4, why: "main.py names auth/ for sign-in. verify_credentials is there." },
+        { p: "Editing a user's phone number does not save.", a: 2, why: "update_user in services/users.py applies the changes." },
+        { p: "The provider rejects every message with an authentication error.", a: 3, why: "The provider key is used in services/sms.py, behind SmsClient." }
+      ]
+    },
+    triage: {
+      options: ["Fix now", "Later stage", "Reject"],
+      items: [
+        { p: "list_users returns every user in a group. A group can hold 5,000 users, and there are 60,000 user records.", a: 0, why: "Fixed now: list_users takes limit and offset, and the router rejects a limit above the maximum page size. The Users list call becomes <code>GET /v1/users?group={id}&amp;limit=50&amp;offset=0</code>." },
+        { p: "Neither send_notice nor list_recipients says whether users who have not opted in receive a notice.", a: 0, why: "Fixed now: both docstrings state that only users with opted_in true are included." },
+        { p: "Stage 1 requires one send record per message, kept as a log, and no interface writes it.", a: 0, why: "Fixed now: NoticeStore gets record_message, called once per message." },
+        { p: "send_notice sends up to 5,000 messages inside one request.", a: 1, why: "Stage 8: the load test measures it. If sending moves to a task queue, send_notice keeps its signature." },
+        { p: "Nothing starts a scheduled notice at its send time.", a: 1, why: "Stage 8: a scheduler finds the notices due to send, using the (status, send_at) index added in Stage 7." },
+        { p: "Users and notices share one service and one database, so a fault in one area affects the other.", a: 2, why: "Rejected: 150 staff accounts and 40 concurrent requests. One service and one database meet that load, and a second service is one more thing to deploy and maintain." }
+      ]
+    },
+    rbAreas: {
+      options: ["Sign-in", "Rooms", "Bookings", "Mail service"],
+      items: [
+        { p: "Sign in", a: 0, why: "Sign-in logic goes in auth/, with routers/auth.py." },
+        { p: "Rooms list", a: 1, why: "It works on rooms: routers/rooms.py and services/rooms.py." },
+        { p: "Room calendar", a: 1, why: "It shows bookings, but for one room. list_room_bookings belongs to RoomService." },
+        { p: "New booking", a: 2, why: "It creates a booking: BookingService.create_booking." },
+        { p: "My bookings, with Cancel", a: 2, why: "list_my_bookings and cancel_booking are in BookingService." },
+        { p: "Confirmation email for each booking", a: 3, why: "An external service gets its own file: services/mail.py." }
+      ]
+    },
+    rbFindings: {
+      options: ["Fix now", "Later stage", "Reject"],
+      items: [
+        { p: "Two staff members can book the same room for overlapping times if both requests arrive together, because a check in the service alone does not stop it.", a: 1, why: "Stage 7: an exclusion constraint on the bookings table rejects overlapping times for the same room. create_booking already raises ValueError for a clash." },
+        { p: "If the mail server is down, create_booking fails after the booking is stored.", a: 0, why: "Fixed now: the docstring states that the booking is kept and the email failure is logged; the email does not decide whether the booking succeeds." },
+        { p: "Bookings could run as a separate service with its own database, so a fault in rooms does not stop bookings.", a: 2, why: "Rejected: 400 staff accounts and 30 concurrent requests, with no bursts. One service and one database meet that load, and a second service is one more thing to deploy and maintain." }
+      ]
+    },
+    lockfile: {
+      mono: false,
+      options: ["Lock file", "Not a lock file"],
+      items: [
+        { p: "<code>frontend/package.json</code>", a: 1, why: "It holds the front end's packages as version ranges, such as ^16.4.0, and its scripts. Its lock file is package-lock.json." },
+        { p: "<code>frontend/package-lock.json</code>", a: 0, why: "The exact version of every installed package, including indirect ones. npm ci installs exactly this and stops with an error if it disagrees with package.json (Sources 56 and 57)." },
+        { p: "<code>backend/requirements.in</code>", a: 1, why: "The libraries you chose directly. pip-compile reads it and writes requirements.txt." },
+        { p: "<code>backend/requirements.txt</code>", a: 0, why: "Every library at an exact version, including the libraries your libraries use. pip-compile writes it; never pip freeze, and never by hand (Source 52)." }
+      ]
+    }
+  };
+
+  var exIds = Object.keys(EX);
+
+  function answerKey(id, i) { return "ex:" + id + ":" + i; }
+  function getAnswer(id, i) {
+    var v = store.get(answerKey(id, i));
+    if (v === null) return null;
+    var n = parseInt(v, 10);
+    return (isNaN(n) || n < 0 || n >= EX[id].options.length) ? null : n;
+  }
+
+  function renderItem(id, i, root) {
+    var ex = EX[id], item = ex.items[i];
+    var el = document.createElement("div");
+    el.className = "q-item";
+    var prompt = document.createElement("div");
+    prompt.className = "q-prompt";
+    prompt.innerHTML = item.p;
+    el.appendChild(prompt);
+    var opts = document.createElement("div");
+    opts.className = "q-options";
+    opts.setAttribute("role", "group");
+    opts.setAttribute("aria-label", "Answer " + (i + 1));
+    ex.options.forEach(function (label, j) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "opt" + (ex.mono ? " mono" : "");
+      b.textContent = label;
+      b.addEventListener("click", function () { choose(id, i, j); });
+      opts.appendChild(b);
+    });
+    el.appendChild(opts);
+    var fb = document.createElement("p");
+    fb.className = "q-feedback";
+    el.appendChild(fb);
+    root.appendChild(el);
+    paintItem(id, i);
+  }
+
+  function paintItem(id, i) {
+    var root = document.querySelector('[data-ex="' + id + '"]');
+    var el = root.children[i];
+    var ex = EX[id], item = ex.items[i];
+    var chosen = getAnswer(id, i);
+    var buttons = el.querySelectorAll(".opt");
+    var fb = el.querySelector(".q-feedback");
+    buttons.forEach(function (b, j) {
+      b.classList.remove("is-correct", "is-wrong");
+      b.disabled = chosen !== null;
+      b.setAttribute("aria-pressed", chosen === j ? "true" : "false");
+      if (chosen !== null && j === item.a) b.classList.add("is-correct");
+      if (chosen !== null && j === chosen && chosen !== item.a) b.classList.add("is-wrong");
+    });
+    if (chosen === null) { fb.innerHTML = ""; return; }
+    if (chosen === item.a) {
+      fb.innerHTML = '<span class="tag ok">Correct.</span> ' + item.why;
+    } else {
+      fb.innerHTML = '<span class="tag no">The answer is ' + ex.options[item.a] + '.</span> ' + item.why;
+    }
+  }
+
+  function choose(id, i, j) {
+    if (getAnswer(id, i) !== null) return;
+    store.set(answerKey(id, i), String(j));
+    paintItem(id, i);
+    paintScore(id);
+    paintMeters();
+  }
+
+  function stats(id) {
+    var ex = EX[id], answered = 0, right = 0;
+    ex.items.forEach(function (item, i) {
+      var c = getAnswer(id, i);
+      if (c !== null) { answered++; if (c === item.a) right++; }
+    });
+    return { answered: answered, right: right, total: ex.items.length };
+  }
+
+  function paintScore(id) {
+    var root = document.querySelector('[data-ex="' + id + '"]');
+    var out = root.parentElement.querySelector(".score");
+    var s = stats(id);
+    if (s.answered === 0) { out.textContent = s.total + " items to answer."; return; }
+    if (s.answered < s.total) { out.textContent = s.answered + " of " + s.total + " answered, " + s.right + " right."; return; }
+    out.textContent = "Finished: " + s.right + " of " + s.total + " right on the first try.";
+  }
+
+  function restart(id) {
+    EX[id].items.forEach(function (_, i) { store.del(answerKey(id, i)); paintItem(id, i); });
+    paintScore(id);
+    paintMeters();
+  }
+
+  exIds.forEach(function (id) {
+    var root = document.querySelector('[data-ex="' + id + '"]');
+    if (!root) return;
+    EX[id].items.forEach(function (_, i) { renderItem(id, i, root); });
+    paintScore(id);
+  });
+  document.querySelectorAll("[data-restart]").forEach(function (b) {
+    b.addEventListener("click", function () { restart(b.getAttribute("data-restart")); });
+  });
+
+  /* Ticks: checkpoint items keep their s4wb:ck: keys; branch rule settings use s4wb:br: keys */
+  function bindTicks(listId, prefix) {
+    var boxes = document.querySelectorAll("#" + listId + " input[type=checkbox]");
+    boxes.forEach(function (box) {
+      box.checked = store.get(prefix + box.id) === "1";
+      box.addEventListener("change", function () {
+        if (box.checked) store.set(prefix + box.id, "1"); else store.del(prefix + box.id);
+        paintMeters();
+      });
+    });
+    return boxes;
+  }
+  var cks = bindTicks("ck-list", "ck:");
+  var brs = bindTicks("br-list", "br:");
+
+  function meter(name, done, total) {
+    document.getElementById("m-" + name + "-text").textContent = done + " of " + total;
+    document.getElementById("m-" + name + "-bar").style.width = (total ? done / total * 100 : 0) + "%";
+  }
+  function countTicked(boxes) { var n = 0; boxes.forEach(function (b) { if (b.checked) n++; }); return n; }
+  function paintMeters() {
+    var done = exIds.filter(function (id) { var s = stats(id); return s.answered === s.total; }).length;
+    meter("ex", done, exIds.length);
+    meter("br", countTicked(brs), brs.length);
+    meter("ck", countTicked(cks), cks.length);
+  }
+  paintMeters();
+
+  /* Clear progress, with an in-page confirmation */
+  var askBtn = document.getElementById("reset-ask"), confirmBox = document.getElementById("reset-confirm"), doneNote = document.getElementById("reset-done");
+  askBtn.addEventListener("click", function () { confirmBox.hidden = false; askBtn.hidden = true; doneNote.hidden = true; });
+  document.getElementById("reset-no").addEventListener("click", function () { confirmBox.hidden = true; askBtn.hidden = false; });
+  document.getElementById("reset-yes").addEventListener("click", function () {
+    exIds.forEach(function (id) { if (document.querySelector('[data-ex="' + id + '"]')) restart(id); });
+    cks.forEach(function (b) { b.checked = false; store.del("ck:" + b.id); });
+    brs.forEach(function (b) { b.checked = false; store.del("br:" + b.id); });
+    paintMeters();
+    confirmBox.hidden = true; askBtn.hidden = false; doneNote.hidden = false;
+  });
+
+  /* Tabs */
+  document.querySelectorAll("[data-tabs]").forEach(function (box) {
+    var tabs = Array.prototype.slice.call(box.querySelectorAll('[role="tab"]'));
+    function select(t) {
+      tabs.forEach(function (x) {
+        var on = x === t;
+        x.setAttribute("aria-selected", on ? "true" : "false");
+        x.tabIndex = on ? 0 : -1;
+        document.getElementById(x.getAttribute("aria-controls")).hidden = !on;
+      });
+    }
+    tabs.forEach(function (t, i) {
+      t.tabIndex = t.getAttribute("aria-selected") === "true" ? 0 : -1;
+      t.addEventListener("click", function () { select(t); });
+      t.addEventListener("keydown", function (e) {
+        var n = null;
+        if (e.key === "ArrowRight") n = tabs[(i + 1) % tabs.length];
+        if (e.key === "ArrowLeft") n = tabs[(i - 1 + tabs.length) % tabs.length];
+        if (n) { e.preventDefault(); select(n); n.focus(); }
+      });
+    });
+  });
+
+  /* Request trace (Figure 3) */
+  var CASES = {
+    ok: [
+      { on: ["browser"], text: "The New notice page sends POST /v1/notices with the text, group and send time. The browser adds the session cookie." },
+      { on: ["deps"], text: "Before the endpoint runs, FastAPI calls its dependencies. current_user returns the signed-in staff member. get_notice_service returns the notice service for this request." },
+      { on: ["router"], text: "create_notice checks the body against NewNotice and calls schedule_notice once, passing the staff member's id as author_id." },
+      { on: ["service"], text: "schedule_notice checks the rules: the text is not empty, the group exists, and the send time is in the future. All three pass, so it asks the data layer to store the notice." },
+      { on: ["data", "storage"], text: "add_notice stores the notice with status scheduled and returns a NoticeSummary. In Stage 5 the store is an in-memory stub; from Stage 7 it is PostgreSQL." },
+      { on: ["router", "browser"], text: "The service returns the NoticeSummary to the router, which returns it as JSON with status 201. The page shows the new notice.", status: ["201 Created", "good"] }
+    ],
+    past: [
+      { on: ["browser"], text: "The New notice page sends POST /v1/notices with a send time that has already passed." },
+      { on: ["deps"], text: "FastAPI calls current_user and get_notice_service, as in every request to this endpoint." },
+      { on: ["router"], text: "create_notice checks the body against NewNotice. The body is well formed, so it calls schedule_notice." },
+      { on: ["service"], off: ["data", "storage"], text: "schedule_notice finds the send time is in the past and raises ValueError. The data layer is never called." },
+      { on: ["router"], off: ["data", "storage"], text: "create_notice catches the ValueError and raises HTTPException with status 400 and the error message." },
+      { on: ["browser"], off: ["data", "storage"], text: "The page shows the message from the response: send time in the past.", status: ["400 Bad Request", "bad"] }
+    ],
+    anon: [
+      { on: ["browser"], text: "A request reaches POST /v1/notices without a valid session cookie." },
+      { on: ["deps"], off: ["router", "service", "data", "storage"], text: "current_user finds no valid session and raises HTTPException with status 401. create_notice never runs." },
+      { on: ["browser"], off: ["router", "service", "data", "storage"], text: "The browser receives 401. The Stage 6 route guard sends a visitor who is not signed in to the sign-in page.", status: ["401 Unauthorized", "bad"] }
+    ]
+  };
+  var traceCase = "ok", traceStep = 0;
+  var layers = document.querySelectorAll("#trace .layer");
+  var caseBtns = document.querySelectorAll("#trace [data-case]");
+  var backBtn = document.getElementById("trace-back"), nextBtn = document.getElementById("trace-next");
+  function paintTrace() {
+    var steps = CASES[traceCase], s = steps[traceStep];
+    layers.forEach(function (l) {
+      var k = l.getAttribute("data-layer");
+      l.classList.toggle("is-on", s.on.indexOf(k) > -1);
+      l.classList.toggle("is-off", !!(s.off && s.off.indexOf(k) > -1));
+    });
+    document.getElementById("trace-count").textContent = "Step " + (traceStep + 1) + " of " + steps.length;
+    document.getElementById("trace-text").textContent = s.text;
+    var chip = document.getElementById("trace-status");
+    if (s.status) { chip.textContent = s.status[0]; chip.className = "status-chip " + s.status[1]; chip.hidden = false; }
+    else { chip.hidden = true; }
+    backBtn.disabled = traceStep === 0;
+    nextBtn.textContent = traceStep === steps.length - 1 ? "Start over" : "Next";
+  }
+  caseBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      traceCase = b.getAttribute("data-case"); traceStep = 0;
+      caseBtns.forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+      paintTrace();
+    });
+  });
+  backBtn.addEventListener("click", function () { if (traceStep > 0) { traceStep--; paintTrace(); } });
+  nextBtn.addEventListener("click", function () {
+    var n = CASES[traceCase].length;
+    traceStep = traceStep === n - 1 ? 0 : traceStep + 1;
+    paintTrace();
+  });
+  paintTrace();
+
+  /* Repository explorer (4.4) */
+  var TREE = [
+    { d: 0, name: "user-notices/", path: "user-notices/", when: "4.1", what: "The repository root. git init -b main runs here before any file exists." },
+    { d: 1, name: ".gitignore", path: ".gitignore", when: "4.1", what: "What Git never tracks: .env, .venv/, __pycache__/, .pytest_cache/, node_modules/ and .next/. Committed first." },
+    { d: 1, name: ".pre-commit-config.yaml", path: ".pre-commit-config.yaml", when: "4.1", what: "The gitleaks hook, which scans the staged changes before each commit. Each developer runs pre-commit install once in each clone. Committed.", isNew: true },
+    { d: 1, name: "README.md", path: "README.md", when: "4.1", what: "What the application does, how to run it, and where to start reading. Committed.", isNew: true },
+    { d: 1, name: ".github/", path: ".github/", when: "4.2", what: "The repository's GitHub files: the CI workflow, the pull request template and CODEOWNERS. Committed.", isNew: true },
+    { d: 2, name: "workflows/ci.yml", path: ".github/workflows/ci.yml", when: "4.2", what: "CI: the gitleaks, pip-audit and tests jobs, run on each push and pull request. main requires all three checks.", isNew: true },
+    { d: 2, name: "pull_request_template.md", path: ".github/pull_request_template.md", when: "4.2", what: "The questions every pull request answers: what changed, how it was tested, the Stage 5 security checklist, and any migration.", isNew: true },
+    { d: 2, name: "CODEOWNERS", path: ".github/CODEOWNERS", when: "4.2", what: "Who must review changes to which paths. In User Notices, @developer-a and @developer-b own every file.", isNew: true },
+    { d: 1, name: "backend/", path: "backend/", when: "4.1", what: "Everything that runs in the Python service." },
+    { d: 2, name: ".env", path: "backend/.env", when: "4.1", what: "Your local settings and secrets: DATABASE_URL, SESSION_SECRET, SMS_API_URL, SMS_API_KEY and ALLOWED_ORIGIN. Never committed." },
+    { d: 2, name: ".env.example", path: "backend/.env.example", when: "4.1", what: "The same five setting names with placeholder values. Committed." },
+    { d: 2, name: ".python-version", path: "backend/.python-version", when: "4.1", what: "3.14. Read by version managers and by CI's setup-python step. Committed.", isNew: true },
+    { d: 2, name: "requirements.in", path: "backend/requirements.in", when: "4.1", what: "The libraries chosen in Stage 3, one per line with its version range, including sqlalchemy[asyncio]. pip-compile reads it." },
+    { d: 2, name: "requirements.txt", path: "backend/requirements.txt", when: "4.1", what: "The lock file from pip-compile, with every library pinned to an exact version. Never written with pip freeze or by hand." },
+    { d: 2, name: "app/", path: "backend/app/", when: "4.1", what: "The application package." },
+    { d: 3, name: "settings.py", path: "backend/app/settings.py", when: "4.1", what: "The one file that reads settings, through pydantic-settings." },
+    { d: 3, name: "main.py", path: "backend/app/main.py", when: "4.7", what: "The index: one router per area, each with a comment naming its files." },
+    { d: 3, name: "interfaces/", path: "backend/app/interfaces/", when: "4.5", what: "Protocol classes and Pydantic models: auth.py (Staff), users.py, notices.py and sms.py (SmsClient)." },
+    { d: 3, name: "auth/", path: "backend/app/auth/", when: "4.5 and 4.6, bodies in Stage 5", what: "verify_credentials and issue_token as stub functions in __init__.py, and current_user in current_user.py. Stage 5 writes the bodies." },
+    { d: 3, name: "routers/", path: "backend/app/routers/", when: "4.7, endpoints in Stage 5", what: "auth.py, users.py and notices.py: one empty APIRouter each until Stage 5 adds endpoints." },
+    { d: 3, name: "services/", path: "backend/app/services/", when: "4.6, classes in Stage 5", what: "users.py, notices.py and sms.py: the providers get_user_service, get_notice_service and get_sms_client now; the service classes and the provider client in Stage 5." },
+    { d: 3, name: "db/", path: "backend/app/db/", when: "4.6, tables in Stage 7", what: "session.py now; models.py with the tables in Stage 7." },
+    { d: 2, name: "tests/", path: "backend/tests/", when: "4.2", what: "test_settings.py (4.2) and test_main.py (4.7). tests/stubs.py, with InMemoryNoticeStore and FakeSmsClient, arrives in Stage 5." },
+    { d: 2, name: "migrations/", path: "backend/migrations/", when: "Stage 7", what: "Alembic's env.py and one file per migration. Not created in Stage 4.", later: true },
+    { d: 1, name: "frontend/", path: "frontend/", when: "Stage 6", what: "The Next.js application, with .nvmrc, package.json and package-lock.json. Not created in Stage 4.", later: true }
+  ];
+  var treeEl = document.getElementById("tree");
+  var selected = "backend/app/main.py";
+  TREE.forEach(function (n) {
+    var li = document.createElement("li");
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "d" + n.d + (n.later ? " later" : "") + (n.isNew ? " new" : "");
+    b.textContent = n.name;
+    b.setAttribute("data-path", n.path);
+    b.addEventListener("click", function () { selected = n.path; paintTree(); });
+    li.appendChild(b);
+    treeEl.appendChild(li);
+  });
+  function paintTree() {
+    var node = TREE.filter(function (n) { return n.path === selected; })[0];
+    treeEl.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-path") === selected ? "true" : "false"); });
+    document.getElementById("ex-path").textContent = node.path;
+    document.getElementById("ex-when").textContent = node.when;
+    document.getElementById("ex-what").textContent = node.what;
+  }
+  paintTree();
+
+  /* Screen-to-interface gap (4.5) */
+  var gapBtn = document.getElementById("gap-toggle");
+  gapBtn.addEventListener("click", function () {
+    var fixed = gapBtn.getAttribute("aria-pressed") !== "true";
+    gapBtn.setAttribute("aria-pressed", fixed ? "true" : "false");
+    gapBtn.textContent = fixed ? "Show the first pass" : "Show the fix";
+    document.querySelectorAll("#gap-table [data-gap]").forEach(function (td) {
+      var fn = td.getAttribute("data-gap") === "fn";
+      td.className = fixed ? "filled" : "gap";
+      td.innerHTML = fixed ? (fn ? "UserService.list_groups" : "<code>GET /v1/users/groups</code>") : "None yet";
+    });
+  });
+
+  /* Code: highlighting and copy buttons */
+  if (window.hljs) {
+    document.querySelectorAll("pre code[class*='language-']").forEach(function (el) {
+      if (!el.classList.contains("language-text")) { try { window.hljs.highlightElement(el); } catch (e) {} }
+    });
+  }
+  document.querySelectorAll(".code").forEach(function (box) {
+    var pre = box.querySelector("pre");
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "copy";
+    btn.textContent = "Copy";
+    btn.addEventListener("click", function () {
+      var text = pre.textContent;
+      function fallback() {
+        var range = document.createRange();
+        range.selectNodeContents(pre);
+        var sel = window.getSelection();
+        sel.removeAllRanges(); sel.addRange(range);
+        btn.textContent = "Selected";
+      }
+      try {
+        navigator.clipboard.writeText(text).then(function () { btn.textContent = "Copied"; }, fallback);
+      } catch (e) { fallback(); }
+      setTimeout(function () { btn.textContent = "Copy"; }, 2000);
+    });
+    box.appendChild(btn);
+  });
+
+  /* Section strip: mark the section in view */
+  var links = Array.prototype.slice.call(document.querySelectorAll("#strip a"));
+  var strip = document.getElementById("strip");
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        links.forEach(function (a) {
+          var on = a.getAttribute("href") === "#" + en.target.id;
+          a.setAttribute("aria-current", on ? "true" : "false");
+          if (on) {
+            var left = a.offsetLeft - strip.offsetLeft;
+            if (left < strip.scrollLeft || left + a.offsetWidth > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = left - 16;
+          }
+        });
+      });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    document.querySelectorAll("main section").forEach(function (s) { io.observe(s); });
+  }
+})();
+</script>

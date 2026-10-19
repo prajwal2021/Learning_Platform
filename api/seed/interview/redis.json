@@ -1,0 +1,477 @@
+{
+ "slug": "redis",
+ "name": "Redis",
+ "category": "Databases",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Redis, and when would you use it instead of a traditional database?",
+    "answer": "Redis is an in-memory data store used for very fast reads and writes. People use it for caching, session storage, rate limiting, queues, and short-lived counters where low latency matters more than long-term durability. A traditional database is usually better for primary storage, complex queries, and strong persistence guarantees. Redis often complements a database rather than replacing it.",
+    "real_world": "A team may cache product pages in Redis so the app can serve most requests without hitting the main database. That can cut latency and reduce load during traffic spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of data structures does Redis support?"
+   },
+   {
+    "question": "What does it mean that Redis is in-memory, and what are the trade-offs?",
+    "answer": "In-memory means Redis keeps data in RAM, which makes it very fast. The trade-off is that RAM is more expensive than disk and data can be lost if persistence is not configured or if the server fails. Redis can persist data to disk, but its core performance comes from memory. You choose it when speed is more important than storing everything permanently in the cache layer.",
+    "real_world": "If a cache server restarts unexpectedly, some or all cached data may disappear, causing a temporary spike in database traffic. Teams plan for this by treating Redis data as rebuildable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does Redis persistence work?"
+   },
+   {
+    "question": "How do `GET` and `SET` work in Redis?",
+    "answer": "`SET` stores a value under a key, and `GET` retrieves it by key. Redis keys are strings, and values are stored as bytes, so higher-level types are handled by commands and client libraries. If a key does not exist, `GET` returns a null-like result. This simple key-value model is the base for many Redis use cases.",
+    "real_world": "A web app might store `user:123:theme` as `dark` and read it on every request. That keeps user preferences fast to load.",
+    "code_lang": "bash",
+    "code": "SET user:123:theme dark\nGET user:123:theme\nGET missing:key",
+    "follow_up": "What happens if you overwrite an existing key with `SET`?"
+   },
+   {
+    "question": "What are Redis strings, lists, sets, and hashes used for?",
+    "answer": "Strings are simple values like counters or cached JSON blobs. Lists are ordered sequences, useful for queues or recent-items style data. Sets store unique members and are good for membership checks, while hashes store field-value pairs and work well for objects such as user profiles. Choosing the right structure matters because it affects both performance and command availability.",
+    "real_world": "A team might use a hash for a user record, a set for feature flags assigned to a user, and a list for a work queue. Picking the wrong structure can make common operations slow or awkward.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use a sorted set instead of a list?"
+   },
+   {
+    "question": "What is a Redis key expiration, and why is it useful?",
+    "answer": "An expiration sets a time after which a key is automatically removed. This is useful for caches, temporary tokens, password reset links, and rate limiting windows. It helps data clean itself up without a background job. A common mistake is assuming expiry makes Redis a permanent store; once the key expires, it is gone.",
+    "real_world": "Session data is often given a TTL so inactive sessions disappear automatically. That prevents old sessions from piling up forever.",
+    "code_lang": "bash",
+    "code": "SET login:token abc123 EX 300\nTTL login:token\nGET login:token",
+    "follow_up": "What is the difference between `EXPIRE` and `SET` with a TTL?"
+   },
+   {
+    "question": "What is the difference between `DEL` and `EXPIRE`?",
+    "answer": "`DEL` removes a key immediately, while `EXPIRE` schedules it to be removed later. `DEL` is for instant deletion, and `EXPIRE` is for temporary data that should live for a limited time. If a key already has an expiration, `DEL` still removes it right away. Beginners sometimes use `DEL` when they really want a timed cleanup.",
+    "real_world": "A rate-limit counter might be set to expire after a minute, so the window resets automatically. An admin tool might use `DEL` to clear a bad cache entry right away.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How can you check how much time is left before a key expires?"
+   },
+   {
+    "question": "What is a Redis cache, and what is a cache miss?",
+    "answer": "A Redis cache stores copies of frequently used data so the app can retrieve it quickly. A cache miss happens when the key is not in Redis, so the app must fetch the data from the database or another source and usually store it in Redis afterward. Caching improves latency and reduces backend load, but it adds complexity around invalidation and staleness. The cached data must be treated as potentially out of date unless your design keeps it fresh.",
+    "real_world": "If a popular page is requested repeatedly, Redis can serve most requests. If the cache is empty after a restart, the app sees many misses until the cache warms up.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you avoid serving stale data from a cache?"
+   },
+   {
+    "question": "How do Redis counters work, and why is `INCR` preferred over reading and writing a number manually?",
+    "answer": "Redis counters are usually just string values that contain numbers, updated with atomic commands like `INCR` or `INCRBY`. Using one atomic command matters because it prevents race conditions when multiple clients update the same key at once. If you read a value, increment it in application code, and write it back, concurrent requests can overwrite each other. Atomic increment commands make counters safe and simple.",
+    "real_world": "A site may count page views or API requests per user with Redis. Without atomic increments, the count can be wrong under load.",
+    "code_lang": "bash",
+    "code": "SET pageviews 0\nINCR pageviews\nINCRBY pageviews 5\nGET pageviews",
+    "follow_up": "How would you implement a per-user rate limit with Redis?"
+   },
+   {
+    "question": "What are common mistakes beginners make when using Redis?",
+    "answer": "A common mistake is using Redis as the primary source of truth without planning for persistence or recovery. Another is forgetting expiration on temporary data, which causes memory growth over time. People also sometimes model data with the wrong structure, making their reads or updates harder than necessary. Finally, treating cached data as always fresh can lead to stale results or confusing bugs.",
+    "real_world": "One team cached user permissions in Redis but never invalidated them after role changes, so users kept old access for too long. Another team filled Redis with temporary keys that never expired and eventually ran out of memory.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether data belongs in Redis or in a database?"
+   },
+   {
+    "question": "How does Redis persistence work, and why would you choose it if Redis is in memory?",
+    "answer": "Redis can save data to disk so it can recover after a restart. The two common persistence styles are periodic snapshots and an append-only write log; the trade-off is between recovery speed, durability, and performance overhead. You choose persistence when Redis stores data you cannot afford to lose completely, even if the main use case is still caching or fast access.",
+    "real_world": "Teams often enable persistence for session stores or job queues so a server restart does not wipe active state. Without it, a crash can turn into a full outage or a burst of cache misses after reboot.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the trade-offs between snapshotting and an append-only log?"
+   },
+   {
+    "question": "What is the difference between a Redis key and a Redis value type?",
+    "answer": "A key is the name you use to look up data, and the value type is the kind of data stored under that key, like a string, list, set, or hash. Redis commands depend on the value type, so using the wrong command on a key gives an error. Picking the right type helps keep your data model simple and commands efficient.",
+    "real_world": "A team might store user profiles in hashes instead of many separate string keys to keep related fields together. If they later call a list command on that key by mistake, the application can fail immediately.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide between storing data in one hash versus several separate keys?"
+   },
+   {
+    "question": "What does `TTL` tell you in Redis?",
+    "answer": "`TTL` returns how much time a key has left before it expires. A positive number means seconds remaining, `-1` usually means the key exists but has no expiration, and `-2` means the key does not exist. It is useful for checking whether cached or temporary data is still valid.",
+    "real_world": "Applications often use TTL to verify session lifetime or cache freshness before serving data. This helps avoid serving stale records after an expected expiration window.",
+    "code_lang": "python",
+    "code": "# Example using redis-py\n# r.ttl('session:123')\n# returns seconds remaining, -1, or -2\n",
+    "follow_up": "How is `TTL` different from `EXPIRE`?"
+   },
+   {
+    "question": "What is a Redis hash, and when is it better than storing many separate keys?",
+    "answer": "A hash is a map of field-value pairs stored under one Redis key. It is a good choice when several small pieces of data belong together, such as a user profile or feature flags for one object. Using a hash can reduce key sprawl and make updates to one field simpler.",
+    "real_world": "Teams commonly use hashes for account records so they can update one field without rewriting the whole object. This can also make it easier to inspect related data with one lookup.",
+    "code_lang": "python",
+    "code": "# HSET user:42 name Ada role admin\n# HGET user:42 name\n",
+    "follow_up": "What commands would you use to read or update only one field in a hash?"
+   },
+   {
+    "question": "What is the difference between `LPUSH`, `RPUSH`, `LPOP`, and `RPOP`?",
+    "answer": "`LPUSH` and `RPUSH` add items to the left or right end of a list, and `LPOP` and `RPOP` remove items from the left or right end. The side you use determines whether the list behaves like a stack or a queue. This matters when Redis is being used for task queues or ordered work items.",
+    "real_world": "A simple background job queue often pushes new jobs on one end and pops them from the other. If the team uses the wrong side, jobs can come out in the wrong order.",
+    "code_lang": "python",
+    "code": "# queue-like usage\n# RPUSH jobs task1 task2\n# LPOP jobs\n",
+    "follow_up": "How would you implement a queue with Redis lists?"
+   },
+   {
+    "question": "What does `MGET` or `MSET` do, and why use them?",
+    "answer": "They let you fetch or write multiple string keys in one command instead of sending many separate commands. This reduces network round trips and can make simple bulk operations faster. The trade-off is that they only work for string values, so they are not a replacement for transactions or type-aware modeling.",
+    "real_world": "Services often use `MGET` when loading several cached fields at once, such as multiple feature flags or config values. That can noticeably reduce latency on request paths that would otherwise make many Redis calls.",
+    "code_lang": "python",
+    "code": "# r.mget(['a', 'b', 'c'])\n# r.mset({'a': '1', 'b': '2'})\n",
+    "follow_up": "How is a multi-key command different from a transaction?"
+   },
+   {
+    "question": "What is a Redis transaction, and what problem does it solve?",
+    "answer": "A Redis transaction groups several commands so they are executed together in order. It helps when you need a set of updates to be applied without other clients interleaving commands between them. It is not the same as a full relational database transaction, so it does not provide every kind of rollback or isolation guarantee people may expect.",
+    "real_world": "A team might use a transaction to decrement inventory and record a reservation together. Without grouping, a race condition could let two requests claim the last item at the same time.",
+    "code_lang": "python",
+    "code": "# r.pipeline(transaction=True)\n# p.decr('stock')\n# p.set('reserved:1', 'yes')\n# p.execute()\n",
+    "follow_up": "What is the difference between a transaction and a pipeline in Redis?"
+   },
+   {
+    "question": "What is a Redis pipeline, and why would you use it?",
+    "answer": "A pipeline lets you send several commands to Redis without waiting for each response before sending the next one. That mainly reduces network latency and improves throughput. It does not by itself make the commands atomic, so it is best for batching many independent operations.",
+    "real_world": "Pipelines are common in import jobs or analytics tasks that write thousands of keys. Without batching, the client spends most of its time waiting on network round trips.",
+    "code_lang": "python",
+    "code": "pipe = r.pipeline()\npipe.set('a', '1')\npipe.set('b', '2')\npipe.execute()\n",
+    "follow_up": "How would you make a batch of commands both fast and safe?"
+   },
+   {
+    "question": "What is a cache stampede in Redis, and how do you prevent it?",
+    "answer": "A cache stampede happens when many requests miss the same expired key at once and all try to recompute or reload the data. That can overload the database or backend service behind the cache. Common fixes include adding jitter to expirations, using request coalescing, or letting one worker refresh while others keep serving existing data briefly.",
+    "real_world": "This often shows up when a popular page or API response expires at the same moment for many users. The sudden burst of backend traffic can be worse than the original steady load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a cache refresh strategy to avoid stampedes?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do Redis pub/sub and Redis Streams differ, and when would you choose one over the other?",
+    "answer": "Pub/sub is for fire-and-forget message delivery to currently connected subscribers; if nobody is listening, the message is lost. Streams persist messages, let consumers read at their own pace, and support consumer groups, offsets, and replay. Use pub/sub for live notifications or transient events, and Streams when you need durability, backpressure, or the ability to recover after a consumer restart.",
+    "real_world": "A team might use pub/sub to push real-time UI updates, but switch to Streams for order processing so a worker restart does not drop messages. The distinction matters when debugging “missing events” after deploys.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do consumer groups in Redis Streams change the way you scale workers?"
+   },
+   {
+    "question": "What problem do Redis locks solve, and what makes a simple lock implementation unsafe?",
+    "answer": "Locks are used to ensure only one worker performs a critical action at a time, such as generating a report or charging a payment. A simple lock is unsafe if it can expire too early, be released by the wrong client, or be acquired by two clients during a race. In practice, you want an ownership token and a safe compare-and-delete release, and you need to think about lock expiration and failure handling.",
+    "real_world": "This comes up when multiple app instances try to process the same job or rebuild the same cache entry. A flawed lock can cause duplicate side effects or data corruption.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure modes would you test for in a Redis-based distributed lock?"
+   },
+   {
+    "question": "How do Redis sorted sets work, and what are they a good fit for?",
+    "answer": "Sorted sets store unique members with an associated score, which lets Redis keep them ordered efficiently. They are a good fit for leaderboards, time-based ranking, delayed queues, and “top N” queries. The trade-off is that they are not a general-purpose relational index; you model around the score and member lookup patterns you actually need.",
+    "real_world": "A game backend often uses sorted sets for rankings so it can update scores frequently and fetch the top players quickly. Another common use is scheduling jobs by timestamp.",
+    "code_lang": "python",
+    "code": "import redis\nr = redis.Redis()\nr.zadd('leaders', {'alice': 120, 'bob': 95})\nprint(r.zrevrange('leaders', 0, 1, withscores=True))",
+    "follow_up": "How would you handle ties or multiple dimensions in a leaderboard?"
+   },
+   {
+    "question": "When would you use `SCAN` instead of `KEYS`, and what are the trade-offs?",
+    "answer": "`KEYS` can block Redis if the keyspace is large because it tries to return all matching keys at once. `SCAN` iterates incrementally, which is safer for production, but it may return duplicates or miss keys added during iteration. Use `SCAN` for background jobs, migrations, and admin tooling; use `KEYS` only in tiny datasets or local debugging.",
+    "real_world": "Teams often discover `KEYS user:*` is fine in development but causes latency spikes in production. Replacing it with `SCAN` is a common production hardening step.",
+    "code_lang": "bash",
+    "code": "redis-cli SCAN 0 MATCH user:* COUNT 100\nredis-cli SCAN 42 MATCH user:* COUNT 100",
+    "follow_up": "How would you delete a large pattern of keys safely without blocking Redis?"
+   },
+   {
+    "question": "What is the difference between cache-aside and write-through caching with Redis?",
+    "answer": "With cache-aside, the application reads from Redis first and loads from the database on a miss, then writes the result back to Redis. With write-through, the application writes to Redis and the underlying data store together, so the cache stays warm and more consistent. Cache-aside is simpler and more flexible; write-through reduces misses but adds write latency and coupling.",
+    "real_world": "Cache-aside is common for user profiles or product pages where reads dominate. Write-through is useful when stale reads are costly and you can afford tighter integration between cache and storage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you keep cache-aside data from becoming stale?"
+   },
+   {
+    "question": "What causes Redis memory eviction, and how should you think about eviction policies?",
+    "answer": "Eviction happens when Redis runs out of memory and has to remove keys to make room for new ones, depending on the configured policy. The important trade-off is whether Redis should evict only keys with expiration or also longer-lived keys, and whether it should prefer least recently used, least frequently used, or other patterns. You should set an eviction policy that matches the data’s importance, and monitor for unexpected evictions because they can look like random cache misses.",
+    "real_world": "A cache cluster may look healthy until memory pressure suddenly causes hot keys to disappear, increasing database load. Eviction policy choice can decide whether that becomes a minor hit or an outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you watch to detect memory pressure before users feel it?"
+   },
+   {
+    "question": "How do you use Redis for rate limiting, and what are the common design choices?",
+    "answer": "A common approach is to keep counters with expirations, so each client or API key has a request count in a time window. You need to decide whether you want a fixed window, sliding window, or token bucket style limiter, because they behave differently around bursts and fairness. The key trade-off is accuracy versus simplicity and Redis command cost.",
+    "real_world": "APIs often use Redis to stop abusive clients or protect expensive endpoints. Bugs here usually show up as either accidental lockouts or unexpected overload during traffic spikes.",
+    "code_lang": "python",
+    "code": "key = f\"rl:{user_id}:minute\"\ncount = r.incr(key)\nif count == 1:\n    r.expire(key, 60)\nallowed = count <= 100",
+    "follow_up": "How would you make that limiter safe under high concurrency and multiple app instances?"
+   },
+   {
+    "question": "What happens if a Redis client loses connection after writing but before it gets the reply?",
+    "answer": "The write may have succeeded even though the client never saw the response, so retrying blindly can duplicate the effect. That is why operations that cause side effects need idempotency or a request identifier, especially for commands used in workflows rather than simple cache updates. You should treat network failures as ambiguous, not as proof that the command failed.",
+    "real_world": "This matters in payment, job dispatch, and order state transitions where a retry can create duplicate records or duplicate processing. Production incidents often come from assuming “no response” means “no write.”",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design an idempotent Redis-backed workflow?"
+   },
+   {
+    "question": "How do you debug a Redis latency spike in production?",
+    "answer": "Start by separating command latency from network latency and client-side queueing. Then look for large blocking commands, oversized keys, slow scripts, memory pressure, persistence activity, or a sudden change in access patterns. The practical goal is to identify whether Redis is slow because of one expensive operation or because the instance is overloaded overall.",
+    "real_world": "A single large `LRANGE` or `SMEMBERS` against a huge key can stall the event loop and make unrelated requests slow. Teams often only notice after p95 latency rises across multiple services.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What Redis command patterns are most likely to block other traffic?"
+   },
+   {
+    "question": "Why would you use Lua scripts with Redis, and what are the trade-offs?",
+    "answer": "Lua scripts let you execute multiple Redis operations atomically from Redis’s point of view, which is useful when you need a read-modify-write sequence without race conditions. They can replace fragile client-side transactions or round trips for things like rate limiting, reservation systems, or conditional updates. The trade-off is that long-running scripts block Redis, and debugging or testing them is harder than normal commands.",
+    "real_world": "Teams use Lua when a simple transaction is not enough because they need to check a value and update several keys together. It often shows up in billing, inventory holds, and throttling logic.",
+    "code_lang": "python",
+    "code": "script = \"\"\"\nlocal v = redis.call('GET', KEYS[1])\nif not v then return 0 end\nreturn redis.call('DECR', KEYS[1])\n\"\"\"\nr.eval(script, 1, 'stock:sku1')",
+    "follow_up": "When would you prefer Lua over `MULTI`/`EXEC` or a pipeline?"
+   },
+   {
+    "question": "How do Redis replicas help with reads and availability, and what are the trade-offs of using them?",
+    "answer": "Replicas let you offload read traffic from the primary and give you a standby copy for failover. The trade-off is replication lag: a read from a replica may not reflect the latest write, so it is not safe for strongly consistent reads. Replication also increases memory and network usage, and failover can briefly interrupt writes during promotion.",
+    "real_world": "Teams often route dashboards, autocomplete, or other eventually consistent reads to replicas so the primary can focus on writes. Problems show up when a user writes data and immediately reads it from a stale replica, which makes the app look broken.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design an endpoint that must read its own writes while still using replicas?"
+   },
+   {
+    "question": "When would you use Redis sets versus sorted sets for a membership problem?",
+    "answer": "Use a set when you only care whether an item is present or not. Use a sorted set when each member needs an ordering score, like recency, priority, or rank. Sorted sets cost more than sets because Redis maintains ordering, so if you do not need range queries or ranking, a plain set is simpler and faster.",
+    "real_world": "A feature flag service might use sets to track enabled users, while a leaderboard or recent-activity feed usually needs sorted sets. Choosing the wrong structure can make simple operations unexpectedly expensive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What operations on a sorted set would you use to get the top 10 users and remove old entries?"
+   },
+   {
+    "question": "How do you model a session store in Redis, and what do you need to think about beyond just saving the data?",
+    "answer": "A common pattern is one key per session with a TTL that matches the session lifetime. You usually store only the data needed for request authentication and authorization, not the entire user profile. You also need a revocation strategy, a plan for refresh flows, and a clear answer for what happens if Redis is restarted or evicts sessions.",
+    "real_world": "This comes up in web apps that want stateless app servers but still need server-side logout and session invalidation. If the TTL or eviction policy is wrong, users can get logged out unexpectedly or stay logged in too long.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you invalidate one user’s sessions across multiple devices?"
+   },
+   {
+    "question": "What is the difference between using Redis as a primary data store versus using it as a cache in front of a database?",
+    "answer": "As a cache, Redis holds derived or duplicate data that can be rebuilt from a system of record, so occasional loss is acceptable. As a primary store, Redis must be treated as the source of truth, which means you need much stronger durability, backup, and recovery thinking. The cache approach is simpler operationally and safer for most teams; the primary-store approach is for cases where Redis’s data model or latency is essential.",
+    "real_world": "Many teams accidentally rely on cached data as if it were durable, then discover that a flush, eviction, or restart creates data loss. The design question is whether the application can tolerate rebuilding from the database.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure modes become unacceptable if Redis is the source of truth?"
+   },
+   {
+    "question": "How do you make a multi-step update in Redis safe from race conditions without overusing transactions?",
+    "answer": "If the steps depend on current state, put the read-modify-write logic inside a Lua script so Redis executes it atomically. Transactions queue commands, but they do not let you branch on intermediate results in the middle of the transaction. If the operation is simple, an atomic single command is better; if it is conditional and must be all-or-nothing, scripting is often the cleanest option.",
+    "real_world": "This matters for inventory counters, deduplication, and quota checks where two workers can otherwise both pass a check and over-consume a resource. A naive sequence of GET, logic, and SET often works in tests and fails under concurrency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would WATCH/MULTI/EXEC be a better fit than Lua?"
+   },
+   {
+    "question": "What happens if you use Redis commands on the wrong data type, and how do you debug that quickly?",
+    "answer": "Redis returns a type error when a command is applied to a key holding a different type than expected, such as calling `HGET` on a string key. This often means the key was reused for a different purpose, or an old value was left behind during a deploy. The fastest debug steps are to inspect the key’s type, check who writes it, and verify key naming so different features do not collide.",
+    "real_world": "This shows up after refactors when one service starts storing a different structure under an existing key name. It can take the app down only for certain requests, which makes it look intermittent.",
+    "code_lang": "bash",
+    "code": "redis-cli TYPE user:123\nredis-cli GET user:123\nredis-cli HGETALL user:123",
+    "follow_up": "How do you prevent key collisions across services and deploys?"
+   },
+   {
+    "question": "How do you choose a Redis key naming scheme in a real application?",
+    "answer": "A good scheme makes the data easy to find, avoids collisions, and supports bulk operations when you need them. Prefixes usually encode the domain and environment, and delimiters help group related keys for scanning or cleanup. The trade-off is between human readability and keeping names short; consistency matters more than the exact format.",
+    "real_world": "Key naming becomes important when multiple services share a Redis cluster or when you need to delete one tenant’s data safely. Without a disciplined scheme, maintenance scripts become risky and slow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure keys for a multi-tenant application so one tenant’s data can be isolated?"
+   },
+   {
+    "question": "What is the difference between a hot key problem and normal high traffic in Redis?",
+    "answer": "High traffic is evenly spread across many keys, while a hot key gets a disproportionate amount of reads or writes. A hot key can overload one shard or one primary even if the cluster is otherwise healthy, because Redis commands are mostly single-threaded per instance. Common fixes are request caching, key sharding, read replicas where safe, or redesigning the access pattern to avoid everyone hitting the same key.",
+    "real_world": "A single popular counter, feature flag, or homepage payload can become a bottleneck during a launch or incident. The symptom is latency on one key while the rest of Redis looks fine.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect a hot key in production?"
+   },
+   {
+    "question": "How do you safely update a cached object in Redis when several app servers might write it at the same time?",
+    "answer": "You need a strategy that avoids lost updates, such as versioning, optimistic locking, or making the cached value derived from a source of truth that serializes writes. If two writers can update the same JSON blob blindly, the later write can overwrite fields from the earlier one. The simplest robust answer is often to avoid treating a large cached object as editable state and instead cache smaller derived pieces.",
+    "real_world": "This is common in profile caches, shopping carts, and API aggregation caches where different code paths touch the same key. Race conditions usually show up as missing fields or data that flips back and forth under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use a Lua script instead of optimistic locking for this?"
+   },
+   {
+    "question": "How do you test Redis-dependent code without making your tests slow or flaky?",
+    "answer": "Unit tests should usually mock the Redis boundary for pure application logic, while a smaller set of integration tests should run against a real Redis instance. That lets you verify serialization, expiration behavior, and command semantics without turning every test into an external dependency. The main trade-off is realism versus speed: too much mocking misses integration bugs, but too much real Redis makes tests brittle and slow.",
+    "real_world": "Teams often get surprised by differences between an in-memory fake and real Redis behavior, especially around expiration, ordering, or connection errors. A balanced test pyramid catches most issues before production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which Redis behaviors would you insist on covering in integration tests?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how Redis uses the event loop and I/O threading, and what that means for command latency under load?",
+    "answer": "Redis executes commands on a mostly single-threaded event loop, so one slow command can delay unrelated clients even if CPU cores are idle. Newer versions can use extra threads for network read and write work, but command execution itself is still largely serialized. That design keeps concurrency simple and avoids lock overhead, but tail latency depends heavily on command cost and event-loop stalls. In practice, you watch for commands with large O(N) behavior, big replies, and forks that contend for CPU or memory bandwidth.",
+    "real_world": "A production cache can show low average latency but still have periodic p99 spikes because one client runs a large `ZRANGE`, `HGETALL`, or script that monopolizes the event loop for milliseconds.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which Redis operations are most likely to block the event loop in a way that surprises teams?"
+   },
+   {
+    "question": "What actually happens during an RDB snapshot fork, and why can `BGSAVE` or AOF rewrite cause latency or memory incidents?",
+    "answer": "Redis forks the process, and the child writes the snapshot or rewritten AOF while the parent keeps serving traffic. Because of copy-on-write, any page the parent modifies after the fork must be duplicated, so write-heavy workloads can temporarily need much more memory. The fork itself can pause the main process briefly, and background persistence competes for CPU, memory bandwidth, and disk I/O. The trade-off is durable persistence without long full pauses, but you need headroom and realistic testing.",
+    "real_world": "Teams get surprised when a node with comfortable steady-state memory usage is killed by the OS during snapshotting because copy-on-write doubles a large working set under sustained writes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you estimate safe memory headroom for a write-heavy Redis instance that does background persistence?"
+   },
+   {
+    "question": "How does Redis Cluster really route requests, and what are the operational consequences of hash slots, redirects, and resharding?",
+    "answer": "Redis Cluster partitions the keyspace into hash slots, and each master owns a subset of those slots. Clients either know the slot map or learn it from `MOVED` and `ASK` redirects, so smart clients matter for performance and failover behavior. Multi-key operations only work directly when all involved keys map to the same slot, usually enforced with hash tags. Resharding is online, but it adds redirects and migration overhead, so hot keys and poorly chosen key patterns can make balancing hard.",
+    "real_world": "A team may discover too late that a feature depends on atomic multi-key updates across unrelated keys, which works on a standalone node but breaks or becomes awkward on Cluster.",
+    "code_lang": "bash",
+    "code": "SET user:1:name alice\nSET user:1:cart book\n# Better for cluster multi-key ops:\nSET {user:1}:name alice\nSET {user:1}:cart book\n# Keys with same hash tag land in the same slot",
+    "follow_up": "What design patterns do you use when a workflow needs atomicity across keys that would naturally live in different slots?"
+   },
+   {
+    "question": "What are the consistency and durability implications of the `WAIT` command, and when is it useful or misleading?",
+    "answer": "`WAIT` blocks until a write has been acknowledged by a number of replicas or a timeout is reached, which can reduce the chance of losing that write during a failover. It does not make Redis fully linearizable, and an acknowledged replica might still lose data if it crashes before persisting, depending on configuration. It is best seen as a bounded durability improvement, not a transaction across nodes. The cost is extra latency on the write path and dependence on replica health.",
+    "real_world": "For things like idempotency keys or payment workflow markers, teams sometimes add `WAIT` to shrink the window where a primary dies before replicas catch up.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If `WAIT` is not enough for a particular workflow, what stronger guarantees would you build at the application level?"
+   },
+   {
+    "question": "How does Redis active expiration work internally, and why can expired keys still take memory or appear to exist for a while?",
+    "answer": "Redis removes expired keys in two ways: lazily when a key is accessed, and actively by sampling keys with TTLs in the background. That means expiration is not a hard real-time deletion guarantee; a cold expired key can sit in memory until sampled or touched. Under some workloads, especially with many expiring keys, the active expiration effort can trade CPU for memory reclamation. This matters if you treat TTL as an exact scheduler rather than a best-effort expiry mechanism.",
+    "real_world": "A job system that assumes a lock or token disappears exactly at its TTL can behave incorrectly when the key is expired logically but not yet removed physically.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design around the fact that expiration timing is approximate rather than exact?"
+   },
+   {
+    "question": "How would you diagnose and mitigate allocator fragmentation in Redis, and why can RSS stay much higher than used memory?",
+    "answer": "Redis reports logical dataset memory separately from the process RSS, and the allocator can keep fragmented arenas that the OS does not immediately reclaim. Churny workloads with many object sizes, deletes, and rewrites can leave RSS much higher than `used_memory`. You diagnose it by comparing allocator and RSS metrics over time and correlating with write patterns or persistence activity. Mitigations include data model simplification, reducing churn, enabling active defragmentation where appropriate, and keeping memory headroom instead of sizing exactly to dataset bytes.",
+    "real_world": "An instance can start evicting or hit container limits even though application teams think they are below the configured max memory, because RSS and allocator behavior are the real operational limits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What Redis data modeling choices tend to make fragmentation worse?"
+   },
+   {
+    "question": "What are the trade-offs between Redis Streams consumer groups and a dedicated message broker when you care about retries, ordering, and backlog management?",
+    "answer": "Streams consumer groups give you persistent messages, server-side tracking of pending deliveries, and replay within Redis, which is convenient when your system already depends on Redis. But backlog retention, trimming, pending-entry cleanup, and operational tooling are more application-driven than in purpose-built brokers. Ordering is per stream, retries are explicit, and slow consumers can create large pending sets or memory growth if you do not manage retention. The trade-off is simplicity and locality versus richer broker semantics and isolation.",
+    "real_world": "Teams often succeed with Streams for moderate internal workflows, then run into operational pain when one consumer lags for days and the stream grows until it competes with cache memory.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you handle a message that was delivered to a consumer that died and never acknowledged it?"
+   },
+   {
+    "question": "If you need exactly-once effects with Redis in the middle of the system, what would you say to an interviewer?",
+    "answer": "I would push back on the phrase exactly once, because Redis cannot by itself guarantee end-to-end exactly-once processing across crashes, retries, and external side effects. What you can usually build is at-least-once delivery with idempotent handlers, deduplication keys, and careful write ordering. The key is to define the effect boundary: for example, write an idempotency record before calling an external API or make downstream writes conditional on a unique operation ID. That is more realistic and operationally safer than promising a guarantee the system cannot actually provide.",
+    "real_world": "Payment, email, and workflow systems usually solve duplicates with operation IDs stored in Redis or a database, because network retries and failover make duplicate delivery inevitable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you store the deduplication state if losing Redis data is unacceptable?"
+   },
+   {
+    "question": "What are the performance and correctness trade-offs of using Redis bitmaps or HyperLogLog for analytics-style workloads?",
+    "answer": "Bitmaps are great when your ID space is dense or can be mapped densely, because they give compact storage and fast bitwise operations, but sparse large ID ranges waste memory. HyperLogLog gives approximate cardinality using tiny fixed memory, which is ideal for unique counts when exact answers are not worth the cost. The correctness trade-off is obvious with HyperLogLog because counts are approximate, while bitmaps are exact but can become huge if the index range explodes. In both cases, you should be clear whether the product requirement tolerates approximation or encoding constraints.",
+    "real_world": "A growth dashboard can use HyperLogLog for daily unique users cheaply, while a feature-flag rollout system might use bitmaps to track exact exposure membership by user ID.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a sorted set over a bitmap for user activity tracking even if it costs more memory?"
+   },
+   {
+    "question": "How do you approach big-key and hot-key incidents differently, and what mitigation options do you actually have in production?",
+    "answer": "A big key is mainly a memory and operation-cost problem: deletes, serialization, migration, and reads can become expensive because one key contains too much data. A hot key is a concentration problem: too much traffic lands on one key or slot, saturating CPU, bandwidth, or a single shard. For big keys, you usually redesign the data model, chunk values, or use unlink-style asynchronous deletion where appropriate; for hot keys, you replicate reads, add local caching, shard logically, or precompute and fan out. They often coexist, but the fixes are different because one is about object size and the other about access skew.",
+    "real_world": "A leaderboard key with millions of members can be both large and hot, causing slow failovers and migration pain even before it maxes out memory.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or commands would you use first during a live incident to confirm whether the issue is a big key, a hot key, or both?"
+   },
+   {
+    "question": "How does Redis Sentinel actually detect failure and perform failover, and what are the edge cases that matter in production?",
+    "answer": "Sentinel first marks an instance subjectively down based on missed responses, then requires quorum from other Sentinels before treating it as objectively down. Failover picks a replica, promotes it, and reconfigures the rest, but that process is still asynchronous and can lose recent writes that never reached replicas. The main edge cases are network partitions, too few Sentinels or poor placement, and clients that don't refresh topology quickly. Sentinel improves availability, not strong consistency.",
+    "real_world": "A common incident is the master being isolated from Sentinels but still reachable from part of the app fleet, causing split-brain-like writes that are later lost after failover. Teams avoid this by placing Sentinels across failure domains and making clients reconnect through Sentinel-aware libraries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose Sentinel quorum and placement across availability zones?"
+   },
+   {
+    "question": "What are the real guarantees of `MULTI` and `EXEC` in Redis, and where do people overestimate them?",
+    "answer": "`MULTI` and `EXEC` guarantee queued commands run sequentially without interleaving from other clients once `EXEC` starts, but they do not provide rollback on runtime errors. If one command in the transaction fails due to a wrong type or similar issue, the others still run. They also don't make reads inside the transaction dynamic; queued reads don't influence later queued writes unless you use `WATCH` or a script. People often mistake Redis transactions for full ACID database transactions, which they are not.",
+    "real_world": "This matters when a team assumes a transaction will undo partial updates after an application bug. In practice, you can end up with half-applied business state unless you model the operation to be idempotent or validate keys up front.",
+    "code_lang": "bash",
+    "code": "MULTI\nINCR counter\nLPUSH counter x   # wrong type at runtime if counter is a string\nEXEC",
+    "follow_up": "When would you prefer `WATCH` over a Lua script for optimistic concurrency?"
+   },
+   {
+    "question": "How does `WATCH` work under contention, and what failure modes do you need to design for?",
+    "answer": "`WATCH` implements optimistic concurrency: if any watched key changes before `EXEC`, the transaction aborts and returns without applying queued writes. Under contention, that can turn into a retry storm because many clients repeatedly read, watch, and lose the race. You need bounded retries, backoff, and idempotent logic because disconnects or timeouts can leave the client unsure whether it should retry. It's a good fit when conflicts are rare, not when many writers hammer the same keys.",
+    "real_world": "A classic case is inventory reservation on one hot SKU during a flash sale. The Redis server may be fine, but application latency spikes because clients keep aborting and retrying the same watched transaction.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would tell you `WATCH` contention is your real bottleneck rather than server CPU?"
+   },
+   {
+    "question": "How would you compare list-based queues, Streams, and sorted-set delayed queues in Redis for background work?",
+    "answer": "Lists are simple and fast, but they don't track consumer ownership or pending work, so recovery and retries are mostly on you. Streams add an append-only log, consumer groups, and pending-entry tracking, which helps with redelivery and observability but costs more memory and operational complexity. Sorted sets are useful for scheduled or delayed work by score, but you need your own claiming and retry logic. The right choice depends on whether you need delay semantics, replay, multiple consumers, and durable backlog behavior.",
+    "real_world": "Teams often start with `BRPOP` workers and later discover jobs disappear when a worker crashes after popping but before finishing. That is usually when they move to Streams or add a pending queue pattern.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you build a reliable delayed job system on Redis if jobs must not run before a timestamp?"
+   },
+   {
+    "question": "What is the purpose of `CLIENT PAUSE`, and when is it useful versus dangerous?",
+    "answer": "`CLIENT PAUSE` temporarily stops processing client commands, which can help during controlled failover or topology changes so clients don't write to the wrong node during a brief transition. It is a blunt tool: paused writes can pile up, client timeouts can fire, and some libraries react poorly if the pause is longer than expected. It doesn't fix consistency by itself; it just creates a window to coordinate a change. You use it carefully, with short pauses and client timeout settings in mind.",
+    "real_world": "Operators sometimes use a write pause during planned master promotion to reduce lost writes. Used carelessly in a busy service, it can cause a secondary outage because request queues and retries explode upstream.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you coordinate clients and load balancers during a planned Redis primary switch?"
+   },
+   {
+    "question": "What is `MIGRATE` doing under the hood, and what trade-offs does it introduce during key movement?",
+    "answer": "`MIGRATE` transfers serialized key data from one Redis instance to another and can optionally remove the source key as part of the operation. It's useful for live rebalancing and operational fixes, but moving large keys can block meaningful work on the source and destination long enough to create latency spikes. The trade-off is simplicity versus impact: it's convenient for targeted moves, but not a free operation. Timeouts, key size, and whether clients are still writing the key all matter.",
+    "real_world": "In production, a single huge hash or sorted set moved during resharding can cause an incident even when average load looks healthy. Teams usually discover they need big-key detection before moving slots or hand-migrating tenant data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely move a tenant with very large keys between Redis nodes?"
+   },
+   {
+    "question": "How do Redis ACLs work, and what are the practical mistakes teams make when securing production instances?",
+    "answer": "Redis ACLs let you define users with passwords and permissions over command categories, individual commands, and key patterns. The common mistake is treating ACLs as the only security boundary while leaving Redis broadly reachable on the network, or giving application users far more commands than they need. Another mistake is forgetting that dangerous admin commands, scripting, or broad key access can still enable destructive behavior. Good practice is least privilege, transport security where needed, and separate users for apps, operators, and replication.",
+    "real_world": "A real failure mode is an app credential leak where the user can still run flushes or inspect unrelated tenants because ACLs were too broad. Restricting command sets and key prefixes can turn that from a catastrophe into a contained incident.",
+    "code_lang": "bash",
+    "code": "ACL SETUSER app on >s3cret ~app:* +@read +@write -FLUSHALL -CONFIG\nACL WHOAMI",
+    "follow_up": "How would you design ACLs for a multi-tenant platform sharing one Redis deployment?"
+   },
+   {
+    "question": "What is the difference between server-side blocking commands and busy Redis, and how do they affect latency for other clients?",
+    "answer": "Blocking commands like `BLPOP` block the client connection waiting for data, not the whole Redis server, so they're usually safe from a server concurrency perspective. A busy server is different: long-running commands, large replies, heavy scripts, or memory-pressure work can monopolize the single command execution path and increase latency for everyone. The key distinction is whether the server is waiting efficiently on behalf of one client or actively spending CPU and memory work that delays all clients. You need to watch both command mix and response sizes.",
+    "real_world": "Teams sometimes blame blocking pops for latency when the real cause is a periodic command like a huge `ZRANGE` or a script scanning giant structures. Looking at slow commands and per-command latency usually separates the two quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which Redis commands are most likely to create tail-latency incidents even if average CPU looks acceptable?"
+   },
+   {
+    "question": "How do client output buffers become a production problem in Redis, and which workloads trigger it?",
+    "answer": "Every client connection has output buffering, and if a client can't read replies fast enough, Redis keeps accumulating response data for it up to configured limits. This is especially dangerous with pub/sub, replicas, or clients issuing commands that return large payloads. Excessive output buffers consume memory, can trigger client disconnects, and in extreme cases contribute to overall memory pressure and eviction or OOM behavior. The fix is usually reducing response size, fixing slow consumers, and setting sane client classes and limits.",
+    "real_world": "A common incident is a slow subscriber or lagging replica consuming hundreds of megabytes of output buffer while the rest of the system looks normal. Another is an analytics endpoint requesting enormous key ranges and causing memory spikes only when a user opens a dashboard.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish replica lag caused by network limits from lag caused by the replica applying work too slowly?"
+   },
+   {
+    "question": "When does Redis switch between full and partial replication resync, and why does the replication backlog size matter?",
+    "answer": "If a replica disconnects briefly and the primary still has the needed replication history in its backlog, it can do a partial resync and continue from the last offset. If that history has already fallen out of the backlog, Redis must do a full resync, which means transferring a fresh dataset snapshot and then replaying newer writes. Backlog size matters because it determines how much disconnect time or write volume you can tolerate before falling back to the expensive path. The right size depends on write rate and expected network instability.",
+    "real_world": "This shows up when a busy primary and a too-small backlog turn short network blips into repeated full resyncs, causing bandwidth spikes and fork-related pressure. Teams usually size backlog from observed write throughput and the longest disconnect they want to survive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you estimate a safe backlog size for a write-heavy primary with replicas across regions?"
+   }
+  ]
+ }
+}

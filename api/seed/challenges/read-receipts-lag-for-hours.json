@@ -1,0 +1,314 @@
+{
+  "slug": "read-receipts-lag-for-hours",
+  "title": "Read receipts lag by hours after the push provider slows down",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "queues",
+    "rate-limits",
+    "retries",
+    "incident-response",
+    "backpressure"
+  ],
+  "scenario": "A messaging app updates read receipts by consuming jobs from one shared queue. The queue normally drains 25,000 jobs/second, but after a push provider starts returning 429 rate-limit responses, the backlog grows to 90 million jobs. Workers retry failed push jobs immediately and put them back at the front of the same queue. Cheap internal receipt writes are now stuck behind third-party push calls that are limited to 2,000/second.",
+  "goal": "Find the cause of the multi-hour read-receipt lag and choose a safe fix that keeps core receipt state current even when push delivery slows down.",
+  "concepts": [
+    {
+      "key": "message-queue",
+      "name": "Message queue",
+      "summary": "A message queue stores work items so workers can process them asynchronously. It helps absorb bursts, but ordering and retry behavior can make one kind of work block another.",
+      "used_here": "Read-receipt writes and push notification sends are both being processed from one shared queue."
+    },
+    {
+      "key": "queue-backlog",
+      "name": "Queue backlog",
+      "summary": "Backlog is the number of queued jobs waiting to be processed. Queue age shows how long the oldest or typical job has waited, which is often more user-visible than just job count.",
+      "used_here": "The shared queue has grown to 90 million jobs, so new read receipts wait behind a large amount of older work."
+    },
+    {
+      "key": "rate-limit",
+      "name": "Rate limit",
+      "summary": "A rate limit caps how many requests a service accepts in a period of time. When callers exceed it, the service may return errors such as HTTP 429.",
+      "used_here": "The push provider is effectively allowing only about 2,000 push calls/second."
+    },
+    {
+      "key": "retry-amplification",
+      "name": "Retry amplification",
+      "summary": "Retry amplification happens when failures cause many extra attempts, increasing load on a dependency that is already struggling. Immediate retries can turn a temporary limit into a sustained overload.",
+      "used_here": "Failed push jobs are retried immediately, creating more push attempts and more 429s."
+    },
+    {
+      "key": "head-of-line-blocking",
+      "name": "Head-of-line blocking",
+      "summary": "Head-of-line blocking occurs when slow or blocked work at the front of a line prevents later independent work from moving forward. It is common when unrelated work shares one ordered queue.",
+      "used_here": "Push jobs are put back at the front of the shared queue, so cheap internal receipt writes cannot run promptly."
+    },
+    {
+      "key": "worker-pool",
+      "name": "Worker pool",
+      "summary": "A worker pool is a set of processes or threads that consume jobs concurrently. Adding workers only helps when the bottleneck is available compute or worker capacity.",
+      "used_here": "More workers would generate more push attempts against the provider instead of fixing the 2,000/second external limit."
+    },
+    {
+      "key": "separate-queues",
+      "name": "Separate queues",
+      "summary": "Separate queues split different classes of work so each can have its own workers, ordering, limits, and failure policy. This prevents one dependency from blocking unrelated work.",
+      "used_here": "Internal receipt writes should be processed independently from push notification sends."
+    },
+    {
+      "key": "token-bucket",
+      "name": "Token bucket",
+      "summary": "A token bucket is a rate limiter that refills tokens at a fixed rate and requires one token per operation. It allows controlled bursts up to the bucket size while enforcing a long-term rate.",
+      "used_here": "Push sends should be limited to the provider budget instead of letting workers exceed 2,000 attempts/second."
+    },
+    {
+      "key": "exponential-backoff",
+      "name": "Exponential backoff",
+      "summary": "Exponential backoff waits longer between each retry after repeated failures. It reduces pressure on a failing or rate-limited dependency.",
+      "used_here": "Push jobs that receive 429s should wait before retrying instead of immediately rejoining the front of the queue."
+    },
+    {
+      "key": "jitter",
+      "name": "Jitter",
+      "summary": "Jitter adds randomness to retry delays. It prevents many workers from retrying at the same time and causing synchronized spikes.",
+      "used_here": "Push retries should be spread out so they do not hit the provider in bursts."
+    },
+    {
+      "key": "dead-letter-queue",
+      "name": "Dead-letter queue",
+      "summary": "A dead-letter queue stores jobs that cannot be processed after a configured number of attempts. It keeps poison or repeatedly failing jobs from blocking normal processing.",
+      "used_here": "Push jobs that exhaust retries should be moved aside for later inspection or replay."
+    },
+    {
+      "key": "canary",
+      "name": "Canary rollout",
+      "summary": "A canary rollout sends a small percentage of traffic through a change before full deployment. It reduces risk by checking behavior on a limited slice first.",
+      "used_here": "The new queue and retry behavior is first enabled for 5% of read-receipt traffic."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Choose the first place to look",
+      "question": "The queue has 90 million jobs and users report read receipts lagging for hours. What should you inspect first to understand why cheap receipt writes are not draining?",
+      "concept_keys": [
+        "message-queue",
+        "queue-backlog",
+        "rate-limit"
+      ],
+      "options": [
+        {
+          "text": "Check average CPU and memory on the worker fleet to decide whether to add capacity.",
+          "correct": false,
+          "hint": "Capacity graphs are useful, but the incident includes an external 429 signal. First separate whether workers are busy doing useful work or repeatedly hitting a dependency limit.",
+          "id": "a"
+        },
+        {
+          "text": "Sample a few user records in the database to see whether receipt rows are locked.",
+          "correct": false,
+          "hint": "Database locks could delay writes, but the backlog and 429s point to work waiting before it reaches the database. Look at the queue path before narrowing to storage.",
+          "id": "b"
+        },
+        {
+          "text": "Break down queue age, attempts, and worker time by job type, dependency, and response code.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Compare mobile client versions to see whether some clients stopped sending read events.",
+          "correct": false,
+          "hint": "Client issues can reduce or distort incoming events, but here the queue is growing to 90 million jobs. The problem is more likely in processing than event creation.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The fastest useful view is a breakdown by job type and dependency result: receipt writes versus push sends, normal attempts versus retries, and 429s. CPU or database checks may matter later, but they do not explain why a queue that normally drains 25,000 jobs/second is now dominated by work involving a provider limited to 2,000/second."
+    },
+    {
+      "title": "Interpret the evidence",
+      "question": "The breakdown shows that most worker time is spent on push jobs that receive 429s, retry immediately, and are inserted at the front of the same queue. Receipt-write jobs are cheap but are waiting behind those push retries. What is the main failure mode?",
+      "concept_keys": [
+        "retry-amplification",
+        "head-of-line-blocking",
+        "rate-limit"
+      ],
+      "options": [
+        {
+          "text": "The workers are losing jobs after failed pushes, causing receipts to be regenerated many times.",
+          "correct": false,
+          "hint": "The symptoms describe jobs being retried immediately and placed back in the queue, not disappearing. The issue is excess repeated work ahead of useful work.",
+          "id": "a"
+        },
+        {
+          "text": "The queue partition count is too low, so receipt writes and push sends cannot be consumed in parallel.",
+          "correct": false,
+          "hint": "More parallelism can help some queues, but the provider is explicitly limiting push to 2,000/second. Parallel consumers do not help if they mostly create more rejected calls.",
+          "id": "b"
+        },
+        {
+          "text": "The shared queue is suffering retry amplification and head-of-line blocking from a rate-limited dependency.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The database write path is too slow, and push 429s are only a symptom of delayed state changes.",
+          "correct": false,
+          "hint": "The evidence says workers are spending time on push calls and receiving 429s. A slow database would show time spent waiting on writes, not repeated provider rejections.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Immediate push retries create extra work against a dependency that is already returning 429s, and putting those retries at the front blocks unrelated receipt writes. This is both retry amplification and head-of-line blocking. A partition or worker-count change would not remove the 2,000/second push limit and can make the retry storm worse."
+    },
+    {
+      "title": "Pick the safest immediate mitigation",
+      "question": "You need to reduce read-receipt lag now, before a full redesign is deployed. Which immediate mitigation is safest?",
+      "concept_keys": [
+        "worker-pool",
+        "rate-limit",
+        "head-of-line-blocking",
+        "message-queue"
+      ],
+      "options": [
+        {
+          "text": "Increase the retry limit for push jobs so transient provider failures have more chances to succeed.",
+          "correct": false,
+          "hint": "More retries add more work to the already overloaded path. The immediate goal is to free capacity for internal receipt state, not maximize push attempts.",
+          "id": "a"
+        },
+        {
+          "text": "Temporarily stop or sharply throttle push-send retries, then let receipt-write jobs drain from the queue.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Prioritize the oldest jobs globally so the queue drains in strict arrival order.",
+          "correct": false,
+          "hint": "Strict age ordering sounds fair, but old push retries can still sit ahead of cheap receipt writes. Fairness by age does not separate blocked external work from internal work.",
+          "id": "c"
+        },
+        {
+          "text": "Double the worker fleet so the 90 million queued jobs can be consumed faster.",
+          "correct": false,
+          "hint": "If most extra workers call the same limited provider, they will mostly create more 429s. More concurrency only helps when the bottleneck is worker capacity.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Throttling or pausing push retries reduces pressure on the rate-limited provider and frees workers to process cheap internal receipt writes. Adding workers is the tempting move, but with push capped at 2,000/second it mostly increases rejected calls and keeps useful work stuck. The trade-off is that external push notifications may be delayed while core read-receipt state catches up."
+    },
+    {
+      "title": "Design the durable queue change",
+      "question": "After the backlog starts falling, you need a durable design so a slow push provider cannot delay core receipt state again. What queue structure should you implement?",
+      "concept_keys": [
+        "separate-queues",
+        "message-queue",
+        "head-of-line-blocking",
+        "rate-limit"
+      ],
+      "options": [
+        {
+          "text": "Split internal receipt writes and external push sends into separate queues with separate worker pools and policies.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Keep one shared queue, but use more partitions so push and receipt jobs are spread across more consumers.",
+          "correct": false,
+          "hint": "More partitions can increase concurrency, but the same workers can still be occupied by a limited dependency. The design should isolate work with different dependencies and failure behavior.",
+          "id": "b"
+        },
+        {
+          "text": "Batch receipt writes behind each push send so users are notified only after the provider accepts the push.",
+          "correct": false,
+          "hint": "That couples core state to the slowest external dependency. The incident shows why receipt state should not wait for push delivery.",
+          "id": "c"
+        },
+        {
+          "text": "Use one priority queue where push retries have lower priority than first-attempt push jobs.",
+          "correct": false,
+          "hint": "This improves push ordering but still mixes external calls and internal writes in one scheduling domain. A provider slowdown can still consume the queue’s worker capacity.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Separate queues let internal receipt writes drain with their own workers even when push sends are slow or failing. A single priority queue or more partitions can reduce some contention, but it still couples core state to third-party behavior. The design should accept delayed external notifications while keeping read-receipt state current."
+    },
+    {
+      "title": "Set the retry policy for push sends",
+      "question": "The push-send queue is now isolated. What retry and rate-control policy should it use when the provider returns 429s?",
+      "concept_keys": [
+        "token-bucket",
+        "exponential-backoff",
+        "jitter",
+        "dead-letter-queue",
+        "rate-limit"
+      ],
+      "options": [
+        {
+          "text": "Retry 429s immediately on the push queue, but cap the total number of retry attempts per job.",
+          "correct": false,
+          "hint": "A retry cap prevents infinite attempts, but immediate retries still create bursts against a provider asking you to slow down. The timing of retries matters as much as the count.",
+          "id": "a"
+        },
+        {
+          "text": "Apply a token-bucket limiter at the provider budget, retry 429s with exponential backoff and jitter, and move exhausted jobs to a dead-letter queue.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Drop all push jobs that receive 429s because the receipt write has already succeeded.",
+          "correct": false,
+          "hint": "Core state should not wait for push, but dropping every rate-limited notification may violate delivery expectations. A controlled retry path preserves the work without blocking receipts.",
+          "id": "c"
+        },
+        {
+          "text": "Retry every failed push exactly 30 seconds later and remove the job after three failures.",
+          "correct": false,
+          "hint": "A fixed delay can synchronize many workers and create repeated spikes. It also does not enforce the provider’s overall request budget.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A token bucket keeps push attempts within the provider’s 2,000/second budget, while exponential backoff with jitter prevents synchronized retry spikes after 429s. A dead-letter queue keeps repeatedly failing jobs from cycling forever. Immediate retries with only a max-attempt cap still amplify load during the failure window."
+    },
+    {
+      "title": "Verify the canary safely",
+      "question": "You roll the isolated queues and new push retry control to 5% of read-receipt traffic. Which canary check best confirms the change is working without being hidden by the old path?",
+      "concept_keys": [
+        "canary",
+        "queue-backlog",
+        "rate-limit",
+        "dead-letter-queue"
+      ],
+      "options": [
+        {
+          "text": "Verify users in the canary receive push notifications before read receipts become visible in the app.",
+          "correct": false,
+          "hint": "The intended trade-off is the opposite: core receipt state should stay current even if external notifications are delayed. Push-first ordering would reintroduce coupling to the provider.",
+          "id": "a"
+        },
+        {
+          "text": "For canary traffic, verify receipt-write queue age falls below the target, canary push attempts stay within its allocated share of the provider budget, and canary 429s and dead-letter volume remain bounded.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Verify canary workers have higher CPU utilization than old workers and the shared backlog starts decreasing globally.",
+          "correct": false,
+          "hint": "Higher CPU is not the goal, and the old path may still control the global backlog. Use metrics scoped to the traffic that actually received the change.",
+          "id": "c"
+        },
+        {
+          "text": "Globally verify total push attempts stay below 2,000/second and the overall 429 rate drops across all traffic.",
+          "correct": false,
+          "hint": "Only 5% of traffic is on the new path. The remaining 95% can still dominate global push attempts and 429s, so global numbers may not tell you whether the canary works.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Because only 5% is on the new path, the confirmation must be scoped to canary traffic or to a clearly allocated rate budget, such as about 100 push attempts/second if the 2,000/second provider budget is split proportionally. Global push attempts and global 429 rate can still be dominated by the 95% old path, so they do not cleanly prove the canary is healthy. The key success signal is that canary receipt-write queue age recovers while push failures are contained."
+    }
+  ],
+  "takeaway": "Do not let cheap internal state changes share a failure domain with a slow, rate-limited third-party call. Separate queues and worker pools by dependency, then apply explicit rate limits, backoff with jitter, and dead-letter handling to the external path. Adding workers during a 429 storm usually amplifies retries and starves useful work faster.",
+  "review_issues": []
+}

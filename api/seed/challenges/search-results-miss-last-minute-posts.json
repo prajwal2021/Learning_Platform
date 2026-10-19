@@ -1,0 +1,362 @@
+{
+  "slug": "search-results-miss-last-minute-posts",
+  "title": "New posts do not appear in search for several minutes",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "search",
+    "elasticsearch",
+    "queues",
+    "eventual-consistency",
+    "incident-response"
+  ],
+  "scenario": "The product promises searchable posts within 10 seconds, but during peak publishing of 15,000 posts per minute, new posts appear in timelines immediately and in search 3 to 8 minutes later. Elasticsearch refresh_interval is 60 seconds, and bulk indexing workers are backlogged by 500,000 documents. Users can find the post by direct URL but not by search query.",
+  "goal": "Find the cause of the search delay and choose a production-safe way to restore and protect the 10-second freshness target.",
+  "concepts": [
+    {
+      "key": "database",
+      "name": "Database",
+      "summary": "The database is the primary store of application data. If a post exists there, the write itself succeeded even if another system has not copied it yet.",
+      "used_here": "Direct URL and timelines read from the primary post data, so they help distinguish missing writes from search indexing delay."
+    },
+    {
+      "key": "timeline",
+      "name": "Timeline",
+      "summary": "A timeline is the feed that shows recent posts to users. It may read from a different path than search.",
+      "used_here": "Timelines showing the new posts immediately prove the publishing path is working."
+    },
+    {
+      "key": "search-index",
+      "name": "Search index",
+      "summary": "A search index is a copy of data optimized for text queries. It is usually updated asynchronously from the main database.",
+      "used_here": "Elasticsearch is the search index that has not made the newest posts queryable yet."
+    },
+    {
+      "key": "indexing-pipeline",
+      "name": "Indexing pipeline",
+      "summary": "An indexing pipeline moves changes from the application into the search index. It often uses queues and workers so publishing does not wait on search.",
+      "used_here": "New posts must pass through this pipeline before search can find them."
+    },
+    {
+      "key": "indexer-queue",
+      "name": "Indexer queue",
+      "summary": "A queue stores work items until workers can process them. Queue age is often more useful than queue length because it tells you how stale the oldest work is.",
+      "used_here": "The 500,000 pending documents indicate the search indexing workers are behind during peak publishing."
+    },
+    {
+      "key": "backlog",
+      "name": "Backlog",
+      "summary": "A backlog is accumulated work that has not been processed yet. A growing backlog means the system is receiving work faster than it completes it.",
+      "used_here": "The indexing backlog explains why posts can wait minutes before Elasticsearch even receives them."
+    },
+    {
+      "key": "elasticsearch-refresh",
+      "name": "Elasticsearch refresh",
+      "summary": "A refresh makes recently indexed documents visible to search. In Elasticsearch it happens at the index or shard level, not just for one document.",
+      "used_here": "The 60-second refresh interval can add up to about a minute after indexing, but it does not explain a 3 to 8 minute delay by itself."
+    },
+    {
+      "key": "bulk-indexing",
+      "name": "Bulk indexing",
+      "summary": "Bulk indexing sends many documents to the search engine in batches for throughput. It is efficient, but large jobs can compete with urgent updates.",
+      "used_here": "Bulk workers and rebuild traffic can consume indexing capacity needed by fresh posts."
+    },
+    {
+      "key": "throughput-capacity",
+      "name": "Throughput capacity",
+      "summary": "Throughput capacity is how much work a system can complete per unit of time. A service-level target depends on capacity being greater than peak input plus retry work.",
+      "used_here": "The indexers and Elasticsearch cluster must process more than 15,000 posts per minute while keeping queue age below the freshness budget."
+    },
+    {
+      "key": "backpressure",
+      "name": "Backpressure",
+      "summary": "Backpressure slows or defers lower-priority work when a downstream system is overloaded. It prevents queues from growing without bound.",
+      "used_here": "Bulk and rebuild jobs should be throttled when fresh-post indexing is falling behind."
+    },
+    {
+      "key": "priority-lanes",
+      "name": "Priority lanes",
+      "summary": "Priority lanes separate urgent work from less urgent work. They keep long-running background jobs from delaying user-visible updates.",
+      "used_here": "Freshly published posts should not wait behind rebuild or low-priority bulk indexing work."
+    },
+    {
+      "key": "hot-index",
+      "name": "Hot index",
+      "summary": "A hot index is a smaller, actively updated search index for recent or high-priority data. It can use different settings from a large historical index.",
+      "used_here": "Recent posts can be indexed into a smaller index with a shorter refresh cadence while bulk rebuild traffic stays elsewhere."
+    },
+    {
+      "key": "search-alias",
+      "name": "Search alias",
+      "summary": "A search alias is a logical name that queries one or more physical indexes. It lets applications search multiple indexes without hard-coding each index name.",
+      "used_here": "Search can query both the recent-post index and the main index while hiding that split from most application code."
+    },
+    {
+      "key": "pending-index-state",
+      "name": "Pending index state",
+      "summary": "Pending state tells the application that an item exists but has not reached a derived system yet. It helps the UI avoid pretending data is missing.",
+      "used_here": "The product can show that a newly published post is still being indexed instead of returning an empty search result silently."
+    },
+    {
+      "key": "result-merge",
+      "name": "Result merge",
+      "summary": "Result merge combines records from two read paths into one response. It must remove duplicates and define ordering clearly.",
+      "used_here": "The author’s very recent posts can be read from the database and merged with search results until Elasticsearch catches up."
+    },
+    {
+      "key": "deduplication",
+      "name": "Deduplication",
+      "summary": "Deduplication removes repeated copies of the same item. It is needed when the same post can come from both search and a fallback source.",
+      "used_here": "A post may appear from both Elasticsearch and the database fallback, so the response should keep one copy by post ID."
+    },
+    {
+      "key": "service-level-objective",
+      "name": "Service-level objective",
+      "summary": "A service-level objective is a measurable reliability target. It should be checked with metrics that match the user-visible promise.",
+      "used_here": "The promise is that posts become searchable within 10 seconds, so monitoring must measure publish-to-search delay."
+    },
+    {
+      "key": "canary-checks",
+      "name": "Canary checks",
+      "summary": "A canary check is a small synthetic test that continuously verifies a user journey. It catches failures that internal component metrics can miss.",
+      "used_here": "A test post can be published and searched until it appears, measuring real freshness."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the split between publish and search",
+      "question": "A user reports that a post published 4 minutes ago appears in the timeline and opens by direct URL, but the same title returns no search results. Where should you look first?",
+      "concept_keys": [
+        "database",
+        "timeline",
+        "search-index",
+        "indexing-pipeline",
+        "indexer-queue"
+      ],
+      "options": [
+        {
+          "text": "Restart the search API servers, then ask the user to repeat the exact same title query after caches refill.",
+          "correct": false,
+          "hint": "The post is missing only from search, but the first check should establish whether search ever received the document. Restarting readers can hide the signal you need.",
+          "id": "a"
+        },
+        {
+          "text": "Check whether the post exists in the database, then inspect the indexing pipeline lag and queue age for that post.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Increase Elasticsearch replicas temporarily, then compare query latency before and after the replica change.",
+          "correct": false,
+          "hint": "Replicas can improve read capacity, but they do not prove whether the document was indexed. A fast query can still return stale results.",
+          "id": "c"
+        },
+        {
+          "text": "Inspect the web router and direct URL handler, then verify the post slug is normalized consistently across services.",
+          "correct": false,
+          "hint": "The direct URL already works, so routing and slug handling are less likely to explain search invisibility. Focus on the path that feeds search.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The direct URL and timeline show the primary post write succeeded, so the next question is whether the search copy is late. Checking the specific post in the indexing pipeline and queue tells you if it is waiting, failed, or already indexed but not searchable. Restarting search API servers is tempting, but it does not address a document that has not reached Elasticsearch."
+    },
+    {
+      "title": "Interpret the freshness numbers",
+      "question": "You find that the post is in the primary database, its indexing job is still pending, the oldest pending indexing job is 6 minutes old, and Elasticsearch refresh_interval is 60 seconds. What is the most likely cause of the 3 to 8 minute search delay?",
+      "concept_keys": [
+        "indexing-pipeline",
+        "indexer-queue",
+        "backlog",
+        "elasticsearch-refresh",
+        "search-index"
+      ],
+      "options": [
+        {
+          "text": "The search query analyzer is probably tokenizing the title differently under peak load, so exact-title searches miss.",
+          "correct": false,
+          "hint": "Analyzer behavior does not normally change because publishing volume is high. The pending indexing job is a stronger clue than query parsing.",
+          "id": "a"
+        },
+        {
+          "text": "The search index is eventually consistent, and the indexing queue backlog is delaying documents before refresh can make them visible.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "The 60-second Elasticsearch refresh interval is the full cause, because search cannot see any new document before that timer fires.",
+          "correct": false,
+          "hint": "A 60-second refresh can add about a minute after indexing. It does not by itself explain documents waiting 3 to 8 minutes.",
+          "id": "c"
+        },
+        {
+          "text": "The database write is probably being rolled back after the timeline renders, so search correctly has no durable document.",
+          "correct": false,
+          "hint": "The direct URL works and the post is present in the primary database. That makes a missing or rolled-back write unlikely.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The oldest pending job is 6 minutes old, which matches the user-visible delay range. Elasticsearch refresh can add up to roughly 60 seconds after a document is indexed, but it cannot explain an 8-minute gap if the document never reached the index. The root issue is lag in the asynchronous indexing pipeline, with refresh contributing additional delay."
+    },
+    {
+      "title": "Stabilize the incident without making it worse",
+      "question": "During the incident, the queue has 500,000 pending documents and new posts continue arriving at 15,000 per minute. What is the safest immediate mitigation?",
+      "concept_keys": [
+        "bulk-indexing",
+        "throughput-capacity",
+        "backpressure",
+        "priority-lanes",
+        "indexer-queue"
+      ],
+      "options": [
+        {
+          "text": "Throttle or pause low-priority bulk and rebuild work, give fresh-post jobs the available indexing capacity, and add workers only if Elasticsearch has headroom.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Double all indexing worker counts immediately, regardless of Elasticsearch CPU, merge pressure, and rejection metrics.",
+          "correct": false,
+          "hint": "More workers help only if the downstream system can accept more writes. If Elasticsearch is saturated, extra workers can increase retries and make the queue older.",
+          "id": "b"
+        },
+        {
+          "text": "Delete the oldest queued indexing jobs so the remaining queue drains faster and new posts become searchable sooner.",
+          "correct": false,
+          "hint": "Dropping jobs creates permanent holes in search unless each item is rebuilt safely later. The incident is about delay, not evidence that old documents are disposable.",
+          "id": "c"
+        },
+        {
+          "text": "Disable timeline publishing until the indexing queue returns to zero, keeping all read paths consistent.",
+          "correct": false,
+          "hint": "This would turn a search freshness incident into a publishing outage. Prefer isolating urgent indexing from background work before stopping user writes.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The goal is to spend scarce indexing capacity on user-visible fresh posts while reducing competing background traffic. Adding workers is useful only if Elasticsearch has write headroom; otherwise it can increase rejected bulk requests and retries. Pausing low-priority bulk work and prioritizing fresh posts directly attacks queue age."
+    },
+    {
+      "title": "Design the durable freshness fix",
+      "question": "After the backlog drains, you need a design that meets the 10-second search promise during future peaks without globally destroying indexing throughput. Which design is most production-safe?",
+      "concept_keys": [
+        "elasticsearch-refresh",
+        "hot-index",
+        "search-alias",
+        "bulk-indexing",
+        "priority-lanes",
+        "throughput-capacity"
+      ],
+      "options": [
+        {
+          "text": "Set refresh_interval to 1 millisecond on the shared posts index so every new post becomes visible almost immediately.",
+          "correct": false,
+          "hint": "Very frequent refreshes create many small segments and heavy merge pressure. On a shared high-volume index, that can reduce write throughput and hurt query performance.",
+          "id": "a"
+        },
+        {
+          "text": "Keep the shared 60-second refresh interval and rely on larger bulk batches so each worker sends fewer requests.",
+          "correct": false,
+          "hint": "Larger batches can improve throughput, but a 60-second refresh plus queueing cannot guarantee a 10-second user-visible target. The freshness budget must be designed into the write path.",
+          "id": "b"
+        },
+        {
+          "text": "Call refresh=true after each new post write on the shared posts index while leaving bulk jobs in the same index.",
+          "correct": false,
+          "hint": "A refresh is shard-wide, not scoped to just the one document. If bulk and rebuild writes share the index or shard, forced refreshes also impose cost on their pending writes.",
+          "id": "c"
+        },
+        {
+          "text": "Put newly published posts through a priority lane into a small recent-posts index with about a 5-second refresh cadence, keep rebuild and bulk traffic in the main index with its longer refresh, and query both through a controlled search layer that handles duplicates.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "A separate recent-posts index or otherwise isolated hot path lets you use a shorter controlled refresh cadence for user-critical documents without forcing the large rebuild workload to refresh at the same rate. Elasticsearch refresh is index or shard-wide, so per-document refresh on a shared index is not truly isolated. Setting refresh_interval to 1 millisecond globally would likely create segment and merge pressure that makes the backlog worse."
+    },
+    {
+      "title": "Handle the user experience while search catches up",
+      "question": "Even with the new hot path, there can be short indexing delays or failures. What should the product do for an author searching for a post they published seconds ago?",
+      "concept_keys": [
+        "pending-index-state",
+        "result-merge",
+        "deduplication",
+        "database",
+        "search-index"
+      ],
+      "options": [
+        {
+          "text": "Cache empty search results for 5 minutes so repeated queries do not add load during propagation delays.",
+          "correct": false,
+          "hint": "Caching an empty result can preserve the incorrect answer after the post becomes indexed. Freshness-sensitive misses need careful cache behavior.",
+          "id": "a"
+        },
+        {
+          "text": "Scan the database for every user’s search query whenever Elasticsearch returns fewer than 10 results.",
+          "correct": false,
+          "hint": "A broad database fallback can become an unbounded query load and may not match search ranking semantics. Limit fallback to cases with clear ownership and small scope.",
+          "id": "b"
+        },
+        {
+          "text": "Show pending-index state and, for the author’s own very recent posts, merge matching database rows into search results with deduplication by post ID.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Return no results until Elasticsearch contains the post, so every search response comes from exactly one backend.",
+          "correct": false,
+          "hint": "A single backend is simpler, but it gives a poor answer for a post the system knows exists. The UI can be honest about temporary propagation.",
+          "id": "d"
+        }
+      ],
+      "explanation": "For the author’s own very recent posts, the database scope is small and the product can confidently show the item as pending search indexing. Deduplication is required because the post may also arrive from Elasticsearch a few seconds later. A database fallback for every user and query is tempting, but it risks expensive scans and inconsistent ranking."
+    },
+    {
+      "title": "Prove the fix and prevent recurrence",
+      "question": "What monitoring best confirms that the 10-second promise is being met after the changes?",
+      "concept_keys": [
+        "service-level-objective",
+        "canary-checks",
+        "indexer-queue",
+        "elasticsearch-refresh",
+        "throughput-capacity"
+      ],
+      "options": [
+        {
+          "text": "Monitor search query p95 latency and error rate, because fast successful queries imply the index is current.",
+          "correct": false,
+          "hint": "A stale search result can be fast and return HTTP 200. You need a metric that measures when a newly published post actually becomes searchable.",
+          "id": "a"
+        },
+        {
+          "text": "Track only Elasticsearch cluster CPU and heap usage, because low resource usage means documents should be searchable quickly.",
+          "correct": false,
+          "hint": "Resource metrics are necessary but not sufficient. A queue can be old even when a cluster looks healthy, especially if workers are throttled or stuck.",
+          "id": "b"
+        },
+        {
+          "text": "Compare total database post count to total indexed document count once per day, and alert if the counts differ by more than 1 percent.",
+          "correct": false,
+          "hint": "Daily count checks can find large data loss, but they miss a 10-second freshness objective. The incident is about latency, not just eventual totals.",
+          "id": "c"
+        },
+        {
+          "text": "Track publish-to-search latency percentiles with synthetic canary posts, alert on indexer queue age near the freshness budget, and watch Elasticsearch write rejections, refresh time, and merge pressure.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The promise is user-visible publish-to-search latency, so the main measurement must follow a post from creation until it appears in search. Queue age provides an early warning before users see minutes of delay, while Elasticsearch rejections, refresh time, and merge pressure explain capacity limits. Query latency alone can stay healthy while results are stale."
+    }
+  ],
+  "takeaway": "When direct reads work but search is stale, debug the derived indexing path before suspecting the primary write. A 10-second freshness promise requires queue-age capacity, priority for fresh writes, and refresh settings that respect Elasticsearch’s index or shard-wide costs. Measure publish-to-search latency directly, not just search API health.",
+  "review_issues": [
+    "Step 2: The stated numbers are arithmetically unclear. A 500,000-document pending queue fed only by 15,000 posts/minute would imply about 33 minutes of arrivals, not an oldest pending job of 6 minutes. Clarify that the backlog includes other bulk/rebuild documents, retries, or non-FIFO/prioritized work.",
+    "Step 3: The correct mitigation assumes there is low-priority bulk/rebuild work competing with fresh-post indexing, but the scenario only explicitly says “bulk indexing workers” are backlogged. If those workers are indexing fresh posts, “pause bulk work” could be misread as pausing the needed path; the scenario should state that rebuild/low-priority bulk jobs are sharing capacity.",
+    "Step 4: Earlier material substantially reveals this answer: the hot-index/search-alias concepts and the Step 3 priority-lane mitigation point directly to using a recent-posts index with shorter refresh and isolating bulk/rebuild traffic."
+  ]
+}

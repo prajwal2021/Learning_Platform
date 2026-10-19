@@ -1,0 +1,493 @@
+{
+ "slug": "rest-api-design",
+ "name": "REST API design",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is a REST API?",
+    "answer": "A REST API is a web API that exposes resources over HTTP using standard methods like GET, POST, PUT, PATCH, and DELETE. The key idea is that each request should contain everything needed to understand it, and the server should not rely on client session state. It matters because this keeps APIs simple, predictable, and easy to integrate with different clients.",
+    "real_world": "A frontend app, a mobile app, and a partner system can all use the same API without sharing internal state. Teams also use this style because HTTP caching and tooling work well with it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does it mean for an API to be stateless?"
+   },
+   {
+    "question": "What is the difference between GET, POST, PUT, PATCH, and DELETE?",
+    "answer": "GET retrieves a resource, POST creates a new resource or triggers processing, PUT replaces a resource, PATCH partially updates a resource, and DELETE removes a resource. The main distinction is whether the method is safe to retry and whether it replaces the whole object or only part of it. Using the wrong method makes APIs confusing and can lead to accidental duplicate records or lost fields.",
+    "real_world": "A common bug is using POST for updates, which makes idempotency harder and breaks client retries. Another is using PUT for partial updates and accidentally clearing fields that were not sent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose PATCH instead of PUT?"
+   },
+   {
+    "question": "What is an HTTP status code, and which ones should a junior know first?",
+    "answer": "HTTP status codes tell the client whether a request succeeded, failed, or needs more action. The most common ones to know are 200 for success, 201 for created, 204 for success with no response body, 400 for bad request, 401 for unauthenticated, 403 for forbidden, 404 for not found, and 500 for server error. Good APIs use the status code to match the outcome instead of putting everything in a 200 response.",
+    "real_world": "Clients often branch on status codes to show different UI states, retry a request, or prompt the user to log in again. Logs and monitoring also become much more useful when errors are classified correctly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between 401 and 403?"
+   },
+   {
+    "question": "What is the difference between path parameters and query parameters?",
+    "answer": "Path parameters identify a specific resource or a resource nested under another resource, such as `/users/123`. Query parameters usually filter, sort, or page results, such as `/users?role=admin&page=2`. A good rule is that the path identifies what you are talking about, while the query refines how you want it returned.",
+    "real_world": "If a team puts filtering values into the path, they often create many nearly identical routes and make the API harder to document. Query parameters are also easier to extend without breaking clients.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you put something in the path instead of the query string?"
+   },
+   {
+    "question": "What does it mean for a REST API to be stateless?",
+    "answer": "Stateless means the server does not store client conversation state between requests. Each request must include the authentication and all data needed to process it. This matters because it makes services easier to scale horizontally and keeps failures in one request from affecting later ones.",
+    "real_world": "In production, stateless APIs are easier to put behind load balancers because any server can handle any request. Stateful designs often cause bugs when a request lands on a different server than the previous one.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does statelessness affect authentication?"
+   },
+   {
+    "question": "Why are resource names usually nouns instead of verbs in REST APIs?",
+    "answer": "REST APIs usually model things as resources, so the URL should describe the thing being acted on, not the action. For example, `/users` is better than `/getUsers`, and the HTTP method communicates the action. This keeps the API consistent and makes it easier to infer behavior from the route structure.",
+    "real_world": "Teams that use verb-heavy routes often end up with inconsistent APIs like `/createUser`, `/updateUser`, and `/deleteUser`. That makes client code and documentation harder to understand and maintain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you model an action that is not a simple CRUD operation?"
+   },
+   {
+    "question": "What is idempotency, and which HTTP methods are typically idempotent?",
+    "answer": "An idempotent request can be sent multiple times without changing the result after the first successful call. GET, PUT, and DELETE are typically treated as idempotent, while POST usually is not. This matters because clients and intermediaries may retry requests, and idempotency helps avoid duplicate side effects.",
+    "real_world": "If a payment endpoint is not idempotent, a network retry can charge a customer twice. That is why teams often design special handling for retries on create-like operations.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a POST request safe to retry?"
+   },
+   {
+    "question": "What is the difference between 400, 401, and 403?",
+    "answer": "400 means the request is malformed or invalid, such as missing required fields or sending the wrong format. 401 means the client is not authenticated, for example because no token was sent or it is invalid. 403 means the client is authenticated but does not have permission to perform the action.",
+    "real_world": "Using the wrong code confuses frontend behavior and security checks. For example, a missing login should prompt authentication, while a valid user lacking permission should get a clear access-denied response.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you return 404 instead of 403?"
+   },
+   {
+    "question": "How should you return errors from a REST API?",
+    "answer": "Use the right HTTP status code and return a clear JSON body with a human-readable message and, when useful, field-level validation details. The response should help the client fix the problem without exposing internal implementation details. Consistent error shapes make client handling much simpler.",
+    "real_world": "Frontend forms depend on validation responses to show errors next to the right fields. Without a stable error format, every endpoint needs custom parsing logic.",
+    "code_lang": "json",
+    "code": "{\n  \"error\": \"validation_failed\",\n  \"message\": \"Email is required\",\n  \"fields\": {\"email\": \"required\"}\n}",
+    "follow_up": "What information is safe to include in error responses?"
+   },
+   {
+    "question": "What is pagination, and why do APIs use it?",
+    "answer": "Pagination splits a large list into smaller pages so responses stay fast and manageable. Common approaches include page-based pagination and cursor-based pagination. It matters because returning too many records at once can slow the server, increase bandwidth, and make clients wait too long.",
+    "real_world": "A search or feed endpoint can become very slow if it always returns thousands of rows. Pagination also reduces timeouts and makes mobile clients more reliable on weak networks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between offset pagination and cursor pagination?"
+   },
+   {
+    "question": "What is the difference between a request body and query parameters in a REST API?",
+    "answer": "Query parameters are part of the URL and are usually used to filter, sort, or page a collection. The request body carries the main data for the operation, especially when creating or updating a resource. If the data changes the resource itself, it usually belongs in the body; if it modifies how the server interprets the request, it often belongs in the query string. Keeping that split consistent makes APIs easier to read and use.",
+    "real_world": "A search endpoint might use query parameters like `?q=shoes&page=2`, while a create endpoint sends the new user data in JSON in the body. If a team puts large payloads in the URL, requests become hard to read and can hit URL length limits.",
+    "code_lang": "json",
+    "code": "// Query params\nGET /products?category=books&sort=price\n\n// Request body\nPOST /products\n{\n  \"name\": \"Notebook\",\n  \"price\": 9.99\n}",
+    "follow_up": "When would you put something in a header instead of the query string or body?"
+   },
+   {
+    "question": "What is the purpose of an HTTP header in an API request or response?",
+    "answer": "Headers carry metadata about the request or response, not the main resource data. Common uses include authentication, content type, caching, and correlation IDs for tracing. They are useful when the information should travel with the message but should not be part of the resource representation itself. Good header usage helps clients and servers stay interoperable.",
+    "real_world": "A client may send `Authorization` and `Content-Type`, while the server may return `Cache-Control` and `Content-Type`. In production, missing or wrong headers often cause auth failures or JSON parsing bugs.",
+    "code_lang": "http",
+    "code": "POST /users HTTP/1.1\nContent-Type: application/json\nAuthorization: Bearer <token>\n\n{\"name\":\"Ava\"}",
+    "follow_up": "Which headers are commonly used for authentication and content negotiation?"
+   },
+   {
+    "question": "What does Content-Type tell the server or client in a REST API?",
+    "answer": "Content-Type says what format the message body is in, such as JSON or form data. The server uses it to parse the request correctly, and the client uses the response content type to know how to read it. If the header does not match the actual body, the request may fail or be misread. It is one of the most common causes of basic API integration bugs.",
+    "real_world": "A frontend sends JSON but forgets `Content-Type: application/json`, so the backend treats the body as empty or as form data. This is a frequent cause of “it works in Postman but not in the app” issues.",
+    "code_lang": "http",
+    "code": "POST /users HTTP/1.1\nContent-Type: application/json\n\n{\"name\":\"Mina\"}",
+    "follow_up": "What is the difference between Content-Type and Accept?"
+   },
+   {
+    "question": "What is the difference between Content-Type and Accept?",
+    "answer": "Content-Type describes the format of the body being sent. Accept tells the server which response formats the client can handle. In other words, one is about the payload you are sending now, and the other is about the response you want back. Using both correctly helps clients and servers agree on a format.",
+    "real_world": "A mobile app may send JSON but only accept JSON responses, while another client may accept XML as well. If a server ignores `Accept`, clients can receive a format they cannot parse.",
+    "code_lang": "http",
+    "code": "GET /users/1 HTTP/1.1\nAccept: application/json\n\nHTTP/1.1 200 OK\nContent-Type: application/json",
+    "follow_up": "What should a server do if it cannot produce the format a client asked for?"
+   },
+   {
+    "question": "What is the difference between 200 OK, 201 Created, and 204 No Content?",
+    "answer": "`200 OK` means the request succeeded and the response includes a body. `201 Created` means a new resource was created, and the response usually points to it. `204 No Content` means the request succeeded but there is no response body. Using the right status code makes APIs clearer and helps clients behave correctly.",
+    "real_world": "A create endpoint that returns `200` instead of `201` still works, but it hides the fact that a new resource was created. A delete endpoint often returns `204` because there is nothing useful to send back.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you include a response body with a successful status code?"
+   },
+   {
+    "question": "What is the purpose of a resource identifier in a REST API?",
+    "answer": "A resource identifier is the stable value used to refer to one specific resource, usually in the path. It lets clients fetch, update, or delete the same entity consistently over time. Good identifiers should be unique and not change unexpectedly. If an ID changes often, clients and links break easily.",
+    "real_world": "An order API may expose `/orders/12345`, where `12345` is the identifier for that order. Teams often discover problems when they use a mutable field like a username in the path and later need to rename it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Should resource identifiers be sequential integers, UUIDs, or something else?"
+   },
+   {
+    "question": "What is a collection endpoint in REST?",
+    "answer": "A collection endpoint represents a group of resources of the same type, like `/users` or `/orders`. You use it to list resources or create a new one in the collection. A single resource endpoint refers to one item in that collection, like `/users/42`. This distinction keeps the URL structure predictable.",
+    "real_world": "A backend might implement `GET /tickets` to list tickets and `POST /tickets` to create one, while `GET /tickets/9` reads a specific ticket. Confusing collection and item endpoints is a common beginner mistake.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the URLs for nested resources like comments on a post?"
+   },
+   {
+    "question": "What does it mean to filter, sort, and search in a REST API?",
+    "answer": "Filtering reduces a list based on conditions, sorting changes the order, and searching finds records that match text or a query term. These are often expressed with query parameters on a collection endpoint. They are not new resource types; they are ways of asking for a subset or ordering of the same collection. Keeping them separate makes the API easier to understand and extend.",
+    "real_world": "A products endpoint might support `?category=books&sort=price` or `?q=wireless`. Without these options, clients would have to download too much data and filter it themselves.",
+    "code_lang": "http",
+    "code": "GET /products?category=books&sort=price&q=python",
+    "follow_up": "How would you decide which query parameters to support and which to reject?"
+   },
+   {
+    "question": "What is the difference between an API version in the URL and versioning another way?",
+    "answer": "URL versioning puts the version in the path, such as `/v1/users`, so clients can choose a specific API shape. Other approaches use headers or media types, which keep the URL cleaner but are less obvious to beginners. The main reason to version is to make breaking changes without breaking existing clients. The trade-off is extra maintenance when multiple versions must run at once.",
+    "real_world": "A public API often keeps old versions alive because mobile apps update slowly. If a team changes response fields without versioning, older clients can break in production.",
+    "code_lang": "http",
+    "code": "GET /v1/users/42\nAccept: application/json",
+    "follow_up": "What kinds of changes are breaking enough to require a new version?"
+   },
+   {
+    "question": "What is the difference between a 4xx error and a 5xx error?",
+    "answer": "A 4xx status means the client sent a bad request or asked for something it is not allowed to do. A 5xx status means the server failed to complete a valid request. This distinction matters because it tells you where to look first: client input or server-side failure. Correct status codes also help monitoring and alerting systems classify problems.",
+    "real_world": "If a validation bug returns 500 instead of 400, dashboards may show a server outage when the real issue is bad input. Teams use the split to spot client bugs versus backend incidents quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the response body for a validation failure?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide whether a client should send back a full resource with PUT or a partial update with PATCH?",
+    "answer": "Use PUT when the client can replace the whole representation and you want a clear, idempotent update contract. Use PATCH when sending the full object would be wasteful or risky, but then define the patch semantics carefully because different patch formats behave differently. The trade-off is simplicity and predictability versus smaller payloads and flexibility. In real APIs, the main risk is clients accidentally clearing fields they did not intend to touch.",
+    "real_world": "This comes up when mobile clients edit only one field of a large profile object. If the backend treats a partial PUT like a full replacement, data loss can happen silently.",
+    "code_lang": "json",
+    "code": "{\n  \"method\": \"PATCH\",\n  \"body\": {\n    \"displayName\": \"New Name\"\n  }\n}",
+    "follow_up": "How would you document patch behavior so clients know which fields are optional, nullable, or immutable?"
+   },
+   {
+    "question": "When would you choose to return a 202 Accepted instead of processing the request immediately?",
+    "answer": "Use 202 Accepted when the server has received the request but has not finished the work yet, usually because the operation is long-running or asynchronous. The response should tell the client how to check status or where to find the eventual result. This avoids holding connections open and makes failure handling clearer. The trade-off is that the client must handle eventual consistency instead of getting the final result right away.",
+    "real_world": "Teams use this for report generation, video processing, or bulk imports. If they return 200 too early, clients assume the work is done when it may still fail later.",
+    "code_lang": "json",
+    "code": "{\n  \"status\": 202,\n  \"body\": {\n    \"jobId\": \"job_123\",\n    \"statusUrl\": \"/jobs/job_123\"\n  }\n}",
+    "follow_up": "What would you return if the job later fails after the 202 response?"
+   },
+   {
+    "question": "How do ETags and conditional requests help with concurrent updates in a REST API?",
+    "answer": "ETags let the server version a representation, and conditional requests use that version to detect if the resource changed since the client last read it. A common pattern is to send an ETag on GET and require If-Match on updates so the server can reject stale writes instead of overwriting newer data. This prevents lost updates in multi-user systems. The trade-off is extra implementation and clients must retry after a conflict.",
+    "real_world": "This matters in admin tools where two people edit the same record at once. Without conditional updates, the second save can silently wipe out the first person's change.",
+    "code_lang": "http",
+    "code": "GET /docs/1\nETag: \"v7\"\n\nPUT /docs/1\nIf-Match: \"v7\"",
+    "follow_up": "What should the server return when the ETag no longer matches?"
+   },
+   {
+    "question": "How would you design an endpoint that lets clients search and filter without making the URL hard to maintain?",
+    "answer": "Use query parameters for filters and search terms, and keep the rules consistent and documented. Prefer a small set of stable parameters with predictable meanings rather than encoding complex logic into path segments. If the query becomes very complex, consider a dedicated search endpoint or a request body for POST-based search. The trade-off is between simplicity for common cases and flexibility for advanced queries.",
+    "real_world": "This shows up in list pages with many optional filters, like status, owner, date range, and free-text search. If the parameter scheme is inconsistent, frontend code becomes fragile and backend support becomes hard to debug.",
+    "code_lang": "http",
+    "code": "GET /orders?status=paid&sort=-createdAt&customerId=42\nGET /products?search=keyboard&category=accessories",
+    "follow_up": "When would you stop using query parameters and move to a search endpoint with a request body?"
+   },
+   {
+    "question": "What is HATEOAS, and do you actually need it in most production APIs?",
+    "answer": "HATEOAS means responses include links for the next valid actions, so clients can discover transitions from the server rather than hardcoding every URL. It can improve evolvability, but it also increases response complexity and is often skipped in simpler public APIs. Most teams use only a lighter version of it, such as including a few useful links. The trade-off is discoverability versus simplicity.",
+    "real_world": "This matters when APIs change often and clients are not tightly coupled to route shapes. In practice, many teams prefer OpenAPI plus a few link fields because it is easier to adopt and test.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of links are most useful to include in a resource representation?"
+   },
+   {
+    "question": "How do you handle backward-compatible changes to an API response shape?",
+    "answer": "Add fields rather than renaming or removing them, and treat unknown fields as tolerated by clients when possible. If you need to change meaning or remove something, introduce a new field or endpoint and deprecate the old one over time. This matters because API consumers often deploy slower than the backend, so breaking changes can take weeks to surface. The key trade-off is keeping the contract stable versus cleaning up the design quickly.",
+    "real_world": "A common failure is renaming a field like `name` to `fullName` and breaking older mobile app versions. Teams usually keep both for a deprecation period and track usage before removing the old one.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you communicate and enforce a deprecation plan to client teams?"
+   },
+   {
+    "question": "What should you think about when making an endpoint safe to retry after a timeout?",
+    "answer": "A retry-safe endpoint should either be idempotent or use an idempotency key so the server can recognize duplicate attempts. This matters because timeouts are ambiguous: the client may not know whether the server processed the request or not. Without protection, retries can create duplicate orders, charges, or messages. The trade-off is extra storage and request correlation versus avoiding duplicate side effects.",
+    "real_world": "Payment and checkout flows often need this because clients retry automatically on network errors. If the backend does not deduplicate, users can be charged twice even though the UI only showed one attempt.",
+    "code_lang": "http",
+    "code": "POST /payments\nIdempotency-Key: 8f2c...\n\n{ \"amount\": 5000, \"currency\": \"USD\" }",
+    "follow_up": "How long would you store an idempotency key, and what would you return on a duplicate request?"
+   },
+   {
+    "question": "How would you choose between embedding related data in one response and making separate API calls?",
+    "answer": "Embed related data when the client almost always needs it and the extra payload is small enough to justify fewer round trips. Use separate calls when the relationship is optional, large, or changes at a different rate than the parent resource. Too much embedding can make responses heavy and harder to cache, while too many round trips hurt latency. The trade-off is network efficiency versus response size and consistency.",
+    "real_world": "A mobile app may embed author info in a feed item to avoid many extra requests over slow networks. But embedding large comment lists in every post response can make the API much slower overall.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent over-fetching without forcing clients to call many endpoints?"
+   },
+   {
+    "question": "What is a good way to design validation errors so clients can show useful messages?",
+    "answer": "Return structured field-level errors with stable field names and a message or code for each invalid input. The response should make it obvious which fields failed and why, instead of returning a single generic message. This helps clients highlight the right form controls and makes automated testing easier. The trade-off is more response design work up front, but it pays off in better UX and debuggability.",
+    "real_world": "This matters in signup forms, billing screens, and admin tools where users need to correct multiple mistakes at once. If the API only says \"invalid request,\" the frontend has to guess what went wrong.",
+    "code_lang": "json",
+    "code": "{\n  \"errors\": [\n    { \"field\": \"email\", \"code\": \"invalid_format\" },\n    { \"field\": \"age\", \"code\": \"must_be_at_least_18\" }\n  ]\n}",
+    "follow_up": "How would you represent validation errors for nested objects or arrays?"
+   },
+   {
+    "question": "How do you test a REST API beyond just checking that one endpoint returns the right status code?",
+    "answer": "Test the contract, not only the happy path: response shape, error cases, auth behavior, pagination, sorting, and idempotency where relevant. Add integration tests that exercise the real routing, serialization, and database behavior, because many API bugs only appear across layers. Also test compatibility when changing fields or error formats. The trade-off is test suite cost versus catching regressions before clients do.",
+    "real_world": "A team may pass unit tests but still break a frontend because a field changed from a string to an object. Contract and integration tests catch those changes before deployment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts of an API are best covered by unit tests versus integration tests?"
+   },
+   {
+    "question": "How would you design a REST API for listing resources when the dataset is large and changes frequently?",
+    "answer": "For large, changing datasets, prefer cursor-based pagination over offset pagination because it is more stable as rows are inserted or deleted. Return a small, consistent page size, and include a next cursor or link so clients can continue without guessing offsets. If the API needs sorting, make the cursor tied to the sort order to avoid duplicates or gaps. The trade-off is that cursors are less flexible for random page access, but they scale better and behave more predictably under write load.",
+    "real_world": "This matters in feeds, audit logs, and event lists where offset paging can skip or repeat items during active writes. It also reduces expensive database scans on deep pages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What can go wrong if you use offset pagination on a table that is being updated during paging?"
+   },
+   {
+    "question": "When would you use an `Idempotency-Key`, and how does it help with duplicate requests?",
+    "answer": "Use an idempotency key for operations that create side effects, especially when a client may retry after a timeout or network failure. The server stores the key and the outcome of the first successful request, then returns the same result for later requests with the same key. That prevents duplicate charges, duplicate orders, or repeated job creation. The trade-off is that you need storage, expiry, and a clear scope for how long a key remains valid.",
+    "real_world": "Payment and checkout APIs often rely on this because clients and gateways retry automatically. Without it, a single user action can create two identical records.",
+    "code_lang": "python",
+    "code": "# Pseudocode for a create endpoint\nif seen(idempotency_key):\n    return stored_response(idempotency_key)\nresult = create_order(request.body)\nstore(idempotency_key, result)\nreturn result",
+    "follow_up": "What should happen if the same idempotency key is reused with a different request body?"
+   },
+   {
+    "question": "How do you decide whether to return a full representation or a minimal response after creating or updating a resource?",
+    "answer": "Return the fields the client needs to continue working, but avoid sending unnecessary data on hot paths. After creation, many APIs return the created resource or at least its identifier, server-generated fields, and any values the client cannot know. After updates, a minimal response can reduce payload size, but a full representation is useful if the server applies defaults, computed fields, or side effects. The main trade-off is bandwidth versus convenience and reduced follow-up reads.",
+    "real_world": "This comes up in mobile APIs where response size affects latency and battery, but also in admin tools where full updated state makes the UI simpler.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you keep response shapes consistent so clients do not need special-case logic for create versus update?"
+   },
+   {
+    "question": "What is the difference between returning `400 Bad Request` and `422 Unprocessable Entity` in practice?",
+    "answer": "Use `400` when the request itself is malformed or cannot be parsed, such as invalid JSON or an unsupported format. Use `422` when the syntax is valid but the content fails semantic validation, like a missing required field or a date that is out of range. The distinction helps clients understand whether they need to fix formatting or business input. In some teams, `400` is used for all client validation errors, so consistency within the API matters more than the exact label.",
+    "real_world": "This is useful when frontends and integration partners need to separate parsing bugs from user input mistakes. Clear status codes can reduce support tickets and retry storms.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you put in the response body for validation failures so clients can highlight the right form fields?"
+   },
+   {
+    "question": "How do you design an API to support partial responses or sparse field selection?",
+    "answer": "Expose a way for clients to request only the fields they need, usually through a field selection parameter or a documented projection mechanism. This can reduce payload size and database work when clients only need a few attributes. The hard part is keeping the API predictable: you need a clear default representation and stable field names, and you must avoid exposing internal model structure too directly. The trade-off is complexity in the server and client versus better performance and smaller responses.",
+    "real_world": "This matters for detail pages that reuse one endpoint in both mobile and desktop apps, where one view needs a summary and another needs a richer payload. It also helps avoid overfetching on slow networks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you prevent sparse field selection from creating brittle client dependencies on optional fields?"
+   },
+   {
+    "question": "What is CORS, and when does it matter for a REST API?",
+    "answer": "CORS is a browser security mechanism that controls whether a web page can call an API on a different origin. It matters for browser-based clients, not for server-to-server calls or mobile apps in the same way. For unsafe or non-simple requests, the browser may send a preflight `OPTIONS` request first, and the server must allow the method, headers, and origin. Misconfigured CORS usually shows up as a browser-only failure even though the API works in Postman.",
+    "real_world": "Teams often hit this when a frontend is deployed to a different domain than the API and suddenly all browser calls fail. It is a deployment configuration issue, not usually a backend logic bug.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What headers would you inspect first when debugging a CORS failure in the browser?"
+   },
+   {
+    "question": "How would you design an endpoint that triggers a background job and lets the client track progress?",
+    "answer": "A common pattern is to return a resource representing the job, often with a job identifier and a status field, rather than blocking until completion. The client can poll a status endpoint or receive a callback if your system supports it. This keeps the request responsive and avoids tying up web workers for long tasks. The trade-off is added state management and the need to define job lifecycle states clearly.",
+    "real_world": "This is typical for exports, report generation, media processing, and large imports. Without it, requests time out or consume too many server threads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What states would you define for the job, and which transitions should be allowed?"
+   },
+   {
+    "question": "How do you think about caching in REST APIs, and what can go wrong if it is configured poorly?",
+    "answer": "Caching can reduce latency and load, but only if the cached response is safe to reuse for the right users and requests. You need to consider cache keys, expiration, and whether responses vary by authorization, language, or other headers. If you cache user-specific data incorrectly, one user can see another user’s response. The trade-off is performance versus freshness and correctness, so you should cache read-heavy, stable data first.",
+    "real_world": "A bad cache rule can expose private data or cause stale pricing and inventory to be shown to users. Good cache headers can dramatically reduce repeated reads on public endpoints.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to cache at the browser, CDN, or application layer?"
+   },
+   {
+    "question": "What is the difference between validating request shape and validating business rules in an API?",
+    "answer": "Request-shape validation checks that the payload is well-formed: required fields exist, types are correct, and formats are parseable. Business-rule validation checks whether the request makes sense in the domain, such as stock availability, account state, or permission to perform an action. Separating them makes error handling clearer and keeps domain logic out of transport code. It also helps you return better client feedback and test the two layers independently.",
+    "real_world": "In production, mixing these often leads to confusing errors and duplicated checks across handlers. A clean split makes API changes safer because transport validation and domain rules evolve differently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you place each type of validation in a typical service architecture?"
+   },
+   {
+    "question": "How would you debug a REST endpoint that works in local tests but fails intermittently in production?",
+    "answer": "Start by comparing request and response logs, including headers, timing, and correlation IDs if you have them. Intermittent failures are often caused by race conditions, timeouts, upstream dependency issues, or differences in payloads that do not appear in basic tests. Reproduce with production-like data and network conditions if possible, then narrow down whether the failure is in routing, validation, the database, or another service. The key is to avoid assuming the endpoint logic is the only moving part.",
+    "real_world": "This is a common pattern when a service only fails under load or only for certain tenants. Good observability turns a vague bug report into a specific failure mode quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What logs or metrics would you add first so the next failure is easier to diagnose?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How would you design optimistic concurrency for updates when the resource spans multiple tables or downstream services, not just one row with a version column?",
+    "answer": "I’d define the concurrency boundary first: what state must change atomically from the client’s point of view. If a single database transaction can cover it, I’d expose one version or strong ETag for the aggregate and reject stale writes with a precondition failure. If the update crosses services, I would not pretend it is atomic; I’d use a command resource or workflow state, make each step idempotent, and surface partial or pending states explicitly. The key trade-off is between strict consistency and operational simplicity under retries and failures.",
+    "real_world": "A common incident is two clients editing an order while inventory and pricing are maintained elsewhere. Without an aggregate-level concurrency model, one write can silently overwrite another or complete only half the intended change.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you generate that aggregate version without making every GET expensive?"
+   },
+   {
+    "question": "What is your approach to designing bulk create or bulk update endpoints without making failure handling ambiguous?",
+    "answer": "I avoid a single all-or-nothing endpoint unless the backend can truly provide one transaction with predictable limits. For most systems, I use a bulk job or batch request that returns per-item results, correlation IDs, and a clear contract for partial success. Each item should be independently idempotent so retries do not duplicate side effects, and the API should document ordering guarantees if any. The main trade-off is client convenience versus observability, timeouts, and blast radius when one bad item is mixed with many good ones.",
+    "real_world": "Teams often add bulk endpoints to reduce request overhead, then discover a timeout at item 800 leaves the client unsure what committed. Per-item result reporting is what lets support and clients reconcile safely.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose synchronous per-item results versus a 202 job resource for the batch?"
+   },
+   {
+    "question": "Suppose clients need exactly-once semantics for a money movement API. What can a REST API realistically guarantee?",
+    "answer": "A REST API can usually guarantee at-most-once effect per idempotency key within a defined scope and retention window, not true global exactly-once semantics. You persist the key with the normalized request identity and final outcome, and on retry you return the same result instead of re-executing. That still depends on durable storage and clear rules for mismatched payloads, expired keys, and downstream side effects. The honest design is to combine idempotency, deduplication, and compensating actions rather than claim something distributed systems cannot strictly provide end to end.",
+    "real_world": "Payment systems hit this constantly: the client times out after the debit was committed, retries, and expects no double charge. If the API does not persist dedupe state before acknowledging, duplicate transfers slip through during failover.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What fields would you bind into the deduplication record to detect an idempotency key reused with a different request?"
+   },
+   {
+    "question": "How do you decide whether a list endpoint should expose a total count, and what are the performance implications?",
+    "answer": "I only return a total count when clients truly need it, because an accurate count can be much more expensive than fetching one page, especially with joins, filters, or tenant isolation. On large or hot datasets, I prefer `has_more`, a next cursor, or an estimated count if the product can tolerate approximation. If I do return a count, I separate its consistency from the page itself in the contract, because making both perfectly consistent under concurrent writes can be expensive. The trade-off is UX convenience versus latency, database load, and lock contention.",
+    "real_world": "A classic production issue is a dashboard page that requests `COUNT(*)` on every filtered list load; under peak traffic the count query dominates CPU even though users only look at the first page.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your answer change for a multi-tenant system where some tenants have millions of rows and most have very few?"
+   },
+   {
+    "question": "What are the main failure modes when a REST API sits behind a load balancer, a CDN, and multiple reverse proxies, and how do you design around them?",
+    "answer": "You have to be explicit about which headers and semantics survive each hop: client IP, host, scheme, cache headers, timeouts, and request IDs are common places where assumptions break. I design endpoints to tolerate retries and duplicate delivery because proxies may retry on connection resets or failover, sometimes only for certain methods depending on configuration. I also make redirect, absolute URL generation, and auth decisions trust only sanitized forwarding headers from known proxies. Operationally, the contract is not just HTTP between client and app; it is HTTP through a chain that can buffer, cache, rewrite, or drop requests.",
+    "real_world": "One real outage pattern is generating signed callback URLs with `http` because the app did not trust the forwarded scheme header. Another is POSTs being replayed after an upstream timeout during node rotation, causing duplicate side effects.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which request metadata would you log end to end to debug those proxy-related failures quickly?"
+   },
+   {
+    "question": "How do you design long-running read endpoints, like exports or large reports, so they do not become a denial-of-service vector?",
+    "answer": "I treat expensive reads like jobs, not ordinary request-response handlers. The API should validate cost up front, enforce limits, run asynchronously, and expose a job resource with status, expiry, and downloadable output instead of holding connections open. I also separate interactive queries from export workloads with different quotas or worker pools so one customer cannot starve normal traffic. The trade-off is extra API complexity in exchange for much better isolation, backpressure, and operability.",
+    "real_world": "Large CSV export endpoints often look harmless because they are reads, then they saturate the primary database with long scans and memory-heavy serialization. Moving them to async jobs with limits is a common reliability fix.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you communicate rate limiting or concurrency caps for export jobs to clients?"
+   },
+   {
+    "question": "How would you use `429 Too Many Requests` in a multi-tenant API, and what mistakes do teams make with rate limiting?",
+    "answer": "I define the limiting dimension first: per API key, user, tenant, IP, endpoint cost, or some combination, because the fairness model matters more than the algorithm. For a multi-tenant API, pure per-request limits are often wrong; a single expensive search can cost orders of magnitude more than a simple read, so weighted or concurrency-based limits are usually better. The response should tell clients enough to back off deterministically, but the bigger design task is choosing limits that protect shared infrastructure without punishing well-behaved tenants behind NAT or shared gateways. Bad rate limiting often blocks the wrong actor and still fails to protect the real bottleneck.",
+    "real_world": "A frequent incident is per-IP throttling breaking enterprise customers whose traffic comes through one egress IP, while a single tenant can still overload the database using cheap-looking but expensive queries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer concurrency limits over token-bucket request limits?"
+   },
+   {
+    "question": "If you support partial updates, how do you avoid lost updates and invalid intermediate states when multiple fields have invariants between them?",
+    "answer": "I separate patch syntax from domain rules. Even if the wire format allows touching individual fields, the server should validate the resulting full resource or aggregate after applying the patch, not just each field independently. For concurrent edits, I require a precondition such as a version or ETag so two clients changing related fields do not unknowingly break invariants by overwriting each other. Partial update is about transport efficiency, not relaxing consistency rules.",
+    "real_world": "An example is updating `start_date` and `end_date` independently; two valid single-field patches can combine into an invalid interval if you do not validate the final state against the current version.",
+    "code_lang": "json",
+    "code": "[\n  {\"op\": \"replace\", \"path\": \"/startDate\", \"value\": \"2026-05-10\"},\n  {\"op\": \"replace\", \"path\": \"/endDate\", \"value\": \"2026-05-09\"}\n]",
+    "follow_up": "How would you decide between JSON Patch and a domain-specific PATCH body for complex resources?"
+   },
+   {
+    "question": "How do you think about API design when replicas are eventually consistent and a client may not immediately read its own write?",
+    "answer": "I make the consistency model explicit instead of letting clients infer stronger guarantees than the system has. If writes go to a primary and reads may hit replicas, I decide whether the API needs read-your-writes options, such as sticky routing, a consistency token, or directing follow-up reads to a stronger source for some period. If not, I document that a successful write may not be visible immediately and design workflows around resource state transitions rather than immediate fetch confirmation. The trade-off is lower read latency and scale versus client-visible staleness and surprising race conditions.",
+    "real_world": "This shows up when a client creates a resource, immediately fetches it, and gets 404 from a lagging replica. Without a consistency strategy, clients add blind retries that amplify load during incidents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What endpoints would you give stronger consistency guarantees to, even if most reads stay eventually consistent?"
+   },
+   {
+    "question": "How would you design deprecation and retirement of a REST endpoint so large clients do not get broken unexpectedly?",
+    "answer": "I treat deprecation as an operational migration, not just a documentation note. The API should expose a machine-visible signal, give a clear sunset timeline, provide a replacement path, and measure which clients are still using the old behavior before enforcing anything. If behavior must diverge, I prefer an explicit opt-in to the new contract so existing clients do not silently change under them. The trade-off is carrying compatibility longer versus reducing long-tail operational and support cost.",
+    "real_world": "Production problems here are usually not technical but organizational: a mobile app on an old release train or a partner integration nobody remembered keeps calling the retired endpoint months later. Usage telemetry is what makes retirement safe.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What telemetry would you collect to decide whether it is safe to remove the old endpoint?"
+   },
+   {
+    "question": "How would you design a POST endpoint to be safe when the server completes the write but the client times out before seeing the response?",
+    "answer": "I’d separate transport retries from business duplication. For non-idempotent creates, I’d require a client-supplied operation key or a natural unique key, persist it with the result, and on retry return the original outcome instead of creating again. The key detail is that deduplication must happen atomically with the write, otherwise two concurrent retries can both win. I’d also define how long the server remembers keys, because too short reintroduces duplicates and too long increases storage and conflict risk.",
+    "real_world": "This is common with payment, order, and provisioning APIs: the DB commit succeeds, the app restarts before responding, and the client retries. Without durable deduplication, teams see double charges or duplicate VM creation during incident recovery.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you store the deduplication record so it still works across multiple API instances and failovers?"
+   },
+   {
+    "question": "When would you expose cursor tokens as opaque values instead of letting clients page by raw sort keys?",
+    "answer": "Opaque cursors give you freedom to change the internal ordering, add tie-breakers, or include snapshot metadata without breaking clients. They also prevent clients from depending on implementation details like primary key monotonicity, which often fails once you shard or change indexes. The trade-off is debuggability and interoperability: raw keys are easier to reason about, but more brittle. For public APIs, opaque cursors are usually safer unless there is a strong need for human-readable pagination.",
+    "real_world": "A team may start with `?after_id=123` and later switch to ordering by `created_at, id`; suddenly paging skips or duplicates records. Opaque cursors let you evolve that without forcing every client to change at once.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What information would you include in a cursor to make pagination stable across concurrent inserts?"
+   },
+   {
+    "question": "How do you handle API-level uniqueness constraints without turning races into flaky 500s?",
+    "answer": "The API should treat uniqueness as a first-class business rule but rely on a storage-level guarantee to resolve races. I validate early for better error messages, then still catch the unique constraint violation from the database and translate it to a deterministic client error, often a conflict. If creation is expensive or cross-service, I may reserve the name first or use a single writer, but I avoid assuming a pre-check alone is enough. The important part is making the losing request fail cleanly rather than surfacing an internal error.",
+    "real_world": "Usernames, DNS records, and human-readable slugs often pass a 'not taken' check in two parallel requests. If the API does not map the storage conflict correctly, production sees random 500s even though the system behaved as designed.",
+    "code_lang": "sql",
+    "code": "INSERT INTO users (username, email)\nVALUES ('alice', 'a@x.com');\n-- if a UNIQUE(username) constraint fires,\n-- catch it in application code and return a conflict\n",
+    "follow_up": "When would you choose `409 Conflict` versus making the create request idempotent and returning the existing resource?"
+   },
+   {
+    "question": "What are the trade-offs of supporting synchronous writes to multiple downstream systems inside one REST request?",
+    "answer": "Synchronous fan-out gives the client a single call, but it couples your tail latency and availability to the slowest dependency. Without a distributed transaction, partial success is the default failure mode, so you need compensation, reconciliation, or an explicit async workflow. I usually keep the request boundary around one durable system of record, then publish work to propagate changes elsewhere. That makes semantics clearer and prevents one flaky downstream from taking the whole API down.",
+    "real_world": "A profile update that writes to the main DB, search index, cache, and CRM in-band often looks fine in test. In production, one slow dependency turns a low-latency endpoint into a timeout factory and leaves systems out of sync anyway.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you explain the consistency model of that endpoint to API consumers?"
+   },
+   {
+    "question": "How would you design conditional reads so clients and CDNs can avoid re-downloading large representations safely?",
+    "answer": "I’d make validators explicit and stable, usually with ETags or a trustworthy last-modified value, and support conditional GET with not-modified responses. The validator must change whenever the selected representation changes, including fields added through expansions or localization, otherwise caches can serve stale data incorrectly. I’d also think about cache scope using `Vary` and authorization, because a cache key that ignores auth or content negotiation can leak data across users. The goal is bandwidth and origin savings without weakening correctness.",
+    "real_world": "Large product or document payloads get fetched repeatedly by mobile apps and edge caches. If validators are wrong, teams either lose all cache efficiency or, worse, serve another user’s representation because the cache key was incomplete.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes an ETag weak or unsafe in practice when a response depends on query parameters or permissions?"
+   },
+   {
+    "question": "How would you model a REST endpoint that accepts very large uploads without tying up application servers?",
+    "answer": "I’d avoid streaming huge files through the main API process if possible and instead use a control-plane call that creates an upload session, then upload directly to object storage. The API keeps metadata, authorization, expected size or checksum, and a finalization step that marks the object ready once storage confirms it. This reduces app bandwidth pressure, makes retries chunk-friendly, and isolates upload failures from normal request traffic. You still need lifecycle cleanup for abandoned uploads and validation of what was actually stored.",
+    "real_world": "Teams that proxy multi-gigabyte uploads through stateless API pods often hit memory pressure, connection exhaustion, and uneven autoscaling. Direct-to-storage uploads move the heavy bytes off the app tier and make incidents much easier to contain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What checks would you do at finalization time before making the uploaded object visible?"
+   },
+   {
+    "question": "Suppose a client sends the same mutation concurrently over HTTP/2 on multiple connections. How do you prevent a thundering herd from creating duplicate work inside the API?",
+    "answer": "Idempotency alone handles duplicate outcomes, but not duplicate in-flight work. For expensive mutations I’d combine durable request deduplication with single-flight behavior keyed by the operation so concurrent identical requests coalesce or one waits on the other. The locking scope matters: too broad reduces throughput, too narrow misses the race across instances. I also put a timeout and fallback around the lock path so the dedupe mechanism itself does not become a bottleneck.",
+    "real_world": "During client retries or mobile reconnect storms, the same mutation can hit several API instances at once. Without in-flight coalescing, every instance may start the same expensive workflow, overloading databases and queues even if only one result is ultimately kept.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement that coalescing safely across multiple stateless application nodes?"
+   },
+   {
+    "question": "What are the design implications of exposing offset pagination on top of a distributed datastore?",
+    "answer": "Offset pagination is simple for clients but can be expensive and unstable at scale. Large offsets often force the backend to scan and discard many rows or documents, and concurrent inserts or deletes can shift pages so clients miss or repeat items. In distributed stores, these costs get worse because global ordering and counting are harder. I’d keep offset only for small administrative datasets and prefer keyset or cursor pagination for high-volume user-facing endpoints.",
+    "real_world": "An endpoint that works fine with `offset=0` can become one of the top database consumers once clients request page 10,000. Teams also get bug reports about duplicates between pages after new records arrive during pagination.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If a product manager insists on page numbers, what compromise would you offer?"
+   },
+   {
+    "question": "How do you decide whether an update endpoint should be synchronous, asynchronous, or split into a command resource and a status resource?",
+    "answer": "I decide based on latency variance, external side effects, and how often the client needs a durable completion guarantee. If the operation is fast and contained within one system of record, synchronous is simplest. If it fans out, has unpredictable duration, or needs retries and compensation, I prefer creating a command resource and letting clients poll or subscribe to status. That makes failure states explicit instead of hiding them behind long-held connections and timeouts.",
+    "real_world": "Provisioning a cloud resource or rebuilding a search index may take seconds to minutes and can fail after partial progress. Representing it as a tracked command gives support and clients something concrete to inspect and retry around.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What states would you expose on that command resource, and which ones are terminal?"
+   },
+   {
+    "question": "How would you design authorization-sensitive list endpoints so they remain performant without leaking the existence of forbidden data?",
+    "answer": "The main choice is whether to filter unauthorized items out silently or fail the whole request when the filter itself references protected scopes. For performance, I try to push authorization into the query plan or precomputed access paths rather than fetch-then-filter in application code, which falls over on large lists. I’m also careful with metadata like counts, next-page cursors, and sort behavior, because they can reveal hidden records even if the items themselves are omitted. The endpoint contract should be explicit about whether results are complete for the caller’s visibility.",
+    "real_world": "A multi-tenant admin API may correctly hide rows but still leak that 'somebody else has 27 matching invoices' through a total count. Teams often only notice after a security review or customer complaint.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if the authorization rules are too complex to evaluate efficiently in the primary datastore?"
+   }
+  ]
+ }
+}

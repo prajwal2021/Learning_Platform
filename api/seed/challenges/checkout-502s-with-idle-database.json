@@ -1,0 +1,356 @@
+{
+  "slug": "checkout-502s-with-idle-database",
+  "title": "Checkout returns 502s while the database CPU is only 8%",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "postgresql",
+    "connection-pooling",
+    "autoscaling",
+    "checkout",
+    "incident-response"
+  ],
+  "scenario": "After autoscaling from 40 to 240 API pods during a TV campaign, checkout traffic rises to 12,000 requests/minute. p95 latency jumps to 22 seconds and then the load balancer emits 502s, but PostgreSQL CPU stays under 10% and disk I/O is flat. Database logs show thousands of short-lived sessions, and the API's pool metrics show many requests waiting to acquire a connection.",
+  "goal": "Find the bottleneck, make checkout stable today, and prevent the same failure during the next traffic spike.",
+  "concepts": [
+    {
+      "key": "api-pod",
+      "name": "API pod",
+      "summary": "An API pod is one running copy of the application in a container platform. More pods usually mean more request-handling capacity.",
+      "used_here": "The fleet grew from 40 to 240 pods, multiplying the number of database pools owned by the application."
+    },
+    {
+      "key": "autoscaling",
+      "name": "Autoscaling",
+      "summary": "Autoscaling automatically changes the number of application instances based on demand or metrics. It can also multiply downstream load if each instance opens its own resources.",
+      "used_here": "Autoscaling added API pods during the campaign, which also multiplied the possible database connections."
+    },
+    {
+      "key": "load-balancer-502",
+      "name": "Load balancer 502",
+      "summary": "A 502 from a load balancer usually means it could not get a valid response from the backend service. The backend may be down, timing out, or closing connections.",
+      "used_here": "Checkout requests waited so long that the load balancer started returning 502s to users."
+    },
+    {
+      "key": "postgresql",
+      "name": "PostgreSQL",
+      "summary": "PostgreSQL is a relational database server. Each client connection is handled by a backend process with memory and scheduling overhead.",
+      "used_here": "The database has a configured connection limit of 600, but the application fleet can try to open far more."
+    },
+    {
+      "key": "connection-pool",
+      "name": "Connection pool",
+      "summary": "A connection pool keeps a set of database connections open so requests can reuse them. If all connections in the pool are busy, new requests wait to acquire one.",
+      "used_here": "Each API pod has a pool of 50 connections, so 240 pods can demand up to 12,000 connections."
+    },
+    {
+      "key": "max-connections",
+      "name": "max_connections",
+      "summary": "max_connections is the PostgreSQL setting that limits how many client sessions the database accepts. Raising it is not free because every backend consumes memory and scheduler time.",
+      "used_here": "PostgreSQL is configured for 600 connections, far below the fleet's possible 12,000-connection demand."
+    },
+    {
+      "key": "connection-acquire-latency",
+      "name": "Connection acquire latency",
+      "summary": "Connection acquire latency is the time a request waits to get a connection from a pool. High acquire latency means work is queued before it can even run a database query.",
+      "used_here": "Many checkout clients are waiting to acquire a connection, explaining high latency with low database CPU."
+    },
+    {
+      "key": "queueing",
+      "name": "Queueing",
+      "summary": "Queueing happens when more work arrives than a constrained resource can serve immediately. Latency can rise sharply even when the constrained resource is not doing much useful work.",
+      "used_here": "Requests queue in API pods waiting for database connections instead of executing queries on PostgreSQL."
+    },
+    {
+      "key": "read-replica",
+      "name": "Read replica",
+      "summary": "A read replica is a database copy used to serve read-only queries. It helps when read query execution is the bottleneck.",
+      "used_here": "A replica would not fix checkout writes or a primary connection limit that is already being exceeded."
+    },
+    {
+      "key": "slow-query-log",
+      "name": "Slow query log",
+      "summary": "A slow query log records database statements that take longer than a threshold. It is useful when database execution time is the main source of latency.",
+      "used_here": "The symptoms point to waiting before queries run, not slow queries consuming CPU or disk."
+    },
+    {
+      "key": "connection-budget",
+      "name": "Connection budget",
+      "summary": "A connection budget is a planned maximum number of database connections each service or fleet may use. It prevents independent pools from adding up to more than the database can safely handle.",
+      "used_here": "The API fleet must fit inside a safe portion of the 600 PostgreSQL connections, leaving room for maintenance and other clients."
+    },
+    {
+      "key": "backpressure",
+      "name": "Backpressure",
+      "summary": "Backpressure limits or rejects work when a downstream dependency is full. It is better than allowing unbounded queues that turn into timeouts.",
+      "used_here": "Checkout should fail fast or throttle excess work instead of allowing every pod to pile up connection waiters."
+    },
+    {
+      "key": "pgbouncer-rds-proxy",
+      "name": "PgBouncer or RDS Proxy",
+      "summary": "PgBouncer and RDS Proxy are connection pooling proxies placed between an application and a database. They let many application clients reuse a smaller number of database connections.",
+      "used_here": "A proxy can reduce the number of PostgreSQL backends required when many API pods are running."
+    },
+    {
+      "key": "transaction-pooling",
+      "name": "Transaction pooling",
+      "summary": "Transaction pooling returns a database connection to the shared pool at transaction boundaries instead of keeping it tied to one client session. It increases multiplexing but changes what session features are safe.",
+      "used_here": "It can help the checkout fleet share fewer PostgreSQL connections, but only if the application does not rely on per-session state."
+    },
+    {
+      "key": "session-state",
+      "name": "Session state, prepared statements, temp tables, and LISTEN/NOTIFY",
+      "summary": "Session state is data or behavior tied to one database session, such as server-side prepared statements, temporary tables, or LISTEN/NOTIFY subscriptions. Transaction pooling can break code that assumes the same database session is reused.",
+      "used_here": "Before enabling transaction pooling, checkout must be checked and adjusted for these session-dependent features."
+    },
+    {
+      "key": "monitoring-alerting",
+      "name": "Monitoring and alerting",
+      "summary": "Monitoring records system behavior, and alerting notifies engineers when important signals cross thresholds. Good alerts track the actual bottleneck, not only generic utilization.",
+      "used_here": "The service needs alerts for pool waiters, acquire latency, database sessions versus budget, checkout latency, and 502s."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Choose the first place to look",
+      "question": "Checkout p95 is 22 seconds, the load balancer is returning 502s, and PostgreSQL CPU and disk I/O are low. Which investigation should you do first?",
+      "concept_keys": [
+        "connection-pool",
+        "connection-acquire-latency",
+        "postgresql",
+        "read-replica",
+        "slow-query-log",
+        "load-balancer-502"
+      ],
+      "options": [
+        {
+          "text": "Add read replicas and move checkout read queries to them so the primary has less work during the campaign.",
+          "correct": false,
+          "hint": "A replica helps when read query execution is the limiting work. Here the primary is not showing CPU or I/O saturation, so first check whether requests are reaching query execution at all.",
+          "id": "a"
+        },
+        {
+          "text": "Tune the load balancer idle timeout upward so checkout has more time to complete during traffic spikes.",
+          "correct": false,
+          "hint": "A timeout change can hide a symptom, but it does not explain why backends became slow. First identify where the 22 seconds are being spent.",
+          "id": "b"
+        },
+        {
+          "text": "Inspect API database pool metrics for active, idle, waiting clients, and acquire latency, then compare them with PostgreSQL session counts.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Start with a slow-query report and optimize the most frequent checkout SQL statements from the campaign window.",
+          "correct": false,
+          "hint": "Slow queries usually leave evidence in database execution metrics such as CPU, I/O, locks, or query runtimes. The reported symptoms include long request latency but little database work.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The key clue is the mismatch between high checkout latency and low PostgreSQL CPU and I/O. Pool waiters and acquire latency show whether requests are stuck before they can run SQL, and PostgreSQL session counts show whether the database connection limit is being hit. A slow-query investigation is tempting, but slow queries should normally show up as database work; here the database is mostly idle."
+    },
+    {
+      "title": "Quantify the connection demand",
+      "question": "You find that many API requests are waiting for a database connection. Each of the 240 API pods owns a pool with a maximum of 50 connections, and PostgreSQL allows 600 connections. What does this imply?",
+      "concept_keys": [
+        "api-pod",
+        "connection-pool",
+        "max-connections",
+        "postgresql",
+        "connection-budget"
+      ],
+      "options": [
+        {
+          "text": "Each pod effectively gets 2.5 requests/second because 600 database connections divided by 240 pods is 2.5.",
+          "correct": false,
+          "hint": "Connections are not the same as request throughput. A connection can serve many requests over time, but only if the fleet does not try to open too many at once.",
+          "id": "a"
+        },
+        {
+          "text": "The database has enough headroom because 8% CPU means max_connections can be increased by about 12 times.",
+          "correct": false,
+          "hint": "CPU headroom does not make thousands of extra database backends free. Connection count has memory and scheduling costs separate from query CPU.",
+          "id": "b"
+        },
+        {
+          "text": "The service needs about 200 database connections because 12,000 requests/minute is 200 requests/second.",
+          "correct": false,
+          "hint": "Requests per second is a rate, not a connection count. The number of connections depends on concurrency and on how many each pod is allowed to open.",
+          "id": "c"
+        },
+        {
+          "text": "The fleet can demand 12,000 database connections, which is 20 times the PostgreSQL limit of 600.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The maximum possible demand is 240 pods × 50 connections = 12,000 connections. PostgreSQL is configured for 600, so the application can ask for 20 times more sessions than the database will accept. Using 200 requests/second as the answer confuses arrival rate with the fleet's configured connection capacity."
+    },
+    {
+      "title": "Identify the root cause",
+      "question": "Given the connection math and the low database CPU, what is the most likely root cause of the 22-second p95 latency and 502s?",
+      "concept_keys": [
+        "connection-pool",
+        "queueing",
+        "max-connections",
+        "postgresql",
+        "load-balancer-502"
+      ],
+      "options": [
+        {
+          "text": "The API fleet is oversubscribing PostgreSQL connections, so requests queue waiting for a connection and time out before much database work runs.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "PostgreSQL is CPU-bound, but the CPU graph is averaged in a way that hides short spikes during checkout bursts.",
+          "correct": false,
+          "hint": "Averaging can hide brief spikes, but the incident also has thousands of short-lived sessions and clients waiting. The explanation should fit both the metrics and the logs.",
+          "id": "b"
+        },
+        {
+          "text": "PostgreSQL disk saturation is hidden by operating system cache, so queries block even though disk I/O looks flat.",
+          "correct": false,
+          "hint": "Hidden storage issues can happen, but this incident has a stronger scaling-related signal. Look for the resource that increased directly when pods went from 40 to 240.",
+          "id": "c"
+        },
+        {
+          "text": "The load balancer timeout is the primary fault, because it turns slow backend responses into 502s.",
+          "correct": false,
+          "hint": "The load balancer is reporting the failure to users, but it is downstream of the backend delay. The cause should explain why the backend became slow after the pod count increased.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The fleet-level pool limit exploded from 2,000 possible connections at 40 pods to 12,000 at 240 pods, while PostgreSQL still accepts only 600. Requests wait in application pools or fail to connect, so checkout latency rises even though PostgreSQL is not doing heavy query work. The load balancer timeout is a symptom: raising it may reduce visible 502s briefly but would not remove the queue."
+    },
+    {
+      "title": "Make a safe same-day mitigation",
+      "question": "You need to stabilize checkout today while PostgreSQL remains configured for 600 connections. Which mitigation is safest?",
+      "concept_keys": [
+        "connection-budget",
+        "connection-pool",
+        "autoscaling",
+        "max-connections",
+        "backpressure",
+        "postgresql"
+      ],
+      "options": [
+        {
+          "text": "Keep the pool settings unchanged and lower the load balancer timeout so stuck requests are removed sooner.",
+          "correct": false,
+          "hint": "This may reduce how long users wait, but it increases visible failures. It does not change the number of clients competing for database sessions.",
+          "id": "a"
+        },
+        {
+          "text": "Set a database connection budget: reserve 100 connections, roll the API pool maximum to 2 per pod at 240 pods, and cap autoscaling so the fleet stays under 500 application connections.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Raise PostgreSQL max_connections from 600 to 12,000 so every API pod can fill its pool during the campaign.",
+          "correct": false,
+          "hint": "This matches the current application demand, but it assumes every database backend is cheap. PostgreSQL connections consume memory and scheduler capacity even when queries are short.",
+          "id": "c"
+        },
+        {
+          "text": "Keep pool maximums at 50 but shorten the pool acquire timeout so requests fail faster under connection pressure.",
+          "correct": false,
+          "hint": "Failing faster can reduce long waits, but it does not make the service healthy if the fleet can still overwhelm the database. The resource limit itself needs a budget.",
+          "id": "d"
+        }
+      ],
+      "explanation": "With 600 PostgreSQL connections, reserving 100 leaves at most 500 for the API fleet. A pool maximum of 2 across 240 pods allows up to 480 application connections, which fits the budget with 20 connections of extra buffer. Raising max_connections to 12,000 is tempting because it matches the bad configuration, but PostgreSQL would spend far more memory and scheduling time on backends and could get slower."
+    },
+    {
+      "title": "Design the durable fix",
+      "question": "After the same-day mitigation, the business expects future campaigns that may scale beyond 240 pods. What durable design should you implement?",
+      "concept_keys": [
+        "pgbouncer-rds-proxy",
+        "transaction-pooling",
+        "session-state",
+        "connection-budget",
+        "autoscaling",
+        "postgresql"
+      ],
+      "options": [
+        {
+          "text": "Route checkout writes to a read replica during campaigns, then replay the changes to the primary after traffic falls.",
+          "correct": false,
+          "hint": "Replicas are not a safe target for normal transactional writes. Checkout needs correct, durable writes at the time the user pays.",
+          "id": "a"
+        },
+        {
+          "text": "Put PgBouncer or RDS Proxy in front of PostgreSQL where appropriate, use transaction pooling only after removing session-state dependencies, and keep autoscaling tied to a global connection budget.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Open a fresh PostgreSQL connection for every checkout request and close it immediately after the response.",
+          "correct": false,
+          "hint": "This avoids large idle pools, but it creates connection churn at peak traffic. The logs already show thousands of short-lived sessions, so more churn is not the direction to go.",
+          "id": "c"
+        },
+        {
+          "text": "Buy a larger database instance and increase max_connections until API pods no longer wait for connections.",
+          "correct": false,
+          "hint": "A larger instance may be part of a capacity plan, but it does not remove the multiplication effect from per-pod pools. Without a budget, autoscaling can recreate the same problem at a higher limit.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A connection proxy can let many application clients reuse a smaller, controlled number of PostgreSQL connections, and a global budget keeps autoscaling from exceeding database capacity. Transaction pooling must be introduced carefully because session state such as server-side prepared statements, temporary tables, and LISTEN/NOTIFY can break when a client does not keep the same database session. Simply buying a bigger database may postpone the incident, but it does not fix the fleet-level oversubscription pattern."
+    },
+    {
+      "title": "Confirm the fix and prevent recurrence",
+      "question": "After reducing pool sizes and adding the longer-term connection plan to the roadmap, what monitoring should you add before the next campaign?",
+      "concept_keys": [
+        "monitoring-alerting",
+        "connection-acquire-latency",
+        "connection-pool",
+        "connection-budget",
+        "postgresql",
+        "autoscaling",
+        "load-balancer-502"
+      ],
+      "options": [
+        {
+          "text": "Alert only when PostgreSQL CPU is above 70% for five minutes, because CPU is the clearest database saturation signal.",
+          "correct": false,
+          "hint": "CPU is useful, but this incident shows a bottleneck can happen before much work is executed by the database. Include signals closer to the user-facing delay.",
+          "id": "a"
+        },
+        {
+          "text": "Alert only on load balancer 502 rate, because users only care once requests are failing.",
+          "correct": false,
+          "hint": "User-facing failures matter, but they are late signals. You want warnings while the system is becoming unhealthy, not only after checkout fails.",
+          "id": "b"
+        },
+        {
+          "text": "Alert only when the API pod count exceeds 240, because that was the pod count during this incident.",
+          "correct": false,
+          "hint": "Pod count is part of the story, but the safe number depends on pool sizes and database capacity. A fixed pod threshold can be wrong after configuration changes.",
+          "id": "c"
+        },
+        {
+          "text": "Alert on API pool waiters and acquire p95, PostgreSQL sessions by state versus budget, checkout p95 and 502s, and autoscaler pod count.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The right monitoring covers both early pressure and user impact: pool waiters and acquire latency show requests queueing, database sessions versus budget shows remaining headroom, and checkout p95/502s confirm customer impact. Autoscaler pod count provides context because each pod contributes to the fleet's possible connection demand. CPU-only alerting would have missed this incident because PostgreSQL CPU stayed under 10%."
+    }
+  ],
+  "takeaway": "Low database CPU does not mean the database dependency is healthy; requests can be stuck waiting to get a connection before any query runs. In autoscaled systems, per-pod pool sizes must be multiplied by the maximum pod count and kept within a global database connection budget. Use connection proxies carefully, and audit session-state features before enabling transaction pooling.",
+  "review_issues": [
+    "Step 1: The scenario says “Database logs show ... many clients waiting to acquire a connection.” PostgreSQL logs generally would not show application-side pool waiters or connection-acquire latency; those come from API/pool metrics or a pooler. This also gives away the Step 1 investigation and Step 3 root cause before the questions.",
+    "Step 2: The pre-step concept text gives away the calculation by stating that each API pod has a pool of 50 and that 240 pods can demand up to 12,000 connections, with PostgreSQL limited to 600.",
+    "Step 3: Step 1’s explanation already states that requests are stuck before they can run SQL and points to pool waiters/acquire latency, effectively revealing the later root-cause answer.",
+    "Step 5: The pre-step concept text for PgBouncer/RDS Proxy and transaction pooling already states the durable fix and the session-state caveat, giving away the correct answer.",
+    "Step 6: The pre-step monitoring concept explicitly lists the exact alerts to add—pool waiters, acquire latency, sessions versus budget, checkout latency, and 502s—giving away the correct answer."
+  ]
+}

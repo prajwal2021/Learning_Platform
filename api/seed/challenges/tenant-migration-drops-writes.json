@@ -1,0 +1,344 @@
+{
+  "slug": "tenant-migration-drops-writes",
+  "title": "A tenant migration loses ten minutes of writes",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "sharding",
+    "migration",
+    "data-consistency",
+    "cutover",
+    "cdc"
+  ],
+  "scenario": "A 600 GB enterprise tenant was moved from shard 12 to shard 27. The migration export/import ran from 12:36 to 13:50 and produced shard 27 data through source log position 8,842,177, whose last included commit was around 13:50. Operators validated the destination for ten minutes and changed the tenant routing entry to shard 27 at 14:00. At 14:20, support reports that several records created and updated shortly before 14:00 are missing after the move.",
+  "goal": "Find why the writes disappeared, choose a safe migration protocol, and repair the tenant without losing more data.",
+  "concepts": [
+    {
+      "key": "tenant",
+      "name": "Tenant",
+      "summary": "A tenant is one customer or organization’s data in a multi-customer system. Keeping tenant data isolated helps with scaling, billing, and operations.",
+      "used_here": "The incident affects one enterprise tenant being moved between database shards."
+    },
+    {
+      "key": "shard",
+      "name": "Shard",
+      "summary": "A shard is one partition of a larger database. Different tenants or records are placed on different shards to spread load and storage.",
+      "used_here": "The tenant was moved from shard 12 to shard 27."
+    },
+    {
+      "key": "snapshot-copy",
+      "name": "Snapshot copy",
+      "summary": "A snapshot copy creates a destination image from a source at a known point or range. It does not automatically include writes that commit after its recorded boundary.",
+      "used_here": "The 600 GB export/import seeded shard 27 through source log position 8,842,177."
+    },
+    {
+      "key": "lsn",
+      "name": "Log sequence number",
+      "summary": "A log sequence number, or LSN, is an ordered position in a database’s commit log. It is safer than wall-clock time for saying exactly which transactions are included.",
+      "used_here": "The migration manifest and repair plan use source log positions to define what shard 27 has and what it is missing."
+    },
+    {
+      "key": "routing-table",
+      "name": "Routing table",
+      "summary": "A routing table maps a tenant or key range to the shard that should serve it. Changing the mapping moves future reads and writes to a different shard.",
+      "used_here": "The tenant routing entry was changed from shard 12 to shard 27 at 14:00."
+    },
+    {
+      "key": "cdc-wal",
+      "name": "CDC / WAL stream",
+      "summary": "Change data capture reads committed database changes from a log, often the write-ahead log. It can replay changes in commit order to another system.",
+      "used_here": "A change stream can catch shard 27 up from the snapshot boundary to the cutover boundary."
+    },
+    {
+      "key": "write-fence",
+      "name": "Write fence",
+      "summary": "A write fence blocks or rejects writes that use an old ownership decision. It prevents two places from accepting writes for the same data during a handoff.",
+      "used_here": "A fence can stop shard 12 from accepting tenant writes during the final cutover."
+    },
+    {
+      "key": "versioned-routing",
+      "name": "Versioned routing",
+      "summary": "Versioned routing adds a generation number to a routing decision. Writers can detect that their cached route is stale and refresh before writing.",
+      "used_here": "The routing switch should make old shard-12 routes invalid for this tenant."
+    },
+    {
+      "key": "idempotency",
+      "name": "Idempotency",
+      "summary": "An idempotent operation can be retried without applying the same logical change twice. This is important when replaying logs or recovering from partial failures.",
+      "used_here": "Repair may need to retry changes from the source log without duplicating already-applied writes."
+    },
+    {
+      "key": "reconciliation",
+      "name": "Reconciliation",
+      "summary": "Reconciliation compares two systems to prove they contain the same intended data. It often uses counts, checksums, sampled records, and targeted audits.",
+      "used_here": "After repair, engineers must prove shard 27 contains every transaction that should have moved."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Choose the first place to look",
+      "question": "At 14:20, users report that records written shortly before the 14:00 move are missing. Which evidence should you gather first to narrow the incident?",
+      "concept_keys": [
+        "tenant",
+        "shard",
+        "routing-table",
+        "lsn"
+      ],
+      "options": [
+        {
+          "text": "Review the validation script output to see whether row-count sampling passed before cutover.",
+          "correct": false,
+          "hint": "Validation output is useful later, but a sample pass does not define the exact write boundary of the copy.",
+          "id": "a"
+        },
+        {
+          "text": "Check web server error rates and request latency during the ten minutes before the routing change.",
+          "correct": false,
+          "hint": "Request metrics can show user impact, but they do not tell you which database image contained which commits.",
+          "id": "b"
+        },
+        {
+          "text": "Compare the tenant’s routing history with source and destination commit positions around the migration window.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Inspect shard 27 CPU, locks, and replication lag immediately after the routing change.",
+          "correct": false,
+          "hint": "Destination health matters, but missing older records can happen even when the new shard is healthy.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The fastest way to reason about this incident is to line up three facts: where the tenant was routed, what source log position the copy included, and which commits happened near cutover. Latency, shard health, and sample validation are plausible checks, but none of them proves whether a specific 13:55 commit was included on shard 27."
+    },
+    {
+      "title": "Interpret the migration timeline",
+      "question": "You find this migration record: the export/import ran from 12:36 to 13:50, and the manifest says shard 27 contains the tenant through source LSN 8,842,177, with the last included commit around 13:50. The routing table was changed to shard 27 at 14:00. Source audit logs show tenant commits after LSN 8,842,177 until just before 14:00. What does this imply?",
+      "concept_keys": [
+        "snapshot-copy",
+        "lsn",
+        "routing-table"
+      ],
+      "options": [
+        {
+          "text": "The ten-minute validation period means shard 27 was implicitly current when routing changed at 14:00.",
+          "correct": false,
+          "hint": "Validation can observe data, but it does not by itself move committed changes from one shard to another.",
+          "id": "a"
+        },
+        {
+          "text": "The 14:00 routing update means any writes before 14:00 must have been sent to both shards.",
+          "correct": false,
+          "hint": "A routing update decides where future traffic goes; it does not imply previous writes were copied twice.",
+          "id": "b"
+        },
+        {
+          "text": "The copy covered the full 12:36 to 13:50 export duration, so only writes before 12:36 are suspect.",
+          "correct": false,
+          "hint": "The manifest boundary is the important inclusion point; the duration of the copy is not the same thing as a guarantee about later commits.",
+          "id": "c"
+        },
+        {
+          "text": "Shard 27 is known to contain data only through LSN 8,842,177, so later source commits need separate proof.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The manifest gives a precise source boundary: shard 27 contains the tenant through LSN 8,842,177. Commits after that position and before the 14:00 routing change were accepted on shard 12, so they are not guaranteed to exist on shard 27 unless another mechanism moved them."
+    },
+    {
+      "title": "Identify the root cause",
+      "question": "The runbook for this migration contains four completed phases: export tenant data, import to shard 27, run sample validation, and update routing. There is no recorded phase that applies source commits after LSN 8,842,177. Which root cause best fits the evidence?",
+      "concept_keys": [
+        "snapshot-copy",
+        "lsn",
+        "routing-table",
+        "shard"
+      ],
+      "options": [
+        {
+          "text": "Shard 27 had a partial import failure that affected only records written from 13:50 to 14:00.",
+          "correct": false,
+          "hint": "A partial import would usually affect data inside the copied range too. Focus on the boundary recorded in the manifest.",
+          "id": "a"
+        },
+        {
+          "text": "The validation script used sampling, so it probably deleted records that were not part of the sample.",
+          "correct": false,
+          "hint": "Sampling can miss a problem, but it does not normally mutate tenant data or explain a clean boundary after the copied log position.",
+          "id": "b"
+        },
+        {
+          "text": "Clock skew between shards made the user interface hide records with timestamps near 14:00.",
+          "correct": false,
+          "hint": "Clock skew can cause ordering or display issues, but it would not explain source commits being absent from destination storage.",
+          "id": "c"
+        },
+        {
+          "text": "The routing switch pointed the tenant at a destination image that did not include committed source writes after the snapshot boundary.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The migration created a destination image through LSN 8,842,177 and then later switched routing to that image. Writes committed on shard 12 after that boundary were outside the copy, so they disappeared from the user’s view after routing moved to shard 27. The tempting validation explanation describes why the issue was not detected, not why the writes were missing."
+    },
+    {
+      "title": "Pick a safe future protocol",
+      "question": "You need to change the migration design for live tenants so a 74-minute copy can run while users keep working. Which protocol preserves committed writes with minimal downtime?",
+      "concept_keys": [
+        "snapshot-copy",
+        "lsn",
+        "cdc-wal",
+        "write-fence",
+        "versioned-routing"
+      ],
+      "options": [
+        {
+          "text": "Keep the snapshot-only process, but schedule the routing switch at a quieter hour so fewer writes can occur during validation.",
+          "correct": false,
+          "hint": "A smaller gap is still a correctness gap. Even one missing committed write is a data-loss incident for this tenant.",
+          "id": "a"
+        },
+        {
+          "text": "Copy a consistent snapshot, record its source LSN, stream and apply later commits until caught up, briefly fence writes, apply through the cutover LSN, then switch versioned routing.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Run the same snapshot copy faster, validate counts every five minutes, and switch routing as soon as the latest validation passes.",
+          "correct": false,
+          "hint": "More frequent checks reduce detection delay, but checking data is not the same as transferring every committed change.",
+          "id": "c"
+        },
+        {
+          "text": "Start writing new requests to shard 27 after the copy begins, keep old requests on shard 12, and switch once both shards have similar row counts.",
+          "correct": false,
+          "hint": "Splitting writes by request timing creates two authorities unless every write has a precise ownership rule and verification path.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A safe live migration needs a precise boundary and a way to move every commit after that boundary. Streaming changes from the source log lets shard 27 catch up while the tenant remains online, and a brief write fence plus versioned routing makes the final handoff exact. Faster snapshots or quieter timing lower the probability of loss but do not eliminate it."
+    },
+    {
+      "title": "Make the routing switch safe",
+      "question": "Assume shard 27 has caught up to the source log and you are ready for final cutover. Some application servers cache tenant routes for up to 60 seconds. What should the cutover include?",
+      "concept_keys": [
+        "routing-table",
+        "write-fence",
+        "versioned-routing",
+        "shard"
+      ],
+      "options": [
+        {
+          "text": "Switch read traffic first, leave writes on shard 12 for one minute, and then manually compare both shards before moving writes.",
+          "correct": false,
+          "hint": "Temporarily splitting reads and writes can be useful in some rollouts, but it needs a defined replication path and ownership rule to avoid stale reads or lost updates.",
+          "id": "a"
+        },
+        {
+          "text": "Broadcast a cache-invalidation message to all application servers and proceed once most servers acknowledge it.",
+          "correct": false,
+          "hint": "Broadcasts can be lost or delayed. A cutover protocol should remain correct even when one server misses an invalidation.",
+          "id": "b"
+        },
+        {
+          "text": "Update the routing table and wait 60 seconds before announcing success, because all cached routes will expire by then.",
+          "correct": false,
+          "hint": "Waiting helps readers converge eventually, but old writers can still commit during the waiting period unless the old path is prevented.",
+          "id": "c"
+        },
+        {
+          "text": "Assign a new route generation, fence shard 12 for that tenant at the old generation, and require writers with stale routes to refresh before committing.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Versioned routing plus a write fence prevents stale application instances from continuing to write to shard 12 after ownership moves. A 60-second cache TTL or best-effort invalidation is tempting, but it allows a correctness window where old route holders can still accept writes."
+    },
+    {
+      "title": "Repair this tenant safely",
+      "question": "For the current incident, you want to repair shard 27 without re-copying 600 GB. You have the snapshot high-water LSN H = 8,842,177, the routing-switch boundary R = 8,843,401, and retained shard 12 WAL for the tenant. Shard 27 has also accepted some valid writes after 14:00. What is the safest repair plan?",
+      "concept_keys": [
+        "lsn",
+        "cdc-wal",
+        "write-fence",
+        "idempotency",
+        "reconciliation"
+      ],
+      "options": [
+        {
+          "text": "Restore the whole tenant from the last backup before migration and ask users to repeat any work done after 14:00.",
+          "correct": false,
+          "hint": "A full restore may be a last resort, but it discards known-good destination writes and increases customer impact.",
+          "id": "a"
+        },
+        {
+          "text": "Copy rows from shard 12 with updated_at after 13:50 into shard 27, overwriting destination rows so the older shard becomes authoritative.",
+          "correct": false,
+          "hint": "Row timestamps do not capture deletes, multi-row transactions, or ordering, and overwriting can destroy valid post-cutover work.",
+          "id": "b"
+        },
+        {
+          "text": "Replay all shard 12 operations whose commit timestamps are between 13:50 and 14:00, then ignore duplicate-key conflicts on shard 27.",
+          "correct": false,
+          "hint": "Wall-clock ranges can miss or double-count transactions at the edges, and a conflict may represent a real business state that needs a merge.",
+          "id": "c"
+        },
+        {
+          "text": "Fence tenant writes, apply committed shard 12 changes in LSN order for (H, R], make replay idempotent, resolve collisions using application semantics, then verify before un-fencing.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The repair should use exact log positions, not wall-clock guesses: apply the missing committed range after H through the route-switch boundary R. Because shard 27 accepted valid post-14:00 writes, conflicts cannot be blindly skipped or overwritten; they need idempotent replay and application-specific merge or compensation. Fencing during repair prevents the target from moving while you reconcile it."
+    },
+    {
+      "title": "Prove the fix worked",
+      "question": "After replay and conflict handling, what evidence best shows the tenant is safe to un-fence?",
+      "concept_keys": [
+        "lsn",
+        "cdc-wal",
+        "reconciliation",
+        "routing-table"
+      ],
+      "options": [
+        {
+          "text": "Shard 27 has contiguous applied coverage for every tenant transaction in (H, R], reconciliation checks pass, conflicts have documented semantic resolutions, and all current writes route to shard 27.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "The total tenant row count on shard 27 matches shard 12 within 0.1%, and recent user-created records are visible in the UI.",
+          "correct": false,
+          "hint": "Counts can match while different rows are missing, duplicated, or incorrectly merged.",
+          "id": "b"
+        },
+        {
+          "text": "A random sample of 1,000 tenant records matches between shards, and the migration dashboard is green.",
+          "correct": false,
+          "hint": "Sampling can miss rare but important rows, especially when the known risk is a specific log interval.",
+          "id": "c"
+        },
+        {
+          "text": "No new support tickets arrive for 30 minutes, and application latency on shard 27 stays within the normal range.",
+          "correct": false,
+          "hint": "Operational quiet is reassuring, but it does not prove the missing transaction range was fully applied.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The proof should match the failure mode: every transaction in the missing LSN interval must be accounted for, and any collision with post-cutover data must have a deliberate resolution. Counts, samples, ticket volume, and UI spot checks are useful signals, but they do not prove there are no gaps in the committed log range."
+    }
+  ],
+  "takeaway": "A snapshot copy is only safe up to its recorded consistency boundary. Live tenant migrations need a cutover protocol that handles writes after that boundary, using a log-based catch-up, verified dual-write, or a short fenced maintenance window. Repairs should use exact log positions and semantic reconciliation, not wall-clock ranges or blind conflict skipping.",
+  "review_issues": [
+    "Step 4: The correct option explicitly names the same mechanism asked in Step 5: briefly fence writes and switch versioned routing. This makes Step 5's correct answer largely revealed by an earlier option.",
+    "Step 6: The marked repair plan applies shard 12 changes only for (H, R], where R is described as the routing-switch boundary. Because the original migration had no write fence/versioned routing, stale route holders could have committed to shard 12 after the routing switch. The safest repair should either define R as the last accepted shard-12 tenant commit after fencing, or explicitly inspect/replay any post-R shard-12 commits before reconciliation."
+  ]
+}

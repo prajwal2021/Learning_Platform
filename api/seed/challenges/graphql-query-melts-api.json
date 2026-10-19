@@ -1,0 +1,338 @@
+{
+  "slug": "graphql-query-melts-api",
+  "title": "One GraphQL Query Melts the API for Everyone",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "graphql",
+    "api",
+    "databases",
+    "performance",
+    "multi-tenancy"
+  ],
+  "scenario": "A customer dashboard sends a single GraphQL query with 7 nested levels: orgs, projects, issues, comments, authors, reactions, and attachments. At 150 requests/minute, database queries jump from 8,000/second to 220,000/second because each resolver performs its own SELECT. API CPU saturates and unrelated endpoints time out.",
+  "goal": "Find the root cause and choose controls that keep GraphQL flexible without letting one query consume shared capacity.",
+  "concepts": [
+    {
+      "key": "graphql",
+      "name": "GraphQL",
+      "summary": "GraphQL is an API style where clients ask for exactly the fields they want. One request can traverse many related objects instead of calling many REST endpoints.",
+      "used_here": "The dashboard sends one GraphQL operation that expands across seven related object types."
+    },
+    {
+      "key": "resolver",
+      "name": "Resolver",
+      "summary": "A resolver is the server function that fetches data for one GraphQL field. Complex queries may call many resolvers during one request.",
+      "used_here": "Each field resolver performs its own database SELECT, so one GraphQL request fans out into many database calls."
+    },
+    {
+      "key": "observability",
+      "name": "Observability",
+      "summary": "Observability means using logs, metrics, and traces to understand what a system is doing. It helps connect a user request to downstream work like database queries.",
+      "used_here": "Resolver traces and database query counts show which GraphQL fields are causing the query explosion."
+    },
+    {
+      "key": "database",
+      "name": "Database",
+      "summary": "A database stores application data and answers queries from the API. It has finite CPU, connections, and I/O capacity.",
+      "used_here": "Database query rate rises from 8,000/second to 220,000/second during the incident."
+    },
+    {
+      "key": "n-plus-one",
+      "name": "N+1 query pattern",
+      "summary": "N+1 happens when code fetches a list, then runs another query for each item in that list. Nested lists can multiply this problem across several levels.",
+      "used_here": "Resolvers fetch children one parent at a time, multiplying SELECTs through orgs, projects, issues, comments, authors, reactions, and attachments."
+    },
+    {
+      "key": "query-complexity",
+      "name": "Query complexity",
+      "summary": "Query complexity is an estimate of how much server work a client request can cause. In GraphQL, two queries with similar byte size can have very different execution cost.",
+      "used_here": "The seven-level dashboard query is small as text but extremely expensive to execute."
+    },
+    {
+      "key": "depth-limit",
+      "name": "Depth limit",
+      "summary": "A depth limit rejects GraphQL operations that nest fields beyond an allowed level. It prevents very deep traversals from reaching the execution layer.",
+      "used_here": "It caps queries that chain many object relationships like orgs to projects to issues to comments and beyond."
+    },
+    {
+      "key": "cost-limit",
+      "name": "Cost limit",
+      "summary": "A cost limit assigns weights to fields and rejects operations whose estimated cost is too high. List fields often cost more because they can return many items.",
+      "used_here": "It lets the API reject expensive combinations even when their nesting depth alone looks acceptable."
+    },
+    {
+      "key": "pagination",
+      "name": "Pagination",
+      "summary": "Pagination requires clients to request lists in bounded pages instead of asking for all items at once. It usually uses arguments like first, limit, after, or cursor.",
+      "used_here": "List fields such as projects, issues, comments, reactions, and attachments must have page sizes so one query cannot fetch every child object."
+    },
+    {
+      "key": "batching",
+      "name": "Batching",
+      "summary": "Batching combines many small data fetches into fewer larger fetches. It is commonly used in GraphQL to load related records for many parents at once.",
+      "used_here": "Author, reaction, and attachment lookups can be grouped by IDs instead of selected one row at a time."
+    },
+    {
+      "key": "request-cache",
+      "name": "Request-scoped cache",
+      "summary": "A request-scoped cache stores loaded objects only for the duration of one request. It avoids fetching the same ID repeatedly without serving stale data across users.",
+      "used_here": "If the same author appears in many comments, the resolver can reuse that loaded author within the current GraphQL request."
+    },
+    {
+      "key": "api-gateway",
+      "name": "API gateway",
+      "summary": "An API gateway is an entry point that can route, reject, or limit requests before they hit application servers. It is often used for emergency controls and shared policy enforcement.",
+      "used_here": "It can temporarily block the known expensive operation signature while the API remains available for other traffic."
+    },
+    {
+      "key": "rate-limit",
+      "name": "Rate limit",
+      "summary": "A rate limit restricts how many requests a client can send in a time window. It controls request count but does not always control work per request.",
+      "used_here": "A plain request-per-minute limit is not enough because one allowed GraphQL request can still cause huge backend work."
+    },
+    {
+      "key": "per-tenant-budget",
+      "name": "Per-tenant budget",
+      "summary": "A per-tenant budget limits resource use by customer or account instead of only by global traffic. It improves fairness in shared systems.",
+      "used_here": "The dashboard tenant should not be able to consume enough GraphQL cost to time out unrelated tenants and endpoints."
+    },
+    {
+      "key": "load-test",
+      "name": "Load test",
+      "summary": "A load test replays expected or risky traffic to measure latency, throughput, and downstream resource use. It confirms whether a fix works before or during rollout.",
+      "used_here": "The fixed API should be tested with the seven-level dashboard query at 150 requests/minute and with unrelated endpoint traffic."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the fan-out",
+      "question": "During the incident, what should you inspect first to connect the 150 GraphQL requests/minute to 220,000 database queries/second?",
+      "concept_keys": [
+        "graphql",
+        "resolver",
+        "observability",
+        "database"
+      ],
+      "options": [
+        {
+          "text": "Compare API pod CPU usage against the number of unrelated endpoint timeouts.",
+          "correct": false,
+          "hint": "CPU saturation shows the blast radius, but it does not explain why a small request rate creates so much downstream work. Look for the link between one operation and database calls.",
+          "id": "a"
+        },
+        {
+          "text": "Review recent deploys for ORM version changes and database driver upgrades.",
+          "correct": false,
+          "hint": "A deploy can cause regressions, but the incident already points to a specific query shape. First confirm how that query expands into resolver and database work.",
+          "id": "b"
+        },
+        {
+          "text": "Check whether the database connection pool has reached its configured maximum.",
+          "correct": false,
+          "hint": "Pool exhaustion may be a symptom, but it will not identify which part of the request path creates the extra queries. You need field-level visibility into the GraphQL execution.",
+          "id": "c"
+        },
+        {
+          "text": "Trace one slow GraphQL operation and count database SELECTs by resolver field.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The request rate is only 2.5 requests/second, yet the database is doing 220,000 queries/second, so the key question is how much work one GraphQL operation creates. Resolver-level tracing ties each field in the operation to its SELECT count. Looking only at CPU or pool usage confirms overload, but it does not identify the fan-out path."
+    },
+    {
+      "title": "Name the failure mode",
+      "question": "The trace shows each org loads projects, each project loads issues, each issue loads comments, and each comment separately loads its author, reactions, and attachments. What is the root cause?",
+      "concept_keys": [
+        "graphql",
+        "resolver",
+        "n-plus-one",
+        "query-complexity",
+        "database"
+      ],
+      "options": [
+        {
+          "text": "The API has unbounded GraphQL complexity combined with N+1 resolver queries.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "The dashboard sends too many HTTP requests and should combine them into one request.",
+          "correct": false,
+          "hint": "The dashboard already sends one GraphQL request. The problem is the amount of server work hidden inside that single request.",
+          "id": "b"
+        },
+        {
+          "text": "The unrelated endpoints are failing because their handlers share the same code path.",
+          "correct": false,
+          "hint": "They can fail even with different handlers if they share saturated API CPU, database capacity, or connection pools. Focus on what caused the shared resources to saturate.",
+          "id": "c"
+        },
+        {
+          "text": "The database is under-provisioned for normal traffic and needs a larger instance class.",
+          "correct": false,
+          "hint": "The database handled 8,000 queries/second before this operation and then jumped to 220,000 queries/second. That change is better explained by request shape than by baseline capacity alone.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The query is allowed to traverse many nested lists, and each resolver issues separate SELECTs for each parent item. That is the N+1 pattern multiplied across seven levels, which explains why 150 requests/minute can become 220,000 database queries/second. A larger database might delay the failure, but it does not stop one client from requesting unbounded work."
+    },
+    {
+      "title": "Stop the bleeding safely",
+      "question": "You need a mitigation in minutes while preserving service for other customers and endpoints. What is the safest immediate action?",
+      "concept_keys": [
+        "graphql",
+        "api-gateway",
+        "database",
+        "rate-limit"
+      ],
+      "options": [
+        {
+          "text": "Increase the database connection pool so the SELECTs finish with less waiting.",
+          "correct": false,
+          "hint": "A larger pool often makes a saturated database worse by allowing more concurrent work. It does not reduce the number of SELECTs created by the query.",
+          "id": "a"
+        },
+        {
+          "text": "Temporarily reject the known expensive operation signature or tenant at the gateway.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Disable the entire GraphQL endpoint until the dashboard team ships a smaller query.",
+          "correct": false,
+          "hint": "This would protect the database, but it is a broad outage for all GraphQL users. Prefer a control that targets the known harmful traffic pattern.",
+          "id": "c"
+        },
+        {
+          "text": "Add two more API pods so unrelated endpoints have spare CPU capacity.",
+          "correct": false,
+          "hint": "More pods can increase pressure on the database because each pod can issue more SELECTs. The overload source is backend work per request, not just frontend compute.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Blocking the known operation signature or limiting the offending tenant at the gateway reduces the 220,000 queries/second source without taking all GraphQL traffic down. It also protects unrelated endpoints that share API and database capacity. Scaling pods or connection pools is tempting, but it can amplify database load instead of controlling it."
+    },
+    {
+      "title": "Bound what clients can ask for",
+      "question": "After the emergency block is in place, what durable API rule should be added before executing GraphQL operations?",
+      "concept_keys": [
+        "graphql",
+        "query-complexity",
+        "depth-limit",
+        "cost-limit",
+        "pagination",
+        "rate-limit"
+      ],
+      "options": [
+        {
+          "text": "Limit all tenants to 150 GraphQL requests/minute regardless of query shape.",
+          "correct": false,
+          "hint": "The incident happened at 150 requests/minute. A request-count limit alone does not bound the work inside each request.",
+          "id": "a"
+        },
+        {
+          "text": "Cache complete dashboard responses for 60 seconds at the edge for every tenant.",
+          "correct": false,
+          "hint": "A full-response cache can help repeated identical reads, but it does not make arbitrary new queries safe. It also does not bound first-request cost.",
+          "id": "b"
+        },
+        {
+          "text": "Require every GraphQL query to be shorter than 10 KB of request body text.",
+          "correct": false,
+          "hint": "Text size is a weak proxy for work. A short query can traverse large lists and call many resolvers.",
+          "id": "c"
+        },
+        {
+          "text": "Enforce maximum depth, weighted cost limits, and required pagination on list fields.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Depth limits stop excessive nesting, cost limits account for expensive fields, and pagination bounds the size of each list expansion. Together they control the work a client can request before any resolver runs. A plain 150 requests/minute limit cannot work here because that exact rate already caused the outage."
+    },
+    {
+      "title": "Reduce work for allowed queries",
+      "question": "Some nested dashboard queries remain valid after depth, cost, and pagination limits. How should the resolver layer reduce database SELECTs for those allowed queries?",
+      "concept_keys": [
+        "resolver",
+        "n-plus-one",
+        "batching",
+        "request-cache",
+        "database"
+      ],
+      "options": [
+        {
+          "text": "Move nested resolver reads to a read replica with a larger connection pool.",
+          "correct": false,
+          "hint": "A replica can protect the primary, but it still receives the same multiplied query stream. The API should avoid creating that many queries in the first place.",
+          "id": "a"
+        },
+        {
+          "text": "Batch related loads by ID and cache repeated loads within the same request.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Add indexes on every foreign key used by the nested resolvers.",
+          "correct": false,
+          "hint": "Indexes can make individual SELECTs faster, and they may be necessary, but they do not reduce the number of SELECTs. The incident is dominated by query count fan-out.",
+          "id": "c"
+        },
+        {
+          "text": "Memoize resolver SQL results globally for ten minutes across all tenants.",
+          "correct": false,
+          "hint": "A broad global cache risks stale data and tenant data leakage unless carefully keyed and invalidated. Start with safe per-request reuse and grouped database access.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Batching turns many per-parent SELECTs into fewer queries such as loading all authors for a page of comments by ID. A request-scoped cache also avoids fetching the same author or attachment repeatedly during one GraphQL execution. Indexes and replicas may help capacity, but they do not fix the N+1 query pattern."
+    },
+    {
+      "title": "Make capacity fair and verify the fix",
+      "question": "Before removing the emergency block, what rollout and validation plan best proves the fix protects everyone?",
+      "concept_keys": [
+        "per-tenant-budget",
+        "query-complexity",
+        "load-test",
+        "database",
+        "graphql"
+      ],
+      "options": [
+        {
+          "text": "Ask the customer to avoid deep dashboard filters and reopen traffic after they confirm.",
+          "correct": false,
+          "hint": "Client cooperation helps, but production safety should not rely on a client always sending cheap queries. The server needs enforceable limits.",
+          "id": "a"
+        },
+        {
+          "text": "Replay the seven-level query at 150 requests/minute with tenant cost budgets and verify database query rate, latency, and unrelated endpoints stay within limits.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Ship the resolver batching change first, then add query limits later if another spike occurs.",
+          "correct": false,
+          "hint": "Batching reduces one failure mode, but it does not bound arbitrary future query shapes. Safe rollout should include both work reduction and enforced budgets.",
+          "id": "c"
+        },
+        {
+          "text": "Enable the dashboard again and watch only the global API error rate for one hour.",
+          "correct": false,
+          "hint": "Global error rate can hide one tenant consuming too much capacity until other users are already affected. You need tenant-level and database-level confirmation.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The validation must replay the risky workload, because the incident happened at 150 requests/minute and affected unrelated endpoints. Per-tenant budgets tied to query cost prevent one customer from consuming shared capacity even when global traffic looks normal. Watching only global errors is too late and too coarse to prove fairness."
+    }
+  ],
+  "takeaway": "GraphQL makes one request capable of doing a lot of server work, so APIs must bound depth, cost, and list sizes before execution. Fix N+1 resolver behavior with batching and request-scoped caching, but do not treat that as a substitute for enforced query budgets. In shared systems, validate fixes with tenant-level load tests and metrics for both the API and database.",
+  "review_issues": []
+}

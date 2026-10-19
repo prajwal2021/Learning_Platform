@@ -1,0 +1,389 @@
+{
+  "slug": "wallet-balance-dips-below-zero",
+  "title": "Wallet balances occasionally go negative during busy hours",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "databases",
+    "concurrency",
+    "transactions",
+    "payments",
+    "consistency"
+  ],
+  "scenario": "A prepaid wallet service handles about 300 debit requests per second for the same popular merchant accounts. During two busy periods each day, wallets that start with $20 sometimes end at -$5 or -$10, even though every debit checks the current balance before subtracting funds. The database uses READ COMMITTED isolation, and the code performs SELECT balance, then later UPDATE balance = balance - amount in two separate statements.",
+  "goal": "Find the race that allows overspending and choose a production-safe fix that preserves the wallet invariant.",
+  "concepts": [
+    {
+      "key": "wallet-balance",
+      "name": "Wallet balance",
+      "summary": "A stored amount of money available for spending. In a prepaid system, the balance must not go below zero unless the product explicitly allows credit.",
+      "used_here": "The service must prevent debits from reducing a wallet below $0."
+    },
+    {
+      "key": "read-committed",
+      "name": "READ COMMITTED",
+      "summary": "A database isolation level where each statement sees only data committed before that statement starts. It does not make a multi-statement check-and-write sequence automatically safe from races.",
+      "used_here": "The SELECT can see a balance that is no longer enough by the time the later UPDATE runs."
+    },
+    {
+      "key": "check-then-act-race",
+      "name": "Check-then-act race",
+      "summary": "A bug where code checks a condition and then acts later, but another concurrent operation changes the condition in between. It is also called a time-of-check/time-of-use problem.",
+      "used_here": "Several debit requests check that $20 is available, then all subtract $5 based on that earlier check."
+    },
+    {
+      "key": "observability",
+      "name": "Observability",
+      "summary": "Logs, metrics, traces, and database records that let engineers understand what happened in production. Good evidence shows timing, inputs, and outcomes for the same entity.",
+      "used_here": "Per-wallet request logs and SQL timing show whether concurrent requests saw the same balance and all debited it."
+    },
+    {
+      "key": "replica-lag",
+      "name": "Replica lag",
+      "summary": "Delay between a primary database commit and when a read replica catches up. Reads from a lagging replica can return stale data.",
+      "used_here": "It is a possible source of stale reads, but the incident also needs evidence about how the write was guarded."
+    },
+    {
+      "key": "atomic-conditional-update",
+      "name": "Atomic conditional update",
+      "summary": "A single database statement that both checks a condition and changes the row if the condition is true. The database evaluates the condition while applying the write, so concurrent writers cannot slip between the check and the update.",
+      "used_here": "The debit can be written as UPDATE wallets SET balance = balance - ? WHERE id = ? AND balance >= ?."
+    },
+    {
+      "key": "affected-rows",
+      "name": "Affected rows",
+      "summary": "The number of rows a write statement actually changed. Applications can use it to decide whether a conditional write succeeded.",
+      "used_here": "If the conditional debit updates one row, it succeeded; if it updates zero rows, the wallet did not have enough available funds at write time."
+    },
+    {
+      "key": "row-level-lock",
+      "name": "Row-level lock",
+      "summary": "A database lock on a specific row that prevents conflicting writes from proceeding at the same time. Databases commonly take this lock while updating a row.",
+      "used_here": "Concurrent conditional updates to the same wallet serialize on that wallet row."
+    },
+    {
+      "key": "transaction",
+      "name": "Transaction",
+      "summary": "A group of database operations that commit or roll back together. Transactions are used to preserve invariants across related reads and writes.",
+      "used_here": "A row-locking approach would need the balance check and debit mutation in the same transaction."
+    },
+    {
+      "key": "serializable-isolation",
+      "name": "Serializable isolation",
+      "summary": "A strong isolation level where concurrent transactions behave as if they ran one at a time. Real systems may abort transactions under conflicts, so callers must handle retries.",
+      "used_here": "It can protect the invariant if the check and write are in one transaction and serialization failures are retried correctly."
+    },
+    {
+      "key": "in-process-mutex",
+      "name": "In-process mutex",
+      "summary": "A lock inside one application process that lets only one local thread enter a critical section. It does not coordinate with other processes or machines.",
+      "used_here": "A per-wallet mutex in one API pod cannot protect the wallet when other pods handle requests for the same wallet."
+    },
+    {
+      "key": "horizontal-scaling",
+      "name": "Horizontal scaling",
+      "summary": "Running multiple service instances to handle more traffic. Each instance has its own memory and can receive requests independently.",
+      "used_here": "The wallet service runs across pods, so memory-only locks do not create a single global ordering."
+    },
+    {
+      "key": "hot-row-contention",
+      "name": "Hot row contention",
+      "summary": "A performance bottleneck when many requests update the same database row. Correct serialization may increase latency for that row under high write rates.",
+      "used_here": "Popular merchant wallets receiving about 300 debits per second can queue on the same wallet row."
+    },
+    {
+      "key": "ledger",
+      "name": "Ledger",
+      "summary": "An append-only record of money movements. It gives an auditable history instead of treating the current balance as the only source of truth.",
+      "used_here": "A redesign can record debits and credits as ledger entries while preserving an available-balance invariant."
+    },
+    {
+      "key": "reserved-balance",
+      "name": "Reserved balance",
+      "summary": "Funds set aside for pending operations so they cannot be spent twice. Available balance is usually total funds minus reservations and settled debits.",
+      "used_here": "A reservation model can prevent overspending while allowing later settlement and auditability."
+    },
+    {
+      "key": "sharding",
+      "name": "Sharding",
+      "summary": "Splitting data across multiple partitions to increase capacity. It is safe only when each partition still preserves the business invariant it owns.",
+      "used_here": "Randomly splitting one wallet balance across shards can break the exact prepaid invariant unless the account semantics define independent sub-wallets."
+    },
+    {
+      "key": "retry-handling",
+      "name": "Retry handling",
+      "summary": "Logic for safely repeating an operation after a transient failure or conflict. Retrying must not create duplicate successful business actions.",
+      "used_here": "Retries are appropriate for transient database conflicts, but not for turning an insufficient-funds result into repeated debit attempts."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with evidence for one wallet",
+      "question": "A wallet that started at $20 ended at -$5 after a burst of $5 debits. Where should you look first to understand whether this is a concurrency bug?",
+      "concept_keys": [
+        "wallet-balance",
+        "observability",
+        "read-committed",
+        "replica-lag"
+      ],
+      "options": [
+        {
+          "text": "Compare primary and read-replica lag during the burst and assume stale replica reads caused the negative balance.",
+          "correct": false,
+          "hint": "Stale reads are worth checking, but you still need to see whether the write itself enforced the non-negative rule.",
+          "id": "a"
+        },
+        {
+          "text": "Inspect daily settlement reports from external payment partners to see whether the merchant was charged extra fees.",
+          "correct": false,
+          "hint": "Settlement can explain accounting mismatches after the fact, but it will not show why the service accepted too many debits against one wallet.",
+          "id": "b"
+        },
+        {
+          "text": "Group request logs and SQL timings by wallet id, showing each SELECT balance result, debit amount, UPDATE, and commit time.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Review CPU and memory profiles for the API pods during the busy period to find a slow handler path.",
+          "correct": false,
+          "hint": "Resource pressure can make races easier to reproduce, but it does not by itself explain a balance crossing below zero.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The first useful evidence is the ordered history for the same wallet: what each request read, what it tried to subtract, and when the writes committed. That directly tests whether multiple requests made decisions from the same balance. Replica lag is tempting, but even a stale read should not be able to create a negative balance if the database write enforces the invariant."
+    },
+    {
+      "title": "Interpret the trace",
+      "question": "The trace for wallet W42 shows five requests within 12 ms. Each SELECT returned balance = $20, each request attempted a $5 debit, and each later ran UPDATE wallets SET balance = balance - 5 WHERE id = 'W42' and committed. What does this show?",
+      "concept_keys": [
+        "wallet-balance",
+        "read-committed",
+        "check-then-act-race"
+      ],
+      "options": [
+        {
+          "text": "A classic overwrite of the same new balance caused several committed debits to be lost from the stored wallet row.",
+          "correct": false,
+          "hint": "Here the UPDATE subtracts from the current stored value, so the committed debits are not being overwritten by the same final value.",
+          "id": "a"
+        },
+        {
+          "text": "A rounding error in currency math accumulated across the five requests and pushed the balance below zero.",
+          "correct": false,
+          "hint": "The amounts are exact $5 debits from a $20 balance, and the final value changes in $5 increments. The pattern points to ordering, not arithmetic precision.",
+          "id": "b"
+        },
+        {
+          "text": "A read-replica returned old data, so moving all reads to the primary fully prevents this class of overspend.",
+          "correct": false,
+          "hint": "The trace tells you several requests made the same decision, but the important question is whether the later write still checked the invariant.",
+          "id": "c"
+        },
+        {
+          "text": "A stale check-then-act race allowed several requests to pass the funds check before any of their debits were reflected in later checks.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Five $5 debits require $25, but the wallet only had $20. Under READ COMMITTED, separate SELECT and UPDATE statements do not reserve the balance between them, so all five requests can decide funds are available. The overwrite explanation would more often leave the balance too high by losing debits; this trace shows all debits were applied after stale checks."
+    },
+    {
+      "title": "Move the invariant into the write",
+      "question": "You want the smallest production fix while keeping READ COMMITTED. Which debit statement pattern should replace the separate SELECT-then-unconditional-UPDATE flow?",
+      "concept_keys": [
+        "atomic-conditional-update",
+        "affected-rows",
+        "read-committed",
+        "row-level-lock",
+        "transaction",
+        "serializable-isolation"
+      ],
+      "options": [
+        {
+          "text": "Switch the database to SERIALIZABLE isolation globally, but keep the current two statements and add no conflict retry handling.",
+          "correct": false,
+          "hint": "Strong isolation is not a magic switch when the operation is not wrapped and handled as a transaction with possible aborts.",
+          "id": "a"
+        },
+        {
+          "text": "Use SELECT FOR UPDATE for the balance, but keep the SELECT and UPDATE as separate autocommit statements.",
+          "correct": false,
+          "hint": "A row lock only protects the gap if it is held across both the check and the mutation in one transaction.",
+          "id": "b"
+        },
+        {
+          "text": "Run UPDATE wallets SET balance = balance - ? WHERE id = ? AND balance >= ?, and treat one affected row as success.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Keep the SELECT first, then run the same UPDATE only if the selected balance was greater than the debit amount.",
+          "correct": false,
+          "hint": "That still leaves a window where another request can spend the same funds after the SELECT and before the UPDATE.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The conditional UPDATE makes the balance check and the subtraction one atomic database operation. If two $5 debits race when only $5 remains, only one can update the row; the other sees zero affected rows. A SELECT FOR UPDATE can also work, but not if the lock is released before the UPDATE because the statements run separately."
+    },
+    {
+      "title": "Handle the failed conditional write",
+      "question": "After the conditional UPDATE is deployed, a debit request sometimes gets zero affected rows. What should the application do for that request?",
+      "concept_keys": [
+        "affected-rows",
+        "wallet-balance",
+        "retry-handling"
+      ],
+      "options": [
+        {
+          "text": "Run a SELECT balance after the zero-row update and approve the debit if the returned balance is still positive.",
+          "correct": false,
+          "hint": "A later read can again be stale relative to another concurrent debit decision. The write result is the authoritative outcome.",
+          "id": "a"
+        },
+        {
+          "text": "Record the debit as successful and let a nightly reconciliation job restore the wallet to zero if it went negative.",
+          "correct": false,
+          "hint": "Reconciliation can detect damage later, but prepaid systems need to prevent the negative balance at the time of spending.",
+          "id": "b"
+        },
+        {
+          "text": "Retry the conditional UPDATE in a loop until it eventually updates one row or the client times out.",
+          "correct": false,
+          "hint": "Zero affected rows is a valid business outcome when funds are gone, not a transient database error.",
+          "id": "c"
+        },
+        {
+          "text": "Return an insufficient-funds result for that debit and do not record it as a successful balance-changing operation.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "With the conditional UPDATE, zero affected rows means the database could not find that wallet with enough balance at the moment of the write. That should become a normal insufficient-funds response, not another attempt to force the debit through. Retrying is tempting for deadlocks or serialization failures, but this result is the invariant doing its job."
+    },
+    {
+      "title": "Evaluate an application-level lock",
+      "question": "A teammate proposes adding a per-wallet mutex inside each API pod to serialize debits before they reach the database. The service runs 12 pods and pods restart during deploys. What should you decide?",
+      "concept_keys": [
+        "in-process-mutex",
+        "horizontal-scaling",
+        "atomic-conditional-update",
+        "wallet-balance"
+      ],
+      "options": [
+        {
+          "text": "Use the mutex and configure the load balancer to send each wallet id to the same pod whenever possible.",
+          "correct": false,
+          "hint": "Routing rules can reduce collisions, but deploys, failures, and rebalancing still leave correctness outside the database.",
+          "id": "a"
+        },
+        {
+          "text": "Do not rely on the in-process mutex for correctness; keep the database-enforced conditional write as the source of truth.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Use the mutex as the main fix because each pod can prevent two local requests from debiting the same wallet at once.",
+          "correct": false,
+          "hint": "The requests for one wallet are not guaranteed to land on the same process, and each process has separate memory.",
+          "id": "c"
+        },
+        {
+          "text": "Use the mutex only during busy hours and remove the database condition to reduce row-lock pressure.",
+          "correct": false,
+          "hint": "The bug appears during busy hours because concurrency is high. That is exactly when a local-only guard is least reliable.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A mutex inside one pod only coordinates threads in that pod. With 12 pods, two requests for the same wallet can run in different processes and both bypass each other's locks. The database condition protects the shared row no matter which pod handles the request."
+    },
+    {
+      "title": "Plan for the hot-wallet trade-off",
+      "question": "The conditional UPDATE stops negative balances, but the most popular wallet now has p95 debit latency rise from 12 ms to 90 ms during 300 requests per second because requests queue on the same row. Product still requires exact prepaid behavior. What is the right direction if this becomes a capacity limit?",
+      "concept_keys": [
+        "hot-row-contention",
+        "row-level-lock",
+        "ledger",
+        "reserved-balance",
+        "sharding",
+        "wallet-balance"
+      ],
+      "options": [
+        {
+          "text": "Cache each wallet balance in the API layer for 100 ms so fewer requests need to wait on the database row.",
+          "correct": false,
+          "hint": "A cache can reduce reads, but spending decisions must be based on an atomic reservation of funds, not a shared stale estimate.",
+          "id": "a"
+        },
+        {
+          "text": "Accept balances down to -$10 for hot wallets and run a compensating job after the rush to bring them back to zero.",
+          "correct": false,
+          "hint": "That changes the product from prepaid spending to short-term credit and allows the incident to continue by design.",
+          "id": "b"
+        },
+        {
+          "text": "Keep the invariant exact, and redesign around ledger entries plus atomic reservations or explicit sub-wallet semantics if partitioning is allowed.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Randomly shard each wallet balance into many rows and let debits pick any shard, then sum the shards asynchronously later.",
+          "correct": false,
+          "hint": "Sharding helps only if each shard owns a well-defined portion of the invariant. Random choice plus async summing can still overspend the total wallet.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Correctness and throughput are now in tension on a hot row. A ledger and reservation model can preserve an auditable money trail while still making the available-funds decision atomic; partitioning is safe only when the business defines independent buckets of funds. Simply allowing negative balances or using cached estimates avoids the queue by weakening the prepaid invariant."
+    },
+    {
+      "title": "Confirm the fix worked",
+      "question": "What evidence should you use after rollout to confirm the incident is fixed and the new bottleneck is understood?",
+      "concept_keys": [
+        "observability",
+        "affected-rows",
+        "wallet-balance",
+        "hot-row-contention",
+        "retry-handling"
+      ],
+      "options": [
+        {
+          "text": "Confirm that API error rates decreased, then remove detailed per-wallet logging to reduce production noise.",
+          "correct": false,
+          "hint": "The important signal is not just transport errors. You need business-level outcomes for each wallet and the new contention behavior.",
+          "id": "a"
+        },
+        {
+          "text": "Track the minimum wallet balance, count zero-row conditional updates as declined debits, and monitor lock-wait or update latency for hot wallets.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Verify that retries increased during busy hours, since more retries mean the database is rejecting unsafe debits.",
+          "correct": false,
+          "hint": "A declined debit should not be treated as a retryable technical failure. Increased retries may indicate clients or workers are mishandling the new result.",
+          "id": "c"
+        },
+        {
+          "text": "Check that average wallet balance across all merchants remains positive and that total debit volume is similar to yesterday.",
+          "correct": false,
+          "hint": "Averages can hide a few negative wallets, and similar volume does not prove the invariant held per wallet.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The fix should produce two visible effects: no wallet balance below $0, and some debits declined with zero affected rows when funds are exhausted. Because the fix serializes updates to hot rows, lock waits and update latency must also be watched. Average balances and total volume are too coarse to prove that the per-wallet invariant is safe."
+    }
+  ],
+  "takeaway": "A separate balance check followed by a later debit is not safe under concurrency, even when each statement reads committed data. Put the funds check and mutation in one database-enforced operation, and treat zero affected rows as a normal insufficient-funds result. Once correctness is restored, handle hot-row contention with designs that preserve the money invariant, not with process-local locks or stale caches.",
+  "review_issues": [
+    "Step 2: If hints are visible before answering, some hints give away the correct choice. For example, in challenge step 4 the retry option hint says zero affected rows is a valid business outcome, which directly points to the insufficient-funds answer.",
+    "Step 4: The top-level concepts section reveals later answers before the questions. For example, `atomic-conditional-update` gives the exact SQL pattern for challenge step 3, `affected-rows` gives the answer logic for challenge step 4, and `in-process-mutex`/`horizontal-scaling` reveal the reasoning for challenge step 5.",
+    "Step 4: Challenge step 3’s correct option and explanation effectively reveal challenge step 4’s answer by establishing that one affected row means success and zero affected rows means the debit did not have enough funds at write time."
+  ]
+}

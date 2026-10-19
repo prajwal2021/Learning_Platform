@@ -1,0 +1,368 @@
+{
+  "slug": "websocket-reconnect-wave",
+  "title": "WebSocket gateways restart every five minutes in synchronized waves",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "websocket",
+    "load-balancing",
+    "reconnects",
+    "incident-response",
+    "reliability"
+  ],
+  "scenario": "A realtime service runs a gateway fleet with about 180,000 concurrent WebSocket connections. During an incident, gateway CPU jumps to 100% on a fixed five-minute cadence, connection attempts spike to about 70,000 per second, and several pods fail liveness checks. Normal message volume is steady between spikes, no deploy started the incident, and the failures appear across many gateway pods at nearly the same time.",
+  "goal": "Find the cause of the synchronized spikes and design a production-safe fix that prevents both idle disconnects and reconnect storms.",
+  "concepts": [
+    {
+      "key": "websocket",
+      "name": "WebSocket",
+      "summary": "A WebSocket is a long-lived connection that lets a client and server send messages in both directions. Unlike short HTTP requests, one connection can stay open for minutes or hours.",
+      "used_here": "The realtime clients hold long-lived connections to gateway pods."
+    },
+    {
+      "key": "gateway",
+      "name": "Gateway",
+      "summary": "A gateway is a service that accepts external client traffic and forwards or processes it inside the system. It is often the first application hop after a load balancer.",
+      "used_here": "The gateway pods terminate client WebSocket sessions and pay the CPU cost of handshakes and connection management."
+    },
+    {
+      "key": "connection-attempt",
+      "name": "Connection attempt",
+      "summary": "A connection attempt is a client trying to open a new network connection. Large bursts can be expensive even if the connection later succeeds.",
+      "used_here": "The incident includes bursts of roughly 70,000 new WebSocket attempts per second."
+    },
+    {
+      "key": "liveness-check",
+      "name": "Liveness check",
+      "summary": "A liveness check is a probe used by an orchestrator to decide whether a container should be restarted. If it fails during overload, restarts can make the overload worse.",
+      "used_here": "Some gateway pods fail liveness checks when CPU is saturated by connection churn."
+    },
+    {
+      "key": "load-balancer",
+      "name": "Load balancer",
+      "summary": "A load balancer distributes client connections across backend servers. It can also enforce connection limits and timeouts.",
+      "used_here": "The gateways sit behind a load balancer that may affect long-lived connections."
+    },
+    {
+      "key": "idle-timeout",
+      "name": "Idle timeout",
+      "summary": "An idle timeout closes a connection when no bytes have crossed it for a configured period. It is common on proxies and load balancers to conserve resources.",
+      "used_here": "One configuration to inspect is whether quiet WebSocket connections are being closed after a fixed idle period."
+    },
+    {
+      "key": "heartbeat",
+      "name": "Heartbeat",
+      "summary": "A heartbeat is a small periodic message used to prove that a long-lived connection is still alive. It keeps both endpoints aware that the connection is usable.",
+      "used_here": "The client and server protocol can include periodic traffic on otherwise quiet WebSocket sessions."
+    },
+    {
+      "key": "ping-pong",
+      "name": "Ping/pong",
+      "summary": "Ping and pong are lightweight WebSocket control frames used to check that the peer is still present. They are usually cheaper than reconnecting a full session.",
+      "used_here": "Gateways can use ping/pong frames to keep idle sessions active and detect dead peers."
+    },
+    {
+      "key": "reconnect-backoff",
+      "name": "Reconnect backoff",
+      "summary": "Reconnect backoff makes clients wait longer between repeated reconnect attempts. It reduces pressure on servers during outages or mass disconnects.",
+      "used_here": "Client reconnect behavior determines how a disconnection turns into gateway load."
+    },
+    {
+      "key": "jitter",
+      "name": "Jitter",
+      "summary": "Jitter adds randomness to a wait time so many clients do not act at the exact same instant. It is often paired with retries and timers.",
+      "used_here": "Randomized timing can spread client behavior that would otherwise be synchronized."
+    },
+    {
+      "key": "connection-draining",
+      "name": "Connection draining",
+      "summary": "Connection draining stops sending new work to an instance while letting existing work finish or close gracefully. It is used before restarts, deploys, and maintenance.",
+      "used_here": "Gateway pods need a controlled way to leave service without dropping all active clients at once."
+    },
+    {
+      "key": "readiness-check",
+      "name": "Readiness check",
+      "summary": "A readiness check tells traffic routers whether a pod should receive new traffic. It is separate from liveness, which decides whether the pod should be restarted.",
+      "used_here": "Gateway pods can be marked not ready before they are terminated so new connections go elsewhere."
+    },
+    {
+      "key": "handshake-rate-limit",
+      "name": "Handshake rate limit",
+      "summary": "A handshake rate limit caps how many new connection handshakes a service accepts in a time window. It protects CPU and memory during bursts.",
+      "used_here": "Gateways need a guardrail for new WebSocket handshakes when many clients reconnect at once."
+    },
+    {
+      "key": "retry-after",
+      "name": "Retry-After",
+      "summary": "Retry-After is a response hint that tells a client how long to wait before trying again. It is useful only when clients are implemented to honor it.",
+      "used_here": "Rejected or shed connection attempts can include a delay hint to reduce immediate retries."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the shape of the failure",
+      "question": "The fleet shows CPU spikes every five minutes and about 70,000 connection attempts per second during each spike. What is the best first investigation to separate gateway code overload from an external connection pattern?",
+      "concept_keys": [
+        "websocket",
+        "gateway",
+        "connection-attempt",
+        "liveness-check",
+        "load-balancer"
+      ],
+      "options": [
+        {
+          "text": "Compare message publish rates from upstream services to gateway egress throughput during the spike window.",
+          "correct": false,
+          "hint": "That would be useful for a fanout storm, but the incident already shows a large burst of new connection attempts.",
+          "id": "a"
+        },
+        {
+          "text": "Capture CPU profiles on the hottest gateway pod and immediately optimize the most expensive stack frame in the WebSocket handler.",
+          "correct": false,
+          "hint": "A CPU profile can help later, but the fixed five-minute cadence suggests you first need timing and source-of-load evidence across layers.",
+          "id": "b"
+        },
+        {
+          "text": "Correlate gateway accept logs, close reasons, load balancer metrics, and client reconnect timestamps around several spike windows.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Increase the liveness check timeout so pods are not restarted while CPU is high, then review whether the spike continues.",
+          "correct": false,
+          "hint": "Avoiding unnecessary restarts may reduce damage, but it does not explain why 70,000 new connections arrive in synchronized bursts.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The fastest way to debug a periodic connection storm is to line up timestamps from the gateways, clients, and load balancer. If closes occur just before the 70,000-per-second attempt burst, the CPU spike is likely handshake churn rather than normal message processing. CPU profiling is tempting, but optimizing a hot stack frame does not address a synchronized source of new work."
+    },
+    {
+      "title": "Identify the trigger",
+      "question": "The correlation shows many quiet WebSocket connections are closed by the load balancer at almost exactly 300 seconds since their last byte. Client traces show those same clients do not send any bytes on quiet sessions until roughly 600 seconds. What is the most likely root cause of the five-minute wave?",
+      "concept_keys": [
+        "websocket",
+        "load-balancer",
+        "idle-timeout",
+        "connection-attempt"
+      ],
+      "options": [
+        {
+          "text": "The load balancer is closing idle WebSockets before the clients send traffic, causing many clients to reconnect together.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "The Kubernetes scheduler is moving gateway pods every five minutes, forcing clients to reconnect to new pods.",
+          "correct": false,
+          "hint": "Pod movement would show up as pod termination or node events. Here, the close timing is tied to idle connection age.",
+          "id": "b"
+        },
+        {
+          "text": "The gateway process has a memory leak that reaches a threshold every five minutes and drops client connections.",
+          "correct": false,
+          "hint": "A leak would usually correlate with pod age or heap growth, not with many connections being closed at the same idle age by the load balancer.",
+          "id": "c"
+        },
+        {
+          "text": "The upstream message broker pauses every five minutes, so clients reconnect because they stop receiving business messages.",
+          "correct": false,
+          "hint": "The observed close reason is at the connection layer, and it depends on last-byte timing rather than message broker lag.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The numbers point to an idle-timeout mismatch: the load balancer closes quiet connections after 300 seconds, while clients can remain silent for about 600 seconds. That creates synchronized disconnects, followed by synchronized reconnects. A memory leak is a plausible overload story, but it does not explain the precise 300-second idle age of the closed connections."
+    },
+    {
+      "title": "Prevent the idle closes",
+      "question": "You need to stop quiet but healthy WebSocket sessions from being closed by the load balancer. Which protocol change is the safest production fix?",
+      "concept_keys": [
+        "websocket",
+        "heartbeat",
+        "ping-pong",
+        "idle-timeout",
+        "load-balancer"
+      ],
+      "options": [
+        {
+          "text": "Disable heartbeat traffic entirely so gateways spend less CPU while connections are idle.",
+          "correct": false,
+          "hint": "Removing periodic traffic makes quiet sessions look idle to middleboxes and can increase reconnect churn.",
+          "id": "a"
+        },
+        {
+          "text": "Rely on TCP keepalive defaults on the operating system instead of sending WebSocket-level frames.",
+          "correct": false,
+          "hint": "Default TCP keepalive intervals are often much longer than application and load balancer timeouts, and some proxies may not treat them the same as application bytes.",
+          "id": "b"
+        },
+        {
+          "text": "Change the client heartbeat to exactly 300 seconds so it matches the load balancer idle timeout and avoids extra background traffic.",
+          "correct": false,
+          "hint": "Matching a timeout exactly leaves no room for scheduling delay, network jitter, proxy buffering, or clock differences.",
+          "id": "c"
+        },
+        {
+          "text": "Send WebSocket ping/pong or equivalent heartbeat traffic on every connection at an interval safely below 300 seconds, such as 60 seconds, and time out peers that do not respond.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "A heartbeat interval comfortably below 300 seconds keeps the connection from becoming idle at the load balancer, and ping/pong also detects dead peers without a full reconnect. A 60-second interval creates predictable steady traffic, but it avoids catastrophic five-minute bursts. Setting the interval to exactly 300 seconds is tempting, but small delays would still let some connections cross the idle limit."
+    },
+    {
+      "title": "Make reconnects non-synchronized",
+      "question": "Even after adding heartbeats, clients still need safe behavior for real network drops and regional failures. What client reconnect policy should you deploy?",
+      "concept_keys": [
+        "reconnect-backoff",
+        "jitter",
+        "retry-after",
+        "connection-attempt"
+      ],
+      "options": [
+        {
+          "text": "Use exponential backoff with random jitter, cap the maximum delay, and honor server Retry-After hints when present.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Retry every five seconds on a fixed timer so the server gets a steady and predictable reconnect rate.",
+          "correct": false,
+          "hint": "A fixed timer is predictable for one client, but many clients using the same timer can stay synchronized after a common disconnect.",
+          "id": "b"
+        },
+        {
+          "text": "Open two WebSocket connections per client so one can stay active while the other reconnects after a failure.",
+          "correct": false,
+          "hint": "Extra connections increase baseline load and can double the size of a reconnect wave during shared failures.",
+          "id": "c"
+        },
+        {
+          "text": "Retry immediately for the first 30 seconds because most network drops are brief, then stop retrying until the user refreshes.",
+          "correct": false,
+          "hint": "Immediate retries are exactly what turns a shared failure into a burst. Stopping later also leaves recoverable sessions broken.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Exponential backoff reduces repeated pressure, and jitter spreads clients across time instead of letting them retry in lockstep. A maximum delay keeps recovery bounded, while Retry-After lets the server push clients away during overload. A fixed five-second retry sounds controlled, but after a common disconnect it still creates repeated synchronized waves."
+    },
+    {
+      "title": "Handle gateway deploys and restarts",
+      "question": "The team also wants deploys and pod replacements to avoid dropping tens of thousands of WebSockets at once. What rollout behavior should the gateways use?",
+      "concept_keys": [
+        "connection-draining",
+        "readiness-check",
+        "websocket",
+        "reconnect-backoff"
+      ],
+      "options": [
+        {
+          "text": "Use faster rolling deploys so each gateway is unavailable for less time and the fleet finishes replacement sooner.",
+          "correct": false,
+          "hint": "Finishing sooner can increase the number of simultaneous disconnects. For long-lived connections, controlled departure matters more than raw rollout speed.",
+          "id": "a"
+        },
+        {
+          "text": "Let liveness checks fail during shutdown so the orchestrator restarts pods that still have active connections.",
+          "correct": false,
+          "hint": "Liveness is for detecting broken processes. Using it for planned shutdown bypasses graceful traffic removal.",
+          "id": "b"
+        },
+        {
+          "text": "Before terminating a pod, mark it not ready, stop accepting new WebSockets, let existing connections drain for a bounded grace period, and close remaining sessions gradually with reconnect guidance.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Keep the pod ready until the final second so the load balancer can use all capacity during the rollout.",
+          "correct": false,
+          "hint": "If the pod stays ready, it can receive new long-lived connections just before termination and drop them immediately.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Draining separates removal from service from process termination: the pod stops receiving new connections, while existing WebSockets get time to finish or reconnect gradually. This prevents planned maintenance from creating the same kind of reconnect wave as an outage. Keeping pods ready until termination is tempting because it preserves capacity briefly, but it sacrifices the clients that connect right before shutdown."
+    },
+    {
+      "title": "Protect gateways during unavoidable storms",
+      "question": "Some old clients will not receive the reconnect update for weeks. What server-side guardrail should you add so a future reconnect wave does not drive gateway CPU to 100% again?",
+      "concept_keys": [
+        "handshake-rate-limit",
+        "retry-after",
+        "connection-attempt",
+        "gateway"
+      ],
+      "options": [
+        {
+          "text": "Double the number of gateway pods so a 70,000-per-second reconnect wave has more CPU available.",
+          "correct": false,
+          "hint": "More capacity can buy time, but a synchronized storm grows with the client population and can still exceed the new limit.",
+          "id": "a"
+        },
+        {
+          "text": "Add a per-gateway and fleet-level WebSocket handshake rate limit that sheds excess attempts with a retry delay hint when possible.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Move all reconnecting clients to a single overflow gateway pool to isolate normal traffic from the storm.",
+          "correct": false,
+          "hint": "Isolation can help, but concentrating handshakes without a limit can simply move the CPU failure to another pool.",
+          "id": "c"
+        },
+        {
+          "text": "Raise the liveness check failure threshold so pods continue running even while CPU is pinned.",
+          "correct": false,
+          "hint": "This may avoid restart amplification, but it does not cap the expensive work that is saturating the pods.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A handshake rate limit provides a hard ceiling on the CPU-heavy part of a reconnect storm, protecting the gateway even when some clients still retry badly. Returning a retry delay hint helps cooperative clients spread out. Doubling gateway capacity is tempting, but the fleet already saw 70,000 attempts per second; as the client base grows, an unbounded synchronized wave can grow too."
+    },
+    {
+      "title": "Confirm the fix and watch the trade-off",
+      "question": "After deploying 60-second ping/pong heartbeats, jittered reconnect backoff, connection draining, and handshake rate limits, which validation plan best proves the incident is fixed without hiding a new problem?",
+      "concept_keys": [
+        "heartbeat",
+        "ping-pong",
+        "jitter",
+        "connection-draining",
+        "handshake-rate-limit",
+        "liveness-check"
+      ],
+      "options": [
+        {
+          "text": "Verify that heartbeat traffic remains unchanged, because the fix should not add load during normal operation.",
+          "correct": false,
+          "hint": "A more frequent heartbeat intentionally trades some steady background traffic for avoiding catastrophic bursts.",
+          "id": "a"
+        },
+        {
+          "text": "Verify only that gateway CPU stays below the alert threshold, because CPU was the user-visible cause of the incident.",
+          "correct": false,
+          "hint": "CPU can look better while disconnects or reconnect retries still harm clients. You need to check the mechanism, not just one symptom.",
+          "id": "b"
+        },
+        {
+          "text": "Verify only that the load balancer reports fewer closed connections, because that was the direct trigger of the reconnect wave.",
+          "correct": false,
+          "hint": "Fewer idle closes is necessary, but it does not prove reconnect behavior, pod health, or the new steady traffic cost are acceptable.",
+          "id": "c"
+        },
+        {
+          "text": "Verify idle-timeout closes fall near zero, connection attempts no longer spike every five minutes, gateway CPU stays below the alert threshold, liveness failures stop, and steady heartbeat traffic increases by the expected amount.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The validation should cover the whole chain: idle closes, reconnect attempt rate, gateway CPU, pod health, and the expected rise in background heartbeat traffic. The fix is not free; 60-second ping/pong adds steady traffic, but that is a controlled cost compared with 70,000 handshakes per second. Watching only CPU is tempting, but it can hide remaining client disconnects or excessive new heartbeat load."
+    }
+  ],
+  "takeaway": "For long-lived connections, compare every heartbeat or keepalive interval with every proxy and load balancer idle timeout in the path. Prevent shared failures from becoming synchronized client behavior by using jittered backoff, graceful draining, and server-side handshake limits. Extra capacity helps, but it is not a substitute for removing the synchronization mechanism.",
+  "review_issues": []
+}

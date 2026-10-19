@@ -1,0 +1,477 @@
+{
+ "slug": "spring-boot",
+ "name": "Spring and Spring Boot",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between Spring and Spring Boot?",
+    "answer": "Spring is the core framework that provides dependency injection, web MVC, data access, and other infrastructure. Spring Boot builds on top of Spring and reduces setup by giving you auto-configuration, starter dependencies, and an embedded server. You use Spring Boot when you want to start quickly with sensible defaults and less XML or manual configuration. You still use Spring concepts underneath Boot.",
+    "real_world": "A team starting a new REST API usually picks Spring Boot because it avoids wiring Tomcat, MVC, and JSON config by hand. When onboarding to an older codebase, juniors often confuse Boot features with Spring itself.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does Spring Boot auto-configuration actually do?"
+   },
+   {
+    "question": "What is dependency injection in Spring?",
+    "answer": "Dependency injection means Spring creates and supplies an object’s dependencies instead of the object creating them itself. This makes code easier to test, swap implementations, and manage lifecycles. In Spring, you usually inject dependencies through constructors, which is the preferred approach for required dependencies. The main benefit is loose coupling between components.",
+    "real_world": "In production, DI makes it easy to replace a real payment client with a mock in tests. It also helps when one service depends on several repositories or helpers that should be managed by Spring.",
+    "code_lang": "java",
+    "code": "@Service\nclass OrderService {\n  private final PaymentClient client;\n  OrderService(PaymentClient client) { this.client = client; }\n}",
+    "follow_up": "Why is constructor injection usually preferred over field injection?"
+   },
+   {
+    "question": "What is the difference between `@Component`, `@Service`, `@Repository`, and `@Controller`?",
+    "answer": "They are all stereotypes that make a class a Spring bean through component scanning. `@Service`, `@Repository`, and `@Controller` are specialized forms of `@Component` that express intent. `@Repository` also helps translate persistence exceptions into Spring’s data access exceptions. The main reason to use the specific annotations is clarity and framework behavior, not different basic bean registration.",
+    "real_world": "A codebase with clear stereotypes is easier to navigate because you can tell whether a class belongs to business logic, persistence, or web handling. Using the right annotation also helps with exception handling in data layers.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is component scanning and when does Spring use it?"
+   },
+   {
+    "question": "What does `@SpringBootApplication` do?",
+    "answer": "`@SpringBootApplication` is a convenience annotation that combines common setup annotations for a Spring Boot app. It typically enables auto-configuration, component scanning, and configuration support from the application’s main class. It reduces boilerplate by putting the usual bootstrapping in one place. You still control behavior by defining beans and properties as needed.",
+    "real_world": "Most Boot applications start with this annotation on the main class, so new developers need to recognize what it implies. If component scanning seems to miss classes, the location of this class is often the reason.",
+    "code_lang": "java",
+    "code": "@SpringBootApplication\npublic class App {\n  public static void main(String[] args) {\n    SpringApplication.run(App.class, args);\n  }\n}",
+    "follow_up": "What can cause a bean not to be found during component scanning?"
+   },
+   {
+    "question": "What is a bean in Spring?",
+    "answer": "A bean is an object that Spring creates, configures, and manages in its application context. Beans can be injected into other beans, and Spring controls their lifecycle. You define beans with annotations like `@Component` or through configuration methods. The important part is that Spring owns the instance, not your code.",
+    "real_world": "When someone says a bean is missing, it usually means Spring never created or registered that object. Debugging often starts with checking whether the class is scanned or declared as a bean.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does Spring know which beans to inject when there are multiple candidates?"
+   },
+   {
+    "question": "What is the application context in Spring?",
+    "answer": "The application context is Spring’s container that holds bean definitions, creates beans, and resolves dependencies. It is the central runtime object for accessing managed components and framework services. In simple terms, it is the registry and factory for the app’s objects. Most Spring features depend on it being built correctly at startup.",
+    "real_world": "Startup errors like missing beans or bad configuration are usually context initialization failures. In tests, a smaller context is often used to load only the beans needed for the scenario.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens during application startup when the context is created?"
+   },
+   {
+    "question": "What is the difference between `@Autowired` and constructor injection?",
+    "answer": "`@Autowired` tells Spring to inject a dependency, while constructor injection is the pattern of receiving dependencies through a constructor. You can use `@Autowired` on a constructor, but with a single constructor it is often optional in modern Spring code. Constructor injection is usually preferred because it makes dependencies explicit, supports immutability, and is easier to test. Field injection hides dependencies and is harder to use in tests.",
+    "real_world": "A junior developer may use field injection because it looks shorter, but that makes unit tests and required-dependency checks worse. Teams often standardize on constructor injection to keep code consistent.",
+    "code_lang": "java",
+    "code": "@Service\nclass UserService {\n  private final UserRepo repo;\n  UserService(UserRepo repo) { this.repo = repo; }\n}",
+    "follow_up": "What problem does Spring solve if you have multiple beans of the same type?"
+   },
+   {
+    "question": "What is Spring Boot auto-configuration?",
+    "answer": "Auto-configuration is Boot’s way of creating and wiring beans automatically based on what is on the classpath and what properties are set. It saves you from writing a lot of repetitive configuration for common cases like web, JSON, or data access. You can override it by defining your own beans or changing properties. The trade-off is convenience versus needing to understand what Boot chose for you.",
+    "real_world": "A team can add a database starter and get a working connection factory without manually defining every low-level bean. If a default is wrong, though, the fix is often to override the auto-configured bean or property.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you figure out why a Boot app did or did not auto-configure something?"
+   },
+   {
+    "question": "What is `application.properties` or `application.yml` used for in Spring Boot?",
+    "answer": "These files hold external configuration such as server settings, database URLs, logging levels, and custom app values. Boot reads them and binds values into beans or framework settings at startup. This keeps configuration out of code and makes it easy to change per environment. You use properties when the value may differ between local, test, and production deployments.",
+    "real_world": "A service might use one database in development and another in production, with the same code but different configuration files. Misconfigured properties are a common cause of startup failures and wrong-environment bugs.",
+    "code_lang": "yaml",
+    "code": "server:\n  port: 8081\napp:\n  name: orders-api",
+    "follow_up": "How do you inject a property value into a Spring bean?"
+   },
+   {
+    "question": "What problem does the Spring IoC container solve?",
+    "answer": "It creates, wires, and manages application objects for you instead of having business code construct its own dependencies. That makes code easier to test, replace, and configure because object relationships are defined centrally. In Spring, the container also manages bean lifecycle concerns such as initialization and destruction.",
+    "real_world": "In a larger app, this lets you swap a real payment client for a mock in tests without rewriting the service. It also prevents scattered `new` calls from making configuration changes painful.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does Spring know which objects to manage as beans?"
+   },
+   {
+    "question": "What is component scanning in Spring?",
+    "answer": "Component scanning is how Spring finds classes annotated with stereotypes like `@Component`, `@Service`, `@Repository`, and `@Controller` and registers them as beans. The scan starts from configured base packages and walks the classpath looking for those annotations. If a class is outside the scanned packages, Spring will not pick it up automatically.",
+    "real_world": "A common startup bug is a bean not being found because it lives in a package outside the application’s scan path. Teams often fix this by moving packages or adjusting the base package structure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if two scanned beans have the same type?"
+   },
+   {
+    "question": "What is `@Bean` used for?",
+    "answer": "`@Bean` marks a factory method whose return value should be registered as a Spring bean. It is typically used when you need to create and configure objects from third-party libraries that you cannot annotate yourself. It also helps when construction requires custom setup logic.",
+    "real_world": "This is common for HTTP clients, object mappers, and messaging clients. It keeps creation logic in one place instead of repeating setup across services.",
+    "code_lang": "java",
+    "code": "@Configuration\nclass Config {\n  @Bean\n  ObjectMapper objectMapper() {\n    return new ObjectMapper();\n  }\n}",
+    "follow_up": "How is a `@Bean` method different from a regular helper method?"
+   },
+   {
+    "question": "What is the difference between singleton scope and prototype scope?",
+    "answer": "Singleton scope means Spring creates one shared bean instance per application context. Prototype scope means Spring creates a new instance each time the bean is requested from the container. Singleton is the default and is usually preferred; prototype is useful for stateful or per-use objects, but Spring does not manage its full lifecycle after creation.",
+    "real_world": "If you accidentally keep request-specific state in a singleton bean, users can leak data across requests. Prototype can help for short-lived objects, but it is not a cure for bad state design.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can prototype beans be surprising when injected into a singleton bean?"
+   },
+   {
+    "question": "What is a request-scoped bean?",
+    "answer": "A request-scoped bean is created once per HTTP request and discarded when that request finishes. It is useful for request-specific data like correlation IDs or per-request context. It only makes sense in a web application and depends on an active request context.",
+    "real_world": "Teams use this for tracing information or user context that should not be shared between requests. If used incorrectly, it can cause scope errors outside web threads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you access a request-scoped bean from a singleton service?"
+   },
+   {
+    "question": "What does `@RestController` do compared with `@Controller`?",
+    "answer": "`@RestController` is a convenience annotation that combines `@Controller` and `@ResponseBody`. That means return values from handler methods are written directly into the HTTP response body, usually as JSON. With `@Controller`, you typically return a view name unless you add `@ResponseBody` on the method.",
+    "real_world": "This matters when building APIs versus server-rendered pages. Using `@Controller` by mistake can make Spring look for a view template instead of returning JSON.",
+    "code_lang": "java",
+    "code": "@RestController\nclass HelloController {\n  @GetMapping(\"/hello\")\n  String hello() { return \"hi\"; }\n}",
+    "follow_up": "When would you use `@Controller` instead of `@RestController`?"
+   },
+   {
+    "question": "How does Spring MVC map an HTTP request to a controller method?",
+    "answer": "Spring MVC matches the request path, HTTP method, and other conditions from annotations like `@GetMapping` or `@PostMapping`. It then binds request data to method arguments such as path variables, query parameters, headers, or request bodies. After the method returns, Spring converts the result to the response format or resolves a view.",
+    "real_world": "This is the core of building REST endpoints. A mismatch in path, method, or parameter binding is a common cause of 404s and 400s during development.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the common ways to bind request data into method parameters?"
+   },
+   {
+    "question": "What is validation in Spring, and how do you trigger it?",
+    "answer": "Validation checks incoming data against constraints before your business logic runs. In Spring, you typically annotate the input object with constraint annotations and use `@Valid` or `@Validated` on the controller method parameter so the framework performs the checks. If validation fails, Spring returns an error instead of calling the method.",
+    "real_world": "This prevents invalid payloads from reaching your service layer, such as missing required fields or bad formats. It reduces manual null checks and keeps controllers cleaner.",
+    "code_lang": "java",
+    "code": "class UserDto {\n  @NotBlank String name;\n}\n@PostMapping(\"/users\")\nvoid create(@Valid @RequestBody UserDto dto) { }",
+    "follow_up": "How do you handle validation errors cleanly in a REST API?"
+   },
+   {
+    "question": "What is the purpose of profiles in Spring Boot?",
+    "answer": "Profiles let you load different beans or configuration for different environments, such as dev, test, or prod. You can activate a profile to change behavior without changing application code. This is useful for swapping databases, credentials, or feature-specific beans based on the deployment context.",
+    "real_world": "A team might use one profile for an in-memory database in tests and another for a real database in production. It avoids hardcoding environment-specific behavior into the codebase.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you activate a profile for local development or tests?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you choose between `@ConfigurationProperties` and `@Value` for externalized configuration in a Spring Boot app?",
+    "answer": "Use `@ConfigurationProperties` when you have a group of related settings that should be bound and validated together, like a client config or feature flags. It gives you type-safe binding, better structure, and easier testing than scattering many `@Value` injections. `@Value` is fine for one-off simple values, but it becomes fragile when keys grow or need defaults and nested fields. In real projects, `@ConfigurationProperties` usually scales better because you can bind lists, maps, and nested objects cleanly.",
+    "real_world": "Teams often start with `@Value` in a few classes and later struggle with duplicated keys and inconsistent parsing. A dedicated config class makes it easier to see all settings for one subsystem and catch missing values early.",
+    "code_lang": "java",
+    "code": "@ConfigurationProperties(prefix = \"client\")\npublic class ClientProperties {\n  private Duration timeout;\n  private List<String> hosts;\n  // getters and setters\n}",
+    "follow_up": "How would you validate that configuration class and fail startup if a required property is missing?"
+   },
+   {
+    "question": "What happens if you inject a prototype bean into a singleton bean in Spring?",
+    "answer": "The prototype bean is created only when the singleton is created, so you usually get one instance stored inside the singleton rather than a fresh one per use. That surprises people because the bean definition is prototype, but the injection point is resolved once at startup. If you need a new prototype instance each time, you typically use `ObjectProvider`, `Provider`, or another lookup mechanism. The trade-off is between simple wiring and explicit control over object creation.",
+    "real_world": "This bites teams building per-request helpers or mutable stateful objects; they expect a fresh instance but accidentally share one across requests. The result is hard-to-debug cross-request leakage.",
+    "code_lang": "java",
+    "code": "@Component\nclass ServiceA {\n  private final Helper helper;\n  ServiceA(Helper helper) { this.helper = helper; }\n}\n\n@Scope(\"prototype\")\n@Component class Helper {}",
+    "follow_up": "How would you change this if `ServiceA` really needs a new `Helper` on each method call?"
+   },
+   {
+    "question": "When would you use `@Transactional`, and what are the common pitfalls with it in Spring?",
+    "answer": "Use `@Transactional` around a unit of work that must commit or roll back as a whole, usually at the service layer. A common pitfall is self-invocation: if one method in the same class calls another transactional method, the proxy is bypassed and the annotation may not take effect. Another issue is applying it to methods that are not `public` or that do not actually cross a proxy boundary, depending on the proxy style. It matters because transaction boundaries affect consistency, locking, and error handling.",
+    "real_world": "A payment or order flow can partially write data if a transaction boundary is missing or placed too low in the stack. Teams often discover this only after duplicate rows or orphan records appear in production.",
+    "code_lang": "java",
+    "code": "@Service\nclass OrderService {\n  @Transactional\n  public void placeOrder() { /* save order + items */ }\n}",
+    "follow_up": "How would you debug whether a transaction is really active on a failing code path?"
+   },
+   {
+    "question": "How do you decide between field injection, constructor injection, and setter injection in Spring?",
+    "answer": "Constructor injection is usually the default because it makes required dependencies explicit and supports immutability and testing. Setter injection is useful for optional dependencies or when you need to break a cycle, but it leaves objects temporarily incomplete. Field injection is concise but hides dependencies and makes unit tests harder because the object cannot be constructed normally. In production code, constructor injection is the safest trade-off in most cases.",
+    "real_world": "Large codebases with field injection often accumulate hidden dependencies and awkward test setup. Constructor injection tends to make refactoring safer because the compiler shows you what changed.",
+    "code_lang": "java",
+    "code": "@Service\nclass PaymentService {\n  private final PaymentGateway gateway;\n  PaymentService(PaymentGateway gateway) { this.gateway = gateway; }\n}",
+    "follow_up": "What would you do if two beans depend on each other and constructor injection fails?"
+   },
+   {
+    "question": "What is the difference between `@MockBean` and a plain Mockito mock in a Spring Boot test?",
+    "answer": "A plain Mockito mock is just a Java object you create yourself, while `@MockBean` replaces a bean in the Spring application context. Use `@MockBean` when you want the rest of the Spring wiring to stay intact but swap one dependency for a test double. Use plain Mockito when you are unit testing a class directly without starting Spring. The trade-off is speed versus integration realism.",
+    "real_world": "In controller or service slice tests, `@MockBean` lets you keep MVC or JPA wiring while isolating an external dependency. It is common for teams to overuse full-context tests when a smaller slice would be faster and clearer.",
+    "code_lang": "java",
+    "code": "@SpringBootTest\nclass OrderControllerTest {\n  @MockBean InventoryClient client;\n  @Autowired OrderController controller;\n}",
+    "follow_up": "When would you prefer `@WebMvcTest` or `@DataJpaTest` instead of `@SpringBootTest`?"
+   },
+   {
+    "question": "How does Spring decide which bean to inject when there are multiple candidates of the same type?",
+    "answer": "Spring first looks for a unique candidate by type, and if there are several it needs more information. You can disambiguate with `@Qualifier`, mark one bean as primary, or inject a collection if you actually want all implementations. The choice matters because relying on accidental bean selection makes startup failures or wrong wiring more likely as the codebase grows. Good design makes the intended dependency explicit.",
+    "real_world": "This often shows up after adding a second implementation, such as a stub and a real client, and suddenly the app no longer starts. It also happens in tests when a mock and a real bean both match the same interface.",
+    "code_lang": "java",
+    "code": "@Service\nclass BillingService {\n  BillingService(@Qualifier(\"stripeClient\") PaymentClient client) {}\n}",
+    "follow_up": "What are the pros and cons of using `@Primary` versus `@Qualifier`?"
+   },
+   {
+    "question": "What is a Spring Boot starter, and how is it different from adding individual dependencies yourself?",
+    "answer": "A starter is a dependency bundle that pulls in a set of libraries commonly used together, along with versions that are known to work well with Spring Boot. Compared with adding jars one by one, it reduces dependency management work and lowers the risk of incompatible versions. The trade-off is that you get more than one artifact, so you should still understand what it brings into your build. In practice, starters make common features faster to enable and easier to keep consistent across services.",
+    "real_world": "A team adding web, validation, and JSON support for a new API usually reaches for a web starter instead of assembling the stack manually. That saves time and avoids subtle version drift between related libraries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you inspect what a starter actually pulled into your application?"
+   },
+   {
+    "question": "How do you troubleshoot a Spring Boot app that starts locally but fails in a deployed environment because of a missing bean or property?",
+    "answer": "First compare the active profiles and externalized configuration between environments, because Boot behavior often changes with those inputs. Then check auto-configuration conditions, component scanning boundaries, and whether the missing bean is conditional on a class or property that is absent in deployment. Logs from startup are usually the fastest way to see which condition failed. The key is to verify the runtime context, not just the code, because environment differences are a common source of Spring failures.",
+    "real_world": "This is common when a service works on a developer laptop but fails in Kubernetes because a secret, profile, or classpath dependency is missing. Startup logs usually reveal that the expected bean was never created.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools or log settings would you use to see why an auto-configuration did or did not apply?"
+   },
+   {
+    "question": "What is the purpose of `CommandLineRunner` or `ApplicationRunner` in Spring Boot, and when would you use them?",
+    "answer": "They let you run code after the application context has been started and all beans are ready. That makes them useful for startup checks, data seeding in non-production environments, or kicking off controlled initialization work. The main caution is not to put long-running business logic there, because it makes startup slower and can hide failures behind application boot. If the work is operationally important, it should usually be explicit and observable.",
+    "real_world": "Teams sometimes use a runner to load reference data or verify an external dependency before serving traffic. That can be helpful, but if it blocks too long it can delay deployments or make restarts fragile.",
+    "code_lang": "java",
+    "code": "@Component\nclass StartupCheck implements ApplicationRunner {\n  public void run(ApplicationArguments args) {\n    // verify dependency, warm cache, seed data\n  }\n}",
+    "follow_up": "How would you prevent this code from running in every environment?"
+   },
+   {
+    "question": "How do you approach testing a controller in Spring Boot without starting the full application context?",
+    "answer": "Use a focused test slice like `@WebMvcTest` so Spring only loads MVC infrastructure and the controller under test. Mock the service layer dependencies and verify request mapping, status codes, and serialization behavior. This keeps tests fast and isolates web-layer problems such as missing validation, bad JSON mapping, or incorrect error handling. The trade-off is that you are not testing the full wiring, so a smaller number of broader integration tests is still useful.",
+    "real_world": "Controller tests often become too slow when every test starts the full app. Slice tests give faster feedback while still catching issues like wrong route paths or response formats.",
+    "code_lang": "java",
+    "code": "@WebMvcTest(UserController.class)\nclass UserControllerTest {\n  @Autowired MockMvc mvc;\n  @MockBean UserService service;\n}",
+    "follow_up": "What kinds of bugs would still require a full `@SpringBootTest` to catch?"
+   },
+   {
+    "question": "How do `@RequestParam`, `@PathVariable`, and `@RequestBody` differ in a Spring MVC controller?",
+    "answer": "`@PathVariable` pulls data from the URL path, `@RequestParam` reads query parameters or form parameters, and `@RequestBody` binds the HTTP body, usually JSON, through message conversion. The choice matters because it changes how clients call the endpoint and how validation and parsing behave. Use path variables for resource identity, request params for optional filters, and request body for structured input.",
+    "real_world": "A common bug is sending JSON to an endpoint that expects query parameters, so the controller gets null values even though the client thinks it posted correctly. In code review, this is often where REST API consistency problems show up.",
+    "code_lang": "java",
+    "code": "@GetMapping(\"/users/{id}\")\nUser get(@PathVariable Long id,\n         @RequestParam(required = false) String sort) { ... }\n\n@PostMapping(\"/users\")\nUser create(@RequestBody CreateUserRequest req) { ... }",
+    "follow_up": "What happens if a required request parameter is missing or a request body cannot be parsed?"
+   },
+   {
+    "question": "How does exception handling usually work in a Spring Boot REST API?",
+    "answer": "You can handle exceptions locally with `@ExceptionHandler`, across controllers with `@ControllerAdvice`, or by relying on Spring Boot’s default error handling. A global handler is usually the cleanest way to turn domain or validation errors into consistent HTTP responses. The trade-off is centralization versus flexibility: local handlers are closer to the controller, while global handlers reduce duplication.",
+    "real_world": "Teams often discover too late that different endpoints return different error shapes, which makes frontend integration harder. A global handler fixes that and also keeps stack traces and internal messages out of client responses.",
+    "code_lang": "java",
+    "code": "@RestControllerAdvice\nclass ApiErrors {\n  @ExceptionHandler(NotFoundException.class)\n  ResponseEntity<?> handle(NotFoundException ex) {\n    return ResponseEntity.status(404).body(ex.getMessage());\n  }\n}",
+    "follow_up": "How would you map validation failures differently from unexpected server errors?"
+   },
+   {
+    "question": "What happens when you call one `@Transactional` method from another method in the same class?",
+    "answer": "The transaction interceptor is usually applied through a proxy, so a call from one method to another on the same instance bypasses the proxy. That means the inner `@Transactional` annotation may not take effect the way you expect. This matters when you rely on propagation, rollback rules, or read-only settings and they silently do not apply.",
+    "real_world": "This often shows up when a refactor moves logic into a private helper or same-class method and suddenly writes are not wrapped in a transaction. The code still compiles and may even work in tests, but fail under load or on partial errors.",
+    "code_lang": "java",
+    "code": "class UserService {\n  public void outer() { inner(); }\n  @Transactional\n  public void inner() { /* not proxied on self-call */ }\n}",
+    "follow_up": "What design changes would you make if you need transactional behavior in the inner method?"
+   },
+   {
+    "question": "How do you choose between `Filter` and Spring MVC interceptor in a Boot application?",
+    "answer": "Use a servlet `Filter` for cross-cutting concerns that should run before Spring MVC, such as request wrapping, low-level logging, authentication integration, or correlation IDs. Use an interceptor when you want MVC-aware logic tied to handler execution, like measuring controller time or adding model data. Filters are lower level and broader; interceptors are easier when you only care about mapped requests.",
+    "real_world": "A tracing header often needs to be added in a filter so every downstream component sees it, including error handling outside MVC. But authorization logic that depends on handler metadata is usually better in an interceptor or Spring Security.",
+    "code_lang": "java",
+    "code": "@Component\nclass TimingInterceptor implements HandlerInterceptor {\n  public boolean preHandle(HttpServletRequest r, HttpServletResponse s, Object h) {\n    r.setAttribute(\"start\", System.nanoTime());\n    return true;\n  }\n}",
+    "follow_up": "When would you prefer Spring Security over a custom filter or interceptor?"
+   },
+   {
+    "question": "How do you externalize and override configuration safely across local, test, and production environments in Spring Boot?",
+    "answer": "Keep defaults in the application config, override per environment with profiles or environment variables, and bind structured settings with `@ConfigurationProperties`. For secrets, prefer external injection from the platform or secret manager rather than committing them to files. The key trade-off is convenience versus control: too much in code makes deployment rigid, while too much in environment variables can become hard to validate and document.",
+    "real_world": "A common production failure is a property that exists locally in `application.yml` but is missing in Kubernetes or a CI job. Centralized binding and startup validation help catch that before traffic reaches the app.",
+    "code_lang": "yaml",
+    "code": "app:\n  timeout: 2s\n---\nspring:\n  config:\n    activate:\n      on-profile: prod\napp:\n  timeout: 5s",
+    "follow_up": "How would you validate required configuration at startup without waiting for a runtime failure?"
+   },
+   {
+    "question": "What is the difference between `@Profile` and conditional configuration based on properties?",
+    "answer": "`@Profile` activates beans or configuration classes based on an environment profile like dev or prod, while property-based conditions let you switch behavior from specific configuration values. Profiles are good for broad environment separation; property conditions are better for feature toggles and fine-grained behavior. The trade-off is clarity versus flexibility: profiles are simpler to reason about, but property conditions scale better when you have many feature combinations.",
+    "real_world": "Teams often use profiles for local mocks versus production clients, but use a property flag for enabling a new integration gradually. That avoids creating too many environment-specific profile combinations.",
+    "code_lang": "java",
+    "code": "@Bean\n@Profile(\"dev\")\nDataSource mockDataSource() { ... }\n\n@Bean\n@ConditionalOnProperty(name = \"feature.x.enabled\", havingValue = \"true\")\nService xService() { ... }",
+    "follow_up": "When does profile-based configuration become a maintenance problem?"
+   },
+   {
+    "question": "How do you debug a Spring Boot application that starts successfully but fails with lazy errors on the first request?",
+    "answer": "First identify whether the failure is in request mapping, serialization, security, or a downstream dependency, because startup success does not prove those paths are valid. Enable relevant logs, reproduce the exact request, and inspect the root cause chain rather than the top-level HTTP error. In many cases the issue is a bean that is only created on demand or a missing property used by a conditional path.",
+    "real_world": "This happens when integration tests only cover app startup but not actual endpoints, so broken JSON serialization or a missing service bean shows up in production traffic. Logging the full exception and request context usually shortens the time to root cause.",
+    "code_lang": "java",
+    "code": "try {\n  // invoke endpoint or service path\n} catch (Exception e) {\n  Throwable root = e;\n  while (root.getCause() != null) root = root.getCause();\n  log.error(\"Root cause\", root);\n}",
+    "follow_up": "What logs or Actuator endpoints would you inspect first in that situation?"
+   },
+   {
+    "question": "When would you use Spring Boot Actuator in a real project, and what do you watch out for?",
+    "answer": "Use Actuator for operational visibility: health checks, metrics, environment info, and request inspection during incidents. It helps with readiness/liveness probes and basic troubleshooting without adding custom endpoints. The main caution is exposure: some endpoints reveal sensitive configuration or internal state, so you should restrict access and only expose what you need.",
+    "real_world": "Operations teams rely on health and readiness endpoints to decide whether to route traffic to a pod. During an outage, metrics can show whether the problem is in the app, the database, or a queue consumer.",
+    "code_lang": "yaml",
+    "code": "management:\n  endpoints:\n    web:\n      exposure:\n        include: health,info,metrics\n  endpoint:\n    health:\n      probes:\n        enabled: true",
+    "follow_up": "How would you add a custom health check for a critical downstream dependency?"
+   },
+   {
+    "question": "How do you keep Spring Boot integration tests fast without losing useful coverage?",
+    "answer": "Limit full-context tests to the paths that really need bean wiring, serialization, security, or database integration, and use narrower tests for pure business logic. Test slices, mocks, and in-memory or containerized dependencies can reduce startup cost while still exercising the framework where it matters. The trade-off is speed versus confidence, so reserve the expensive tests for the highest-risk flows.",
+    "real_world": "A team often discovers their test suite is slow because every test starts the whole application even though most logic is plain Java. Splitting tests by layer usually cuts build time without reducing confidence in controller or repository behavior.",
+    "code_lang": "java",
+    "code": "@SpringBootTest\nclass OrderFlowIT {\n  @Test void createsOrder() { }\n}",
+    "follow_up": "Which parts of your application would you intentionally keep as full `@SpringBootTest` tests?"
+   },
+   {
+    "question": "How do you decide between JPA repositories and `JdbcTemplate` in a Spring Boot service?",
+    "answer": "Use JPA when you want object mapping, change tracking, and a higher-level model around aggregates and relationships. Use `JdbcTemplate` when you need precise SQL control, predictable performance, or a query that is awkward to express in JPA. The trade-off is productivity versus transparency: JPA speeds up common CRUD, while JDBC is often easier to reason about for complex reads or performance-sensitive paths.",
+    "real_world": "Many teams start with JPA and later switch a reporting query or bulk update to JDBC because the ORM generates inefficient SQL or loads too much data. That avoids fighting the ORM for cases where a straightforward query is clearer and faster.",
+    "code_lang": "java",
+    "code": "public List<User> findActive(JdbcTemplate jdbc) {\n  return jdbc.query(\"select id, name from users where active = true\",\n      (rs, i) -> new User(rs.getLong(\"id\"), rs.getString(\"name\")));\n}",
+    "follow_up": "What problems can happen if you mix JPA entity state changes and direct JDBC updates in the same transaction?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how Spring AOP actually works under the hood, and where proxy-based AOP breaks down?",
+    "answer": "Spring AOP is usually proxy-based: the container wraps a bean with either a JDK dynamic proxy for interfaces or a subclass-based proxy such as CGLIB when needed. Advice only runs when the call goes through the proxy, so self-invocation, private methods, and often final methods are common blind spots. That matters because features like transactions, caching, async execution, and security often rely on the same mechanism. If you need join points beyond method execution on Spring beans, or you need advice on internal calls, you usually need AspectJ weaving instead of plain Spring AOP.",
+    "real_world": "A common production bug is a method annotated with `@Cacheable` or `@Transactional` calling another annotated method in the same class and silently skipping the advice. Teams often discover it only after seeing duplicate writes, missing retries, or no cache hits under load.",
+    "code_lang": "java",
+    "code": "@Service\nclass BillingService {\n  @Transactional\n  public void outer() { inner(); } // no proxy hop\n\n  @Transactional\n  public void inner() { /* advice not applied here */ }\n}",
+    "follow_up": "How would you redesign or configure the code so that advice is applied to that internal call?"
+   },
+   {
+    "question": "What actually happens during Spring Boot startup, and how would you reason about startup time and memory when the context gets large?",
+    "answer": "Boot builds an environment, creates the application context, loads bean definitions, applies auto-configuration conditions, instantiates non-lazy singletons, and then runs lifecycle callbacks. Startup cost usually comes from classpath scanning, condition evaluation, reflection, proxy creation, and expensive bean constructors that do I/O too early. For memory, each bean definition, proxy, cached metadata entry, and initialized singleton adds overhead, and broad scanning or unused starters can bloat the graph. The practical approach is to measure with startup metrics and heap profiles, then reduce scanned packages, trim starters, delay expensive initialization, and avoid creating clients you do not need.",
+    "real_world": "This matters in containerized deployments where cold starts drive rollout time and autoscaling lag. A service that takes tens of seconds to build a large context can miss readiness windows and amplify an incident during a traffic spike.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What Boot features or patterns would you use to keep startup fast without hiding failures until the first request?"
+   },
+   {
+    "question": "How do circular dependencies behave in modern Spring applications, and what would you do if you hit one in a large codebase?",
+    "answer": "A constructor-based cycle means the container cannot create either bean because each requires the other before instantiation completes. Some older patterns worked accidentally with setter injection or early references, but circular dependencies are still a design smell and can interact badly with proxies and initialization order. In a large system I would first break the cycle by extracting an interface, moving orchestration up a layer, publishing an event, or injecting a provider for truly optional lookup. The goal is not just to make startup succeed, but to reduce hidden coupling and lifecycle surprises.",
+    "real_world": "Teams often hit this after adding cross-cutting services like auditing or notifications and wiring them both ways with core business services. The immediate fix may be `@Lazy`, but that can defer the problem into runtime paths that are harder to test and debug.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is `@Lazy` an acceptable escape hatch, and what risks does it introduce?"
+   },
+   {
+    "question": "How would you think about thread safety of Spring beans, especially singleton beans in a web application?",
+    "answer": "Most Spring beans are singletons, but that only means one instance per context, not that they are safe to mutate across requests. In a servlet app many threads can call the same bean concurrently, so any shared mutable state needs synchronization, immutability, confinement, or a different scope. The safest default is to keep singleton services stateless and move per-request data into method parameters, request scope, or dedicated data structures. This matters because race conditions in services are often subtle and only appear under real concurrency.",
+    "real_world": "A classic incident is a singleton service storing request-specific data in a field, which works in local tests and then corrupts responses under load. These bugs are hard to reproduce because they depend on timing and thread interleaving.",
+    "code_lang": "java",
+    "code": "@Service\nclass BadService {\n  private String currentUser;\n  public String process(String user) {\n    currentUser = user;\n    return currentUser.toUpperCase();\n  }\n}",
+    "follow_up": "What changes when the application uses WebFlux instead of the traditional servlet model?"
+   },
+   {
+    "question": "What is the bean lifecycle in Spring from instantiation to shutdown, and where do `BeanPostProcessor` and `BeanFactoryPostProcessor` fit?",
+    "answer": "The container first loads bean definitions, then `BeanFactoryPostProcessor` can modify those definitions before beans are instantiated. When a bean is created, dependencies are injected, aware callbacks and init callbacks run, and `BeanPostProcessor` can wrap or modify the instance before and after initialization; this is where many proxies are created. On shutdown, destroy callbacks run for singleton beans that need cleanup. Knowing the order matters because initialization bugs often come from doing work too early, using a bean before post-processing, or assuming a raw object instead of the proxied one.",
+    "real_world": "This shows up when a custom framework library registers post-processors that alter beans globally, and suddenly a bean behaves differently between tests and production. It also matters for proper shutdown of pools, schedulers, and clients during rolling restarts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of a Spring feature implemented using a `BeanPostProcessor`?"
+   },
+   {
+    "question": "How does `@Async` work in Spring, and what are the main failure modes in production?",
+    "answer": "`@Async` is typically implemented through a proxy that submits the method invocation to a `TaskExecutor`, so the caller returns immediately or gets a `Future`-like handle depending on the signature. The main failure modes are self-invocation bypassing the proxy, assuming thread-local context such as security or MDC will automatically propagate, and using an unbounded or poorly sized executor that collapses under load. You also need to think about exception handling because `void` async methods can hide failures unless an uncaught exception handler is configured. The key trade-off is decoupling latency versus losing simple call semantics and backpressure.",
+    "real_world": "A real incident pattern is an async email or webhook sender backed by a tiny queue or default executor, where a traffic burst causes tasks to pile up and memory to rise until the pod is killed. Another is missing trace IDs in logs because context was never propagated to worker threads.",
+    "code_lang": "java",
+    "code": "@EnableAsync\n@Service\nclass ReportService {\n  @Async\n  public CompletableFuture<String> build() {\n    return CompletableFuture.completedFuture(\"ok\");\n  }\n}",
+    "follow_up": "How would you size and configure the executor for CPU-bound versus I/O-bound async work?"
+   },
+   {
+    "question": "How do Spring events work, and when would you choose them versus a direct method call or a message broker?",
+    "answer": "Spring application events are in-process publish-subscribe within one application context. By default listeners run synchronously in the publisher's thread unless you make them async, so they are not a durability or cross-service integration mechanism. They are useful for decoupling modules inside a service when eventual consistency within the same process is acceptable, but direct method calls are often clearer when the dependency is explicit and ordering matters. A message broker is the better fit when you need durability, retries across process restarts, buffering, or integration between services.",
+    "real_world": "Teams use events for things like updating search indexes or emitting audit records after a domain action without tangling the core service code. Problems start when developers treat them like reliable integration events and then lose work on process crashes because nothing was persisted.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If an event listener updates the database, how would transaction boundaries affect when the listener should run?"
+   },
+   {
+    "question": "What are the practical differences between servlet-based Spring MVC and Spring WebFlux, and how would you decide between them for a high-scale service?",
+    "answer": "Spring MVC is built around the servlet model and usually a thread-per-request execution style, while WebFlux is designed for non-blocking I/O and reactive streams. WebFlux can improve resource efficiency for high numbers of concurrent, mostly I/O-bound requests, but it does not magically speed up blocking code; if you call blocking drivers on event-loop threads, you can make things worse. MVC is often simpler when the stack is mostly blocking, especially with JPA and traditional libraries. The decision is about end-to-end architecture, not controller syntax: concurrency model, drivers, operational complexity, and team familiarity all matter.",
+    "real_world": "A common mistake is migrating only the web layer to WebFlux while keeping blocking database calls, then seeing stalled event loops and worse latency under load. On the other hand, gateway or streaming services can benefit substantially from non-blocking I/O when fan-out concurrency is high.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What specific problems happen if you use blocking JDBC calls directly on a WebFlux event-loop thread?"
+   },
+   {
+    "question": "How would you customize or debug Spring Boot auto-configuration when the defaults are close but not quite right?",
+    "answer": "Auto-configuration is just conditional configuration classes loaded based on classpath, properties, and existing beans, so the first step is to inspect which conditions matched and which beans were created. In practice you override behavior by defining your own bean of the expected type, narrowing configuration properties, or excluding a specific auto-configuration when the default is harmful. The trade-off is convenience versus hidden complexity: overriding too much can make upgrades harder because you now depend on framework internals. I prefer minimal, explicit overrides and checking the condition evaluation report when behavior is surprising.",
+    "real_world": "This matters when a service accidentally configures an embedded database, wrong serializer, or unexpected security filter chain because of a transitive dependency. During incidents, the condition report often explains why a bean exists even though nobody added it directly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do `@ConditionalOnMissingBean` and user-defined beans interact when you are trying to override a default?"
+   },
+   {
+    "question": "What are the main gotchas with using `@Scheduled` in Spring, especially in clustered deployments?",
+    "answer": "`@Scheduled` runs inside each application instance unless you add external coordination, so in a cluster every node may execute the same job. It also uses a scheduler whose sizing and error handling you should configure explicitly; long-running tasks, overlap, clock assumptions, and silent failures are common problems. For important jobs, make idempotency a requirement and consider distributed locking or moving scheduling to a dedicated system. The trade-off is simplicity for lightweight local tasks versus weak guarantees for business-critical workflows.",
+    "real_world": "A classic production incident is a cleanup or billing task annotated with `@Scheduled` that starts running on every pod after a scale-out, causing duplicate processing. Another is a single-thread scheduler getting blocked by one slow task, which delays all other scheduled work.",
+    "code_lang": "java",
+    "code": "@Scheduled(fixedDelay = 1000)\npublic void runJob() {\n  // if this takes >1s, delays can drift; in a cluster each node runs it\n}",
+    "follow_up": "How would you make a scheduled job safe across multiple instances without turning the application into a distributed scheduler?"
+   },
+   {
+    "question": "How does Spring transaction propagation actually behave in a real call chain, and when would you use `REQUIRES_NEW` versus `NESTED` versus the default?",
+    "answer": "`REQUIRED` joins the current transaction or starts one if none exists, so it is the safest default for service methods. `REQUIRES_NEW` suspends any existing transaction and starts an independent one, which is useful for audit or outbox writes that must commit even if the outer work rolls back. `NESTED` uses a savepoint inside the same physical transaction, so partial rollback is possible only if the transaction manager and database support it. The trade-off is consistency versus isolation: `REQUIRES_NEW` can create side effects that survive a failed business operation, while `NESTED` keeps one overall commit boundary.",
+    "real_world": "A common incident is writing an audit record with `REQUIRES_NEW` and then rolling back the business transaction, leaving an apparently successful audit trail for a failed operation. Teams also hit connection pool pressure when many threads open inner `REQUIRES_NEW` transactions under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you explain rollback behavior for checked versus unchecked exceptions in Spring transactions?"
+   },
+   {
+    "question": "What really happens when you put `@Transactional(readOnly = true)` on a method, and what performance or correctness benefits should you actually expect?",
+    "answer": "In Spring, `readOnly` is mostly a hint passed to the transaction infrastructure and the underlying persistence provider. With JPA and Hibernate it often changes flush behavior and can reduce dirty checking overhead, but it does not make entities immutable and it does not guarantee the database will reject writes. Whether the database gets a true read-only transaction depends on the driver and transaction manager. It is useful for intent, possible optimization, and catching accidental writes in some stacks, but it is not a hard enforcement mechanism by itself.",
+    "real_world": "Teams sometimes mark whole services read-only expecting a major latency win, then see no change because the database and driver ignore the hint. The more practical win is reducing accidental flushes on large read paths.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when the same method runs outside a transaction entirely?"
+   },
+   {
+    "question": "How do you prevent the N+1 query problem in a Spring Boot JPA application, and what trade-offs come with each approach?",
+    "answer": "The main fixes are fetch joins, entity graphs, batch fetching, and replacing entity loading with projection queries when you only need a read model. Fetch joins reduce round trips but can explode row counts and break pagination on collection joins. Batch fetching helps when loading many lazy associations across multiple root entities, but it still issues multiple queries. Projections are often fastest and most stable for API reads, at the cost of bypassing part of the entity model.",
+    "real_world": "This shows up as APIs that work fine in test data and then jump from tens of milliseconds to seconds in production because one page of results triggers hundreds of extra queries. Teams usually catch it by enabling SQL logging briefly or using metrics around query count per request.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle pagination when a fetch join on a one-to-many association is required?"
+   },
+   {
+    "question": "What causes `LazyInitializationException` in a Spring application, and how would you fix it without papering over a design problem?",
+    "answer": "It happens when code tries to access a lazy-loaded association after the persistence context is closed, typically outside the transactional service boundary. The durable fix is to load the data you actually need inside the transaction, often with a fetch plan or a projection DTO, rather than relying on view-layer access. Keeping the session open through the web request can hide the issue, but it couples rendering to database access and makes query behavior unpredictable. The key is to make transaction boundaries and data shape explicit.",
+    "real_world": "A common production symptom is an endpoint that works in one code path and fails in another because JSON serialization touches a lazy field after the transaction ended. Disabling open-session-in-view often reveals these bugs early, which is painful at first but usually improves service boundaries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the pros and cons of Open Session in View in a high-throughput API?"
+   },
+   {
+    "question": "How does Spring Boot executable jar loading work, and what are the operational implications compared with a plain classpath deployment?",
+    "answer": "A Boot executable jar uses a launcher and a custom class loading layout so dependencies can live as nested jars inside one artifact. That packaging is convenient for deployment consistency, but it changes classpath scanning, resource loading assumptions, and sometimes startup characteristics. Libraries that assume every dependency is an exploded file on disk can behave differently, and custom classloader behavior can matter for agents, reflection-heavy frameworks, or native image preparation. Operationally, the big win is one immutable artifact, while the trade-off is a bit more indirection during startup and debugging.",
+    "real_world": "This matters when a service runs fine in IDE classpath mode but fails only as a packaged jar because a resource lookup or classpath scan behaves differently. It also comes up when diagnosing slow cold starts in containerized deployments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you compare Boot's executable jar packaging with deploying a WAR to an external servlet container?"
+   },
+   {
+    "question": "If a Spring Boot service is leaking memory over days, what framework-level causes would you investigate before blaming the JVM or the database?",
+    "answer": "I would check for unbounded caches, request or session data retained in static structures, thread pools holding large task queues, excessive creation of application contexts in tests or dynamic refresh flows, and MDC or ThreadLocal values not being cleared on pooled threads. In Spring apps, listeners, schedulers, and async executors are common places where references live much longer than expected. I would also verify whether proxies, reflection metadata, or bean definitions are multiplying due to repeated context initialization rather than normal runtime growth. The pattern matters: heap growth from domain objects points to business retention, while growth from framework classes points to lifecycle or classloader issues.",
+    "real_world": "A real incident pattern is a custom `TaskDecorator` or servlet filter putting user context into a `ThreadLocal` and never clearing it, causing memory retention and even data bleed between requests. Another is an oversized in-memory cache added inside a singleton bean without eviction.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics and heap dump clues would tell you whether the leak is from request data, caches, or classloader churn?"
+   },
+   {
+    "question": "How do you make a Spring Boot service shut down gracefully under load, and what usually goes wrong in production?",
+    "answer": "Graceful shutdown means stopping new traffic, letting in-flight requests finish within a timeout, and coordinating downstream resources like executors, messaging listeners, and database work so they stop cleanly. In Spring Boot that usually involves server graceful shutdown support plus explicit lifecycle management for custom thread pools and consumers. The failures are usually mismatched timeouts, Kubernetes or load balancer settings that cut traffic too late or too early, and async work that keeps running after the app is considered down. You need the termination path tested, not just configured.",
+    "real_world": "Without this, rolling deploys can drop requests, duplicate message processing, or leave half-finished work when pods are killed. Teams often discover that HTTP shutdown is graceful but background executors are not, so work vanishes during deployments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you coordinate graceful shutdown for both HTTP requests and Kafka consumers in the same service?"
+   },
+   {
+    "question": "What does `@Configuration(proxyBeanMethods = false)` change under the hood, and when is it safe or unsafe to use?",
+    "answer": "With proxying enabled, Spring subclasses the configuration class so calls from one `@Bean` method to another go through the container and return the managed singleton. With `proxyBeanMethods = false`, those methods are plain Java calls, which avoids CGLIB enhancement and can slightly reduce startup overhead, but an internal call can create a new instance instead of reusing the container-managed bean. It is safe when the configuration is effectively factory-style and `@Bean` methods do not depend on calling each other directly. It is unsafe when inter-bean method calls rely on container semantics.",
+    "real_world": "This bites teams during startup optimization: they flip the flag globally, then subtle duplicate object graphs appear because one `@Bean` method directly called another. The symptom can be two similar instances with different lifecycle or missing post-processing.",
+    "code_lang": "java",
+    "code": "@Configuration(proxyBeanMethods = false)\nclass AppConfig {\n  @Bean A a() { return new A(b()); }\n  @Bean B b() { return new B(); }\n}\n",
+    "follow_up": "How is this different from injecting `B` as a method parameter into `a()`?"
+   },
+   {
+    "question": "When would you use `ObjectProvider`, `Provider`, or lazy injection in Spring, and what problem are they solving beyond optional dependencies?",
+    "answer": "They let you defer bean resolution until runtime, which is useful for expensive beans, request-scoped dependencies accessed from singletons, ordered plugin lists, or cases where the dependency may not exist. `ObjectProvider` is Spring-specific and convenient because it supports optional access, iteration, and lazy retrieval without forcing initialization too early. The main benefit is controlling timing and cardinality of resolution, not just null-safe injection. The trade-off is that it can hide design problems if overused and make dependencies less obvious.",
+    "real_world": "A common case is a singleton service needing the current request's context-dependent collaborator, which cannot be resolved safely at application startup. Another is optional integrations where loading the client eagerly would fail startup in environments where the feature is disabled.",
+    "code_lang": "java",
+    "code": "@Service\nclass ReportService {\n  private final ObjectProvider<Exporter> exporters;\n  ReportService(ObjectProvider<Exporter> exporters) {\n    this.exporters = exporters;\n  }\n  List<Exporter> all() { return exporters.orderedStream().toList(); }\n}\n",
+    "follow_up": "What is the difference between `@Lazy` on an injection point and using `ObjectProvider`?"
+   },
+   {
+    "question": "How would you design idempotent request handling in a Spring Boot service so retries from clients or gateways do not create duplicate side effects?",
+    "answer": "I would make idempotency explicit at the API boundary using a client-supplied key or a natural business key, persist the processing outcome atomically with the side effect, and return the same result for safe retries. The core requirement is a unique constraint or equivalent store-level guarantee; in-memory deduplication is not enough in a scaled deployment. For distributed workflows, I would separate the accepted request from downstream side effects using an outbox or state machine so retries are replay-safe. The trade-off is extra storage and lifecycle management for keys versus much better correctness under timeouts and duplicate delivery.",
+    "real_world": "This matters when a payment or order endpoint times out after the database commit but before the response reaches the client, so the client retries. Without idempotency, you get duplicate charges or duplicated shipments even though each instance behaved 'correctly' in isolation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle idempotency when the downstream dependency is not idempotent and does not support your request key?"
+   }
+  ]
+ }
+}

@@ -1,0 +1,485 @@
+{
+ "slug": "accessibility",
+ "name": "Web accessibility",
+ "category": "Frontend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What does web accessibility mean?",
+    "answer": "Web accessibility means building websites and apps that people with disabilities can use effectively. That includes users who rely on screen readers, keyboard navigation, captions, sufficient color contrast, and other assistive technologies or adaptations. Good accessibility usually improves usability for everyone, not just disabled users.",
+    "real_world": "A form that works only with a mouse can block users who cannot use a trackpad or mouse. Accessible navigation and labels reduce support issues and make checkout flows usable for more people.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main types of disabilities you think about when designing for accessibility?"
+   },
+   {
+    "question": "Why is semantic HTML important for accessibility?",
+    "answer": "Semantic HTML gives elements meaning, not just appearance, so assistive technologies can understand the page structure and controls. For example, a real button is announced as a button and is keyboard accessible by default, while a styled div is not. Using the right element often solves accessibility problems without extra code.",
+    "real_world": "Teams often ship clickable divs that look fine visually but cannot be activated with keyboard or announced correctly by screen readers. Replacing them with native elements prevents a lot of bugs.",
+    "code_lang": "html",
+    "code": "<button type=\"button\">Save</button>\n<!-- Better than: -->\n<div onclick=\"save()\">Save</div>",
+    "follow_up": "When would you choose an ARIA role over a native HTML element?"
+   },
+   {
+    "question": "What is alt text, and when should you use it?",
+    "answer": "Alt text is the text alternative for an image, provided with the alt attribute on img elements. Use it to describe the image’s purpose or content for users who cannot see it. If an image is purely decorative, use an empty alt attribute so screen readers can skip it.",
+    "real_world": "Product cards often include images that repeat the same information already in the title. In those cases, concise alt text avoids noisy, repetitive screen reader output.",
+    "code_lang": "html",
+    "code": "<img src=\"shoe.jpg\" alt=\"Blue running shoe with white sole\">\n<img src=\"divider.png\" alt=\"\">",
+    "follow_up": "How do you decide whether an image needs descriptive alt text or should be ignored?"
+   },
+   {
+    "question": "What makes a page keyboard accessible?",
+    "answer": "A keyboard-accessible page can be used without a mouse, usually with Tab, Shift+Tab, Enter, Space, and arrow keys where appropriate. Interactive elements must be reachable in a logical order and have visible focus styles. If you add custom controls, you need to preserve keyboard behavior that native elements already provide.",
+    "real_world": "A modal that traps focus incorrectly or loses focus on close can leave keyboard users stuck. This is a common source of production bugs in dialogs, menus, and custom dropdowns.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is focus management, and why does it matter in modals?"
+   },
+   {
+    "question": "What is the difference between labels and placeholders in forms?",
+    "answer": "A label identifies the input and should be available even after the user starts typing. A placeholder is only an example or hint and disappears when the field has content, so it should not be the only way a field is named. For accessibility, every form control should have a clear associated label.",
+    "real_world": "Forms that rely on placeholder text often become hard to use for screen reader users and for anyone with memory or attention issues. They also create confusion once the user begins typing and the hint disappears.",
+    "code_lang": "html",
+    "code": "<label for=\"email\">Email</label>\n<input id=\"email\" name=\"email\" type=\"email\" placeholder=\"name@example.com\">",
+    "follow_up": "How do labels work for checkbox and radio groups?"
+   },
+   {
+    "question": "What is visible focus, and why should you not remove it?",
+    "answer": "Visible focus is the outline or indicator that shows which element currently has keyboard focus. It is essential for keyboard users because it tells them where they are on the page. Removing it without replacing it with an equally clear custom focus style makes the interface hard or impossible to use.",
+    "real_world": "Design systems sometimes ship `outline: none` to make elements look cleaner, then keyboard users cannot tell which button or link is active. This often gets found late in testing when someone tries to tab through the page.",
+    "code_lang": "css",
+    "code": "button:focus-visible {\n  outline: 3px solid #0b5fff;\n  outline-offset: 2px;\n}",
+    "follow_up": "What is the difference between focus and hover?"
+   },
+   {
+    "question": "Why does color contrast matter?",
+    "answer": "Color contrast affects how easily text and essential UI information can be read, especially for users with low vision or in bright light. If contrast is too low, people may miss content or controls even if the layout is otherwise correct. Do not rely on color alone to communicate meaning, because some users cannot distinguish it well.",
+    "real_world": "Light gray text on a white background is a common design mistake in dashboards and marketing pages. It can make content unreadable and fail accessibility checks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make an error message accessible beyond just using red text?"
+   },
+   {
+    "question": "What is the purpose of headings on a page?",
+    "answer": "Headings create a structure that helps users and assistive technologies understand the content hierarchy. Screen reader users often navigate by headings, so the order should reflect the document structure rather than just visual size. Use heading levels consistently and avoid skipping around without a reason.",
+    "real_world": "Long articles, docs, and admin pages become much easier to scan when headings are meaningful. Poor heading structure makes it hard to find sections quickly, especially for screen reader users.",
+    "code_lang": "html",
+    "code": "<h1>Account settings</h1>\n<h2>Profile</h2>\n<h2>Security</h2>\n<h3>Change password</h3>",
+    "follow_up": "How would you fix a page that uses headings only for styling?"
+   },
+   {
+    "question": "What is the accessibility tree?",
+    "answer": "The accessibility tree is the structured representation of the page that assistive technologies use, built from the DOM and semantic information. It includes names, roles, states, and relationships that screen readers rely on to announce and navigate content. If an element is hidden visually or has the wrong semantic role, it may be missing or confusing in that tree.",
+    "real_world": "A visually polished custom widget can still be unusable if it exposes the wrong role or name to a screen reader. Debugging the accessibility tree helps explain why a control is not announced the way you expect.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you test what a screen reader might perceive without using a screen reader?"
+   },
+   {
+    "question": "What is the difference between an ARIA label and a visible label for a control?",
+    "answer": "A visible label is text on the page that all users can see, while an ARIA label gives an accessible name to assistive technologies when there is no suitable visible text. If a control already has a good visible label, prefer that over ARIA. ARIA should supplement missing semantics, not replace basic HTML. Overusing it can make the interface harder to maintain or accidentally hide important context.",
+    "real_world": "This comes up with icon-only buttons like search, close, or menu. If the button has no text, screen readers need an accessible name or users won’t know what it does.",
+    "code_lang": "html",
+    "code": "<button aria-label=\"Close\">\n  <svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"></svg>\n</button>",
+    "follow_up": "When would you use aria-labelledby instead of aria-label?"
+   },
+   {
+    "question": "What does an ARIA role do, and when would you use one?",
+    "answer": "A role tells assistive technologies what kind of UI element something is, such as button, dialog, or navigation. You use it when native HTML cannot express the component, or when you are building a custom control that needs an explicit semantic. Native elements are still better whenever possible because they bring built-in behavior and accessibility for free. Roles should match the element’s actual behavior, or they can confuse users.",
+    "real_world": "A team building a custom dropdown often starts with divs and spans. Adding the correct role is part of making it understandable to screen reader users, but it does not replace keyboard handling.",
+    "code_lang": "html",
+    "code": "<div role=\"button\" tabindex=\"0\">Save</div>",
+    "follow_up": "Why is a native <button> usually better than a div with role=\"button\"?"
+   },
+   {
+    "question": "What is aria-hidden used for?",
+    "answer": "aria-hidden hides an element from assistive technologies, so screen readers do not announce it. It is useful for decorative content, like purely visual icons or repeated text that would be noisy if read twice. You should not use it on meaningful content or on focusable controls, because then keyboard and screen reader users can lose access to important parts of the page. It changes exposure to assistive tech, not the visual display.",
+    "real_world": "This matters when a button contains both an icon and text. If the icon is decorative, hiding it prevents screen readers from announcing extra clutter.",
+    "code_lang": "html",
+    "code": "<button>\n  <svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"></svg>\n  Save\n</button>",
+    "follow_up": "What problems can happen if you put aria-hidden=\"true\" on a parent container?"
+   },
+   {
+    "question": "What is a skip link, and why is it useful?",
+    "answer": "A skip link is an early link on the page that lets keyboard users jump directly to the main content. It reduces the need to tab through repeated navigation on every page load. It is especially helpful on sites with large menus, headers, or repeated widgets. The link should be visible on focus so it can actually be used.",
+    "real_world": "This is common on news sites and dashboards with long navigation bars. Without it, keyboard users have to tab through the same items on every page.",
+    "code_lang": "html",
+    "code": "<a href=\"#main\" class=\"skip-link\">Skip to main content</a>\n<main id=\"main\">...</main>",
+    "follow_up": "Where should the skip link point on a page with multiple landmarks?"
+   },
+   {
+    "question": "What is the purpose of a fieldset and legend in forms?",
+    "answer": "A fieldset groups related form controls, and a legend gives that group a shared label. This helps screen reader users understand the relationship between inputs, especially for radio buttons and checkboxes. It is more meaningful than just visually placing fields near each other. Use it when several controls belong to one question or category.",
+    "real_world": "A checkout form with shipping options or a preferences form with several checkbox groups is a good fit. Without grouping, each option can sound isolated and harder to understand.",
+    "code_lang": "html",
+    "code": "<fieldset>\n  <legend>Delivery method</legend>\n  <label><input type=\"radio\" name=\"delivery\"> Standard</label>\n</fieldset>",
+    "follow_up": "When would you use a label on a fieldset, and why is legend different?"
+   },
+   {
+    "question": "What are landmarks on a page, and why do they matter?",
+    "answer": "Landmarks are structural regions like header, nav, main, and footer that help users understand and jump around a page. Screen reader users can move between landmarks instead of reading everything linearly. They matter most on large pages with repeated or complex layouts. Good landmark use makes pages easier to scan and navigate.",
+    "real_world": "On an enterprise app with a lot of panels and menus, users often rely on landmarks to jump straight to the main content or side navigation. Without them, navigation is much slower.",
+    "code_lang": "html",
+    "code": "<header>...</header>\n<nav>...</nav>\n<main>...</main>\n<footer>...</footer>",
+    "follow_up": "Can you use more than one nav landmark on the same page?"
+   },
+   {
+    "question": "What is the difference between a button and a link from an accessibility point of view?",
+    "answer": "A link navigates to another page or location, while a button performs an action on the current page. Screen readers and keyboard users rely on that difference to understand what will happen when they activate it. If something changes page location, use a link; if it submits, opens, toggles, or saves, use a button. Using the wrong element can break expected keyboard and assistive technology behavior.",
+    "real_world": "A common beginner mistake is making a div look clickable and using it for navigation. That causes problems for keyboard users and for browser features like opening links in new tabs.",
+    "code_lang": "html",
+    "code": "<a href=\"/settings\">Settings</a>\n<button type=\"button\">Save changes</button>",
+    "follow_up": "What goes wrong if you use a button for navigation?"
+   },
+   {
+    "question": "What is a form error message supposed to do for accessibility?",
+    "answer": "An error message should explain what is wrong and how to fix it in plain language. It should be associated with the relevant input, and ideally announced when the user submits the form or moves to the field. Just changing the border color is not enough, because not all users can perceive color cues. Clear errors reduce confusion and make correction faster.",
+    "real_world": "This matters on sign-up and checkout forms where a small mistake can block submission. If the message is not connected to the field, screen reader users may not know which input needs attention.",
+    "code_lang": "html",
+    "code": "<label for=\"email\">Email</label>\n<input id=\"email\" aria-describedby=\"email-error\">\n<p id=\"email-error\">Enter a valid email address.</p>",
+    "follow_up": "How would you make sure the error is announced when it appears?"
+   },
+   {
+    "question": "What does tabindex do, and what is the safe default usage?",
+    "answer": "tabindex controls whether an element can receive keyboard focus and in what order. The safest use is tabindex=\"0\" on custom interactive elements that need to join the normal tab order. tabindex=\"-1\" can make an element focusable by script but not by Tab, which is useful for moving focus after opening dialogs or revealing content. Positive tabindex values are usually avoided because they create confusing focus order.",
+    "real_world": "This comes up with custom components like menus or accordions built from non-native elements. If focus order is wrong, keyboard users may get lost or skip important controls.",
+    "code_lang": "html",
+    "code": "<div tabindex=\"0\">Focusable card</div>\n<div tabindex=\"-1\" id=\"panel\">Details</div>",
+    "follow_up": "Why are positive tabindex values considered a bad practice?"
+   },
+   {
+    "question": "What is an accessible name, and why does it matter?",
+    "answer": "An accessible name is the text a screen reader uses to identify an element. It tells users what a control is, such as “Search,” “Close,” or “Email address.” The name can come from visible text, a label, ARIA, or other associated text depending on the element. Without a clear name, controls may be announced as empty or ambiguous.",
+    "real_world": "Icon buttons, custom widgets, and form controls all need accessible names. Missing names are a common reason screen reader users cannot tell what a control does.",
+    "code_lang": "html",
+    "code": "<button aria-label=\"Search\">\n  <svg aria-hidden=\"true\"></svg>\n</button>",
+    "follow_up": "How does the accessible name of an input usually get set?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you make a custom dropdown or combobox work accessibly without relying on the native select element?",
+    "answer": "Use the native control if you can, because it already handles keyboard, focus, and screen reader behavior. If you need a custom widget, follow the expected ARIA pattern for that control, manage focus carefully, and support arrow keys, Escape, Enter, and type-ahead where appropriate. The key trade-off is that you gain styling and custom behavior, but you also take on a lot of interaction and testing complexity. If the custom version is not clearly better, native is usually the safer choice.",
+    "real_world": "Teams often replace `<select>` with a styled component and accidentally break keyboard navigation or screen reader announcements. The result is a UI that looks better but is slower and harder for many users to operate.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test that custom control with a keyboard and a screen reader?"
+   },
+   {
+    "question": "When would you use ARIA live regions, and what problems can they cause if you use them too much?",
+    "answer": "Use live regions for dynamic updates that a user needs to know about but that do not move focus, such as form validation, save status, or cart updates. You should keep the announcement short and only update it when something meaningful changes, because frequent or verbose announcements become noisy and confusing. The trade-off is between keeping users informed and interrupting their workflow. If the change is important enough to require immediate interaction, moving focus may be more appropriate than a live region.",
+    "real_world": "This comes up in single-page apps where a toast says “Saved” but screen reader users never hear it. The opposite problem is an app that announces every minor DOM change and becomes unusable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide between moving focus and using a live region?"
+   },
+   {
+    "question": "What is the accessible way to handle modal dialogs so keyboard and screen reader users are not trapped or confused?",
+    "answer": "A modal should move focus into the dialog when it opens, keep focus inside it while it is open, and restore focus to the triggering element when it closes. The background content should not be reachable while the dialog is active, and the dialog needs a clear accessible name and description if necessary. This matters because a modal changes the user’s context, and focus management is what makes that context understandable. A modal that only looks like an overlay but does not manage focus is still broken.",
+    "real_world": "This is a common bug in checkout flows and admin tools, where users tab into content behind the modal or lose their place after closing it. Screen reader users may also hear both the dialog and the page behind it if the background is not properly suppressed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should happen if the user presses Escape while the dialog is open?"
+   },
+   {
+    "question": "How would you make a dynamic table sort or filter accessible to keyboard and screen reader users?",
+    "answer": "The control that triggers sorting or filtering must be reachable and operable with the keyboard, and the UI should communicate the updated state in text or via appropriate ARIA state. If the table content changes, users need a way to understand what changed, especially if the sort order affects the meaning of the results. The trade-off is between keeping the interface compact and making state changes explicit enough to announce and test. For complex data grids, native table semantics are still valuable because they preserve relationships between headers and cells.",
+    "real_world": "This matters in reporting dashboards where clicking a column header changes the order but nobody knows it happened except sighted mouse users. It also affects infinite filters where results update without any announcement.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you expose the current sort direction to assistive technologies?"
+   },
+   {
+    "question": "What is the difference between using native HTML controls and building the same thing with divs and ARIA?",
+    "answer": "Native controls give you built-in semantics, focus handling, keyboard support, and expected browser behavior for free. A div-based version can be styled more freely, but you must recreate all of that behavior yourself and keep it correct across browsers and assistive technologies. The main trade-off is control versus reliability. In practice, native should be the default unless the product requirement truly needs custom interaction that cannot be achieved otherwise.",
+    "real_world": "This comes up in design systems that try to standardize every control. Teams often discover that the custom version is harder to maintain and less robust than the native one it replaced.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are examples of controls where you would still choose native even if styling is limited?"
+   },
+   {
+    "question": "How do you make an image button or icon-only control accessible?",
+    "answer": "An icon-only control still needs an accessible name, usually through visible text, an aria-label, or alternative text depending on the element. The control also needs enough hit area and a clear focus state so keyboard and touch users can find it. The trade-off is that minimal visuals can hide meaning, so you must preserve that meaning somewhere machine-readable and understandable. If the icon’s action is ambiguous, the control should probably include text instead of relying on the icon alone.",
+    "real_world": "This is common with toolbar actions like delete, share, or settings. Without a name, screen reader users hear a string of unlabeled buttons and cannot tell what they do.",
+    "code_lang": "html",
+    "code": "<button aria-label=\"Delete\">\n  <svg aria-hidden=\"true\" viewBox=\"0 0 24 24\">...</svg>\n</button>",
+    "follow_up": "When would you prefer visible text over an aria-label?"
+   },
+   {
+    "question": "What should you check when building accessible form validation beyond just showing an error message?",
+    "answer": "The error should be programmatically associated with the field, and the user should be able to find it quickly after submission or blur. If multiple fields fail, a summary can help users jump to each issue, but each field still needs its own specific message. The trade-off is between minimizing visual clutter and giving enough context for users to fix the problem efficiently. Good validation also avoids relying only on color or animation to indicate failure.",
+    "real_world": "This matters in long checkout or signup forms where users get a generic “invalid input” toast but do not know which field is wrong. Teams often see repeat submissions because the error was visible but not tied to the control.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you link an input to its error message in HTML?"
+   },
+   {
+    "question": "How do responsive layout changes affect accessibility, especially when content is reordered visually?",
+    "answer": "Visual reordering can confuse keyboard and screen reader users if the DOM order no longer matches the reading and focus order. It is usually better to keep the source order logical and use CSS for visual adjustments that do not change meaning. The trade-off is design flexibility versus a predictable navigation path. If you must change order, verify that tab order, reading order, and headings still make sense together.",
+    "real_world": "This happens in mobile layouts where a sidebar moves below the main content visually but remains first in the DOM. Users tabbing through the page may encounter content in an order that feels random.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you check whether your responsive layout still has a logical reading order?"
+   },
+   {
+    "question": "What accessibility issues can animations and motion effects cause, and how do you handle them responsibly?",
+    "answer": "Motion can trigger discomfort, distract from important content, or make state changes hard to follow. Prefer subtle motion for decoration, avoid motion that is essential to understanding, and respect the user’s reduced-motion preference when possible. The trade-off is between visual polish and comfort or clarity for users who are motion-sensitive. Motion should enhance comprehension, not be required to use the interface.",
+    "real_world": "This shows up in carousels, parallax sections, and animated page transitions that make some users dizzy or lose track of where they are. It also affects users on low-power devices where heavy animation hurts performance.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test whether an animation is safe for users who prefer reduced motion?"
+   },
+   {
+    "question": "How do you test accessibility in a real frontend project without trying to cover everything manually?",
+    "answer": "Use a mix of automated checks, keyboard testing, and targeted screen reader spot checks. Automated tools catch common issues like missing labels, contrast failures, and invalid ARIA, but they cannot fully judge workflow or meaning. The trade-off is coverage versus time, so you focus manual testing on the highest-risk user flows such as navigation, forms, dialogs, and dynamic updates. Accessibility testing works best when it is part of the development and review process, not a final pass at the end.",
+    "real_world": "In practice, teams run linting and CI checks on every pull request, then do manual verification on a few critical flows before release. That catches most regressions without requiring a full audit each time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which manual checks would you do first on a new feature behind a modal or form?"
+   },
+   {
+    "question": "How do you make a disclosure widget like an accordion accessible without overcomplicating it with ARIA?",
+    "answer": "Use a real button for the trigger and keep the content in the DOM so assistive tech can reach it. The button should expose expanded or collapsed state, and its relationship to the panel should be clear. If the content is hidden, make sure it is actually removed from the accessibility tree, not just visually clipped. Native semantics reduce the amount of keyboard and screen reader behavior you need to recreate.",
+    "real_world": "Accordions often break when teams use clickable divs, which makes them impossible to operate with a keyboard. In audits, the common bug is a panel that looks closed but is still readable by screen readers, or vice versa.",
+    "code_lang": "html",
+    "code": "<button aria-expanded=\"false\" aria-controls=\"faq1\">Shipping times</button>\n<div id=\"faq1\" hidden>\n  <p>Most orders ship within 2 business days.</p>\n</div>",
+    "follow_up": "When would you choose native details and summary instead of a custom accordion?"
+   },
+   {
+    "question": "What accessibility problems can happen with infinite scroll, and how would you mitigate them?",
+    "answer": "Infinite scroll can make it hard to reach the footer, lose your place when new items load, and overwhelm screen reader users if updates are announced too often. A common mitigation is to provide a load more button as the primary path, or at least keep keyboard focus stable when new content is appended. If items are inserted dynamically, announce changes sparingly and preserve a way to navigate by page or section. The trade-off is convenience versus predictable navigation.",
+    "real_world": "Product listing pages often regress when endless scrolling is added for engagement metrics. Users on assistive tech may never discover that more results loaded, or they may lose context after returning from a detail page.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you preserve focus and announcement behavior when appending results to a list?"
+   },
+   {
+    "question": "How do you make drag and drop accessible for users who cannot use a mouse?",
+    "answer": "Provide a full keyboard alternative for picking up, moving, and dropping items, and make the state changes obvious to assistive tech. The interface should not rely on pointer-only gestures or visual spatial cues alone. In many cases, up/down move buttons are simpler and more reliable than a custom drag interaction. If you do support drag and drop, make sure the same task can be completed without dragging.",
+    "real_world": "Sortable lists and kanban boards often work in demos but fail in production for keyboard-only users. Teams usually end up adding move controls after support tickets reveal that ordering tasks is impossible without a mouse.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you announce to a screen reader user after an item is moved?"
+   },
+   {
+    "question": "How do you handle accessibility when you show and hide content with CSS instead of unmounting it?",
+    "answer": "You need to think about both visibility and exposure to assistive tech. Content that is visually hidden but still focusable creates a broken experience, and content that is visually shown but marked hidden is equally confusing. Prefer patterns where hidden state is reflected consistently in the DOM, focus order, and accessibility tree. If the content can receive focus, hiding it must remove it from tab order as well.",
+    "real_world": "This shows up in mobile nav menus and modals, where links remain tabbable after the panel is closed. Users report “tabbing into nowhere” or landing on invisible elements.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between visibility, display, and the hidden attribute in terms of accessibility?"
+   },
+   {
+    "question": "How do you decide whether to use ARIA or native HTML for a custom control?",
+    "answer": "Start with native HTML whenever the element and behavior already exist, because browsers provide keyboard handling, focus management, and semantics for free. Use ARIA only when you are filling a real semantic gap, not as a styling tool. ARIA can improve exposure to assistive tech, but it does not add behavior; if you use it on the wrong element, you may still have to implement keyboard support yourself. The safest choice is usually the simplest native element that matches the interaction.",
+    "real_world": "A common failure is using a div with ARIA to mimic a checkbox or button, then forgetting space/enter behavior and focus styles. That creates work for QA and support because the element looks right but behaves wrong.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are some signs that a custom control should be replaced with a native element?"
+   },
+   {
+    "question": "How would you make a data table accessible when users can sort, paginate, or expand rows?",
+    "answer": "Keep the table semantics intact and expose the interactive controls as real buttons or links in the header or row cells. Sorting should be communicated in text or state, not only by an icon, and row expansion should be reachable by keyboard. If pagination changes what is on screen, preserve focus and announce the page change carefully. The key is to avoid turning a data table into a layout grid with no structure.",
+    "real_world": "Reporting dashboards often become unusable after a feature team adds client-side sorting but forgets to announce the active sort column. Screen reader users then hear only the raw cells and cannot tell why values moved.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make the current sort state clear to both sighted users and screen readers?"
+   },
+   {
+    "question": "What accessibility concerns come up with autocomplete or typeahead inputs?",
+    "answer": "The main concerns are focus management, announcement of suggestions, and keeping the text input usable with the keyboard. If you show a popup list, users need to be able to move through suggestions predictably and know which item is active. The control should not steal focus from the input unless the interaction truly requires it. Also make sure the suggestions do not disappear or change too aggressively while the user is typing.",
+    "real_world": "Search bars with typeahead can become frustrating when the list updates on every keystroke and the highlighted item jumps around. In support logs, users often describe this as the cursor “fighting them.”",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test an autocomplete with a screen reader and keyboard only?"
+   },
+   {
+    "question": "How do you make toast notifications accessible without interrupting the user too much?",
+    "answer": "Use them for short status updates, not critical workflows, and make sure important information is available elsewhere too. If a toast is purely informational, it can be announced politely; if it requires action, the action should be reachable and the message should remain discoverable after the toast disappears. Avoid stacking many announcements, or you can create a noisy experience for screen reader users. The goal is to inform without stealing focus unnecessarily.",
+    "real_world": "Payment or save-confirmation toasts often vanish before a screen reader user can hear them, which makes the UI feel unreliable. Teams usually need a persistent confirmation area or history for important status messages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you move focus to a message instead of using a live region?"
+   },
+   {
+    "question": "What accessibility issues can client-side routing introduce in single-page applications?",
+    "answer": "Route changes do not automatically behave like full page loads, so focus, document title, and announcements may not update in a useful way. After navigation, focus should usually move to the main content or heading, and the new page title should reflect the view. Without that, screen reader and keyboard users can stay stranded on an old control while the content underneath has changed. SPAs need extra work to recreate the navigation cues browsers normally provide.",
+    "real_world": "This is a common bug in React and Vue apps where the URL changes but the focus stays on the clicked menu item. Users think the app froze because nothing tells them the new page is ready.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure focus management after a route transition?"
+   },
+   {
+    "question": "How do you evaluate whether an accessibility issue is a blocker or a lower-priority fix in a real product team?",
+    "answer": "I look at task completion, frequency, and how many users are affected, then compare that against effort and risk. Things that prevent core actions, trap focus, or hide essential content are usually blockers because they stop people from using the product at all. Cosmetic issues matter too, but they come after problems that break navigation, forms, or comprehension. The trade-off is balancing user impact with delivery constraints, while keeping a clear remediation backlog.",
+    "real_world": "Teams often have dozens of issues from automated scans, but only a few are truly blocking checkout, login, or account recovery. Prioritizing by user impact helps avoid wasting time on low-risk findings while critical bugs linger.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would tell you a reported issue is likely to affect screen reader users versus only automated tooling?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How do screen readers actually decide what to announce first after a React or SPA view update, and what patterns help keep that predictable?",
+    "answer": "Screen readers consume the browser’s accessibility tree, not your component tree, so what gets announced depends on DOM order, focus changes, document title updates, and whether a live region fired. In SPAs, the safest pattern is to move focus to a meaningful heading or container at route change, update the page title, and avoid replacing large DOM regions unless necessary. If several updates happen at once, users can hear stale or duplicate announcements because assistive tech may process events asynchronously. Predictability comes from stable structure, intentional focus management, and limiting gratuitous re-renders around the active element.",
+    "real_world": "A common SPA bug is navigating to a new screen visually while keyboard focus stays on an old nav link, so screen reader users never get a clear cue that the main content changed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you move focus programmatically on navigation, and when would you leave it where it is?"
+   },
+   {
+    "question": "What are the accessibility risks of virtualization in large lists or grids, and how would you design around them?",
+    "answer": "Virtualization removes offscreen DOM nodes for performance, but assistive tech often relies on a stable set of elements, consistent positions, and accurate item counts. Users can lose context if rows disappear while navigating, or hear misleading positions unless you expose metadata like set size and position where the pattern supports it. I’d prefer pagination or chunked loading for highly interactive content, and use virtualization more carefully for read-only feeds. If virtualization is required, keep focusable items mounted while focused, preserve DOM identity, and test with real screen readers because browser behavior varies.",
+    "real_world": "Teams often ship a fast virtualized grid that works with a mouse, then discover screen reader users cannot review previous rows because they were unmounted as soon as they scrolled.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your approach differ for a virtualized chat transcript versus a virtualized financial data grid?"
+   },
+   {
+    "question": "How do accessible relationships break across portals, shadow DOM, or micro-frontends, and what would you watch for?",
+    "answer": "Relationships such as labeling and descriptions depend on IDs resolving correctly in the composed document and on assistive tech understanding the rendered accessibility tree. Portals usually preserve semantics if IDs remain unique, but shadow DOM and independently deployed fragments can complicate naming, ownership, and heading structure. I watch for duplicate IDs, broken aria-describedby references, and components that visually look connected but are separate in the accessibility tree. At the architecture level, shared primitives and ID generation rules matter as much as component-level ARIA.",
+    "real_world": "In micro-frontend setups, two teams can both render 'error-message' IDs, causing a field in one app shell to pick up the wrong description or none at all.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What conventions would you put in a design system to prevent these cross-boundary issues?"
+   },
+   {
+    "question": "What can go wrong with accessible names and descriptions when content is localized or generated at runtime?",
+    "answer": "Accessible names are computed from multiple sources, so localization can accidentally create duplicates, empty names, or names that no longer match the visible UI. Runtime generation also causes problems when IDs change between renders and break references, or when concatenated strings produce unnatural announcements in some languages. I try to keep the visible text as the primary name source when possible and use ARIA labeling only where native semantics are insufficient. Localization review should include screen reader output, not just visual screenshots, because grammar and ordering matter.",
+    "real_world": "A classic production issue is a control whose visible text says one thing in German while an untranslated aria-label says another, confusing speech input users and screen reader users at the same time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you audit a component library for computed-name regressions during localization?"
+   },
+   {
+    "question": "How would you handle accessibility for skeleton screens and loading states so they do not create noise or hide important status changes?",
+    "answer": "Skeletons are visual affordances, so I usually keep them out of the accessibility tree and expose a concise loading state on the relevant region instead of making users traverse placeholder content. If loading blocks interaction, communicate busy state and avoid moving focus into content that is not ready. The trade-off is between silence and discoverability: too many announcements become noisy, but no status makes the interface feel frozen. For long-running loads, a stable status message is better than repeatedly updating placeholders.",
+    "real_world": "Users often encounter pages where a screen reader reads twenty fake placeholder cards before the real content arrives, turning a one-second load into a frustrating experience.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use a busy indicator on a container versus a separate status message?"
+   },
+   {
+    "question": "What accessibility problems show up in canvas, SVG, or chart-heavy UIs, and what is a practical strategy for making them usable?",
+    "answer": "Canvas is mostly opaque to assistive tech unless you provide an alternative representation, and SVG accessibility varies depending on structure and browser support. For charts, the goal is not to narrate every pixel but to provide the key takeaway, data access, and interaction model in another form such as a summary, table, or drill-down controls. Keyboard support for chart interactions needs a clear focus model; otherwise users get trapped in dozens of points. I treat the visual chart as one representation and design an equivalent data workflow alongside it.",
+    "real_world": "Analytics dashboards often pass automated checks yet still fail real users because the only way to inspect values is hover tooltips on a canvas chart.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you expose a dense time-series chart differently for executives versus analysts?"
+   },
+   {
+    "question": "What is the difference between disabled, readonly, and aria-disabled in terms of accessibility and behavior, and how do you choose?",
+    "answer": "Native disabled generally removes a control from interaction and often from the tab order, while readonly allows focus and value review but prevents editing on supported form fields. aria-disabled only changes the accessibility semantics; it does not block clicks, keyboard events, or form submission by itself. I choose native disabled when the control truly cannot be used, readonly when users must still inspect or copy the value, and aria-disabled mainly for custom widgets that need to stay discoverable in navigation. The main gotcha is exposing something as disabled without enforcing the behavior consistently.",
+    "real_world": "A frequent bug is styling a button as disabled with aria-disabled but still firing the action on Enter because the JavaScript handler never checked the state.",
+    "code_lang": "html",
+    "code": "<button aria-disabled=\"true\" onclick=\"save()\">Save</button>\n<!-- Still clickable unless JS prevents it -->\n\n<input value=\"INV-1042\" readonly>\n<!-- Focusable and readable, but not editable -->",
+    "follow_up": "When is it better to leave an action enabled and validate on submit instead of disabling it ahead of time?"
+   },
+   {
+    "question": "How do accessible states get out of sync in highly interactive UIs, and what engineering practices prevent that?",
+    "answer": "State drift happens when visual state, DOM state, and accessibility state are updated through different paths or at different times. A toggle can look pressed while aria-pressed is stale, or a panel can be hidden visually while still exposed because only CSS changed. The fix is to derive both visuals and semantics from the same source of truth and to test state transitions, not just static snapshots. In complex apps, race conditions from optimistic updates, debouncing, or interrupted renders are common failure modes.",
+    "real_world": "This shows up in component libraries where a menu closes visually but remains announced as expanded because the attribute update was tied to a later animation callback.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of automated tests actually catch semantic state drift instead of only DOM presence?"
+   },
+   {
+    "question": "How would you approach accessibility in a realtime collaborative app where content updates frequently, like comments, dashboards, or incident tools?",
+    "answer": "The core problem is balancing awareness with interruption. Frequent automatic announcements can make the app unusable, so I separate urgent events from ambient updates, aggregate low-priority changes, and give users control over what is announced or auto-focused. Focus should almost never be stolen for remote changes; instead, expose status and navigable update summaries. In collaborative tools, accessibility is partly product design: deciding which events are actionable right now versus reviewable later.",
+    "real_world": "In incident consoles, constant log updates can flood a live region and drown out the operator’s current task unless updates are batched or filtered.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of events would you classify as assertive versus polite versus not announced at all?"
+   },
+   {
+    "question": "How do you use automated accessibility tooling at scale without getting a false sense of coverage?",
+    "answer": "Automated tools are good at catching detectable rule violations like missing names, invalid ARIA, or some color and structure issues, but they miss workflow failures, poor announcements, and many custom-widget bugs. At scale, I treat automation as a fast regression net in CI plus component tests, then add targeted manual screen reader and keyboard testing for critical journeys. The architectural win is building accessible primitives and lint rules so teams fix issues once in the system rather than repeatedly in products. Metrics should track defect classes and user-impacting escapes, not just the number of automated violations.",
+    "real_world": "A team can have a dashboard showing zero axe violations while a core purchase flow is still unusable because focus order and announcement timing were never exercised end to end.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which user journeys would you put into a manual accessibility smoke test for every release?"
+   },
+   {
+    "question": "How would you make a custom slider accessible, and where do teams usually get it wrong?",
+    "answer": "A custom slider needs the slider role, a stable accessible name, correct min/max/current value, and full keyboard support including arrow keys and usually larger step changes. The hard part is keeping pointer, keyboard, and assistive technology state in sync while exposing a meaningful value text when the raw number is not enough. Teams often miss orientation, touch AT support, or they update only the visual thumb while the announced value lags behind. If the control is discrete or complex, a native input range is often cheaper and more reliable than recreating the interaction model.",
+    "real_world": "Media scrubbers, pricing filters, and timeline controls often ship with polished visuals but broken keyboard increments or stale announced values. In production that leads to users being unable to set exact values even though the UI appears functional.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you add a text input next to a slider instead of relying on the slider alone?"
+   },
+   {
+    "question": "What are the accessibility implications of using CSS generated content like ::before and ::after for meaningful text or icons?",
+    "answer": "Generated content is unreliable for meaning because its exposure to assistive technology varies by browser and screen reader, and it is not part of the DOM in the same way real text is. It is fine for decoration, but if the content conveys state, instructions, required markers, or an icon-only label, put that in the markup. Another pitfall is localization and copy extraction: pseudo-element text is easy to miss in translation workflows. Treat generated content as visual enhancement, not as the source of truth.",
+    "real_world": "Teams sometimes add required-field asterisks, status words like 'New', or external-link icons only through CSS. That can create inconsistent announcements across platforms and leave translated builds with missing or untranslated meaning.",
+    "code_lang": "css",
+    "code": ".required::after {\n  content: \" *\"; /* decorative only */\n  color: red;\n}\n\n/* Put the actual required text/state in HTML, not only here */",
+    "follow_up": "If you need an icon with text hidden visually, what pattern would you use instead?"
+   },
+   {
+    "question": "How do you handle accessibility for embedded third-party widgets or iframes that you do not fully control?",
+    "answer": "First, make the integration boundary accessible: give the iframe a clear title, ensure focus can enter and leave predictably, and provide an alternate path if the widget fails or is unusable. Then assess the vendor component like any dependency: test keyboard flow, screen reader behavior, zoom, contrast, and error handling in the contexts where you embed it. If it is not fixable, you may need to sandbox the damage with clear handoff messaging or replace it, because inaccessible checkout, chat, or auth widgets become hard blockers. Contractually, accessibility requirements should be part of vendor selection, not an afterthought.",
+    "real_world": "CAPTCHA, payment, scheduling, and support widgets are common incident sources because they sit on critical paths and bypass your design system standards. A team may have an accessible app overall but still fail users at the one embedded step that matters most.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you log or monitor in production to detect when an embedded widget is causing accessibility failures?"
+   },
+   {
+    "question": "How would you design accessible pagination when the dataset is large and page state changes frequently?",
+    "answer": "Pagination should expose a clear navigation structure, a current page indicator, and predictable focus behavior after page changes. In SPAs, the key decision is whether to move focus to the main heading, preserve it on the activated control, or land on the results container; pick one rule and use it consistently so updates are understandable. Large datasets also need concise labels because announcing long page ranges or repeated boilerplate on every control becomes noisy. If counts change due to filters or realtime updates, announce summary changes sparingly rather than re-reading the whole pager.",
+    "real_world": "Search and admin tools often combine paging, sorting, and filtering, and users can lose context after each update if focus bounces around. At scale, small inconsistencies across dozens of list screens create a support burden because keyboard and screen reader users have to relearn each page.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your approach differ between classic full-page navigation and an SPA that swaps results in place?"
+   },
+   {
+    "question": "What accessibility issues come up with file upload components, especially custom drag-and-drop uploaders?",
+    "answer": "The safest pattern is to keep a real file input available and use the custom drop zone as an enhancement, not the only path. The component needs a programmatic label, keyboard activation, clear constraints like accepted types and size limits, and status updates for selected files, progress, success, and failure. Drag-and-drop alone excludes many users, and upload progress can become noisy if every percentage point is announced. Also think about recovery: users need a way to remove, retry, and understand validation errors per file.",
+    "real_world": "Design-heavy uploaders often hide the native input, making them unusable on keyboard or mobile assistive tech. Production incidents usually show up when a required upload step silently rejects files or announces progress in a way that floods screen readers.",
+    "code_lang": "html",
+    "code": "<label for=\"resume\">Upload resume</label>\n<input id=\"resume\" type=\"file\" accept=\".pdf,.doc,.docx\">\n<div id=\"upload-help\">PDF or Word, max size depends on backend limits.</div>\n<!-- Enhance with drag/drop, but keep the input usable -->",
+    "follow_up": "How would you announce upload progress without overwhelming users when many files upload at once?"
+   },
+   {
+    "question": "How do accessibility concerns change when you build for high zoom, browser text scaling, or reflow requirements?",
+    "answer": "At high zoom or text scaling, many bugs are really layout and interaction bugs: clipped labels, fixed-height containers, off-screen dialogs, overlapping controls, and content that requires two-dimensional scrolling. The accessibility requirement is not just readable text; users must still complete tasks without losing content or functionality. That pushes architectural choices toward flexible layouts, relative sizing, robust wrapping, and avoiding assumptions about viewport width or line length. You also need to test at combinations of zoom and responsive breakpoints because failures often appear only at specific thresholds.",
+    "real_world": "Dense enterprise tables and filter panels often break around 200 to 400 percent zoom, where controls collapse or become unreachable. These are expensive late-stage fixes because the problem is usually baked into layout primitives rather than one component.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What CSS or layout patterns tend to cause the worst failures under zoom and text resize?"
+   },
+   {
+    "question": "What is the difference between hiding content with display:none, visibility:hidden, off-screen CSS, and the hidden attribute from an accessibility perspective?",
+    "answer": "display:none, the hidden attribute, and usually visibility:hidden remove content from normal interaction and from most assistive technology exposure, while off-screen techniques keep content in the accessibility tree if done correctly. That makes off-screen text useful for extra labels or instructions, but dangerous if it leaves stale or duplicate content available only to screen readers. The choice should match intent: if users should not perceive or interact with it, fully hide it; if it is meant only as an assistive cue, use a vetted visually-hidden pattern. Problems start when teams switch visual state without deciding what should happen semantically.",
+    "real_world": "A common bug is a mobile menu or duplicate heading hidden visually but still announced, causing repeated navigation items or confusing page structure. The reverse also happens when helpful instructions are removed from both sighted and assistive users because the wrong hiding method was used.",
+    "code_lang": "css",
+    "code": ".sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border: 0;\n}",
+    "follow_up": "What extra problems do hidden duplicates create for speech input users?"
+   },
+   {
+    "question": "How would you approach accessibility for complex gestures like swipe, pinch, or long-press interactions on the web?",
+    "answer": "Any gesture-only action needs an equivalent that works with simple pointer input, keyboard, and assistive technology activation. The reason is both accessibility and interoperability: some users cannot perform the gesture, and some platforms or AT intercept it. Long-press and swipe are especially risky when they reveal critical actions that have no visible alternative. I treat gestures as shortcuts layered on top of explicit controls, not as the only interaction model.",
+    "real_world": "Mail, kanban, and mobile-web list UIs often hide delete, archive, or reorder behind swipe. That looks efficient in demos but becomes a production accessibility bug when core actions disappear for keyboard, switch, or screen reader users.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you keep the non-gesture alternative discoverable without cluttering the UI?"
+   },
+   {
+    "question": "What are the accessibility pitfalls of using contenteditable instead of standard form controls?",
+    "answer": "contenteditable gives you editing behavior, but not the semantics, validation model, value handling, or predictable assistive technology support of input and textarea. Rich-text editors built on it often have broken cursor announcements, inconsistent shortcut handling, and awkward interactions with forms, placeholders, and error messaging. You can make it workable, but it takes substantial editor-specific engineering for selection, formatting state, and announcement strategy. If plain text is enough, use textarea; if rich text is required, budget for accessibility as a core feature, not a polish task.",
+    "real_world": "Comment editors, CMS fields, and chat composers often regress when teams replace a textarea with a custom rich editor. Users report that formatting state is unclear, cursor position announcements are inconsistent, or pasted content behaves unpredictably across browsers and screen readers.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you test first in a rich-text editor to judge whether it is viable for screen reader users?"
+   },
+   {
+    "question": "How do you prevent accessibility regressions in a component library used by many product teams?",
+    "answer": "You need accessibility encoded into the component contract: semantics, keyboard behavior, naming hooks, and escape hatches that are explicit rather than ad hoc. In practice that means tested primitives, lint rules, Storybook or fixture examples, and CI checks for both interaction and accessibility tree expectations, plus documented do-and-don't usage. The scaling challenge is governance: one broken button or dialog pattern can multiply across hundreds of screens, so changes need versioning discipline and migration guidance. Central ownership helps, but telemetry and issue intake from product teams matter because real failures often come from composition, not the primitive alone.",
+    "real_world": "A design system can eliminate classes of bugs, but it can also spread them very quickly if a shared pattern is wrong. Teams often discover this after a library update changes focus behavior or labeling APIs and dozens of workflows regress at once.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you include in a component API to make the accessible path the easiest path for product teams?"
+   }
+  ]
+ }
+}

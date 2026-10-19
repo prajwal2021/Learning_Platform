@@ -1,0 +1,493 @@
+{
+ "slug": "grpc",
+ "name": "gRPC and Protocol Buffers",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Protocol Buffers, and why would you use it instead of JSON?",
+    "answer": "Protocol Buffers is a compact binary serialization format with a schema defined in .proto files. You use it when you want smaller messages, faster parsing, and a strongly defined contract between services. Compared with JSON, protobuf is less human-readable but usually more efficient and less ambiguous. It is especially common in service-to-service APIs.",
+    "real_world": "Teams use protobuf for internal APIs where many services exchange high-volume traffic and network cost matters. It also helps prevent contract drift because both sides compile against the same schema.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a .proto file and what do you define in it?"
+   },
+   {
+    "question": "What is gRPC, and how is it related to Protocol Buffers?",
+    "answer": "gRPC is an RPC framework for calling methods on remote services as if they were local functions. It commonly uses Protocol Buffers to define service methods and message types, though protobuf is the data format and gRPC is the transport and RPC layer. The main value is a strongly typed contract, code generation, and efficient communication over HTTP/2. You would choose it for internal service communication or APIs that need strict schemas and good performance.",
+    "real_world": "A backend team might expose a user service to several microservices using gRPC so clients can generate stubs in multiple languages. That reduces hand-written client code and mismatched request shapes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does HTTP/2 give gRPC that plain HTTP/1.1 does not?"
+   },
+   {
+    "question": "What does a .proto file usually contain?",
+    "answer": "A .proto file defines the messages, enums, and services in your API contract. Messages describe the shape of data, and services define RPC methods and their request and response types. It may also include package names and options that affect code generation. The key idea is that the schema is the source of truth for both clients and servers.",
+    "real_world": "When teams review API changes, they often review the .proto file first because it shows the contract change directly. That helps catch breaking changes before code is merged.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a protobuf field change backward compatible or breaking?"
+   },
+   {
+    "question": "How do field numbers work in Protocol Buffers, and why are they important?",
+    "answer": "Each field in a protobuf message has a unique numeric tag, and that number is what gets written on the wire, not the field name. Those numbers must stay stable because changing them changes the meaning of old data. You can rename a field safely, but reusing or renumbering a field can break compatibility. This is one of the most important protobuf rules to remember.",
+    "real_world": "A production incident can happen if a field number is reused for a different meaning and old clients send data that new servers misinterpret. That can silently corrupt behavior even though the code compiles.",
+    "code_lang": "proto",
+    "code": "message User {\n  string name = 1;\n  int32 age = 2;\n}",
+    "follow_up": "What should you do if you need to remove a field later?"
+   },
+   {
+    "question": "What is the difference between a unary RPC and a streaming RPC?",
+    "answer": "A unary RPC has one request and one response, like a normal function call. A streaming RPC lets one or both sides send multiple messages over the same call, which is useful for large data transfers, live updates, or chat-like flows. Streaming adds complexity around backpressure, ordering, and cancellation, but it can be much more efficient for continuous data. Choosing the simplest model that fits the use case is usually best.",
+    "real_world": "A notification service may use server streaming to push events to clients as they happen instead of polling. That lowers latency and reduces load from repeated requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose client streaming instead of server streaming?"
+   },
+   {
+    "question": "What is the difference between optional, repeated, and scalar fields in protobuf?",
+    "answer": "A scalar field holds one value of a basic type, like int32 or string. A repeated field is a list of zero or more values. In modern protobuf, scalar fields also have a presence model that can matter when distinguishing an explicitly set empty value from an unset value, depending on the language and syntax used. Knowing the distinction matters when you need defaults, validation, or patch-like updates.",
+    "real_world": "This comes up in update APIs where a client needs to say whether a field should be cleared or left unchanged. If you model it wrong, partial updates can overwrite data unintentionally.",
+    "code_lang": "proto",
+    "code": "message Profile {\n  string display_name = 1;\n  repeated string tags = 2;\n}",
+    "follow_up": "How do you represent an update request when fields may be intentionally omitted?"
+   },
+   {
+    "question": "How do gRPC clients and servers get generated from a .proto file?",
+    "answer": "You run the protobuf/gRPC code generator for your language, and it produces message classes and service stubs. The client uses the generated stub to call methods, and the server implements the generated service interface or handler. This avoids manual serialization code and keeps both sides aligned with the schema. If the .proto changes, you regenerate the code and compile against the updated contract.",
+    "real_world": "A team adding a new language to their stack can generate clients instead of hand-writing request parsing. That usually reduces bugs and speeds up adoption.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can happen if client and server use different versions of the generated code?"
+   },
+   {
+    "question": "What is backward compatibility in protobuf, and how do you avoid breaking old clients?",
+    "answer": "Backward compatibility means newer code can read older messages and older code can usually ignore fields it does not know about. To preserve that, keep field numbers stable, do not reuse removed numbers, and prefer adding new fields instead of changing existing meanings. Old clients ignore unknown fields, which is a big reason protobuf works well for evolving APIs. Breaking changes usually come from renumbering, changing types incompatibly, or reusing old tags.",
+    "real_world": "This matters when many services deploy independently. A server may receive traffic from an older mobile app or an older internal service for weeks after a rollout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you safely remove a field from a schema?"
+   },
+   {
+    "question": "How does gRPC handle errors, and what is the basic way to signal failure?",
+    "answer": "In gRPC, servers return a status code and optional message instead of only using exceptions or HTTP status codes. The client can inspect that status to tell whether the call succeeded, failed because of invalid input, was unavailable, or timed out. This makes failures part of the RPC contract, not just transport errors. Good APIs use the right status code so clients can react appropriately.",
+    "real_world": "If a validation service returns the wrong error code, clients may retry a request that will never succeed. That can waste load and hide the real problem from monitoring.",
+    "code_lang": "python",
+    "code": "from grpc import StatusCode\n# server side conceptually:\n# context.abort(StatusCode.INVALID_ARGUMENT, 'email is invalid')",
+    "follow_up": "How is a gRPC status different from an exception in application code?"
+   },
+   {
+    "question": "What is the purpose of deadlines in gRPC?",
+    "answer": "A deadline is the time by which an RPC must complete, and it protects callers from waiting forever. It also lets downstream services stop work early when the caller no longer cares, which saves resources. Deadlines are important in service chains because each hop should inherit or shorten the original timeout. Without them, slow dependencies can pile up threads and make outages worse.",
+    "real_world": "During an incident, missing deadlines can cause request queues to grow until the whole service becomes unresponsive. Setting and propagating them is one of the simplest reliability improvements.",
+    "code_lang": "python",
+    "code": "# client side conceptually\nstub.GetUser(req, timeout=2.0)",
+    "follow_up": "What should a server do when it notices the client deadline has already expired?"
+   },
+   {
+    "question": "What is a service definition in a .proto file, and what does it give you?",
+    "answer": "A service definition lists the RPC methods your server exposes, along with their request and response message types. It gives gRPC enough information to generate client and server stubs, so both sides agree on the API shape. Think of it as the contract for remote calls, separate from the message schemas themselves.",
+    "real_world": "A team adds a new endpoint by updating the service definition first, then regenerating stubs in each language. This keeps backend and frontend service clients aligned without hand-written HTTP glue.",
+    "code_lang": "proto",
+    "code": "syntax = \"proto3\";\n\nservice UserService {\n  rpc GetUser(GetUserRequest) returns (GetUserResponse);\n}",
+    "follow_up": "How do you version a gRPC service without breaking existing clients?"
+   },
+   {
+    "question": "What is a protobuf message, and how is it different from a service?",
+    "answer": "A message is a structured data type: it defines fields and their types, like a strongly typed record. A service, by contrast, defines callable RPC methods that send and receive messages. Messages describe the data being moved; services describe the operations available.",
+    "real_world": "If a team confuses the two, they may try to put business actions into a message schema or add fields to solve API design problems that should live in the service layer.",
+    "code_lang": "proto",
+    "code": "message GetUserRequest {\n  string user_id = 1;\n}\n\nservice UserService {\n  rpc GetUser(GetUserRequest) returns (GetUserResponse);\n}",
+    "follow_up": "When would you reuse the same message type across multiple RPCs?"
+   },
+   {
+    "question": "What does proto3 mean, and what should you know about its syntax basics?",
+    "answer": "Proto3 is the modern protobuf syntax version most teams use. It uses a simple declarative format with a syntax line, package declarations, message definitions, and service definitions. A common beginner mistake is mixing proto2 and proto3 assumptions, especially around field presence and defaults.",
+    "real_world": "When a service is migrated from older schemas, developers often assume every field can be checked for presence the same way in proto3 as in proto2. That can cause subtle bugs in validation and partial updates.",
+    "code_lang": "proto",
+    "code": "syntax = \"proto3\";\npackage users.v1;\n\nmessage User {\n  string id = 1;\n}",
+    "follow_up": "What changes when you need to know whether a field was explicitly set or not?"
+   },
+   {
+    "question": "What is the role of a package in protobuf, and why does it matter?",
+    "answer": "A package namespaces your protobuf types so names do not collide across files and services. It matters because generated code and fully qualified type names depend on it, especially in larger systems with multiple teams. Without good namespacing, you can end up with confusing or conflicting generated symbols.",
+    "real_world": "In a monorepo with many APIs, two teams may define a `User` message. Packages prevent those definitions from stepping on each other in generated code and service registration.",
+    "code_lang": "proto",
+    "code": "syntax = \"proto3\";\npackage billing.v1;\n\nmessage Invoice {\n  string id = 1;\n}",
+    "follow_up": "How do imports and packages work together when one .proto file uses types from another?"
+   },
+   {
+    "question": "What is an enum in protobuf, and when would you use one?",
+    "answer": "An enum is a named set of allowed integer values for a field, used when a value comes from a fixed list of options. It improves readability and makes the schema self-documenting compared with plain integers. The trade-off is that changing enum values carefully matters, because clients may depend on the names and numeric values.",
+    "real_world": "A team uses enums for order status, payment state, or job state so logs and generated code are easier to understand than raw numbers. It also reduces invalid inputs at the API boundary.",
+    "code_lang": "proto",
+    "code": "enum OrderStatus {\n  ORDER_STATUS_UNSPECIFIED = 0;\n  ORDER_STATUS_PENDING = 1;\n  ORDER_STATUS_SHIPPED = 2;\n}",
+    "follow_up": "What should you do with an enum value you no longer want clients to use?"
+   },
+   {
+    "question": "What is the default value behavior in proto3, and why can it surprise people?",
+    "answer": "In proto3, unset scalar fields read as their default values, such as empty string, zero, or false. That means you cannot tell from the value alone whether the sender omitted the field or intentionally set it to the default. This surprises people when they need partial updates or validation logic based on presence.",
+    "real_world": "An update API may treat an omitted `count` the same as `count = 0`, which can accidentally erase data or block valid requests. Teams often discover this when patch semantics do not behave as expected.",
+    "code_lang": "proto",
+    "code": "message Config {\n  int32 retries = 1;\n}",
+    "follow_up": "How do you model partial updates safely in protobuf-based APIs?"
+   },
+   {
+    "question": "What is a oneof field in protobuf, and what problem does it solve?",
+    "answer": "A oneof lets exactly one field from a group be set at a time. It is useful when a request or response has mutually exclusive shapes, such as different payment methods or search filters. The main benefit is making the schema explicit instead of encoding that rule in application code.",
+    "real_world": "An API for payments might accept either a card token or an ACH account, but never both. Oneof prevents ambiguous requests and makes generated code easier to validate.",
+    "code_lang": "proto",
+    "code": "message PaymentMethod {\n  oneof method {\n    string card_token = 1;\n    string ach_account = 2;\n  }\n}",
+    "follow_up": "What happens to the other fields in a oneof when one is set?"
+   },
+   {
+    "question": "What is field presence, and why do some fields need wrappers or optional support?",
+    "answer": "Field presence means knowing whether a field was explicitly set, not just what value it currently holds. This matters when `0`, `false`, or an empty string are meaningful and different from “not provided.” Teams use this for patch requests, validation, and distinguishing missing data from explicit default values.",
+    "real_world": "A profile update endpoint may need to know whether the user intentionally cleared a nickname or simply did not send it. Without presence, those two cases look the same for scalar fields.",
+    "code_lang": "proto",
+    "code": "message UpdateProfileRequest {\n  string nickname = 1;\n}",
+    "follow_up": "How would you design an API that needs to distinguish unset from empty string?"
+   },
+   {
+    "question": "What is protobuf serialization, in simple terms, and why is it efficient?",
+    "answer": "Serialization is turning an in-memory message into bytes, and deserialization is turning bytes back into a message. Protobuf is efficient because it uses a compact binary format with field numbers and typed encoding rather than verbose text. The trade-off is that the bytes are not human-readable, so debugging usually needs tooling or generated code.",
+    "real_world": "Teams often use protobuf on high-throughput services because it reduces payload size and CPU compared with text-based formats. That can make a noticeable difference on mobile networks or chatty internal RPCs.",
+    "code_lang": "python",
+    "code": "# Conceptual example only\nmsg = User(id=\"123\")\nwire_bytes = msg.SerializeToString()\ncopy = User()\ncopy.ParseFromString(wire_bytes)",
+    "follow_up": "Why does protobuf need stable field numbers for this to work over time?"
+   },
+   {
+    "question": "What is the difference between gRPC and REST at a high level?",
+    "answer": "gRPC is an RPC framework centered on calling methods defined in a service contract, while REST is an HTTP resource-oriented style built around verbs and URLs. gRPC usually uses binary protobuf payloads and strong typing, while REST often uses JSON and is easier to inspect with plain HTTP tools. gRPC is a good fit for internal service-to-service communication; REST is often simpler for public APIs and browser-friendly integration.",
+    "real_world": "A backend team may choose gRPC between microservices for performance and strict contracts, but expose a REST or JSON gateway for external clients that cannot easily use gRPC.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer gRPC-Web or a REST gateway instead of plain gRPC?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide whether a gRPC endpoint should be unary or streaming in a real service?",
+    "answer": "Use unary when the request and response are naturally bounded and you want simple retries, load balancing, and easier observability. Use streaming when the server needs to push many updates, the client needs to upload a sequence, or you want lower latency for incremental results. The trade-off is that streaming is more efficient for ongoing exchange, but it is harder to test, debug, and recover from partial failures. In practice, choose the simplest shape that matches the interaction pattern.",
+    "real_world": "A search service might return one response for a query, but a log tailing API or live price feed often needs server streaming. Teams often regret using streaming for a simple request because client code and operational tooling get more complex.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure modes do you think are harder with streaming than with unary RPCs?"
+   },
+   {
+    "question": "When would you use metadata in gRPC, and what should you be careful about?",
+    "answer": "Metadata is for cross-cutting information that is not part of the business payload, such as auth tokens, request IDs, locale, or tracing headers. It is useful because interceptors and gateways can read it without changing the protobuf schema. Be careful not to put large blobs or sensitive data there unless you control encryption and logging, because metadata often gets forwarded through infrastructure. Also keep key names and semantics consistent across services.",
+    "real_world": "A team may propagate a correlation ID through metadata so logs from multiple services can be stitched together during an incident. If they accidentally put customer PII there, it can leak into logs or tracing systems.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you propagate metadata through a service-to-service call chain?"
+   },
+   {
+    "question": "What happens if a client sends a protobuf message with an unknown field to an older server?",
+    "answer": "The older server should ignore unknown fields while parsing, so the call usually still succeeds. This is one of the main reasons protobuf is good for evolving APIs: new fields can be added without breaking old consumers. The catch is that unknown data is not interpreted by that older server, so you cannot rely on it until both sides understand the field. If you remove or reuse field numbers, though, you can turn a safe evolution into data corruption.",
+    "real_world": "This comes up when one team deploys a new client before the server rollout completes. If the server ignores the new field, the feature may appear to do nothing rather than fail loudly, which can complicate rollout checks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of schema changes are safe, and which ones are risky even if the code still compiles?"
+   },
+   {
+    "question": "How do you design protobuf messages for partial updates without accidentally overwriting fields?",
+    "answer": "For partial updates, use a separate update message or a dedicated patch pattern rather than reusing the full resource message. You need a way to distinguish “field not sent” from “field sent with zero value,” otherwise a client can unintentionally clear data. That usually means using field presence, wrapper types, or an explicit field mask, depending on your language and API style. The key is to make update semantics explicit instead of inferring intent from defaults.",
+    "real_world": "A user profile API often breaks when a client submits only one changed field and other fields get reset to empty values. Teams usually fix this by separating create/read models from update models or by requiring a field mask.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer a field mask over separate update messages?"
+   },
+   {
+    "question": "How would you use interceptors in gRPC, and what problems do they solve?",
+    "answer": "Interceptors let you add behavior around RPCs without repeating it in every handler or client call. They are commonly used for auth, logging, metrics, tracing, request validation, and retries on the client side. The benefit is centralized policy and less boilerplate; the trade-off is that hidden cross-cutting logic can make debugging harder if the interceptor chain is not well documented. Use them for concerns that should apply consistently across many methods.",
+    "real_world": "A platform team may add a server interceptor that checks JWTs and emits latency metrics for every endpoint. If an outage happens, that same interceptor can also help identify which calls are failing before business logic is even reached.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you make sure interceptor behavior is tested separately from handler logic?"
+   },
+   {
+    "question": "What are the practical differences between client-side retries and server-side idempotency in gRPC APIs?",
+    "answer": "Retries are a transport-level recovery strategy; idempotency is an application-level guarantee that repeating the call does not change the outcome incorrectly. Retries only make sense when the operation is safe to repeat or when the server can deduplicate requests. Without idempotency, a retry after a timeout can create duplicate orders, payments, or jobs. In real systems you usually need both: sensible retry rules plus an idempotency key or other dedupe mechanism.",
+    "real_world": "A payment service that retries on deadline exceeded can charge a card twice if the first request actually succeeded but the response was lost. Teams prevent this by making the charge operation idempotent and by limiting retries to clearly safe cases.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which gRPC status codes would you consider retryable, and why?"
+   },
+   {
+    "question": "How do you handle large payloads in gRPC, and when might gRPC be the wrong fit?",
+    "answer": "gRPC can move large messages, but you still need to watch memory usage, compression, and proxy limits because many stacks buffer messages before sending or after receiving them. For large transfers, streaming is often better than a single huge unary response because it reduces peak memory and improves backpressure. gRPC may be the wrong fit if you need browser-native access without a gateway, human-readable payloads, or very large file transfer semantics. In those cases, object storage or chunked upload/download APIs can be simpler.",
+    "real_world": "Exporting a multi-gigabyte report as one unary response can exhaust memory in a service or client. A chunked streaming design is usually safer and easier to resume after failure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug a case where a gRPC call fails only with large messages?"
+   },
+   {
+    "question": "What is backpressure in gRPC streaming, and why does it matter?",
+    "answer": "Backpressure is the ability of the receiver or transport to slow the sender so buffers do not grow without bound. In streaming RPCs this matters because a fast producer can overwhelm a slow consumer and cause memory pressure or latency spikes. Good streaming designs respect flow control and avoid spawning unbounded work per message. If you ignore backpressure, the stream may appear fine in tests but fail under load.",
+    "real_world": "A metrics fan-out service might receive data faster than downstream consumers can process it. Without backpressure, it can accumulate queued messages and eventually run out of memory.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs would you look for to tell whether a stream is being flow-controlled correctly?"
+   },
+   {
+    "question": "How would you version a gRPC API in a way that minimizes client breakage?",
+    "answer": "Prefer additive changes: add fields, add new methods, and keep old methods working until clients migrate. If you need a breaking change, introduce a new service or a new method name rather than changing the meaning of existing fields. Also keep protobuf field numbers and service contracts stable, and document deprecations so teams can move deliberately. Versioning is as much about release process as schema design, because old and new clients often coexist for a long time.",
+    "real_world": "A platform team might keep v1 and v2 methods side by side while mobile clients slowly update over months. This avoids forcing a synchronized rollout across teams with different release cycles.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you deprecate an RPC safely when you still have unknown clients in the wild?"
+   },
+   {
+    "question": "How do you test a gRPC service beyond just unit-testing the handler methods?",
+    "answer": "You want a mix of handler unit tests, contract tests against the protobuf schema, and integration tests that run a real client-server round trip. Unit tests catch business logic bugs, while integration tests catch serialization, deadline, metadata, and transport issues. It is also useful to test compatibility by exercising older generated clients against newer servers. The important part is to verify the API shape and behavior, not just the pure function underneath it.",
+    "real_world": "A service may pass unit tests but fail in production because an interceptor strips metadata or because a field is serialized differently than expected. Integration tests with a real server often catch these problems before deployment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you include in a contract test for a protobuf-based API?"
+   },
+   {
+    "question": "How do protobuf maps work, and what trade-offs do they have compared with a repeated key-value message?",
+    "answer": "A protobuf map is syntactic sugar for a keyed collection where each key maps to one value. It is convenient for lookup-style data, but it gives you less control over validation, ordering, and future schema evolution than a repeated message. If you need duplicate keys, custom metadata per entry, or deterministic ordering semantics, a repeated message is usually safer.",
+    "real_world": "Teams often use maps for config-like data such as feature flags or per-user settings. Problems show up when they later need multiple values per key or want to attach extra fields to each entry.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you avoid maps even if the data looks key-value shaped?"
+   },
+   {
+    "question": "What happens if you add a new required business rule on the server but old clients still call the gRPC method?",
+    "answer": "Old clients will keep sending the same request shape, so the server has to enforce the new rule at runtime rather than assuming the client knows about it. In practice that means validating inputs, returning a clear error code, and deciding whether the old behavior is still accepted for a transition period. If the rule is truly incompatible, you usually need a new method or a new versioned request shape.",
+    "real_world": "This comes up when product changes a workflow after mobile or partner clients have already shipped. The server has to reject bad requests gracefully instead of failing in unpredictable ways.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you introduce that change without breaking existing integrations?"
+   },
+   {
+    "question": "How do unary RPCs behave differently from streaming RPCs in terms of latency and resource usage?",
+    "answer": "A unary RPC is simpler because each call has one request and one response, which makes it easier to reason about retries, timeouts, and load balancing. Streaming can reduce overhead and latency for many messages, but it also keeps connections open longer and makes flow control and cancellation more important. Choose unary when the interaction is naturally request-response; choose streaming when you need incremental delivery or long-lived interaction.",
+    "real_world": "A log ingestion pipeline might use streaming to avoid opening a new call for every event. A user profile lookup is usually better as unary because the response is small and immediate.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a streaming RPC harder to retry safely than a unary one?"
+   },
+   {
+    "question": "How do you debug a gRPC call that works locally but fails in production with an unavailable or deadline-exceeded error?",
+    "answer": "First check whether the failure is connectivity, server overload, or the client timing out before the server responds. Then inspect logs and metrics on both sides, including request duration, queueing, and whether the server is returning errors or simply not responding in time. In gRPC, transport issues and application timeouts can look similar from the client side, so you need server-side visibility to separate them.",
+    "real_world": "This is common when production traffic is routed through proxies or service meshes that add latency. A call that is fine in a dev environment can start timing out once real traffic and contention are introduced.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you add to make this easier to diagnose next time?"
+   },
+   {
+    "question": "When would you use protobuf wrapper types or optional fields instead of plain scalars?",
+    "answer": "Use them when you need to distinguish “field not sent” from “field sent with a zero value.” That matters for patch-style updates, validation, and APIs where clearing a value is different from leaving it unchanged. Plain scalars are simpler, but they lose presence information in cases where the distinction matters.",
+    "real_world": "A settings API may need to tell the difference between “don’t change my email preference” and “set my email preference to false.” Without presence, the server can accidentally overwrite fields.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you model a partial update request that supports clearing fields?"
+   },
+   {
+    "question": "What are the main trade-offs between using protobuf maps and using repeated messages for collections?",
+    "answer": "Maps are easier to query by key and make the common case concise. Repeated messages are more flexible because you can store duplicates, add per-entry fields, and control validation more explicitly. If your collection might grow extra semantics later, repeated messages usually age better; if it is truly just a lookup table, a map is simpler.",
+    "real_world": "A permissions system often starts as a simple map, then later needs source, expiry, or audit data per entry. At that point a repeated entry message is much easier to evolve.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you migrate an existing map field to a richer repeated structure safely?"
+   },
+   {
+    "question": "How do you handle authentication in gRPC, and where should that logic live?",
+    "answer": "Authentication is usually carried in metadata, with server-side interceptors or middleware validating tokens before the business handler runs. That keeps the auth logic consistent across methods and avoids duplicating it in every RPC. The main trade-off is making sure you do not leak sensitive headers into logs and that streaming calls still check identity for the full lifetime of the stream.",
+    "real_world": "This matters in internal platforms where many services call each other and every handler cannot implement auth from scratch. A shared interceptor also makes auditing and token rotation much easier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you propagate a user identity from one service to another without trusting client-supplied headers blindly?"
+   },
+   {
+    "question": "What does server-side reflection do in gRPC, and when is it useful?",
+    "answer": "Reflection lets tools discover service and method definitions from a running server instead of needing the .proto files beforehand. It is useful for debugging, manual inspection, and tooling like grpcurl in development or internal environments. The trade-off is exposure: in production you should think carefully about whether revealing your API surface is acceptable.",
+    "real_world": "On-call engineers often use reflection to inspect a live service quickly when they do not have the latest generated code locally. It can save a lot of time during incident response.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you disable reflection even if it is convenient?"
+   },
+   {
+    "question": "How do you approach testing backward compatibility of protobuf changes in a real project?",
+    "answer": "You test the old reader against new data and the new reader against old data, not just the happy path on the latest code. That catches problems like renamed fields, reused numbers, or semantics that changed even though the schema still compiles. It is also useful to have golden serialized fixtures in CI so regressions are detected before deployment.",
+    "real_world": "This matters when multiple services deploy independently and some clients lag behind for weeks. A change that looks harmless in code review can break older binaries in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of schema changes would you explicitly block in review?"
+   },
+   {
+    "question": "How do you choose between protobuf oneof and separate nullable fields for mutually exclusive data?",
+    "answer": "Use oneof when the protocol truly allows exactly one alternative at a time and you want that constraint enforced by the schema. Separate nullable fields are more permissive, but they make invalid combinations easier to represent and harder to validate consistently. Oneof is a better fit when the alternatives are semantically exclusive, like different payment methods or event variants.",
+    "real_world": "Event payloads often have several shapes, and oneof makes the producer’s intent explicit. Without it, consumers may have to guess which field should be read and what combinations are valid.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the downsides of oneof when you later need to add another variant?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does a gRPC call actually run over HTTP/2 on the wire, and what consequences does that have for performance and failure modes?",
+    "answer": "A gRPC RPC is carried as HTTP/2 frames: headers for method and metadata, then one or more DATA frames containing length-prefixed protobuf messages, and trailers carrying final status. Because HTTP/2 multiplexes many streams over one TCP connection, you avoid connection-per-request overhead, but packet loss or a blocked TCP send buffer can still stall unrelated streams on that connection. Header compression and multiplexing help throughput, while flow control and max concurrent streams become real bottlenecks at high fan-out. In practice, understanding that transport stack explains why some failures show up as transport errors instead of application errors.",
+    "real_world": "Teams often see tail latency spikes when too many hot RPCs share a single client connection through a proxy. A production incident can look like random UNAVAILABLE errors, but the root cause is HTTP/2 stream limits or TCP-level congestion.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you inspect first to tell whether the bottleneck is the application, HTTP/2 flow control, or the network?"
+   },
+   {
+    "question": "How do connection pooling and channel reuse work in gRPC clients, and when does a single channel stop being enough?",
+    "answer": "A gRPC channel is meant to be long-lived and reused; creating one per RPC is expensive because you pay TCP, TLS, and HTTP/2 setup repeatedly. One channel can handle many concurrent RPCs, but it is still bounded by HTTP/2 stream concurrency, connection-level flow control, and the fact that all traffic shares one socket. At high QPS or with long-lived streams, clients often need multiple channels per backend or per process to spread load and reduce head-of-line effects at the TCP layer. The trade-off is better concurrency versus more open connections, memory, and handshake overhead.",
+    "real_world": "A common failure mode is a service that works in staging but saturates one client channel in production, causing queueing and deadline misses. Another is overcorrecting with too many channels and exhausting file descriptors or load balancer limits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide the right number of channels for a high-throughput client?"
+   },
+   {
+    "question": "What is the difference between transparent retries, explicit retry policies, and hedging in gRPC, and where can they go wrong?",
+    "answer": "Transparent retries are limited retries the library may do when it knows the request was not committed, while explicit retry policies let you retry configured status codes under controlled conditions. Hedging sends multiple attempts in parallel after a delay to cut tail latency, but it increases backend load and makes idempotency even more critical. All of these can amplify outages if your deadlines are too long, your retry budget is unbounded, or the method has side effects. The core rule is that transport-level safety is not business-level safety.",
+    "real_world": "During partial outages, naive retries can turn a small percentage of slow requests into a retry storm that takes the whole tier down. Teams usually pair retries with strict deadlines, jittered backoff, and server-side deduplication for mutating methods.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design an RPC for safe retries if it creates an order or charges a card?"
+   },
+   {
+    "question": "How does schema evolution get tricky with generated code across languages, even when the protobuf change is wire-compatible?",
+    "answer": "Wire compatibility only means old and new binaries can parse each other's bytes; it does not guarantee identical behavior in generated APIs. Different languages vary in unknown field retention, enum handling, JSON mapping, presence APIs, integer overflow behavior, and whether map ordering or default values appear the same to application code. A change that is safe on the wire can still break validation, persistence diffs, or gateway behavior when one language drops information another preserves. So compatibility testing has to include cross-language round trips and generated-code semantics, not just parsing.",
+    "real_world": "A common incident is a Java service forwarding a message with fields it preserves, while a gateway in another language drops those unknown fields and silently strips data. Another is a new enum value reaching an older client that treats it as invalid business logic rather than an opaque unknown.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which protobuf changes do you consider wire-safe but still risky enough to require cross-language integration tests?"
+   },
+   {
+    "question": "What are the performance implications of protobuf allocation patterns and message size, and how do you optimize hot paths without making the code fragile?",
+    "answer": "Serialization cost is usually dominated by memory allocation, copying, and cache behavior once schemas get large or QPS is high. Reusing buffers, avoiding unnecessary message materialization, limiting deep nesting, and keeping hot fields small and frequent can matter more than micro-optimizing field tags. Large repeated fields and many tiny submessages increase GC pressure and CPU branchiness, while compression can save bandwidth but raise CPU and tail latency. The safest optimizations are usually architectural: smaller messages, fewer hops, and fewer encode/decode cycles.",
+    "real_world": "In high-throughput services, CPU often burns not in business logic but in repeated marshal-unmarshal across sidecars, gateways, and internal hops. Teams sometimes cut fleet size substantially just by removing one unnecessary translation layer or by batching small RPCs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you profile whether your bottleneck is protobuf encoding itself, allocation pressure, or network transfer time?"
+   },
+   {
+    "question": "How do bidirectional streams fail in practice, and what concurrency mistakes do you watch for in server implementations?",
+    "answer": "Bidirectional streams look simple but combine long-lived state, cancellation, partial failure, and concurrent send/receive paths. Common mistakes are blocking reads and writes on the same goroutine or thread, not propagating cancellation to downstream work, unbounded buffering between producer and sender, and assuming message order implies processing completion order. You also need to handle half-close correctly: the peer may stop sending while still expecting responses. A robust design separates read, process, and write flow with bounded queues and explicit shutdown rules.",
+    "real_world": "Production leaks often come from streams that outlive client disconnects because one background worker never noticed cancellation. Another common incident is memory growth from buffering outbound messages faster than the client can read them.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure a bidi streaming handler so slow clients do not cause unbounded memory growth?"
+   },
+   {
+    "question": "How do load balancing and name resolution actually work in gRPC, and why do client-side and proxy-based balancing behave differently?",
+    "answer": "gRPC typically resolves a target name into one or more backend addresses, then applies a balancing policy such as pick-first or round-robin on the client. Client-side balancing can react per RPC and spread load well for long-lived HTTP/2 connections, but it depends on accurate discovery data and pushes balancing logic into every client. Proxy-based balancing centralizes policy and observability, yet can hide backend health details and may pin many streams on a few upstream connections unless configured carefully. Long-lived streams make this especially important because they reduce how often load can rebalance.",
+    "real_world": "A team may think they have even load distribution, but with pick-first plus long-lived streams one backend ends up carrying most traffic. Conversely, an L7 proxy can become the bottleneck if every service funnels gRPC through it without enough upstream connection fan-out.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when your workload is dominated by long-lived streams instead of short unary calls?"
+   },
+   {
+    "question": "What are the main gotchas when exposing a gRPC service through a JSON or HTTP gateway?",
+    "answer": "The gateway is not a lossless translation layer: protobuf field presence, oneof semantics, 64-bit integers, bytes, unknown fields, and enum handling can all change meaning when mapped to JSON. Error models also diverge, because HTTP status plus JSON error bodies do not perfectly match gRPC status and rich error details. You need to define canonical behavior for omitted versus zero values, repeated query parameters, and how to preserve or intentionally drop fields clients do not understand. Otherwise the gRPC API and the public HTTP API gradually become different products.",
+    "real_world": "A common bug is a PATCH-like HTTP request omitting a field and the gateway turning that into a protobuf zero value, unintentionally clearing data. Another is JavaScript clients losing precision on large integers returned through JSON even though the underlying protobuf value was valid.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design around field presence and 64-bit integer issues if you must support both gRPC and browser clients?"
+   },
+   {
+    "question": "How do rich error details in gRPC work, and what trade-offs come with using them heavily?",
+    "answer": "gRPC can return a canonical status plus structured error details encoded as protobuf messages, which is much better than forcing clients to parse strings. This helps clients distinguish validation failures, quota errors, and retryable conditions programmatically. The trade-offs are payload size, cross-language support differences, and the risk of coupling clients to very specific server internals. I use stable detail types for actionable categories, but keep the surface small and avoid putting sensitive or highly variable data into errors.",
+    "real_world": "In production, rich details let mobile or web backends show precise field-level validation errors without bespoke parsing. But teams sometimes overuse them, and suddenly every client depends on internal reason codes that become painful to evolve.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What error information belongs in status details versus response metadata or logs?"
+   },
+   {
+    "question": "What protobuf and gRPC limits or edge cases have caused real incidents for you, and how do you design around them?",
+    "answer": "The recurring ones are message size limits, recursion or nesting depth, enum evolution surprises, and the assumption that serialization order is stable for hashing or signatures. Another class is transport edge cases: a stream may succeed at the application level but still fail before trailers reach the client, leaving ambiguity about whether work committed. Designing around this means keeping messages bounded, making side-effecting RPCs idempotent, avoiding signatures over non-canonical encodings unless you define your own canonicalization, and treating commit acknowledgment as part of the API contract. Many severe bugs come from assuming the wire format or transport behavior is stronger than it really is.",
+    "real_world": "Teams hit incidents when a single oversized message gets rejected in production after a feature quietly increases batch size. Another painful case is duplicate side effects after the server completed work but the client saw a transport failure and retried.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If a client times out after the server may have committed, how would you let the client recover safely?"
+   },
+   {
+    "question": "How does flow control actually work in gRPC streaming, and how would you diagnose a stream that stalls under load?",
+    "answer": "gRPC inherits HTTP/2 flow control, so both the connection and each stream have windows that must be replenished as data is read. A stall often means the receiver is slow to consume, the application stopped reading, or a proxy in the path is buffering aggressively. In practice you check whether writes are blocked, whether read loops are draining promptly, and whether memory growth correlates with outstanding messages. The trade-off is throughput versus memory: larger buffers can smooth bursts, but they also hide slow consumers and increase tail latency when a peer falls behind.",
+    "real_world": "A common production incident is a bidi stream that looks healthy at TCP level but stops making progress because one side stopped reading while continuing to write. Teams usually catch it by graphing in-flight messages, write latency, and per-stream memory rather than just request counts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes if the bottleneck is a proxy or ingress rather than the gRPC application itself?"
+   },
+   {
+    "question": "When do you choose protobuf bytes versus a string field, and what are the practical implications for validation, encoding, and interoperability?",
+    "answer": "Use string for UTF-8 text with text semantics, and bytes for opaque binary data where arbitrary byte sequences are valid. The choice matters because strings may be validated or transcoded by tooling, while bytes often get base64-encoded when exposed through JSON gateways, which adds size and CPU overhead. Bytes also make cross-language debugging harder because logs and CLI tools are less readable. If consumers need to inspect or search the value, string is usually the better contract.",
+    "real_world": "This matters when a service adds signatures, compressed blobs, or encrypted payloads to a message and later routes the same API through grpc-gateway. Teams are often surprised by the base64 expansion and log readability problems.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you model a field that is usually text but can sometimes contain arbitrary binary data?"
+   },
+   {
+    "question": "What is the protobuf Any type, and when is it a good idea versus a long-term maintenance trap?",
+    "answer": "Any lets you embed an arbitrary protobuf message along with a type URL, which is useful for extension points, plugin-style payloads, or rich error details. The downside is weaker discoverability, more runtime type handling, and cross-language friction when type registries or generated classes are missing. It also makes governance harder because producers can start shipping payloads consumers do not understand. I use it only when the set of possible subtypes is truly open or owned by independent teams.",
+    "real_world": "Any shows up in event envelopes and policy engines where each feature team wants to attach its own payload type. It often becomes painful when analytics pipelines or gateways need to inspect data without the full type registry.",
+    "code_lang": "typescript",
+    "code": "import { Any } from \"google-protobuf/google/protobuf/any_pb\";\n\nconst a = new Any();\na.pack(user.serializeBinary(), \"mypkg.User\");\n\nif (a.is(mypkg.User)) {\n  const u = a.unpack(mypkg.User.deserializeBinary, \"mypkg.User\");\n}",
+    "follow_up": "If the subtype set is closed today, what would you use instead of Any and why?"
+   },
+   {
+    "question": "How do packed repeated fields work in protobuf, and when do they help or hurt?",
+    "answer": "For packable scalar repeated fields, protobuf can encode the elements as one length-delimited blob instead of repeating the field tag for every element. That usually saves space and parse overhead for large numeric arrays, especially telemetry-style payloads. The downside is that a consumer often has to process a larger contiguous chunk at once, so a giant packed field can create bursty allocation and latency. It helps for dense numbers; it is less meaningful for small lists or message-valued repeats, which are not packed.",
+    "real_world": "Packed encoding matters in metrics, embeddings, and time-series ingestion where a single request can contain thousands of ints or floats. A schema that looks harmless can become a CPU hotspot if every record carries large repeated scalars.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you change if a repeated numeric field is growing so large that single-message parse latency becomes visible?"
+   },
+   {
+    "question": "How would you design and operate long-lived gRPC streams through load balancers, deploys, and connection draining?",
+    "answer": "Treat long-lived streams as sticky state on a transport connection, not as independent requests that can move freely across backends. During deploys or draining, you need explicit shutdown behavior: stop accepting new streams, signal existing clients, and give them time to reconnect before killing the pod or process. You also need keepalive and idle timeout settings that match every hop, otherwise intermediaries may drop quiet streams unexpectedly. The trade-off is operational complexity versus efficiency, because long-lived streams reduce handshake overhead but make balancing and rollout behavior less elastic.",
+    "real_world": "This shows up in watch APIs, chat systems, and subscription services. Teams often discover that their L7 balancer happily handles unary RPCs but silently kills quiet streams during deploys or after an idle timeout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make reconnection safe so a client does not miss or duplicate events after a stream break?"
+   },
+   {
+    "question": "What are the trade-offs between using generated protobuf classes directly in your domain logic versus mapping them to internal models?",
+    "answer": "Using generated classes end to end is fast to build and avoids copy cost, but it couples business logic to transport concerns, codegen quirks, and schema evolution details. Mapping to internal models adds boilerplate and some allocation, yet it creates a boundary where you can enforce invariants, normalize defaults, and change APIs without rewriting core logic. For hot paths I usually keep the mapping thin and measure it rather than assuming it is too expensive. The decision is mostly about long-term maintainability versus short-term simplicity.",
+    "real_world": "Teams that skip the boundary often struggle when one RPC message starts serving storage, business logic, and public API needs at once. A harmless schema change can then ripple through unrelated code and make migrations risky.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns keep the mapping layer from becoming repetitive and slow?"
+   },
+   {
+    "question": "How do protobuf deterministic serialization and message equality trip people up in distributed systems?",
+    "answer": "Deterministic serialization is about producing a stable byte encoding for the same logical message, but it is not a full cross-language canonicalization guarantee in every scenario. People get into trouble when they hash serialized bytes for deduplication, signatures, or cache keys and assume all runtimes will emit identical bytes forever. Message equality is also subtle because unknown fields, map ordering, and presence semantics can affect bytes or API-level comparisons. If the bytes matter externally, define a canonicalization strategy and test it across languages and versions.",
+    "real_world": "This bites systems that sign requests, shard by message hash, or use serialized protobufs as cache keys. A rollout that changes runtime or code generator version can suddenly break deduplication without any schema change.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need a stable signature over a protobuf payload, how would you design that safely?"
+   },
+   {
+    "question": "What are the practical differences between a map field and a repeated key-value message when you care about ordering, duplicates, and partial updates?",
+    "answer": "A map is convenient for lookup semantics, but it does not represent duplicate keys and you should not rely on wire or iteration order as part of the contract. A repeated key-value message is more verbose but lets you preserve order, allow duplicates if that is meaningful, and attach metadata per entry. It also gives you more control in patch-style APIs where you may need operations like upsert, delete, or conditional update. The trade-off is ergonomic simplicity versus explicit semantics.",
+    "real_world": "This matters in config APIs, routing tables, and HTTP header-like data where order or duplicate keys can carry meaning. Teams often start with map because it is convenient and later realize they need richer per-entry behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you model deletion of individual entries in a patch request?"
+   },
+   {
+    "question": "How do you make gRPC observability useful for streaming RPCs, where request-per-span metrics are often misleading?",
+    "answer": "For streams, a single RPC span can last minutes or hours, so request counts and average latency stop telling you much. You need stream-specific signals like open stream count, stream lifetime, messages sent and received, bytes, inter-message gap, blocked write time, and termination reason. Tracing also needs careful boundaries: often the useful unit is a message or logical event inside the stream, not just the transport-level RPC span. The trade-off is visibility versus overhead, because naive per-message tracing can be expensive at high message rates.",
+    "real_world": "A service can look healthy if you only monitor RPC success rates while clients are actually receiving updates several seconds late. Streaming teams usually add metrics around backlog, send stalls, and reconnect loops to catch that class of issue.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you sample traces for a high-volume stream without losing the ability to debug stalls?"
+   },
+   {
+    "question": "What changes when you run gRPC across untrusted or heterogeneous networks, like mobile clients, browsers via proxies, or multi-region WAN links?",
+    "answer": "The happy path assumptions break down: HTTP/2 support may be partial, intermediaries may terminate or downgrade connections, packet loss hurts multiplexed streams differently, and long-lived connections become less reliable. You often need shorter messages, resumable application semantics, stricter deadline and retry policies, and sometimes a gateway layer because native gRPC is not available everywhere. Multi-region links also make head-of-line effects and bandwidth-delay product more visible, so batching and stream design need rethinking. The trade-off is protocol efficiency versus compatibility and operational resilience.",
+    "real_world": "This is why internal gRPC APIs often work well in a datacenter but need grpc-web, REST fallbacks, or region-local fanout at the edge. Without those adjustments, mobile networks and enterprise proxies create mysterious disconnects and poor tail latency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you choose grpc-web or a JSON API instead of exposing native gRPC directly to clients?"
+   }
+  ]
+ }
+}

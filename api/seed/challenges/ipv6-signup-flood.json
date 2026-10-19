@@ -1,0 +1,348 @@
+{
+  "slug": "ipv6-signup-flood",
+  "title": "One provider sends 80,000 signups without tripping the IP limit",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "rate-limiting",
+    "ipv6",
+    "abuse-prevention",
+    "signup",
+    "risk-scoring"
+  ],
+  "scenario": "Abuse traffic creates 80,000 accounts in 25 minutes from a single hosting provider. The per-IP limit is 5 signups/hour, and logs show every request using a different IPv6 /128 address within a few /64 prefixes. Email verification, CAPTCHA, and device checks are only applied after account creation.",
+  "goal": "Find the limiting gap, stop the signup flood safely, and preserve access for legitimate users.",
+  "concepts": [
+    {
+      "key": "rate-limiting",
+      "name": "Rate limiting",
+      "summary": "Rate limiting caps how often a client can perform an action in a time window. The cap only works as intended if the key represents the real source of repeated activity.",
+      "used_here": "The signup endpoint has a configured limit of 5 signups/hour for whatever key the limiter uses."
+    },
+    {
+      "key": "ipv6",
+      "name": "IPv6",
+      "summary": "IPv6 is an internet address format with a much larger address space than IPv4. A single network can contain many usable addresses.",
+      "used_here": "The incident traffic uses many IPv6 addresses from the same hosting provider."
+    },
+    {
+      "key": "prefix",
+      "name": "Network prefix",
+      "summary": "A network prefix is a group of IP addresses that share the same leading bits. Operators often reason about traffic at a prefix level instead of only one address at a time.",
+      "used_here": "The logs mention that the source addresses cluster in a few IPv6 ranges."
+    },
+    {
+      "key": "asn",
+      "name": "ASN",
+      "summary": "An Autonomous System Number identifies a network operator or routing domain on the internet. It is commonly used to understand which provider owns or announces traffic.",
+      "used_here": "The traffic is attributed to one hosting provider."
+    },
+    {
+      "key": "observability",
+      "name": "Observability",
+      "summary": "Observability is the ability to inspect logs, metrics, and traces to understand what a system did. It helps distinguish a real control failure from a monitoring or reporting error.",
+      "used_here": "Limiter logs, signup logs, and provider grouping can show what happened during the 25-minute window."
+    },
+    {
+      "key": "false-positive",
+      "name": "False positive",
+      "summary": "A false positive is a legitimate user incorrectly treated as abusive. Abuse controls must balance blocking bad traffic with not blocking real users.",
+      "used_here": "Some legitimate users can share providers, networks, or device characteristics with abusive traffic."
+    },
+    {
+      "key": "risk-signal",
+      "name": "Risk signal",
+      "summary": "A risk signal is a piece of evidence used to estimate whether an action is abusive. Multiple weak signals can be stronger when combined carefully.",
+      "used_here": "Signup handling can use network, account, device, email, and payment-related evidence."
+    },
+    {
+      "key": "device-fingerprint",
+      "name": "Device fingerprint",
+      "summary": "A device fingerprint is a set of browser or device attributes used to recognize repeated clients. It is useful but can be spoofed or shared by legitimate users.",
+      "used_here": "Device checks exist in the signup flow but currently happen after the account is created."
+    },
+    {
+      "key": "email-reputation",
+      "name": "Email reputation",
+      "summary": "Email reputation estimates the trustworthiness of an email address or domain. Disposable or newly abused domains can carry higher risk.",
+      "used_here": "Email verification and email quality are available signals for signup abuse."
+    },
+    {
+      "key": "payment-reputation",
+      "name": "Payment reputation",
+      "summary": "Payment reputation uses payment method history and risk data to identify suspicious activity. It is only useful when the product collects payment information or has a payment step.",
+      "used_here": "Payment-related data can be one of several signals where applicable."
+    },
+    {
+      "key": "captcha",
+      "name": "CAPTCHA",
+      "summary": "A CAPTCHA is a challenge intended to make automated actions harder. It adds user friction and can be expensive, so many systems apply it selectively.",
+      "used_here": "CAPTCHA is present in the flow but is currently not required until after account creation."
+    },
+    {
+      "key": "email-verification",
+      "name": "Email verification",
+      "summary": "Email verification confirms that the user can receive mail at the address they provided. It can reduce automated account creation when required before granting value.",
+      "used_here": "Email verification is available but currently happens after the account row is created."
+    },
+    {
+      "key": "account-creation",
+      "name": "Account creation",
+      "summary": "Account creation is the point where the system persists a new user account. Controls placed after this point may not prevent account counts, usernames, or downstream work from being consumed.",
+      "used_here": "The incident impact is 80,000 created accounts."
+    },
+    {
+      "key": "risk-based-friction",
+      "name": "Risk-based friction",
+      "summary": "Risk-based friction applies stricter checks only when an action appears suspicious. It avoids burdening every user equally.",
+      "used_here": "Signup can take a normal path or a stricter path depending on risk."
+    },
+    {
+      "key": "shadow-mode",
+      "name": "Shadow mode",
+      "summary": "Shadow mode evaluates a new rule without enforcing it. It shows what would have been blocked before real users are affected.",
+      "used_here": "A new signup control can be measured against live traffic before enforcement."
+    },
+    {
+      "key": "canary-release",
+      "name": "Canary release",
+      "summary": "A canary release enables a change for a small slice of traffic first. It limits blast radius while engineers watch metrics.",
+      "used_here": "A limiter change can be rolled out gradually before applying it to all signups."
+    },
+    {
+      "key": "metrics",
+      "name": "Metrics",
+      "summary": "Metrics are numeric measurements tracked over time. They show whether a change improved the target behavior and whether it caused side effects.",
+      "used_here": "Signup volume, limiter decisions, verification completion, and support contacts can confirm the fix."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the control that was supposed to stop it",
+      "question": "You are on call and need the first useful investigation step. What should you check before changing production behavior?",
+      "concept_keys": [
+        "rate-limiting",
+        "ipv6",
+        "asn",
+        "observability"
+      ],
+      "options": [
+        {
+          "text": "Query email verification completion rates for the 80,000 new accounts and disable accounts that did not verify.",
+          "correct": false,
+          "hint": "Cleanup may reduce damage after the fact, but it does not explain the front-door failure. The first question is why the signups were admitted.",
+          "id": "a"
+        },
+        {
+          "text": "Inspect signup limiter decision logs for the incident window, including allow/deny counts, limiter keys, IP version, and provider grouping.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Start by checking database CPU, lock waits, and insert latency to see whether the account table was overloaded during the flood.",
+          "correct": false,
+          "hint": "Capacity symptoms matter, but they do not explain why a configured abuse control allowed the traffic. First confirm what the control decided for these requests.",
+          "id": "c"
+        },
+        {
+          "text": "Review the CAPTCHA vendor dashboard for solve rates and challenge failures during the same 25 minutes.",
+          "correct": false,
+          "hint": "That can show bot behavior, but in this flow CAPTCHA is not the control that runs before the account exists. Look at the gate that should have limited account creation.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The configured front-door control is the signup rate limit, so its decision logs are the fastest way to learn whether requests were allowed, denied, or not keyed as expected. Grouping by IP version and provider helps connect the 80,000 signups in 25 minutes to the traffic source without assuming the cause. Database or CAPTCHA data can be useful later, but they do not show why the limiter failed to stop account creation."
+    },
+    {
+      "title": "Identify why the limit did not fire",
+      "question": "The limiter logs show almost no key exceeded 1 signup, even though all 80,000 requests came from one hosting provider over 25 minutes. What is the most likely root cause?",
+      "concept_keys": [
+        "rate-limiting",
+        "ipv6",
+        "prefix"
+      ],
+      "options": [
+        {
+          "text": "The limiter is keyed too narrowly for this traffic pattern, so rotating many IPv6 addresses avoids the 5 signups/hour threshold.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "The hourly window is too long, so the limiter did not have enough time to accumulate requests during a 25-minute attack.",
+          "correct": false,
+          "hint": "A longer window normally accumulates more history, not less. Compare the observed per-key counts with the configured threshold.",
+          "id": "b"
+        },
+        {
+          "text": "The email verification step is after creation, so unverified accounts are bypassing the 5 signups/hour limiter.",
+          "correct": false,
+          "hint": "Post-creation verification affects account quality, but it does not determine whether the rate limiter increments or denies. Separate the limiter failure from later workflow checks.",
+          "id": "c"
+        },
+        {
+          "text": "The account creation service is retrying failed inserts, so one attacker request is being counted as many successful signups.",
+          "correct": false,
+          "hint": "Retries would usually create repeated activity tied to the same original request or idempotency key. The logs show many distinct inbound requests.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The per-key counts staying near 1 while total signups reached 80,000 means the limiter key did not group the repeated source activity. With IPv6, an attacker can often use many addresses from the same allocated range, so a full-address key can be too narrow. Post-creation email verification is a real weakness, but it does not explain why the 5 signups/hour limit never accumulated enough requests on a key."
+    },
+    {
+      "title": "Change the network limit without blocking too much",
+      "question": "You need a production fix for the network-based limiter. Which change best addresses this IPv6 signup flood while managing false positives?",
+      "concept_keys": [
+        "rate-limiting",
+        "ipv6",
+        "prefix",
+        "asn",
+        "false-positive"
+      ],
+      "options": [
+        {
+          "text": "Block all signup traffic from the hosting provider’s ASN until the abuse campaign ends.",
+          "correct": false,
+          "hint": "This may stop the current source, but it treats ownership as the only fact that matters. Consider whether legitimate users or customers can also appear from that provider.",
+          "id": "a"
+        },
+        {
+          "text": "Disable all IPv6 signups and require users to retry from IPv4 until new abuse controls are built.",
+          "correct": false,
+          "hint": "This is broad and can exclude legitimate users whose networks prefer or require IPv6. A good control should match the abuse pattern more closely.",
+          "id": "b"
+        },
+        {
+          "text": "Lower the per-IP signup limit from 5/hour to 1/hour for both IPv4 and IPv6 addresses.",
+          "correct": false,
+          "hint": "Lowering the threshold only helps when repeated attempts hit the same key. If the source can keep changing keys, the smaller number may still not accumulate.",
+          "id": "c"
+        },
+        {
+          "text": "Keep IPv4 behavior, but group IPv6 signup limits by an appropriate prefix such as /64, with configuration for provider-specific ranges.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Grouping IPv6 by prefix makes the limiter count related addresses together, which matches the observed pattern of many /128 addresses within a few ranges. Keeping the prefix size configurable matters because provider allocations and legitimate sharing patterns vary. Blocking the entire ASN would be tempting during an incident, but it can create large false positives for legitimate users on the same hosting or network provider."
+    },
+    {
+      "title": "Avoid relying on one signal",
+      "question": "After adding an IPv6 prefix limit, you want the next layer of defense so a similar campaign cannot simply move providers. What should you add?",
+      "concept_keys": [
+        "risk-signal",
+        "asn",
+        "device-fingerprint",
+        "email-reputation",
+        "payment-reputation",
+        "false-positive"
+      ],
+      "options": [
+        {
+          "text": "Require a CAPTCHA for every signup from every provider, regardless of traffic pattern or account attributes.",
+          "correct": false,
+          "hint": "A universal challenge is simple, but it shifts cost and friction onto all users. Think about how to apply stricter handling where the evidence is strongest.",
+          "id": "a"
+        },
+        {
+          "text": "Use a combined risk decision from network grouping, ASN history, device evidence, email quality, and payment data where available.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Trust device fingerprints as the primary control and allow signups when the fingerprint is new.",
+          "correct": false,
+          "hint": "Device data is helpful, but new or manipulated device attributes are common in abuse. It is safer as part of a broader decision.",
+          "id": "c"
+        },
+        {
+          "text": "Limit each email domain to a fixed number of signups per hour and ignore source network information.",
+          "correct": false,
+          "hint": "Email domains can be useful, but many legitimate users share common domains. A single dimension is easy to overblock or evade.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A combined risk decision is harder to evade because the attacker must change several independent characteristics, not just the network. Network prefix and ASN history help with this incident, while device, email, and payment signals cover campaigns that move elsewhere. A CAPTCHA for everyone may reduce abuse, but it increases friction and cost for legitimate low-risk signups."
+    },
+    {
+      "title": "Move friction to the point where it prevents damage",
+      "question": "The current flow creates the account first, then runs email verification, CAPTCHA, and device checks. How should the signup flow change for requests classified as high risk?",
+      "concept_keys": [
+        "account-creation",
+        "captcha",
+        "email-verification",
+        "device-fingerprint",
+        "risk-based-friction"
+      ],
+      "options": [
+        {
+          "text": "Require the high-risk request to pass the selected checks before committing the account creation.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Create the account immediately, mark it disabled, and delete it later if verification or CAPTCHA fails.",
+          "correct": false,
+          "hint": "This can reduce later access, but it still consumes account rows, usernames, and downstream work. The incident impact was measured at creation time.",
+          "id": "b"
+        },
+        {
+          "text": "Create the account and enqueue a background job to run the checks within five minutes.",
+          "correct": false,
+          "hint": "A delayed job can miss the prevention window and may fall behind during a flood. Ask whether the valuable action has already happened.",
+          "id": "c"
+        },
+        {
+          "text": "Let the account be created, but prevent login until email verification succeeds.",
+          "correct": false,
+          "hint": "Preventing login is useful, but created accounts can still be costly or valuable to attackers. The control should protect the resource being exhausted.",
+          "id": "d"
+        }
+      ],
+      "explanation": "For high-risk signups, the checks must run before the system commits the account, otherwise the attacker still achieves mass account creation. This directly addresses the 80,000 created accounts rather than only disabling them later. Creating disabled accounts or delaying checks is tempting because it preserves a smooth write path, but it still allows the creation flood to consume storage, usernames, and operational attention."
+    },
+    {
+      "title": "Roll out and prove the fix worked",
+      "question": "You have implemented IPv6 prefix grouping and high-risk pre-creation checks. What is the safest way to deploy and validate the change?",
+      "concept_keys": [
+        "shadow-mode",
+        "canary-release",
+        "metrics",
+        "false-positive"
+      ],
+      "options": [
+        {
+          "text": "Apply enforcement only to the attacked hosting provider and consider the fix complete once that provider’s traffic falls.",
+          "correct": false,
+          "hint": "This may handle the immediate source, but it does not show whether the general control works or whether attackers shifted. Validation should cover both abuse reduction and user impact.",
+          "id": "a"
+        },
+        {
+          "text": "Run the rules in shadow mode, review would-block data, canary enforcement on a small slice, then monitor abuse and legitimate signup metrics before full rollout.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Enable the new rules for all traffic immediately and judge success by whether total signups drop sharply in the next hour.",
+          "correct": false,
+          "hint": "A sharp drop can mean abuse stopped, but it can also mean real users were blocked. Rollout safety and outcome metrics both matter.",
+          "id": "c"
+        },
+        {
+          "text": "Deploy the prefix limiter and confirm success by counting fewer unique IPv6 /128 addresses in signup logs.",
+          "correct": false,
+          "hint": "The attacker can change address diversity without reducing account creation. Measure the protected action and the user experience around it.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Shadow mode shows which requests the new rules would affect before users are blocked, and a canary limits blast radius during enforcement. The important metrics include created accounts from suspicious sources, limiter denials, verification completion, signup conversion, and support contacts. Looking only for a drop in total signups or fewer unique IPv6 addresses can hide false positives or attacker adaptation."
+    }
+  ],
+  "takeaway": "Per-IP limits can fail badly on IPv6 when the key is narrower than the attacker’s available address range. Use network aggregation carefully, combine multiple risk signals, and put verification before the valuable action for high-risk requests. Roll out abuse controls with measurement so you reduce attacks without silently blocking legitimate users.",
+  "review_issues": []
+}

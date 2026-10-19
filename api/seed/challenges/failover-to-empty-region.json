@@ -1,0 +1,314 @@
+{
+  "slug": "failover-to-empty-region",
+  "title": "DNS failover sends all users to a region that cannot serve them",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "disaster-recovery",
+    "dns",
+    "multi-region",
+    "capacity",
+    "replication"
+  ],
+  "scenario": "A health check fails in us-east, so DNS shifts 100% of traffic to us-west within 60 seconds. The west region has only 25% warm capacity, its database replica is 23 minutes behind, and several feature-flag values were never replicated. Error rate rises from 12% to 68% after the automatic failover.",
+  "goal": "Find the root cause and design a safer failover process that does not send users to an unready region.",
+  "concepts": [
+    {
+      "key": "dns-failover",
+      "name": "DNS failover",
+      "summary": "DNS failover changes which server or region a name resolves to when a health check says the current target is unhealthy. It is a routing mechanism, not proof that the new target can serve traffic.",
+      "used_here": "DNS moved all users from us-east to us-west within 60 seconds."
+    },
+    {
+      "key": "dns-ttl",
+      "name": "DNS TTL",
+      "summary": "DNS TTL is how long resolvers are allowed to cache a DNS answer. A low TTL can make traffic move faster, but it does not create capacity or fix stale data.",
+      "used_here": "The fast 60-second shift made the bad failover happen quickly."
+    },
+    {
+      "key": "health-check",
+      "name": "Health check",
+      "summary": "A health check is an automated test used to decide whether a service or region is healthy. A check can be too narrow if it only tests one side of a failover decision.",
+      "used_here": "The us-east check failed, but the automation did not prove us-west was ready."
+    },
+    {
+      "key": "warm-capacity",
+      "name": "Warm capacity",
+      "summary": "Warm capacity is already-running compute capacity that can serve traffic immediately. It differs from theoretical capacity that might appear later after scaling.",
+      "used_here": "us-west had only enough warm capacity for about 25% of normal traffic."
+    },
+    {
+      "key": "database-replica-lag",
+      "name": "Database replica lag",
+      "summary": "Replica lag is how far a copied database trails the primary database. Large lag can cause stale reads, missing data, or unsafe promotion.",
+      "used_here": "The us-west database replica was 23 minutes behind us-east."
+    },
+    {
+      "key": "feature-flags",
+      "name": "Feature flags",
+      "summary": "Feature flags are configuration switches that turn behavior on or off without a code deploy. If they are missing or inconsistent, the same code can behave differently across regions.",
+      "used_here": "Several flag values needed by us-west were never replicated there."
+    },
+    {
+      "key": "error-rate",
+      "name": "Error rate",
+      "summary": "Error rate is the percentage of requests that fail. It is often a better incident signal than a single infrastructure check.",
+      "used_here": "The customer-visible error rate rose from 12% before failover to 68% after failover."
+    },
+    {
+      "key": "readiness-gate",
+      "name": "Readiness gate",
+      "summary": "A readiness gate blocks an action until required checks pass. For failover, it should test the destination, not just the failed source.",
+      "used_here": "The failover should be allowed only if us-west has capacity, fresh data, and required dependencies."
+    },
+    {
+      "key": "traffic-shifting",
+      "name": "Traffic shifting",
+      "summary": "Traffic shifting sends a controlled percentage of requests to a target instead of moving everything at once. It lets teams observe real behavior before committing more users.",
+      "used_here": "A safer process would send limited traffic to us-west before increasing the percentage."
+    },
+    {
+      "key": "runbook",
+      "name": "Runbook",
+      "summary": "A runbook is a written operational procedure for handling a known situation. It reduces guesswork during incidents and drills.",
+      "used_here": "The team needs a runbook for partial failover, rollback, and readiness checks."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the destination, not just the trigger",
+      "question": "The error rate jumped from 12% to 68% right after DNS moved all traffic to us-west. What should you inspect first to understand why the failover made things worse?",
+      "concept_keys": [
+        "dns-failover",
+        "health-check",
+        "warm-capacity",
+        "database-replica-lag",
+        "feature-flags",
+        "error-rate",
+        "dns-ttl"
+      ],
+      "options": [
+        {
+          "text": "Compare us-west readiness at the shift time: warm capacity, database replica lag, feature-flag values, and error rate by region.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Look for a recent application deploy in us-west and roll it back before checking capacity or replicated state.",
+          "correct": false,
+          "hint": "A deploy can cause regional errors, but the incident data already names capacity, data freshness, and missing configuration as suspicious signals.",
+          "id": "b"
+        },
+        {
+          "text": "Focus on restarting unhealthy us-east hosts so the original health check turns green again as soon as possible.",
+          "correct": false,
+          "hint": "Recovering the original region may help mitigation, but it does not explain why sending traffic to the other region caused a larger failure.",
+          "id": "c"
+        },
+        {
+          "text": "Check whether the DNS TTL was low enough and reduce it further so resolvers update faster next time.",
+          "correct": false,
+          "hint": "The traffic already moved within 60 seconds. Faster routing does not explain why the new region returned more errors.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The immediate clue is that the target region could not serve what DNS sent to it: only 25% warm capacity, 23 minutes of replica lag, and missing feature flags. Checking us-west readiness explains why 100% failover produced 68% errors. The tempting DNS TTL path is not enough because the shift already happened quickly; the problem was what traffic landed on."
+    },
+    {
+      "title": "Identify the failed assumption",
+      "question": "You confirm that us-west had 25% warm capacity, a database replica 23 minutes behind, and missing feature-flag values when DNS sent it 100% of users. What is the most likely root cause?",
+      "concept_keys": [
+        "dns-failover",
+        "health-check",
+        "warm-capacity",
+        "database-replica-lag",
+        "feature-flags",
+        "readiness-gate"
+      ],
+      "options": [
+        {
+          "text": "The failed us-east health check was the only defect, because the system should never leave the primary region.",
+          "correct": false,
+          "hint": "Primary-region health matters, but disaster recovery must also decide whether the destination is safer than staying put.",
+          "id": "a"
+        },
+        {
+          "text": "The DNS TTL was too low, so too many resolvers honored the failover within the first minute.",
+          "correct": false,
+          "hint": "A low TTL can change how fast the blast radius appears, but it does not make a healthy target unhealthy.",
+          "id": "b"
+        },
+        {
+          "text": "The automatic failover checked that us-east was unhealthy but did not require us-west to be ready for full traffic.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The database replica lag alone caused the incident, because compute capacity would have scaled after the first minute.",
+          "correct": false,
+          "hint": "The lag was serious, but multiple independent readiness failures were present. A root cause should account for all of them.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The failure was a one-sided decision: automation reacted to us-east being unhealthy without proving us-west could handle the load and state. The 25% capacity, 23-minute lag, and missing flags are all target-readiness failures. Blaming TTL is tempting because traffic moved quickly, but TTL only controlled speed, not readiness."
+    },
+    {
+      "title": "Stabilize the incident safely",
+      "question": "During the incident, us-east is degraded but was serving about 12% errors before failover, while us-west is serving 68% errors after receiving all traffic. What is the safest immediate mitigation?",
+      "concept_keys": [
+        "dns-failover",
+        "traffic-shifting",
+        "warm-capacity",
+        "database-replica-lag",
+        "feature-flags",
+        "error-rate"
+      ],
+      "options": [
+        {
+          "text": "Promote the us-west database replica immediately so reads and writes stay local in the failover region.",
+          "correct": false,
+          "hint": "Promotion can be destructive when the replica is far behind. A 23-minute lag means the data state is not equivalent to the primary.",
+          "id": "a"
+        },
+        {
+          "text": "Lower the DNS TTL again so clients can move away from us-west faster if another failover is needed.",
+          "correct": false,
+          "hint": "Fast movement is useful only when the destination is known to be better. The urgent problem is deciding where traffic should safely go now.",
+          "id": "b"
+        },
+        {
+          "text": "Freeze the automatic failover, reduce us-west to traffic it can actually serve, and route the rest to the least-bad available path while disabling features that depend on missing flags.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Leave 100% of traffic in us-west and wait for capacity scaling and replica catch-up to reduce errors naturally.",
+          "correct": false,
+          "hint": "Waiting keeps users on the path currently failing 68% of requests. Also, a 23-minute data lag is not a quick capacity-only problem.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The immediate goal is to reduce customer impact, not to preserve the automatic decision. Since us-west can only handle about 25% warm capacity and is producing 68% errors, cap or remove traffic there until it is ready, and use the path with lower observed failure even if it is degraded. Promoting a 23-minute-lagged replica is especially risky because it can turn an availability incident into data loss or inconsistency."
+    },
+    {
+      "title": "Fix the failover decision",
+      "question": "You are changing the failover automation. Which rule should decide whether DNS is allowed to move all traffic from us-east to us-west?",
+      "concept_keys": [
+        "dns-failover",
+        "health-check",
+        "readiness-gate",
+        "warm-capacity",
+        "database-replica-lag",
+        "feature-flags",
+        "dns-ttl"
+      ],
+      "options": [
+        {
+          "text": "Fail over only when us-west passes a readiness gate for required capacity, acceptable replica lag, required feature flags, and critical dependencies.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Fail over only by manual approval, because removing automation avoids accidental regional moves.",
+          "correct": false,
+          "hint": "Manual approval can be useful, but people still need objective checks. A manual button can send traffic to an empty region too.",
+          "id": "b"
+        },
+        {
+          "text": "Fail over whenever us-east fails two independent health checks, because that reduces false positives in the source region.",
+          "correct": false,
+          "hint": "Better source checks reduce bad triggers, but they still do not prove the destination is capable of serving users.",
+          "id": "c"
+        },
+        {
+          "text": "Fail over automatically after a fixed 60-second delay, because the current DNS TTL already matches that timing.",
+          "correct": false,
+          "hint": "A fixed delay is not the same as evidence. Sixty seconds cannot guarantee capacity or make a 23-minute-lagged replica fresh.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The correct fix is to make failover conditional on target readiness: capacity, data freshness, configuration, and dependencies must all be acceptable before a full shift. This may block or slow failover, but it avoids failing into a worse state. Improving only the us-east health check is tempting, but the incident happened because us-west was not validated."
+    },
+    {
+      "title": "Make configuration part of readiness",
+      "question": "Several feature-flag values were never replicated to us-west. What change best prevents missing flags from breaking the next regional failover?",
+      "concept_keys": [
+        "feature-flags",
+        "readiness-gate",
+        "dns-failover"
+      ],
+      "options": [
+        {
+          "text": "Default all missing feature flags to enabled in us-west so new behavior is available without waiting for replication.",
+          "correct": false,
+          "hint": "A default can hide the missing-data symptom while creating different behavior between regions. The safer goal is consistency.",
+          "id": "a"
+        },
+        {
+          "text": "Require feature-flag changes to be present at the needed version in every failover region before they are considered active, and fail the region readiness check if required flags are missing.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Have the incident commander manually copy missing feature flags into us-west during a failover if errors appear.",
+          "correct": false,
+          "hint": "Manual copying during an outage is slow and error-prone. Readiness should be known before users are sent there.",
+          "id": "c"
+        },
+        {
+          "text": "Exclude feature flags from regional readiness because flags are application behavior, not infrastructure health.",
+          "correct": false,
+          "hint": "Users experience application behavior. A region that has compute but missing required configuration is still not ready.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Feature flags are runtime dependencies, so their presence and version must be part of the failover contract. If a required flag is absent in us-west, us-west should not be considered ready for that feature or for full failover. Manual copying is tempting during an incident, but it makes readiness depend on human memory at the worst time."
+    },
+    {
+      "title": "Prove the new process works",
+      "question": "After adding target readiness checks and replicated feature-flag validation, how should the team confirm the failover process is safe in production?",
+      "concept_keys": [
+        "traffic-shifting",
+        "runbook",
+        "readiness-gate",
+        "error-rate",
+        "warm-capacity",
+        "database-replica-lag"
+      ],
+      "options": [
+        {
+          "text": "Run a quarterly tabletop review of the architecture diagram and mark the failover fixed if all owners attend.",
+          "correct": false,
+          "hint": "Tabletops are useful for coordination, but they do not prove capacity, data freshness, or configuration replication under traffic.",
+          "id": "a"
+        },
+        {
+          "text": "Trigger a 100% DNS failover during off-peak hours and rely on fast rollback if customer errors rise.",
+          "correct": false,
+          "hint": "A full shift can recreate the original blast radius. Gradual traffic gives you measurements before most users are affected.",
+          "id": "b"
+        },
+        {
+          "text": "Run a controlled drill using the runbook: verify readiness gates, shift small percentages such as 1%, 5%, and 25%, watch error rate, capacity headroom, and replica lag, then roll forward or back.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Wait for the next real us-east outage, because only a full emergency proves whether the automation works.",
+          "correct": false,
+          "hint": "A real outage is the most expensive test environment. You want evidence before the system is under maximum stress.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A controlled partial failover tests the real path while limiting blast radius. The runbook should require gates before traffic moves and should define rollback if error rate, capacity, or replica lag crosses limits. A 100% off-peak test is tempting, but it skips the safety mechanism the team is trying to validate."
+    }
+  ],
+  "takeaway": "DNS failover is only routing; it is not a disaster recovery plan by itself. Safe regional failover must check the destination’s capacity, data freshness, configuration, and dependencies before moving large amounts of traffic. The trade-off is that failover may be slower or blocked, but it avoids sending users to a region that is worse than the one you left.",
+  "review_issues": []
+}

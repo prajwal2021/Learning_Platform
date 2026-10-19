@@ -1,0 +1,469 @@
+{
+ "slug": "cpp",
+ "name": "C++",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a pointer and a reference in C++?",
+    "answer": "A pointer stores an address and can be null or changed to point somewhere else. A reference is an alias for an existing object and must be initialized when it is created. Use a reference when you want a required, non-null relationship and pointer when nullability or reseating matters. References are often simpler for function parameters; pointers are common when you need optional ownership or array traversal.",
+    "real_world": "This comes up when designing APIs: a function that must modify an object usually takes a reference, while an optional argument is often better expressed with a pointer. Beginners also run into crashes by dereferencing null pointers.",
+    "code_lang": "cpp",
+    "code": "void addOne(int& x) { x++; }\nint main() {\n    int a = 3;\n    addOne(a);\n}",
+    "follow_up": "When would you prefer a const reference over a pointer?"
+   },
+   {
+    "question": "What is the difference between stack and heap allocation in C++?",
+    "answer": "Stack allocation is automatic and tied to scope: objects are created and destroyed when execution enters and leaves the block. Heap allocation uses dynamic memory with new/delete or, preferably, smart pointers and containers, and the lifetime is managed explicitly or by ownership wrappers. Stack allocation is faster and simpler when the lifetime is local. Heap allocation is useful when the object must outlive the current scope or size is decided at runtime.",
+    "real_world": "A common bug is returning a pointer or reference to a local stack variable, which becomes invalid after the function returns. Another is leaking memory from heap allocations that are never freed.",
+    "code_lang": "cpp",
+    "code": "int* bad() {\n    int x = 5;\n    return &x; // invalid\n}",
+    "follow_up": "How do smart pointers change how you manage heap memory?"
+   },
+   {
+    "question": "What does const mean in C++?",
+    "answer": "const means the value should not be modified through that name or view. You can use it for variables, function parameters, member functions, pointers, and references to express intent and let the compiler enforce it. The exact meaning depends on where const appears, especially with pointers. It matters because it prevents accidental changes and makes APIs easier to understand.",
+    "real_world": "Teams use const heavily in function signatures so callers know whether data may be changed. Beginners often get confused by pointer constness and accidentally allow mutation they did not intend.",
+    "code_lang": "cpp",
+    "code": "const int x = 10;\nconst int* p = &x; // pointer to const int\nint* const q = &x; // const pointer, if x were non-const",
+    "follow_up": "What is the difference between const int* and int* const?"
+   },
+   {
+    "question": "What is a constructor, and why do you use one?",
+    "answer": "A constructor is a special member function that runs when an object is created and initializes its state. You use it to make sure the object starts in a valid, usable condition instead of relying on later setup calls. Constructors can take parameters and can be overloaded. This is a core way to enforce class invariants.",
+    "real_world": "Without a constructor, it is easy to forget to initialize fields and then use garbage values later. In production, that often becomes subtle logic bugs instead of obvious crashes.",
+    "code_lang": "cpp",
+    "code": "class Person {\npublic:\n    Person(int age) : age_(age) {}\nprivate:\n    int age_;\n};",
+    "follow_up": "What is the purpose of a destructor?"
+   },
+   {
+    "question": "What is the difference between pass by value and pass by reference?",
+    "answer": "Pass by value copies the argument into the function, so changes inside the function do not affect the caller. Pass by reference gives the function an alias to the original object, so changes are visible outside. Use pass by value for small or cheap-to-copy types and when you want isolation. Use references for efficiency or when the function is meant to modify the caller's object.",
+    "real_world": "This matters when passing large objects like strings or vectors, where copying can be expensive. It also matters when a function unexpectedly mutates input because it took a non-const reference.",
+    "code_lang": "cpp",
+    "code": "void incByValue(int x) { x++; }\nvoid incByRef(int& x) { x++; }\nint main() {\n    int a = 1;\n    incByValue(a);\n    incByRef(a);\n}",
+    "follow_up": "Why would you pass a large object by const reference instead of by value?"
+   },
+   {
+    "question": "What is a std::string, and why use it instead of C-style strings?",
+    "answer": "std::string is a C++ standard library type for owning and managing text. It handles memory, length, copying, and concatenation more safely than raw null-terminated char arrays. It reduces buffer overflow and lifetime bugs and is usually the default choice for string data. You only use C-style strings when interfacing with older C APIs or low-level code that requires them.",
+    "real_world": "A classic production bug is writing past the end of a char buffer or forgetting the null terminator. std::string avoids many of those errors by managing size internally.",
+    "code_lang": "cpp",
+    "code": "std::string name = \"Ada\";\nname += \" Lovelace\";\nstd::cout << name << std::endl;",
+    "follow_up": "How do you convert between std::string and a C-style string?"
+   },
+   {
+    "question": "What is a vector in C++, and when would you use it?",
+    "answer": "std::vector is a dynamic array that stores elements contiguously and grows as needed. Use it when you need a resizable list with fast indexed access and good cache performance. It is one of the most common containers in C++. It is usually preferred over raw arrays for general-purpose sequence storage.",
+    "real_world": "Vectors are common for storing lists of users, IDs, or records read from a file or API. A frequent mistake is assuming indexes are valid after pushing or erasing without checking size or iterator invalidation rules.",
+    "code_lang": "cpp",
+    "code": "std::vector<int> nums;\nnums.push_back(1);\nnums.push_back(2);\nstd::cout << nums[0];",
+    "follow_up": "What happens to iterators or references when a vector grows?"
+   },
+   {
+    "question": "What is an if statement and what is a common mistake when writing one in C++?",
+    "answer": "An if statement conditionally runs code based on a boolean expression. A common mistake is using assignment instead of comparison, or forgetting that only the immediate next statement is controlled if braces are omitted. Braces make intent clear and prevent accidental logic errors. Good style is to use braces even for one-line bodies.",
+    "real_world": "Missing braces cause bugs when someone later adds a line to the branch and assumes it is inside the if. This is a common source of production logic errors in small patches.",
+    "code_lang": "cpp",
+    "code": "if (ready) {\n    start();\n    log();\n}\nif (x == 0)\n    std::cout << \"zero\";",
+    "follow_up": "What is the difference between if/else and a switch statement?"
+   },
+   {
+    "question": "What is a header file used for in C++?",
+    "answer": "A header file typically declares the functions, classes, and types that other files can use. The implementation usually lives in a separate source file, which helps organize code and avoid duplicating definitions. Headers are included where needed, but they should be written carefully to avoid multiple-definition problems.",
+    "real_world": "In a larger project, headers let many source files share the same interface without copy-pasting declarations. If a header is poorly designed, compile times and dependency problems grow quickly.",
+    "code_lang": "cpp",
+    "code": "// math.h\n#pragma once\nint add(int a, int b);\n\n// math.cpp\nint add(int a, int b) { return a + b; }",
+    "follow_up": "Why do we usually put function definitions in a .cpp file instead of a header?"
+   },
+   {
+    "question": "What is the difference between declaration and definition?",
+    "answer": "A declaration tells the compiler that something exists, while a definition allocates or provides the actual thing. For example, a function declaration gives its signature, and the function definition contains the body. You often declare in a header and define in a source file.",
+    "real_world": "This matters when you get linker errors because something was declared but never defined. It also helps explain why including the same header in many files is okay as long as it only declares things.",
+    "code_lang": "cpp",
+    "code": "int add(int, int);   // declaration\n\nint add(int a, int b) {  // definition\n    return a + b;\n}",
+    "follow_up": "What kinds of errors happen if a declaration and definition do not match?"
+   },
+   {
+    "question": "What is an array in C++, and how is it different from a vector?",
+    "answer": "An array is a fixed-size sequence of elements, usually with the size decided at compile time or at least not changed later. A vector is a dynamic container that can grow and shrink. Arrays are simple and lightweight, but vectors are usually safer and more flexible for general use.",
+    "real_world": "You might use an array for a small fixed set of items, like days of the week, and a vector for user input where the number of items is not known ahead of time.",
+    "code_lang": "cpp",
+    "code": "int nums[3] = {1, 2, 3};\nstd::vector<int> values;\nvalues.push_back(4);",
+    "follow_up": "What risks come with using raw arrays in C++?"
+   },
+   {
+    "question": "What is a loop in C++, and what are the common loop types?",
+    "answer": "A loop repeats a block of code until a condition changes. The common loop types are `for`, `while`, and `do-while`. `for` is usually used when you know the iteration pattern, `while` when you want to continue based on a condition, and `do-while` when the body should run at least once.",
+    "real_world": "Loops are used for processing collections, reading input until a condition is met, or retrying an operation. A common bug is using the wrong termination condition and creating an infinite loop.",
+    "code_lang": "cpp",
+    "code": "for (int i = 0; i < 3; ++i) {\n    // runs 3 times\n}\n\nwhile (condition) {\n    // repeats while condition is true\n}",
+    "follow_up": "When would you use a `do-while` loop instead of a `while` loop?"
+   },
+   {
+    "question": "What is a function prototype in C++?",
+    "answer": "A function prototype is a declaration of a function that tells the compiler its name, return type, and parameter types before the function is used. It lets you call a function before its definition appears in the file. This is common in headers and helps the compiler type-check calls.",
+    "real_world": "If you split code across files, prototypes let one file call functions implemented elsewhere without needing the full body. Missing prototypes can lead to compile errors or the wrong overload being chosen.",
+    "code_lang": "cpp",
+    "code": "int multiply(int a, int b);  // prototype\n\nint main() {\n    return multiply(2, 3);\n}\n\nint multiply(int a, int b) { return a * b; }",
+    "follow_up": "How is a prototype different from a function definition?"
+   },
+   {
+    "question": "What is an enum used for in C++?",
+    "answer": "An enum gives a name to a set of related constant values. It is useful when a variable should only take one of a small number of meaningful options, like status or direction. Strongly typed enums are usually preferred because they avoid name collisions and implicit conversions.",
+    "real_world": "You might use an enum for order states such as pending, shipped, or canceled. This makes code easier to read than using raw integers or strings.",
+    "code_lang": "cpp",
+    "code": "enum class Status {\n    Pending,\n    Shipped,\n    Canceled\n};\n\nStatus s = Status::Pending;",
+    "follow_up": "Why might `enum class` be safer than plain `enum`?"
+   },
+   {
+    "question": "What is the purpose of `new` and `delete` in C++?",
+    "answer": "`new` allocates an object on the free store and returns a pointer to it, and `delete` frees that memory. They are used for manual dynamic allocation, but in modern C++ you usually prefer standard containers or smart pointers instead. If you use them, you must match each `new` with exactly one `delete` to avoid leaks or undefined behavior.",
+    "real_world": "Manual memory management problems often show up as leaks, crashes, or corrupt state in long-running services. Teams often reduce these bugs by avoiding raw `new` and `delete` in application code.",
+    "code_lang": "cpp",
+    "code": "int* p = new int(5);\n// use *p\ndelete p;\np = nullptr;",
+    "follow_up": "What problems can happen if you call `delete` twice on the same pointer?"
+   },
+   {
+    "question": "What is a `switch` statement, and when is it useful?",
+    "answer": "A `switch` chooses one branch based on the value of an expression, usually an integral or enum type. It is useful when you have several exact values to compare and want clearer code than a long chain of `if`/`else if`. You need to handle `break` carefully to avoid accidental fall-through when that is not intended.",
+    "real_world": "A switch is common for handling command codes, menu options, or state machines. A missing `break` can cause the wrong action to run and create subtle bugs.",
+    "code_lang": "cpp",
+    "code": "switch (choice) {\n    case 1: doA(); break;\n    case 2: doB(); break;\n    default: doDefault(); break;\n}",
+    "follow_up": "When is an `if`/`else if` chain better than a `switch`?"
+   },
+   {
+    "question": "What does it mean to overload a function in C++?",
+    "answer": "Function overloading means having multiple functions with the same name but different parameter lists. The compiler decides which one to call based on the arguments. It is useful when the same operation makes sense for different input types or numbers of inputs, but overloads should still be easy to distinguish.",
+    "real_world": "You might overload a `print` function for integers, strings, and custom types. This keeps the API clean while still allowing type-specific behavior.",
+    "code_lang": "cpp",
+    "code": "int add(int a, int b) { return a + b; }\ndouble add(double a, double b) { return a + b; }\n\nint x = add(1, 2);\ndouble y = add(1.5, 2.5);",
+    "follow_up": "How does overloading differ from overriding in C++?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "When would you choose an RAII wrapper like std::unique_ptr over managing a raw pointer yourself?",
+    "answer": "Use RAII when an object owns a resource and you want cleanup to happen automatically, even on exceptions or early returns. std::unique_ptr makes ownership explicit, prevents leaks, and usually has zero runtime overhead compared with manual delete. Raw pointers are still useful as non-owning observers, but they should not be the primary ownership mechanism in modern C++.",
+    "real_world": "This comes up when a function allocates an object and then throws before reaching the cleanup code, or when a team is chasing intermittent leaks in a service. Switching to RAII often removes entire classes of bugs.",
+    "code_lang": "cpp",
+    "code": "std::unique_ptr<File> open_file() {\n    auto f = std::make_unique<File>(\"data.txt\");\n    if (!f->is_open()) throw std::runtime_error(\"open failed\");\n    return f;\n}",
+    "follow_up": "How would you represent shared ownership, and what are the risks of that choice?"
+   },
+   {
+    "question": "What is the difference between a copy and a move in C++, and when does move semantics matter?",
+    "answer": "A copy duplicates an object’s value, while a move transfers ownership of resources from one object to another, leaving the source in a valid but unspecified state. Move semantics matter for expensive-to-copy types like strings, vectors, and file handles because they avoid deep allocation and copying. They help most when returning objects, inserting into containers, or passing temporary objects around.",
+    "real_world": "In performance-sensitive code, accidental copies can create unexpected latency spikes and memory churn. Moving large containers instead of copying them can materially reduce CPU and allocator pressure.",
+    "code_lang": "cpp",
+    "code": "std::vector<int> make_data() {\n    std::vector<int> v(1000000);\n    return v; // move or elision\n}\n\nstd::vector<int> a = make_data();\nstd::vector<int> b = std::move(a);",
+    "follow_up": "What makes a type movable, and when should you define move operations yourself?"
+   },
+   {
+    "question": "Why would you make a member function const, and what guarantees does that give callers?",
+    "answer": "A const member function promises not to modify the observable state of the object, which lets it be called on const instances and makes APIs easier to reason about. It also helps the compiler catch accidental mutation. This matters for read-only operations like getters, comparisons, and formatting functions.",
+    "real_world": "Teams often mark accessors const to make containers and utility code work with const objects cleanly. Missing const on a method can force unnecessary copies or block usage in otherwise read-only code paths.",
+    "code_lang": "cpp",
+    "code": "class User {\npublic:\n    const std::string& name() const { return name_; }\nprivate:\n    std::string name_;\n};",
+    "follow_up": "What is the difference between a const method and a method returning a const reference?"
+   },
+   {
+    "question": "What problem do virtual functions solve, and what trade-off do they introduce?",
+    "answer": "Virtual functions enable runtime polymorphism: code can call through a base pointer or reference and execute the derived implementation. The trade-off is indirect dispatch, less inlining opportunity, and the need to design clear object lifetimes, often with a virtual destructor in the base class. They are useful when you need substitutable behavior behind a common interface.",
+    "real_world": "This is common in plugin systems, GUI widgets, and request handlers where the exact type is not known until runtime. Bugs often appear when a base class lacks a virtual destructor and deleting through a base pointer leaks resources or skips cleanup.",
+    "code_lang": "cpp",
+    "code": "struct Shape {\n    virtual ~Shape() = default;\n    virtual double area() const = 0;\n};",
+    "follow_up": "When would you prefer templates or type erasure over virtual functions?"
+   },
+   {
+    "question": "How do templates help with generic code, and what is a common downside of using them heavily?",
+    "answer": "Templates let you write code once and have it work for multiple types with compile-time type checking. They can produce very efficient code because the compiler specializes the implementation for each type. The downside is longer compile times, larger binaries, and sometimes harder-to-read compiler errors.",
+    "real_world": "A utility library may use templates for containers, algorithms, or serialization helpers to avoid duplicated code. In large builds, overusing templates can slow iteration and make debugging template instantiation errors painful.",
+    "code_lang": "cpp",
+    "code": "template <typename T>\nT clamp(T v, T lo, T hi) {\n    return v < lo ? lo : (v > hi ? hi : v);\n}\n\nint x = clamp(10, 0, 5);",
+    "follow_up": "What is the difference between template overloading and explicit specialization?"
+   },
+   {
+    "question": "What is exception safety, and how do you reason about it when writing code that mutates state?",
+    "answer": "Exception safety describes what guarantees code provides if an operation throws: no guarantee, basic, strong, or nothrow. In practice, you want at least the basic guarantee so invariants hold, and the strong guarantee when possible so either the operation succeeds or the state is unchanged. You achieve this by using RAII, avoiding partial updates, and making commits at the end.",
+    "real_world": "This matters in transactional code, configuration updates, and data structure mutations where a mid-operation failure could leave the program in an inconsistent state. A common bug is updating multiple fields and throwing halfway through, leaving the object corrupted.",
+    "code_lang": "cpp",
+    "code": "void Account::deposit(int amount) {\n    int new_balance = balance_ + amount;\n    if (new_balance < 0) throw std::runtime_error(\"overflow\");\n    balance_ = new_balance;\n}",
+    "follow_up": "How would you make a multi-step update strongly exception-safe?"
+   },
+   {
+    "question": "What is the difference between std::map and std::unordered_map, and how do you choose between them?",
+    "answer": "std::map keeps keys ordered and gives logarithmic lookups, while std::unordered_map uses hashing and usually gives faster average lookups with no ordering guarantee. Choose std::map when you need sorted iteration, range queries, or stable ordering; choose std::unordered_map when you mostly care about fast key lookup. Hash quality and memory overhead matter more with unordered_map.",
+    "real_world": "A service that frequently checks membership by ID may benefit from an unordered map, while code that emits results in key order or does prefix/range logic often needs a map. Performance bugs sometimes come from assuming unordered_map is always faster under bad hash distribution.",
+    "code_lang": "cpp",
+    "code": "std::unordered_map<std::string, int> counts;\n++counts[\"apple\"];\nif (counts.find(\"banana\") == counts.end()) {\n    counts[\"banana\"] = 1;\n}",
+    "follow_up": "What happens to iterator validity when these containers rehash or rebalance?"
+   },
+   {
+    "question": "What are iterators in C++, and what is one common mistake people make with them?",
+    "answer": "Iterators are general pointer-like objects used to traverse container elements and work with algorithms. A common mistake is keeping an iterator after the container changes in a way that invalidates it, such as vector reallocation or erase operations. That leads to undefined behavior and often intermittent crashes.",
+    "real_world": "This shows up in loops that erase elements while iterating, or when a vector grows and previously stored iterators are reused later. These bugs can be hard to reproduce because they depend on capacity and allocation timing.",
+    "code_lang": "cpp",
+    "code": "for (auto it = v.begin(); it != v.end(); ) {\n    if (*it < 0) it = v.erase(it);\n    else ++it;\n}",
+    "follow_up": "Which container operations invalidate iterators, and how do you check that safely?"
+   },
+   {
+    "question": "How would you decide between storing objects directly in a container versus storing pointers to them?",
+    "answer": "Store objects directly when the container should own the values and copying or moving them is acceptable; this gives simpler code, better locality, and fewer allocations. Store pointers when polymorphism, stable addresses, very large objects, or shared ownership constraints require indirection. The trade-off is usually between simplicity and performance versus flexibility and ownership complexity.",
+    "real_world": "Teams often switch from a vector of pointers to a vector of values and get a noticeable speedup because cache locality improves. On the other hand, object graphs with multiple owners often need smart pointers or references to avoid expensive copies and unclear lifetime rules.",
+    "code_lang": "cpp",
+    "code": "std::vector<Person> people;\npeople.emplace_back(\"Ada\");\n\nstd::vector<std::unique_ptr<Person>> refs;\nrefs.push_back(std::make_unique<Person>(\"Ada\"));",
+    "follow_up": "How do you handle lifetime and ownership when multiple parts of the program need the same object?"
+   },
+   {
+    "question": "How do you debug a segfault or undefined behavior in a C++ program in a practical way?",
+    "answer": "Start by identifying the exact failing line with a debugger or stack trace, then check for lifetime bugs, out-of-bounds access, null dereferences, and use-after-free. Reproduce with sanitizers or valgrind if available, and reduce the problem to the smallest input that still fails. Because undefined behavior can hide symptoms, the goal is to find the first bad write or invalid access, not just the crash point.",
+    "real_world": "In production, a crash may appear far from the real bug because memory corruption happened earlier. Sanitizers in test or staging often turn a mysterious crash into a clear report of the invalid access site.",
+    "code_lang": "cpp",
+    "code": "std::vector<int> v{1,2,3};\nfor (size_t i = 0; i <= v.size(); ++i) {\n    std::cout << v[i] << '\\n';\n}",
+    "follow_up": "What tools or compiler flags would you use to catch this earlier in CI?"
+   },
+   {
+    "question": "How do you think about object lifetime bugs when a class stores references, pointers, or views to data owned elsewhere?",
+    "answer": "The key risk is dangling access: the object outlives the thing it points to. In review, I check who owns the data, whether the callee copies it or just borrows it, and whether that lifetime is obvious from the API. If the class needs ownership, store by value or use an owning smart pointer; if it only borrows, make that explicit and keep the scope tight. This matters because these bugs often pass tests and fail later under different call patterns.",
+    "real_world": "A service kept `std::string_view` fields to parse request data, but the backing buffer was reused after the request handler returned. The crash only showed up under load when views outlived the buffer.",
+    "code_lang": "cpp",
+    "code": "struct UserView {\n  std::string_view name;\n};\n\nUserView make() {\n  std::string tmp = \"alice\";\n  return {tmp}; // dangling view\n}",
+    "follow_up": "How would you redesign the API to make the lifetime requirement harder to misuse?"
+   },
+   {
+    "question": "What is the Rule of Zero, and when would you intentionally break it?",
+    "answer": "The Rule of Zero says a type should rely on standard RAII members so you do not have to write custom copy, move, or destructor logic. If your class owns only standard containers, strings, or smart pointers, the compiler-generated special members are usually correct and safer. I would break it only when managing a non-standard resource or when I need custom invariants around copying or moving. It matters because manual special members are a common source of leaks, double-frees, and incomplete moves.",
+    "real_world": "Teams often simplify classes by replacing raw buffers and manual cleanup with `std::vector` or `std::unique_ptr`. That removes a lot of boilerplate and makes tests less brittle.",
+    "code_lang": "cpp",
+    "code": "class Session {\n  std::string id;\n  std::vector<int> samples;\n}; // compiler-generated copy/move/destructor are fine",
+    "follow_up": "If you do need a custom destructor, what other special member functions do you usually need to think about?"
+   },
+   {
+    "question": "How do you choose between returning `std::optional<T>` and throwing an exception for a function that can fail?",
+    "answer": "I use `std::optional` when failure is expected and not exceptional, and the caller can reasonably branch on success versus absence. I use exceptions when the failure is truly exceptional or when propagating errors through many layers would otherwise clutter the code. `optional` makes the failure path explicit at the call site, but it cannot explain why it failed unless you add more structure. The trade-off is between simplicity of control flow and richer error reporting.",
+    "real_world": "Parsing a config file often uses optional-like results for missing fields, while opening the file itself may throw or return a detailed error. That separation keeps the common path clear without hiding real I/O problems.",
+    "code_lang": "cpp",
+    "code": "std::optional<int> find_port(const Config& c) {\n  if (!c.has(\"port\")) return std::nullopt;\n  return c.port();\n}\n\nif (auto p = find_port(cfg)) use(*p);",
+    "follow_up": "When would you prefer `std::expected` or another error type instead?"
+   },
+   {
+    "question": "What are the practical differences between `std::vector` and `std::list`, and why is `std::list` usually a poor default choice?",
+    "answer": "`std::vector` stores elements contiguously, so it is cache-friendly, supports random access, and usually performs better for iteration and append-heavy workloads. `std::list` gives stable node addresses and cheap splice-like operations, but each node allocates separately and iteration is much slower in practice. Most code benefits more from contiguous storage and fewer allocations than from O(1) inserts in the middle. So `std::list` is best reserved for narrow cases where its specific strengths matter.",
+    "real_world": "A team may switch from `list` to `vector` and see a big speedup in a hot path without changing algorithms. The bottleneck was often memory locality, not asymptotic complexity.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need stable references while modifying a collection, what container or design would you consider instead?"
+   },
+   {
+    "question": "What is object slicing, and how do you avoid it in polymorphic code?",
+    "answer": "Object slicing happens when a derived object is copied into a base object by value, so the derived part is lost. It is a common bug when storing polymorphic objects directly in containers or passing them by value. You avoid it by using references, pointers, or smart pointers to the base interface, or by using value polymorphism patterns intentionally. The main trade-off is preserving dynamic behavior versus simpler ownership and copying semantics.",
+    "real_world": "A plugin system once stored derived handlers in a `std::vector<Base>`, and only base behavior ran in production. The derived overrides were silently sliced away during insertion.",
+    "code_lang": "cpp",
+    "code": "struct Base { virtual void f(); };\nstruct Der : Base { void f() override; };\n\nBase b = Der{};   // slices\nBase& r = d;      // keeps polymorphism",
+    "follow_up": "How would you design a container of heterogeneous polymorphic objects safely?"
+   },
+   {
+    "question": "What is the difference between `static_cast`, `dynamic_cast`, `const_cast`, and `reinterpret_cast`, and when would you use each?",
+    "answer": "`static_cast` is for checked-at-compile-time conversions that make sense by type rules, like numeric conversions or upcasts. `dynamic_cast` is for safe downcasting through a polymorphic base when you need a runtime check. `const_cast` removes or adds constness, typically to call legacy APIs, but mutating originally-const data is undefined behavior. `reinterpret_cast` is the blunt tool for low-level bit reinterpretation or pointer conversions, and it is the easiest to misuse, so I avoid it unless I am in systems-level code.",
+    "real_world": "Bugs often come from using `static_cast` where a runtime-checked cast was needed, especially in inheritance hierarchies. On the other side, `const_cast` shows up when integrating with older C APIs that were not const-correct.",
+    "code_lang": "cpp",
+    "code": "Base* b = get_base();\nif (auto d = dynamic_cast<Derived*>(b)) {\n  d->run();\n}\n\nint x = static_cast<int>(3.7);",
+    "follow_up": "What requirements must a class satisfy for `dynamic_cast` to work?"
+   },
+   {
+    "question": "How do you make a function or class thread-safe, and what is the trade-off of adding locks?",
+    "answer": "Thread safety means multiple threads can use the code without data races or corrupted state. The simplest approach is to protect shared mutable state with a mutex and keep the locked section small. The trade-off is contention and the possibility of deadlocks if you lock multiple resources inconsistently. In many cases, redesigning to reduce shared state is better than adding more locking.",
+    "real_world": "A cache that worked in single-threaded tests started returning corrupted results under concurrent traffic. Adding a mutex fixed correctness, but profiling later showed lock contention as the new bottleneck.",
+    "code_lang": "cpp",
+    "code": "class Counter {\n  std::mutex m;\n  int value = 0;\npublic:\n  void inc() { std::lock_guard<std::mutex> g(m); ++value; }\n  int get() { std::lock_guard<std::mutex> g(m); return value; }\n};",
+    "follow_up": "How would you avoid holding a lock while calling into user-provided code?"
+   },
+   {
+    "question": "What is the difference between `std::unique_lock` and `std::lock_guard`, and why would you choose one over the other?",
+    "answer": "`std::lock_guard` is the simpler RAII lock wrapper: it locks in the constructor and unlocks in the destructor, with no manual unlocking. `std::unique_lock` is more flexible because it can be unlocked early, moved, or constructed without immediately locking, which is useful for condition variables and more complex control flow. That flexibility comes with a bit more overhead and complexity. For ordinary scoped locking, `lock_guard` is usually the better default.",
+    "real_world": "Condition-variable code often needs a `unique_lock` because the waiting API releases and reacquires the mutex internally. For a simple critical section, `lock_guard` is harder to misuse.",
+    "code_lang": "cpp",
+    "code": "std::mutex m;\n{\n  std::lock_guard<std::mutex> g(m);\n  // simple critical section\n}\n\nstd::unique_lock<std::mutex> u(m);\n// can unlock() and relock() if needed",
+    "follow_up": "Why does `std::condition_variable` require a `std::unique_lock`?"
+   },
+   {
+    "question": "How do you think about the complexity trade-off between `std::map` and `std::unordered_map` when performance matters?",
+    "answer": "`std::map` gives ordered keys and predictable logarithmic operations, while `std::unordered_map` usually gives faster average constant-time lookups but can degrade with poor hashing or rehashing. If you need sorted iteration, range queries, or stable ordering, `map` is the better fit. If you mostly do exact-key lookups and updates, `unordered_map` is often faster. The real choice depends on access patterns, memory use, and whether worst-case predictability matters.",
+    "real_world": "A backend may use `unordered_map` for request routing, but switch to `map` when it needs to emit results in key order. Profiling often shows the hash table is faster until memory growth or rehash spikes become a problem.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the implications of storing pointers or references as keys in an `unordered_map`?"
+   },
+   {
+    "question": "How do you test C++ code that uses randomness, time, or filesystem state without making tests flaky?",
+    "answer": "I isolate nondeterministic inputs behind interfaces and inject them in tests. For example, instead of calling time or random generators directly, pass in a clock or generator abstraction that tests can control. For filesystem code, use temp directories and clean setup/teardown so tests do not depend on shared state. The goal is to keep tests deterministic while still covering real integration points.",
+    "real_world": "A flaky test suite often comes from code that depends on the current time, random IDs, or leftover files from previous runs. Teams usually fix this by introducing seams and using fixtures with temporary resources.",
+    "code_lang": "cpp",
+    "code": "struct Clock { virtual std::time_t now() const = 0; };\nstruct FakeClock : Clock { std::time_t t; std::time_t now() const override { return t; } };\n\nbool expired(const Clock& c, std::time_t limit) {\n  return c.now() > limit;\n}",
+    "follow_up": "How would you test code that spawns threads or depends on a race condition?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "What actually happens under the hood when you call a pure virtual function from a base-class constructor or destructor?",
+    "answer": "During base construction and destruction, the dynamic type is treated as the base subobject currently being built or torn down, so virtual dispatch does not reach the most-derived override. If a pure virtual is invoked in that state, the behavior is invalid and typically ends in a runtime abort through the implementation's pure-virtual handler. The core issue is that derived invariants are not established yet in construction, and may already be gone in destruction. A safe pattern is to avoid virtual calls there and use non-virtual helpers or a separate initialization step.",
+    "real_world": "This shows up in plugin systems and framework base classes where someone adds a virtual callback in a constructor for convenience. It can pass tests for one implementation and then crash immediately in production when another derived type is loaded.",
+    "code_lang": "cpp",
+    "code": "struct Base {\n  Base() { f(); }\n  virtual void f() = 0;\n  virtual ~Base() { f(); }\n};\n\nstruct D : Base {\n  void f() override {}\n};",
+    "follow_up": "How would you redesign a class hierarchy that currently relies on virtual dispatch during initialization?"
+   },
+   {
+    "question": "Can you explain the C++ memory model well enough to distinguish a data race from a race condition, and why undefined behavior appears so quickly?",
+    "answer": "A race condition is any timing-dependent bug; a data race is the specific case where two threads access the same memory location concurrently, at least one access is a write, and there is no synchronization establishing happens-before. In C++, a data race is undefined behavior, so the compiler is allowed to reorder, cache, or eliminate accesses in ways that make outcomes look impossible at source level. That is why code can seem fine under debug builds and fail under optimization. Atomics and locks are the tools that create ordering and visibility guarantees.",
+    "real_world": "A common incident is a stop flag implemented as a plain bool that works in staging, then a release build spins forever on one core because the load was optimized out of the loop.",
+    "code_lang": "cpp",
+    "code": "bool done = false;\n\nvoid worker() {\n  while (!done) {}\n}\n\nvoid stop() {\n  done = true;\n}",
+    "follow_up": "When would `memory_order_relaxed` be correct, and when would it be a bug?"
+   },
+   {
+    "question": "How do you choose memory ordering on std::atomic in real code instead of defaulting everything to seq_cst?",
+    "answer": "I start from the synchronization contract I need: atomicity only, publish-consume style visibility, or a total order across threads. `memory_order_relaxed` is for independent counters and statistics where ordering with other data does not matter; acquire-release is for publishing data and making prior writes visible after a flag or pointer is observed; `seq_cst` is simplest but can add unnecessary ordering and reduce optimization freedom. The hard part is proving that every reader and writer participates in the same protocol. If the proof is unclear, a mutex is often the cheaper engineering choice.",
+    "real_world": "Teams often overuse seq_cst in hot metrics paths and later discover the cost under contention, or they under-specify ordering in a lock-free queue and get rare corrupt reads on ARM but not x86.",
+    "code_lang": "cpp",
+    "code": "std::atomic<bool> ready{false};\nint value;\n\nvoid publish() {\n  value = 42;\n  ready.store(true, std::memory_order_release);\n}\nvoid consume() {\n  if (ready.load(std::memory_order_acquire)) use(value);\n}",
+    "follow_up": "Why might code that is accidentally correct on x86 still be wrong on weaker memory models?"
+   },
+   {
+    "question": "What are the ABI and code-generation trade-offs between type erasure like std::function and templates or virtual interfaces?",
+    "answer": "Templates give static polymorphism, so calls can inline and optimize well, but they increase code size and expose implementation in headers. Virtual interfaces give a stable object layout contract within one ABI, but every call is indirect and usually needs heap ownership decisions outside the interface. Type erasure like `std::function` or `std::any` hides concrete types behind a uniform wrapper, which improves API flexibility but can add indirect calls, larger objects, copies, and sometimes heap allocation depending on the callable. The right choice depends on whether your bottleneck is dispatch cost, binary size, compile times, or ABI stability.",
+    "real_world": "In low-latency request routing, replacing a templated callback chain with `std::function` can simplify APIs but show up as extra allocations and lost inlining on profiles. In SDKs shipped to third parties, the opposite trade-off often wins because ABI churn is more expensive than a few nanoseconds.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the pImpl idiom solving, and what does it cost?"
+   },
+   {
+    "question": "How does small-string optimization or small-buffer optimization affect performance, and what assumptions are unsafe to make about it?",
+    "answer": "These optimizations store small payloads inside the object itself to avoid heap allocation, which can reduce latency, allocator pressure, and cache misses for common small cases. But size thresholds, object layout, and move behavior are implementation details, so you should not write code that depends on a specific cutoff or binary representation. They also make object size larger, which can hurt cache density in arrays of objects. Measure the workload: fewer allocations help, but oversized objects can lose in tight data structures.",
+    "real_world": "A production parser may speed up after switching temporary tokens from heap-backed strings to in-place small buffers, but the same change can bloat a vector of millions of records and increase RSS and cache misses.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you benchmark whether a small-buffer optimization helps a particular hot path?"
+   },
+   {
+    "question": "Why can false sharing destroy multithreaded performance even when threads never logically contend on the same variable?",
+    "answer": "False sharing happens when independent variables used by different threads sit on the same cache line. Each core invalidates the line when it writes its own variable, so the line bounces between caches and throughput collapses despite no logical lock contention. This is a hardware coherence problem, not an algorithmic one. The fixes are to separate hot write-heavy fields, pad or align per-thread data, and prefer thread-local or sharded counters.",
+    "real_world": "A metrics system with one counter per worker can scale worse as you add threads because all counters land in one struct packed into a few cache lines. CPU time goes into coherence traffic instead of useful work.",
+    "code_lang": "cpp",
+    "code": "struct Counters {\n  alignas(64) std::atomic<long> a{0};\n  alignas(64) std::atomic<long> b{0};\n};",
+    "follow_up": "How would you confirm false sharing from profiling data rather than guessing?"
+   },
+   {
+    "question": "What are the failure modes around std::shared_ptr in large systems, beyond just reference cycles?",
+    "answer": "The obvious issue is cycles, but there are several others: unclear ownership makes lifetime reasoning harder, atomic reference count updates can become hot under contention, and `shared_from_this` is invalid until the object is actually owned by a `shared_ptr`. Aliasing constructors can also keep an owning object alive while pointing at a subobject, which is powerful but easy to misuse. In hot code, the control block traffic and extra indirection can matter. I prefer `unique_ptr` by default and reserve shared ownership for APIs that truly need it.",
+    "real_world": "Teams often end up with request graphs held together by shared_ptr everywhere, then discover leaks from cycles and CPU overhead from refcount churn under fan-out workloads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use `std::weak_ptr`, and when is it still the wrong ownership model?"
+   },
+   {
+    "question": "How do you reason about allocator strategy in C++ when performance and fragmentation matter?",
+    "answer": "Allocator choice affects latency distribution as much as average throughput: general-purpose allocators are flexible, but frequent small allocations can fragment memory and create lock contention. I look at allocation rate, object lifetime patterns, thread locality, and whether memory can be reclaimed in bulk. Pools or arenas work well when many objects share a lifetime, because deallocation becomes cheap and locality improves, but they complicate ownership and can retain memory longer than needed. The important trade-off is predictable behavior versus flexibility and simplicity.",
+    "real_world": "A request pipeline that builds thousands of short-lived AST nodes often gets much faster and more stable in tail latency with an arena. The same arena can become a memory retention bug if requests unexpectedly hold onto objects across batches.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when objects in an arena need non-trivial destructors or can escape the arena lifetime?"
+   },
+   {
+    "question": "What problems can static initialization order cause across translation units, and how do you avoid them?",
+    "answer": "Initialization order across different translation units is not something you should rely on, so one global object may use another before it has been constructed. Destruction order has the symmetric problem at shutdown. That leads to rare startup crashes, shutdown crashes, or configuration read before initialization. The common fix is to avoid non-trivial globals, use function-local statics for lazy construction, or move initialization into explicit startup wiring where dependencies are visible.",
+    "real_world": "This bites logging, metrics, and registry systems: a global logger may try to use a global sink or config object from another file and fail only in certain link orders or build modes.",
+    "code_lang": "cpp",
+    "code": "Logger& logger() {\n  static Logger instance;\n  return instance;\n}",
+    "follow_up": "What guarantees does C++ give for thread-safe initialization of function-local statics?"
+   },
+   {
+    "question": "What is the practical cost model of exceptions in C++, and when do they become the wrong tool?",
+    "answer": "On many implementations, the normal path cost is close to zero because metadata is used for stack unwinding only on throw, but a throw itself is expensive: it walks stack frames, runs destructors, and can be orders of magnitude slower than a regular return path. They are a good fit for infrequent, exceptional failures where unwinding simplifies cleanup. They are a poor fit for expected control flow, low-latency hot paths, or interfaces crossing boundaries that do not share exception semantics cleanly. The key is not 'exceptions are slow' but 'throwing is expensive and changes API design constraints.'",
+    "real_world": "A parser that throws on every malformed field in a noisy data feed can spend most of its time unwinding. Teams often switch to status returns or error objects in those paths to recover throughput and make failure rates observable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a component strongly exception-safe without copying everything defensively?"
+   },
+   {
+    "question": "What are the invalidation rules for `std::vector`, `std::deque`, and `std::unordered_map`, and why do they cause so many production bugs?",
+    "answer": "The key issue is that inserts, erases, reallocation, and rehashing can invalidate iterators, pointers, and references, but the exact rules differ by container. `std::vector` commonly invalidates everything on growth; `std::unordered_map` can invalidate iterators on rehash while references to elements often remain valid; `std::deque` has more nuanced behavior around insertions at ends versus middle. Senior engineers memorize the broad rules they rely on and design APIs so callers do not retain unstable handles across mutations. Many bugs come from code that works in tests until size crosses a threshold and a reallocation or rehash finally happens.",
+    "real_world": "A common incident is caching pointers or iterators into a container, then adding one more element under production load and crashing only at higher cardinalities. Another is a latent bug that appears after changing reserve size, compiler, or allocator behavior.",
+    "code_lang": "cpp",
+    "code": "std::vector<int> v{1,2,3};\nint* p = &v[0];\nv.push_back(4); // may reallocate\n*p = 9;         // UB if reallocated\n",
+    "follow_up": "How would you redesign an API if clients need stable identities for elements while the collection still grows?"
+   },
+   {
+    "question": "When does copy elision actually happen in modern C++, and when should you still care about move constructors?",
+    "answer": "Since C++17, some prvalue cases construct the object directly in its final destination, so no move or copy happens at all. That means code like returning a temporary by value is often cheaper than people expect, but named objects may still rely on NRVO, which is allowed but not guaranteed in every case. You still care about move constructors for container reallocation, swaps, passing ownership, and pre-C++17 or non-elided paths. The deeper point is to write clear value-returning code and make moves cheap and noexcept where appropriate.",
+    "real_world": "Teams sometimes add heap allocation or output parameters to avoid copies that the compiler would already eliminate. The opposite mistake is forgetting that a non-noexcept move can make containers fall back to copying during growth, hurting latency.",
+    "code_lang": "cpp",
+    "code": "std::string make() {\n    return std::string(\"abc\"); // direct construction in caller in C++17 cases\n}\n\nstd::string s = make();\n",
+    "follow_up": "Why does marking a move constructor `noexcept` affect `std::vector` growth behavior?"
+   },
+   {
+    "question": "How do vtables and dynamic dispatch actually work at the ABI level, and what performance costs do they introduce beyond one indirect call?",
+    "answer": "Most implementations store a hidden vptr in polymorphic objects that points to a table of function pointers and RTTI metadata, but exact layout is ABI-specific. The obvious cost is an indirect branch, but the larger effects are inhibited inlining, worse branch prediction, extra pointer chasing, and larger object size that hurts cache density. Multiple and virtual inheritance can add pointer adjustments and more complex layouts. In hot code, those secondary costs often matter more than the raw dispatch instruction.",
+    "real_world": "A plugin or message-processing system may look fine in profiles until object count grows and cache misses dominate. Teams sometimes replace deep virtual hierarchies in hot paths with tagged unions, function tables, or batched processing to recover throughput.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose CRTP or `std::variant` over runtime polymorphism, and what do you give up?"
+   },
+   {
+    "question": "What can go wrong with condition variables even if you think you used the mutex correctly?",
+    "answer": "The two classic problems are lost wakeups and spurious wakeups, which is why waits must always re-check a predicate under the lock. You also need the state change and the notification to be coordinated correctly; notifying without publishing the state under synchronization can create races. Another failure mode is mixing multiple predicates on one condition variable without a disciplined protocol, leading to thundering herds or missed progress. Condition variables are about waiting for state, not waiting for notifications themselves.",
+    "real_world": "Production deadlocks often come from a consumer doing `wait()` once instead of waiting in a loop, or from a shutdown path that sets a flag without holding the same mutex. These bugs can sleep for months and only appear under timing changes from load or a new kernel.",
+    "code_lang": "cpp",
+    "code": "std::unique_lock<std::mutex> lk(m);\ncv.wait(lk, [&]{ return ready || stopped; });\nif (stopped) return;\nconsume(item);\n",
+    "follow_up": "How would you compare condition variables with semaphores or atomics plus `wait/notify` for a work queue?"
+   },
+   {
+    "question": "What is the role of alignment in C++, and how can over-aligned types or misaligned access break correctness or performance?",
+    "answer": "Alignment determines where objects may legally reside in memory, and violating it can be undefined behavior even if it seems to work on one CPU. Over-aligned types may require special allocation support, and packed layouts can create misaligned members that force slow accesses or fault on stricter architectures. Alignment also affects vectorization, cache-line placement, and false sharing. Senior engineers think about alignment both as a language rule and as a hardware cost model.",
+    "real_world": "A serialization layer that casts byte buffers to structs may pass tests on x86 and then fail or slow down badly on ARM. Another common issue is manually packed structs used for network protocols causing hidden penalties in hot loops.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely deserialize binary data without relying on undefined struct layout or alignment assumptions?"
+   },
+   {
+    "question": "How do ODR violations actually happen in real C++ systems, and why are they so hard to diagnose?",
+    "answer": "An ODR violation happens when the program ends up with multiple inconsistent definitions of what should be the same entity, often via headers, macros, inline functions, templates, or different build flags across translation units. The result can be link failures, or worse, a successful build with undefined behavior at runtime because code generated in different places disagrees about layout or behavior. They are hard to diagnose because the source often looks valid locally and the failure depends on the full build graph. Binary boundaries and mixed toolchains make this much easier to trigger.",
+    "real_world": "A classic incident is two shared libraries built against slightly different headers for the same type, leading to memory corruption only when objects cross the boundary. Teams also hit this when feature macros change struct definitions in only part of a large monorepo.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What practices would you use to keep ABI and ODR risks under control in a large multi-library codebase?"
+   },
+   {
+    "question": "What are the real trade-offs between `std::mutex`, a spinlock, and a reader-writer lock under contention?",
+    "answer": "`std::mutex` is the safe default because it avoids burning CPU while waiting and tends to behave well across a wide range of contention levels. Spinlocks can win only when critical sections are extremely short and contention is brief; otherwise they waste cores and can amplify tail latency. Reader-writer locks help only when reads are long enough and write frequency is low enough to offset extra bookkeeping and fairness issues. In practice, reducing shared mutable state usually beats picking a fancier lock.",
+    "real_world": "Teams often replace a mutex with a spinlock after seeing lock contention in a profile, then make production worse because blocked threads start burning CPU. Reader-writer locks also frequently disappoint when write bursts starve readers or vice versa.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If lock contention shows up in a profile, what measurements would you gather before changing the lock type?"
+   },
+   {
+    "question": "How do you reason about `std::shared_ptr` aliasing constructors and `enable_shared_from_this`, and what bugs do they prevent or create?",
+    "answer": "The aliasing constructor lets a `shared_ptr` share ownership with one object while pointing at a subobject or related pointer, which is useful but easy to misuse if the pointed-to thing is not actually tied to that lifetime. `enable_shared_from_this` exists to safely create additional `shared_ptr`s to an already shared object; constructing a fresh `shared_ptr<this>` would create a second control block and double-delete. The failure modes are subtle because the pointer value can look correct while ownership semantics are wrong. You need one clear control block per owned object.",
+    "real_world": "A common production crash is an object handing out `shared_ptr(this)` from inside a method, then being deleted twice later. Another is exposing a member via an aliasing `shared_ptr` and assuming it stays valid even after the parent relationship changes.",
+    "code_lang": "cpp",
+    "code": "struct Node : std::enable_shared_from_this<Node> {\n  std::shared_ptr<Node> self() { return shared_from_this(); }\n};\n\nauto p = std::make_shared<Node>();\nauto q = p->self(); // shares same control block\n",
+    "follow_up": "When would you avoid `shared_from_this` entirely and model ownership differently?"
+   },
+   {
+    "question": "What are the correctness and performance implications of padding, object layout, and `[[no_unique_address]]` in modern C++?",
+    "answer": "Member order affects padding, which affects object size, cache density, and bandwidth. Empty base optimization and `[[no_unique_address]]` can remove storage for empty members in some cases, but you should not build protocols or persistence formats around implementation-specific layout assumptions. Reordering members can materially reduce memory footprint in large arrays of objects, sometimes improving throughput by fitting more working set in cache. The trade-off is readability versus data-oriented layout.",
+    "real_world": "A service storing tens of millions of in-memory objects can save gigabytes just by tightening layout, which often reduces cache misses enough to move p99 latency. The dangerous version is when someone serializes raw structs and later a harmless refactor silently breaks compatibility.",
+    "code_lang": "cpp",
+    "code": "struct A { char c; int i; bool b; };\nstruct B { int i; char c; bool b; };\n// Same fields, often different sizeof due to padding.\n",
+    "follow_up": "How would you measure whether a layout change actually improved performance instead of just shrinking `sizeof`?"
+   },
+   {
+    "question": "How do you design and review a lock hierarchy to avoid deadlocks in a large C++ codebase?",
+    "answer": "You define a global partial order for locks and require code to acquire them only in that order, with clear rules for hand-off, callbacks, and re-entrancy. The hard part is not just two locks in one function; it is hidden lock acquisition inside utility code, destructors, logging, allocators, or callbacks into user code. Good reviews look for lock scope, whether external code is invoked while holding a lock, and whether blocking operations happen inside critical sections. Instrumentation and annotations help, but the design discipline matters most.",
+    "real_world": "Many deadlocks in production come from seemingly harmless changes like adding logging or metrics inside a locked region, where the logging path grabs another lock. Large teams often maintain documented lock levels or use thread-safety annotations to keep the hierarchy enforceable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you change if you discover a callback must run user code but currently executes while an internal mutex is held?"
+   }
+  ]
+ }
+}

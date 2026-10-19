@@ -1,0 +1,453 @@
+{
+ "slug": "git",
+ "name": "Git",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Git, and how is it different from a centralized version control system?",
+    "answer": "Git is a distributed version control system, so every clone has the full repository history and can work offline. A centralized system keeps the main history on one server and clients usually depend on that server for most operations. Git is useful because branching, merging, and local history operations are fast and cheap. The trade-off is that you have to understand local versus remote state.",
+    "real_world": "This matters when a developer is traveling or the remote server is unavailable; they can still commit, branch, and inspect history locally. Teams also use the distributed model to let feature work happen without blocking on a central server.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main parts of a Git repository, like the working tree, staging area, and commit history?"
+   },
+   {
+    "question": "What does `git status` tell you?",
+    "answer": "`git status` shows the current state of your working tree and staging area relative to the last commit. It tells you which files are modified, staged, untracked, or ready to commit. It is the first command to run when you are unsure what Git thinks changed. It does not show the actual diff unless you ask for it separately.",
+    "real_world": "New developers often commit the wrong files or forget to stage changes, and `git status` is how they catch that before pushing. It is also useful in scripts and support workflows when you need a quick sanity check.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do `git diff` and `git diff --staged` differ?"
+   },
+   {
+    "question": "What is the difference between `git add` and `git commit`?",
+    "answer": "`git add` stages changes, meaning it marks a snapshot of specific file changes that will go into the next commit. `git commit` creates a permanent commit from the staged snapshot with a message. This separation lets you choose exactly what belongs together in one commit. A common mistake is assuming `git add` saves work permanently; it does not until you commit.",
+    "real_world": "This matters when one file contains two unrelated fixes and you want separate commits for each. Teams use staging to keep history readable and easier to review.",
+    "code_lang": "bash",
+    "code": "git add app.py\ngit commit -m \"Fix login validation\"",
+    "follow_up": "How would you unstage a file or a change before committing?"
+   },
+   {
+    "question": "What is a branch in Git, and why would you use one?",
+    "answer": "A branch is a movable pointer to a commit, used to develop a line of work independently from the main history. You use branches to isolate features, bug fixes, or experiments without disturbing stable code. Branches are cheap in Git, so they are the normal way to work. The main trade-off is that you still need to merge or rebase the work back later.",
+    "real_world": "Branches let a team work on multiple features at the same time without stepping on each other. They also make code review safer because unfinished work stays off the main branch.",
+    "code_lang": "bash",
+    "code": "git branch feature/login\ngit switch feature/login",
+    "follow_up": "What happens when two branches change the same line in the same file?"
+   },
+   {
+    "question": "What does `git merge` do?",
+    "answer": "`git merge` combines changes from one branch into another, usually by creating a merge commit if the branches have diverged. If one branch is an ancestor of the other, Git can do a fast-forward merge and just move the branch pointer. Merge preserves the branch history, which makes it clear how work joined together. The downside is that history can become less linear.",
+    "real_world": "This is common when a feature branch is finished and needs to be integrated into `main`. It also matters in hotfix workflows where a fix must be merged into both release and main branches.",
+    "code_lang": "bash",
+    "code": "git switch main\ngit merge feature/login",
+    "follow_up": "How is merging different from rebasing?"
+   },
+   {
+    "question": "What is a merge conflict, and how do you resolve one?",
+    "answer": "A merge conflict happens when Git cannot automatically combine changes, usually because both branches edited the same lines or one deleted something the other changed. Git marks the conflicted sections in the file, and you must edit the file to choose the correct result. After fixing the file, you stage it and complete the merge. Conflicts are normal; the key is understanding the combined intent before accepting one side blindly.",
+    "real_world": "Conflicts often appear when multiple developers edit the same configuration or the same function. In production branches, resolving them carefully avoids accidentally dropping a bug fix or a required setting.",
+    "code_lang": "text",
+    "code": "<<<<<<< HEAD\ncurrent change\n=======\nincoming change\n>>>>>>> feature",
+    "follow_up": "What is the difference between resolving a conflict during merge and during rebase?"
+   },
+   {
+    "question": "What does `git remote` mean, and what is `origin`?",
+    "answer": "A remote is a named reference to another repository, usually the shared repository on GitHub, GitLab, or a server. `origin` is just the conventional default name Git gives to the remote you cloned from. Remotes let you fetch and push changes without typing the full URL every time. The name itself is not special; it is just a label.",
+    "real_world": "This matters when a team mirrors a repository or works with both a company fork and the upstream project. Developers often push to one remote and fetch from another.",
+    "code_lang": "bash",
+    "code": "git remote -v\ngit remote add upstream https://example.com/upstream.git",
+    "follow_up": "What is the difference between pushing to a remote and fetching from it?"
+   },
+   {
+    "question": "What does `git log` show, and when would you use it?",
+    "answer": "`git log` shows the commit history for the current branch, including commit messages, authors, dates, and hashes. You use it to trace when a change happened, inspect recent work, or find a commit to revert or compare against. It is one of the main tools for debugging history. A common beginner issue is relying only on the latest files instead of checking the commits that led there.",
+    "real_world": "When a bug appears in production, `git log` helps identify the commit that likely introduced it. Teams also use it to review whether a fix already landed in another branch.",
+    "code_lang": "bash",
+    "code": "git log --oneline --graph --decorate --all",
+    "follow_up": "How would you inspect what changed in a specific commit?"
+   },
+   {
+    "question": "What does `git clone` do, and how is it different from `git init`?",
+    "answer": "`git clone` copies an existing repository, including its history and usually its remote setup, into a new local directory. `git init` creates a brand-new Git repository in an existing directory that may not have any commits yet. You use `clone` when you want to work on someone else’s repo, and `init` when you are starting a new project from scratch or turning an existing folder into a repo.",
+    "real_world": "A new engineer usually clones the company repo to start work, but a team may run `git init` when bootstrapping a brand-new service. Using the wrong one often leads to missing history or an extra nested directory.",
+    "code_lang": "bash",
+    "code": "git clone https://example.com/repo.git\ncd repo\n\ngit init",
+    "follow_up": "What happens if you clone a repository that already has a remote configured?"
+   },
+   {
+    "question": "What does `git branch` show you, and what is it used for?",
+    "answer": "`git branch` lists branches in your repository, and with options it can also create or delete branches. It is useful for seeing where you are working and for switching between lines of development. A branch is just a movable pointer to a commit, so branches are cheap and meant for isolating work.",
+    "real_world": "Developers check branches before starting or finishing a task so they do not accidentally commit to the wrong line of work. In shared repos, branch names also help reviewers and CI identify the purpose of changes.",
+    "code_lang": "bash",
+    "code": "git branch\ngit branch feature/login\ngit branch -d feature/login",
+    "follow_up": "How do you switch from one branch to another?"
+   },
+   {
+    "question": "What does `git checkout` do, and what is it commonly used for?",
+    "answer": "`git checkout` is used to switch branches or restore files from another commit or branch. In newer Git workflows, people often use `git switch` for branches and `git restore` for files because they are clearer. The key idea is that checkout changes what is in your working tree or where your HEAD points.",
+    "real_world": "A junior engineer often uses checkout to move to a bugfix branch or to discard a bad local edit in one file. Confusing branch switching with file restoration is a common beginner mistake.",
+    "code_lang": "bash",
+    "code": "git checkout main\ngit checkout feature/auth\n\ngit checkout -- app/config.yml",
+    "follow_up": "When would you use `git switch` or `git restore` instead?"
+   },
+   {
+    "question": "What is the purpose of `git diff`?",
+    "answer": "`git diff` shows line-by-line changes between your working tree, index, commits, or branches. It is how you inspect what has changed before committing or before comparing two points in history. This matters because it helps you catch accidental edits, review scope, and understand exactly what a commit will contain.",
+    "real_world": "Before code review, engineers often inspect diffs to make sure only intended files changed. In production incidents, diffing against a known commit can quickly reveal the exact configuration change that caused the problem.",
+    "code_lang": "bash",
+    "code": "git diff\ngit diff --staged\ngit diff main..feature/login",
+    "follow_up": "What is the difference between `git diff` and `git log`?"
+   },
+   {
+    "question": "What does `git commit --amend` do, and when should you use it?",
+    "answer": "`git commit --amend` replaces the most recent commit with a new one, usually to fix the message or include a forgotten change. It is useful when the commit has not been shared yet, because it rewrites history. You should avoid amending commits that other people may already have pulled unless your team expects history rewriting.",
+    "real_world": "A developer forgets one file in a commit and amends it before opening a pull request. In a shared branch, doing this after others have based work on the old commit can cause confusion and force extra coordination.",
+    "code_lang": "bash",
+    "code": "git add missing-file.txt\ngit commit --amend -m \"Add validation for signup form\"",
+    "follow_up": "What is the risk of amending a commit that has already been pushed?"
+   },
+   {
+    "question": "What is the staging area in Git?",
+    "answer": "The staging area, also called the index, is where you prepare the next commit. It lets you choose exactly which changes from your working tree will be included, instead of committing everything at once. This matters because it helps you make smaller, cleaner commits and separate unrelated changes.",
+    "real_world": "A developer may stage only the bug fix and leave formatting changes for a later commit. Without staging, a single commit can become hard to review and hard to revert cleanly.",
+    "code_lang": "bash",
+    "code": "git add file1.py\ngit status\ngit commit -m \"Fix login bug\"",
+    "follow_up": "How do you remove a file from the staging area without deleting your edits?"
+   },
+   {
+    "question": "What does `.gitignore` do?",
+    "answer": "`.gitignore` tells Git which untracked files or patterns to ignore so they do not show up as new changes. It is commonly used for build artifacts, logs, local environment files, and editor junk. It does not remove files that are already being tracked; those must be untracked separately if you want Git to stop following them.",
+    "real_world": "Projects often ignore `.env` files, compiled binaries, and dependency directories to keep noise out of the repo. Forgetting to ignore generated files can clutter status output and lead to accidental commits.",
+    "code_lang": "txt",
+    "code": "# Ignore build output\n/dist/\n*.log\n.env",
+    "follow_up": "What happens if a file is already committed and you add it to `.gitignore`?"
+   },
+   {
+    "question": "What is a detached HEAD state in Git?",
+    "answer": "A detached HEAD means HEAD points directly to a commit instead of to a branch. You can inspect code or make temporary commits there, but if you do not create a branch, it is easy to lose track of those commits once you move away. It is most useful for reviewing old commits, testing, or checking out a tag.",
+    "real_world": "Someone may detach HEAD to reproduce a bug on an older release commit. If they make fixes there without creating a branch, those changes can disappear from normal branch history.",
+    "code_lang": "bash",
+    "code": "git checkout v1.2.0\ngit switch -c hotfix-from-tag",
+    "follow_up": "How would you save work you made while in detached HEAD?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How would you safely undo a local commit that you have not pushed yet?",
+    "answer": "If you want to keep the changes but remove the commit, use a soft reset; if you want to keep the changes unstaged, use a mixed reset. If you want to discard both the commit and the changes, use a hard reset, but only when you are sure nothing else depends on that work. The key trade-off is safety versus simplicity: reset rewrites local history, so it is fine before pushing but risky after.",
+    "real_world": "This comes up when a developer commits too early and wants to split the work into cleaner commits before opening a pull request. It also matters when a bad local commit needs to be removed without losing the code.",
+    "code_lang": "bash",
+    "code": "git reset --soft HEAD~1\n# keep changes staged\n\ngit reset --mixed HEAD~1\n# keep changes unstaged\n\ngit reset --hard HEAD~1\n# discard commit and changes",
+    "follow_up": "What would you do differently if that commit had already been pushed?"
+   },
+   {
+    "question": "When would you use `git rebase` instead of `git merge`?",
+    "answer": "Use rebase when you want to apply your work on top of another branch and keep a linear history. Merge preserves the exact branch structure, which can be useful for showing when integration happened. Rebase is often cleaner for local feature branches, but it rewrites commit history, so it should be avoided on shared branches unless the team is aligned on that workflow.",
+    "real_world": "Teams often rebase feature branches before merging so the history is easier to read during debugging. On the other hand, some teams prefer merge commits to make release and integration points explicit.",
+    "code_lang": "bash",
+    "code": "git checkout feature\ngit fetch origin\ngit rebase origin/main",
+    "follow_up": "What can go wrong if two people rebase the same shared branch?"
+   },
+   {
+    "question": "What is `git cherry-pick`, and when is it useful?",
+    "answer": "Cherry-pick copies one specific commit from another branch onto your current branch. It is useful when you need a small fix from a later branch without merging all of its other changes. The downside is duplicated history, which can make future merges more confusing if you cherry-pick too often instead of merging the related branch.",
+    "real_world": "This is common for hotfixes: a bug fix lands on a release branch, and you need the same fix on main without bringing in unrelated release-only changes. It is also used when a single commit must be backported to an older version.",
+    "code_lang": "bash",
+    "code": "git checkout release-1.2\ngit cherry-pick abc1234",
+    "follow_up": "How do you handle conflicts if the cherry-picked commit does not apply cleanly?"
+   },
+   {
+    "question": "What does `git stash` do, and when would you use it instead of committing work-in-progress?",
+    "answer": "Stash temporarily shelves uncommitted changes so you can switch branches or clean your working tree. It is useful for short interruptions, but it should not replace real commits for work you may need to review, share, or recover later. Commits are safer and more visible; stash is for quick, local context switches.",
+    "real_world": "A common case is needing to switch to a hotfix branch while you have half-finished changes on your current branch. Teams also use stash when they want a clean tree before running tests or rebasing.",
+    "code_lang": "bash",
+    "code": "git stash push -m \"wip parser fix\"\ngit switch main\n# later\ngit stash pop",
+    "follow_up": "What happens if you stash changes and then modify the same files before popping the stash?"
+   },
+   {
+    "question": "How do you inspect what changed in a specific commit without checking out that commit?",
+    "answer": "Use `git show` to view the patch and metadata for one commit. That is usually better than checking out old history because it avoids detached HEAD and keeps the workflow focused on review. It helps when you need to understand exactly what a commit introduced or whether a bug fix really touched the intended lines.",
+    "real_world": "This is common during code review and production debugging when you want to confirm the exact contents of a suspicious commit. It is also useful in incident response when you are tracing which change introduced a regression.",
+    "code_lang": "bash",
+    "code": "git show abc1234\n# or just the changed file names\n\ngit show --name-only abc1234",
+    "follow_up": "How would you compare two arbitrary commits or branches instead?"
+   },
+   {
+    "question": "What is `git revert`, and how is it different from resetting a branch?",
+    "answer": "Revert creates a new commit that undoes the effect of an earlier commit, which preserves history. Reset moves the branch pointer and can discard history, so it is mainly for local work or carefully managed history rewrites. Revert is the safer choice for shared branches because it does not force others to rewrite their clones.",
+    "real_world": "If a bad change is already on main, teams usually revert it so the branch stays usable while they prepare a proper fix. This avoids breaking everyone else’s history or forcing a force-push.",
+    "code_lang": "bash",
+    "code": "git revert abc1234\n# creates a new commit that undoes abc1234",
+    "follow_up": "When would reverting a merge commit be necessary, and what extra care is needed?"
+   },
+   {
+    "question": "How do you handle a remote branch that diverged from your local branch after someone else pushed changes?",
+    "answer": "First fetch, then inspect the new remote commits before deciding whether to merge or rebase. If your local work is private, rebasing often gives a cleaner linear history; if the branch is shared, merging is usually safer because it avoids rewriting commits that others may already have. The important part is to resolve the divergence intentionally, not by force-pushing blindly.",
+    "real_world": "This happens constantly on shared feature branches where multiple developers commit before a review is finished. It is also a common source of accidental history rewrites that confuse teammates and CI.",
+    "code_lang": "bash",
+    "code": "git fetch origin\ngit log --oneline --graph --decorate --left-right HEAD...origin/main\ngit rebase origin/main",
+    "follow_up": "What policies would you use to decide when force-push is acceptable?"
+   },
+   {
+    "question": "What is a good way to find out which commit introduced a bug in a long history?",
+    "answer": "Use `git bisect` to perform a binary search over commits and narrow the first bad one efficiently. You mark each tested commit as good or bad, and Git walks you toward the culprit in far fewer steps than checking commits one by one. This matters when history is large and the bug is subtle, especially if you have a reliable test or reproduction script.",
+    "real_world": "Teams use bisect during incident debugging when a regression appears and the change window is large. It works especially well when paired with an automated test that can say pass or fail quickly.",
+    "code_lang": "bash",
+    "code": "git bisect start\ngit bisect bad HEAD\ngit bisect good v1.4.0\n# test each checkout, then mark good/bad",
+    "follow_up": "What makes a good bisect test, and what do you do if the bug is intermittent?"
+   },
+   {
+    "question": "How do you safely work with large binary files in Git repositories?",
+    "answer": "Git is optimized for text diffs, so large binaries can bloat the repository and make clones and history operations slow. In practice, you usually keep large assets outside normal Git history or use a storage approach designed for large files, while Git tracks pointers or metadata. The trade-off is convenience versus repository performance and clone size.",
+    "real_world": "This matters in projects with videos, model artifacts, design files, or game assets, where ordinary Git usage can make every clone and CI job painfully slow. Teams often discover the problem only after the repository has already grown too large.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent a repository from growing quickly because of large generated files?"
+   },
+   {
+    "question": "When would you choose `git rebase -i` over a plain rebase or merge in a feature branch workflow?",
+    "answer": "Use interactive rebase when you want to clean up local history before sharing it: squash noisy commits, reorder fixes, or edit commit messages. It keeps the eventual branch history easier to review, but it rewrites commit IDs, so it should be done only on unpublished work or with care on shared branches. If the branch is already public and others may base work on it, a merge is usually safer.",
+    "real_world": "This comes up when a developer has a branch with ten small WIP commits and wants to present two meaningful commits in the pull request. Teams often require history cleanup before merging to keep release and audit logs readable.",
+    "code_lang": "bash",
+    "code": "git rebase -i HEAD~5\n# mark commits as squash/reword/edit as needed",
+    "follow_up": "What problems can happen if you rebase commits that other people already pulled?"
+   },
+   {
+    "question": "What is the difference between `git reset --soft`, `--mixed`, and `--hard`?",
+    "answer": "They all move `HEAD` to another commit, but they differ in what happens to the index and working tree. `--soft` keeps changes staged, `--mixed` keeps changes in the working tree but unstaged, and `--hard` discards both staged and working-tree changes. The trade-off is safety versus cleanup: `--hard` is fast but destructive, so it should be used carefully.",
+    "real_world": "This matters when you need to uncommit work without losing edits, or when a bad local experiment should be thrown away completely. Misusing `--hard` can delete hours of uncommitted work.",
+    "code_lang": "bash",
+    "code": "git reset --soft HEAD~1\ngit reset --mixed HEAD~1\ngit reset --hard HEAD~1",
+    "follow_up": "How would you recover if you ran `git reset --hard` by mistake?"
+   },
+   {
+    "question": "How do you use `git reflog`, and what kinds of mistakes can it help recover from?",
+    "answer": "`reflog` records where your branch pointers and `HEAD` have recently moved, even if commits are no longer reachable from a branch. It is the first place to look after accidental resets, rebases, or branch deletions because it often lets you find the lost commit and restore it. It is a local safety net, but it is not a substitute for backups or pushed history.",
+    "real_world": "A developer may reset a branch too far or rebase away a commit and later realize the work is still needed. In practice, `reflog` often saves the day without needing to re-create the change manually.",
+    "code_lang": "bash",
+    "code": "git reflog\ngit reset --hard HEAD@{3}",
+    "follow_up": "Why might a commit appear in `reflog` but not in `git log`?"
+   },
+   {
+    "question": "What is a shallow clone, and when would you use one?",
+    "answer": "A shallow clone copies only part of the repository history, usually to reduce download time and disk usage. It is useful in CI or for quick inspection of a large repo, but it limits operations that need full history, such as certain merges, bisects, or history-based tooling. The trade-off is speed versus completeness.",
+    "real_world": "CI jobs for large monorepos often use shallow clones to save minutes on every run. The downside is that a build or test step may fail later if it needs older commits or tags that were not fetched.",
+    "code_lang": "bash",
+    "code": "git clone --depth 1 <repo-url>",
+    "follow_up": "What Git commands or workflows tend to break when history is shallow?"
+   },
+   {
+    "question": "How do Git submodules work, and what is the main operational trade-off of using them?",
+    "answer": "A submodule is a Git repository embedded inside another repository at a specific commit. The parent repo records only a pointer to the submodule commit, not the submodule contents themselves, so checking out the parent repo does not automatically give you a usable submodule state unless you initialize and update it. They can help with version pinning, but they add complexity to cloning, branching, and CI.",
+    "real_world": "Teams use submodules when they need one repo to depend on a specific commit of another repo without vendoring the code. They also cause frequent confusion when someone updates the parent pointer but forgets to update or initialize the submodule locally or in CI.",
+    "code_lang": "bash",
+    "code": "git clone <repo-url>\ngit submodule update --init --recursive",
+    "follow_up": "When would you prefer a submodule over a package dependency or monorepo?"
+   },
+   {
+    "question": "What is the purpose of `git fetch`, and how is it different from `git pull`?",
+    "answer": "`git fetch` downloads new remote commits and updates your remote-tracking branches without changing your current branch. `git pull` is basically fetch plus an integrate step, usually merge or rebase depending on configuration. Fetch is safer for inspection because it lets you review incoming changes before deciding how to apply them.",
+    "real_world": "Before merging a teammate’s branch, you may fetch to see what changed without altering your worktree. This helps avoid accidental merge commits or surprise conflicts during an active coding session.",
+    "code_lang": "bash",
+    "code": "git fetch origin\ngit log --oneline --decorate HEAD..origin/main",
+    "follow_up": "When would you configure `git pull` to rebase instead of merge?"
+   },
+   {
+    "question": "How do you use `.gitignore` effectively, and what does it not do?",
+    "answer": "`.gitignore` prevents untracked files matching its patterns from being added accidentally, which is useful for build artifacts, local config, and temporary files. It does not remove files that are already tracked, so if a file is committed once, ignoring it later will not stop Git from noticing changes. For already tracked files, you need to stop tracking them explicitly if that is really the goal.",
+    "real_world": "This matters when a team commits generated files by mistake and later adds an ignore rule expecting the noise to disappear. The tracked files still show up in diffs until they are removed from the index.",
+    "code_lang": "bash",
+    "code": "echo dist/ >> .gitignore\ngit rm -r --cached dist/\ngit commit -m \"Stop tracking build output\"",
+    "follow_up": "How would you ignore a file only in your local clone without committing that rule?"
+   },
+   {
+    "question": "What happens when the same line is changed in two branches, but one branch also renamed the file?",
+    "answer": "Git uses rename detection heuristics during merge, so it can often treat the change as a rename plus content edit rather than a delete-and-add. If both branches edited overlapping lines, you can still get a conflict, but the conflict may involve the renamed path rather than the old one. The exact result depends on how well Git detects the rename and whether the changes overlap.",
+    "real_world": "This shows up in refactors where a file is moved and edited at the same time in one branch, while another branch continues modifying the old path. Teams often see surprising conflicts if the rename is not obvious to Git or the changes are large.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How can you help Git recognize renames more reliably in a large refactor?"
+   },
+   {
+    "question": "How would you compare `git merge --no-ff` and a fast-forward merge in a team workflow?",
+    "answer": "A fast-forward merge moves the branch pointer forward without creating a merge commit, so history stays linear. `--no-ff` forces a merge commit even when fast-forward is possible, which preserves the fact that a feature branch existed and can make rollbacks or release grouping easier. The trade-off is cleaner linear history versus richer context about how work was integrated.",
+    "real_world": "Release branches often use merge commits so you can see exactly which features landed together. Other teams prefer fast-forward or rebase-based histories to make `git bisect` and log reading simpler.",
+    "code_lang": "bash",
+    "code": "git merge --no-ff feature/login",
+    "follow_up": "When can merge commits actually make debugging easier?"
+   },
+   {
+    "question": "What should you do if a push is rejected because the remote branch has new commits?",
+    "answer": "First fetch and inspect the remote changes, then integrate them with a merge or rebase depending on your branch policy. If you rebase, you rewrite local commits and may need a force push, so only do that on branches where your team expects it and use the safer force option if available. The key is to incorporate the remote work rather than overwrite it blindly.",
+    "real_world": "This happens constantly when two people work on the same feature branch or when a CI bot updates a branch. A blind force push can erase a teammate’s work and create a bad recovery situation.",
+    "code_lang": "bash",
+    "code": "git fetch origin\ngit rebase origin/main\ngit push --force-with-lease",
+    "follow_up": "What is the difference between `--force` and `--force-with-lease`?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how Git stores objects internally and why packing matters for performance at scale?",
+    "answer": "Git stores content as blobs, trees, commits, and annotated tags, addressed by object ID. Loose objects are fine for small changes, but large repos rely on packfiles, which delta-compress and co-locate objects to reduce disk, network transfer, and object lookup overhead. Reachability is tracked from refs, so history shape affects what stays alive and what can be pruned. At scale, pack layout, bitmap indexes, and commit-graph data can make clone, fetch, and log operations dramatically faster.",
+    "real_world": "Large monorepos can become painfully slow to clone or traverse if they accumulate many loose objects or poorly optimized packs. Teams often schedule maintenance tasks to repack, write commit-graphs, and refresh indexes after heavy CI churn.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the trade-offs of aggressive repacking on a busy shared repository server?"
+   },
+   {
+    "question": "What actually happens during `git gc`, and what failure modes or trade-offs do you think about before running it on a large repository?",
+    "answer": "`git gc` cleans up unreachable objects, consolidates loose objects into packfiles, and may rewrite auxiliary indexes such as reflogs or packing metadata. The upside is less disk usage and faster reads, but it is I/O and CPU intensive, and it can interfere with concurrent operations if run at the wrong time or with the wrong repository setup. Its exact behavior depends on repository state and configuration, so on servers many teams prefer controlled maintenance windows or background maintenance. You also need to be careful not to prune objects still needed for recovery via reflog or in-progress references.",
+    "real_world": "A badly timed GC on a busy self-hosted Git server can spike disk I/O and slow every fetch and push. In incident recovery, overly aggressive pruning can remove commits someone expected to recover after a force-push mistake.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish between safe unreachable objects and objects you should retain longer for operational recovery?"
+   },
+   {
+    "question": "If a repository has millions of files or very deep history and common commands are slow, what Git features would you look at first and why?",
+    "answer": "I would separate working-tree scale from history scale. For working-tree cost, sparse-checkout and partial clone can reduce the files and blobs a client needs; for history traversal, commit-graph and pack bitmaps help log, merge-base, and fetch negotiation. I would also check whether the index is the bottleneck, because split index or untracked cache can help status-like operations in some environments. The right fix depends on whether the pain is clone time, checkout time, status latency, or server-side negotiation.",
+    "real_world": "In a monorepo, developers often complain about `status` and checkout speed, while CI is dominated by clone and fetch time. The winning optimization is different in each case, and applying the wrong one can add complexity without noticeable benefit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide between shallow clone, partial clone, and sparse-checkout for developer laptops versus CI agents?"
+   },
+   {
+    "question": "How does Git decide what objects to send during fetch or push, and why can that negotiation become a scaling bottleneck?",
+    "answer": "Git compares what the client wants with what it believes both sides already have, then sends the missing reachable objects. On large or highly branching histories, proving common ancestry can require a lot of object graph walking and multiple negotiation rounds, especially when refs are numerous or commit graphs are expensive to traverse. Pack bitmaps and good server-side metadata reduce this cost by answering reachability questions faster. Poor negotiation shows up as fetches that transfer little data but still spend a long time in 'counting' or 'enumerating' phases.",
+    "real_world": "A repo with many active branches and CI-generated refs can make fetch latency climb even when daily code changes are small. Teams sometimes fix 'network' complaints by cleaning refs and improving pack metadata rather than buying bandwidth.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why do stale or excessive refs hurt fetch performance even if developers never check them out?"
+   },
+   {
+    "question": "What is the role of the index in Git, and what edge cases or performance issues have you seen around it?",
+    "answer": "The index is Git’s cached view of the next commit plus metadata about the working tree, so commands like add, diff, merge, and status rely on it heavily. It is also where merge stages live during conflicts, which is why conflict resolution is really about updating indexed entries before creating a new tree. Performance issues often come from huge numbers of paths, expensive filesystem stat calls, or pathological untracked-file scans. Corruption or stale assumptions in the index can produce surprising status output, especially on network filesystems or case-insensitive filesystems.",
+    "real_world": "On very large working trees, developers often think Git is slow because of history, but the real issue is repeated filesystem scans against the index. On macOS or Windows, case-only renames can behave differently than expected because the filesystem and index semantics do not fully align.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug a case where `git status` is unexpectedly slow only on one developer’s machine?"
+   },
+   {
+    "question": "What are replace refs and grafts in Git, and when would you ever use them in practice?",
+    "answer": "They let you locally alter perceived history without rewriting the underlying objects: you can tell Git to treat one commit as replaced by another or to splice ancestry for traversal purposes. That is useful for experiments, archaeology, or stitching histories together temporarily, but it is dangerous if you forget the view is local and not what others see. They can also confuse tooling because some commands honor them for history walking while the stored commit graph is unchanged. I use them as a temporary lens, not as a shared long-term solution.",
+    "real_world": "During a repository migration, engineers sometimes need to inspect what history would look like if two roots were connected before doing an actual rewrite. It is also useful when analyzing an incident in a forked repo without permanently altering provenance.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why would you prefer a replace ref for analysis but a proper history rewrite for a permanent migration?"
+   },
+   {
+    "question": "What are the risks of history rewriting on a shared branch beyond 'someone has to force-pull'?",
+    "answer": "The obvious risk is diverged local branches, but the deeper problems are broken commit references in code review systems, invalidated CI cache keys, lost signatures or attestations, and confusing audit trails. Any tooling that keys off commit IDs, including deployments, changelogs, and incident links, can silently stop matching reality. Rewrites also interact badly with in-flight work: a clean rebase for one person can become a conflict storm for everyone else. On regulated or security-sensitive systems, the provenance impact matters as much as developer inconvenience.",
+    "real_world": "A force-push to `main` can leave CI reporting on commits that no longer exist and deployments referencing SHAs nobody can fetch. In post-incident review, that makes it hard to answer exactly what code was running at a given time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If a team occasionally must rewrite published history, what guardrails would you put in place?"
+   },
+   {
+    "question": "How do rename and copy detection in Git actually work, and what are the practical limitations?",
+    "answer": "Git does not store renames as first-class history events; it infers them by comparing deleted and added content and scoring similarity. That means rename detection is heuristic and can be expensive on changesets with many adds and deletes, especially when files are large or heavily edited. It also means results can vary by command context and thresholds, so a rename seen in one diff may not be recognized the same way elsewhere. Understanding that helps explain surprising merges and why exact file identity is not tracked across history.",
+    "real_world": "A large refactor that moves and edits many files at once can cause merges to become much slower and less intuitive because rename detection has to do more work. Review diffs can also become noisy or misleading if similarity falls below the detection threshold.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure a big refactor to make rename-heavy changes easier to review and merge?"
+   },
+   {
+    "question": "What is the difference between author date and committer date in Git, and why does that distinction matter operationally?",
+    "answer": "Author date records when the change was originally written, while committer date records when that specific commit object was created, such as after rebasing, cherry-picking, or amending. They can diverge significantly, so using the wrong one in tooling can give misleading age, velocity, or compliance reports. For example, a rebased old patch may look new by committer date but old by author date. You need to choose based on the question you are answering: provenance of the idea versus timing of integration.",
+    "real_world": "Teams building release notes or lead-time dashboards often get incorrect metrics if they treat one timestamp as universally correct. In incident response, knowing when code was integrated can matter more than when it was first authored.",
+    "code_lang": "bash",
+    "code": "git log --format='%h %ad | %cd | %s' --date=short\n# author date | committer date",
+    "follow_up": "Which timestamp would you use for deployment lead time, and which for attributing the origin of a fix?"
+   },
+   {
+    "question": "How would you recover from repository corruption or missing objects, and how do you reason about what is still trustworthy?",
+    "answer": "First I would determine whether the problem is local or on the canonical remote, then verify object and ref integrity with Git’s consistency checks. If the remote is healthy, recloning or fetching missing objects is often safest; if the remote is affected, recovery becomes about finding intact replicas, backups, or alternate object stores and reconstructing refs carefully. I would treat commit IDs whose objects validate as trustworthy, but I would be cautious with refs, reflogs, and working trees until I know the object graph is complete. The priority is preserving evidence before running destructive cleanup.",
+    "real_world": "Disk issues or interrupted storage writes can leave a repo with broken packfiles or dangling refs on a build server. The wrong 'fix'—like aggressive cleanup before triage—can destroy the only remaining path to recover a hotfix branch.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do differently if the corruption is only in a developer clone versus the central repository used by CI?"
+   },
+   {
+    "question": "How does `git push --force-with-lease` actually protect you, and where can it still fail in a busy team?",
+    "answer": "It refuses to update the remote ref if the remote branch no longer points to the value you believe it does, so it prevents overwriting someone else’s unseen work. Internally it is a compare-and-swap on the ref, not a semantic merge check. It still fails as a safety net if your expectation is stale in subtle ways, or if you use a broad force on the wrong ref. It also does nothing for people who already based work on commits you are deleting; it only protects the remote tip update.",
+    "real_world": "Teams often require `--force-with-lease` for rebasing PR branches because plain `--force` can silently discard another engineer’s last push. It does not prevent downstream CI jobs, tags, or release tooling from breaking if they referenced the rewritten commits.",
+    "code_lang": "bash",
+    "code": "git fetch origin\ngit rebase origin/main\n# safer than --force\ngit push --force-with-lease origin HEAD",
+    "follow_up": "What branch protection rules would you add so that `--force-with-lease` is rarely needed on long-lived shared branches?"
+   },
+   {
+    "question": "What is the purpose of commit-graph files, and how do they change the performance profile of history-heavy commands?",
+    "answer": "A commit-graph stores precomputed metadata about commits, especially parent relationships and generation data, so Git can answer ancestry and reachability queries without re-parsing huge numbers of commit objects. That speeds up commands like `log`, `merge-base`, and history walks in large repositories. The trade-off is extra maintenance and another on-disk structure that can become stale until refreshed. It is an optimization layer; correctness still comes from the object database.",
+    "real_world": "On monorepos with very deep history, simple branch comparisons can become noticeably slower without a maintained commit-graph. Hosting platforms and CI images often precompute it to keep fetch, blame, and merge-base operations responsive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a commit-graph different from a pack index or bitmap index?"
+   },
+   {
+    "question": "When would you use partial clone with a blob filter, and what operational trade-offs does it introduce compared with shallow clone?",
+    "answer": "Partial clone keeps full commit and tree history but omits some object types, commonly large blobs, until they are needed. That is useful when history matters but checkout size or network transfer is the bottleneck. Compared with shallow clone, it preserves ancestry for operations like merge-base and many history queries, but commands that touch missing content may trigger on-demand fetches. The trade-off is lower initial cost versus more complex runtime behavior and dependency on server support.",
+    "real_world": "A large codebase with many big assets can become usable much faster for developers and CI by fetching commits and trees first, then lazily downloading file contents actually read by the build. The downside is that builds can become nondeterministically slower when a previously untouched path suddenly triggers network I/O.",
+    "code_lang": "bash",
+    "code": "git clone --filter=blob:none <url>\ncd repo\ngit checkout main\n# blobs are fetched later if a command needs them",
+    "follow_up": "What kinds of Git commands or tooling tend to behave badly with promisor or missing objects?"
+   },
+   {
+    "question": "Can you explain Git alternates and shared object stores, and what risks they create if you optimize clones that way?",
+    "answer": "Alternates let one repository borrow objects from another object database instead of storing all copies locally, which can save a lot of disk and speed up local cloning. They are efficient for caches, CI workers, or fork farms on the same machine. The risk is hidden coupling: if the source store is pruned, corrupted, or moved, dependent repositories can break or become unrecoverable. You also need to think carefully about trust boundaries because object availability is no longer self-contained.",
+    "real_world": "Build farms often seed workspaces from a local mirror using shared objects to cut clone time and storage. Incidents happen when the mirror runs aggressive cleanup and jobs later fail with missing object errors in supposedly isolated workspaces.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a local mirror strategy that gets most of the disk savings without making every clone fragile?"
+   },
+   {
+    "question": "What are bitmap indexes in Git, and why do they help some fetches and clones much more than others?",
+    "answer": "Bitmaps precompute reachability information for selected commits so Git can quickly determine which objects are already included in a known set. They are especially effective for full clones or common fetch patterns from a server because object enumeration becomes much cheaper. They help less when the negotiation shape is unusual, the relevant commits are not well covered, or the server’s packs are fragmented. The core trade-off is extra index generation work in exchange for much faster object counting and packing later.",
+    "real_world": "On a busy Git server, generating packs without bitmaps can make clone and fetch CPU-bound during peak hours. Repacking with bitmap support often drops latency and server load dramatically for the common case.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can frequent incremental repacks reduce the usefulness of bitmaps over time?"
+   },
+   {
+    "question": "How does sparse-checkout differ from partial clone, and when would you combine them in a very large monorepo?",
+    "answer": "Sparse-checkout limits what paths are present in the working tree, while partial clone limits which objects are downloaded up front. One is a workspace shaping feature; the other is an object transfer optimization. In a huge monorepo, combining them lets developers materialize only a subset of directories and avoid downloading irrelevant blobs initially. The trade-off is more complexity in tooling and developer expectations, because some scripts assume the full tree and fully local object availability.",
+    "real_world": "Platform teams use sparse-checkout so service owners see only their service directories, and partial clone so first-time setup does not pull the whole monorepo’s historical file contents. Problems show up when code generators or linters unexpectedly scan paths outside the sparse set.",
+    "code_lang": "bash",
+    "code": "git sparse-checkout init --cone\ngit sparse-checkout set services/payments libs/common",
+    "follow_up": "What classes of tools tend to break first when a repository uses sparse-checkout?"
+   },
+   {
+    "question": "How do annotated tags differ from lightweight tags internally, and why does that matter for release and security workflows?",
+    "answer": "A lightweight tag is just a ref pointing directly to an object, usually a commit. An annotated tag is a full tag object with metadata like tagger, message, and optionally a signature, and the ref points to that tag object. That extra object matters because it creates an auditable release artifact and can be signed and verified. The trade-off is slight overhead for much better provenance and release hygiene.",
+    "real_world": "Release pipelines typically rely on annotated tags so they can verify who created a release marker and attach signed metadata. Lightweight tags are easy to create accidentally and can undermine traceability if a team assumes all tags carry provenance.",
+    "code_lang": "bash",
+    "code": "git tag v1.2.3\ngit tag -a v1.2.3-ann -m \"release 1.2.3\"",
+    "follow_up": "How would you enforce in CI that production releases only come from signed annotated tags?"
+   },
+   {
+    "question": "What is a non-fast-forward update at the ref level, and why is that rule important for consistency on a multi-user server?",
+    "answer": "A fast-forward ref update moves a branch tip to a descendant of its current commit, so no existing reachable commits from that ref are dropped. A non-fast-forward update points the ref somewhere else, potentially making current branch history disappear from that name. Servers reject those by default because refs are shared coordination points, and atomic monotonic updates avoid accidental history loss. The rule is simple but powerful because it protects collaboration without inspecting code semantics.",
+    "real_world": "Without non-fast-forward protection, two concurrent pushes to the same branch can leave one developer’s commits no longer reachable from the branch name, even though both pushes individually succeeded from their own perspective. This is why protected branches usually disallow force pushes entirely.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do atomic pushes extend that safety when updating multiple refs together?"
+   },
+   {
+    "question": "How do lockfiles and ref updates work in Git, and what kinds of failures can leave a repository in a confusing state?",
+    "answer": "Git typically writes ref changes by creating a lockfile, validating the expected old value, writing the new value, and then renaming the lock into place. That pattern is meant to make ref updates atomic and prevent concurrent writers from clobbering each other. Confusing states arise from stale lockfiles after crashes, filesystem semantics that do not provide the expected guarantees, or scripts that edit files under `.git` directly. The object store may still be fine while branch movement is blocked or partially updated.",
+    "real_world": "A common production support issue is a failed CI job leaving `.lock` files behind in a shared checkout, causing later jobs to fail with ref lock errors. Network filesystems can make this worse if rename or file visibility semantics differ from what Git expects.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why are shared working copies on NFS or similar filesystems often a bad idea for concurrent automation?"
+   },
+   {
+    "question": "What is the difference between `git fsck` proving and not proving, and how would you use it during an incident?",
+    "answer": "`git fsck` is good at checking object database integrity and connectivity: malformed objects, broken links, and some ref issues. It does not prove that history is the intended history, that no one maliciously rewrote a branch, or that a reachable commit contains the right source. During an incident, I use it to separate storage corruption from logical or workflow corruption, then verify refs, remotes, signatures, and known-good mirrors. It is an integrity check, not a full trust model.",
+    "real_world": "After a storage or server incident, teams often run `git fsck` and conclude the repository is healthy because objects are connected. Later they discover the real problem was a bad force-push or compromised release tag, which `fsck` was never meant to detect.",
+    "code_lang": "bash",
+    "code": "git fsck --full\n# then compare refs against a trusted mirror or server state",
+    "follow_up": "If `fsck` passes but a release branch still looks wrong, what artifacts would you compare next?"
+   }
+  ]
+ }
+}

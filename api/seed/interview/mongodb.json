@@ -1,0 +1,493 @@
+{
+ "slug": "mongodb",
+ "name": "MongoDB",
+ "category": "Databases",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is MongoDB, and how is it different from a relational database?",
+    "answer": "MongoDB is a document database that stores data as JSON-like documents instead of rows and columns. It is useful when your data is naturally hierarchical or changes shape over time, because each document can have its own fields. The trade-off is that joins and strict schema enforcement are less central than in relational databases, so you need to design around access patterns and data duplication.",
+    "real_world": "Teams often use MongoDB for user profiles, product catalogs, or event data where records do not all have the same shape. It helps when new fields appear frequently and you want to avoid repeated schema migrations.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you still choose a relational database instead?"
+   },
+   {
+    "question": "What is a MongoDB document and a collection?",
+    "answer": "A document is the basic unit of data in MongoDB, similar to a record, and it is stored as a BSON object. A collection is a group of documents, similar to a table, but documents in the same collection do not have to share exactly the same fields. This flexibility is useful, but you still want consistent structure for fields you query often.",
+    "real_world": "A team might store all application users in one collection even if some users have profile photos and others do not. That keeps queries simple while allowing optional fields.",
+    "code_lang": "json",
+    "code": "{\n  \"name\": \"Ava\",\n  \"email\": \"ava@example.com\",\n  \"roles\": [\"user\", \"admin\"]\n}",
+    "follow_up": "What is BSON, and why does MongoDB use it instead of plain JSON?"
+   },
+   {
+    "question": "How do you insert a document into a collection?",
+    "answer": "You use insertOne for a single document or insertMany for multiple documents. MongoDB automatically creates an _id field if you do not provide one. A common beginner mistake is trying to insert data with the wrong shape and later assuming every document will have the same fields.",
+    "real_world": "This is common when seeding a development database or writing a backend endpoint that creates new records. If the insert succeeds but the response is not checked, bugs can show up later as missing data.",
+    "code_lang": "javascript",
+    "code": "db.users.insertOne({\n  name: \"Ava\",\n  email: \"ava@example.com\"\n})",
+    "follow_up": "What does the _id field do, and can you set it yourself?"
+   },
+   {
+    "question": "How do you query documents in MongoDB?",
+    "answer": "You use find to return matching documents based on a filter object. The filter matches fields by equality or operators like greater than and less than, and you can chain projection, sorting, and limits. The key idea is to query by the fields your application actually uses, not by assuming SQL-style table scans are cheap.",
+    "real_world": "A support dashboard might query all open tickets created in the last 24 hours. If the filter fields are indexed, the query stays fast as data grows.",
+    "code_lang": "javascript",
+    "code": "db.orders.find({ status: \"open\", total: { $gt: 100 } })",
+    "follow_up": "How do find and findOne differ?"
+   },
+   {
+    "question": "What is an index in MongoDB, and why would you create one?",
+    "answer": "An index is a data structure that makes queries faster for specific fields by avoiding full collection scans. You create indexes on fields you filter, sort, or join on frequently. The trade-off is that indexes use extra storage and make writes a bit slower because MongoDB has to update the index too.",
+    "real_world": "Without an index, a growing users collection can make login or search endpoints slow under load. Adding the right index often fixes a production latency issue without changing application code.",
+    "code_lang": "javascript",
+    "code": "db.users.createIndex({ email: 1 })",
+    "follow_up": "What are the downsides of adding too many indexes?"
+   },
+   {
+    "question": "What is the difference between embedded documents and referencing other documents?",
+    "answer": "Embedding means storing related data inside the same document, while referencing means storing an ID and looking up the related document separately. Embed when the related data is usually read together and stays reasonably small; reference when the relationship is large, shared, or updated independently. The trade-off is between simpler reads and avoiding duplicated data.",
+    "real_world": "A blog post can embed its comments if you usually fetch the post with a few recent comments. But a user profile referenced by many orders is usually better kept in one place.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide whether to embed or reference for a specific feature?"
+   },
+   {
+    "question": "What is the _id field in MongoDB?",
+    "answer": "The _id field is the unique identifier for a document, and every document has one. MongoDB creates it automatically if you do not supply it, and by default it is indexed. It is the primary way to fetch a single document and is commonly used as the reference target from other documents.",
+    "real_world": "If two services write to the same collection, _id prevents accidental duplicates and gives you a stable way to update or delete a specific record. It also makes cross-document references straightforward.",
+    "code_lang": "javascript",
+    "code": "db.products.findOne({ _id: ObjectId(\"64f1a2b3c4d5e6f7890abc12\") })",
+    "follow_up": "Why might you choose your own _id values instead of MongoDB-generated ones?"
+   },
+   {
+    "question": "How do you update a document in MongoDB?",
+    "answer": "You use updateOne or updateMany with update operators like $set, $inc, or $push. Using operators matters because it changes only the fields you want instead of replacing the whole document. A common mistake is forgetting that a plain object update can overwrite the entire document shape if you do not use operators.",
+    "real_world": "This comes up when a user changes only their display name or when a counter needs to be incremented safely. Partial updates reduce the risk of accidentally deleting unrelated fields.",
+    "code_lang": "javascript",
+    "code": "db.users.updateOne(\n  { email: \"ava@example.com\" },\n  { $set: { name: \"Ava Chen\" } }\n)",
+    "follow_up": "What is the difference between updateOne and replaceOne?"
+   },
+   {
+    "question": "What is the difference between findOne and find?",
+    "answer": "findOne returns a single document or null, while find returns a cursor over all matching documents. Use findOne when you expect at most one result, like looking up by _id or unique email. Use find when you may need multiple matches or want to sort, limit, or iterate through results.",
+    "real_world": "A login service usually uses findOne to fetch a single user account. A reporting page might use find to list many matching records with pagination.",
+    "code_lang": "javascript",
+    "code": "const user = db.users.findOne({ email: \"ava@example.com\" })",
+    "follow_up": "What is a cursor, and why does MongoDB return one for find?"
+   },
+   {
+    "question": "What is aggregation in MongoDB?",
+    "answer": "Aggregation is a way to transform and summarize data using a pipeline of stages, such as filtering, grouping, projecting, and sorting. It is the MongoDB equivalent of doing more advanced query processing, especially for reports or analytics. Use it when simple find queries are not enough, but keep in mind that complex pipelines can be harder to read and tune.",
+    "real_world": "A team might use aggregation to count orders per day or compute revenue by product category. It is often used for dashboard queries that would be awkward to do in application code.",
+    "code_lang": "javascript",
+    "code": "db.orders.aggregate([\n  { $match: { status: \"paid\" } },\n  { $group: { _id: \"$customerId\", total: { $sum: \"$amount\" } } }\n])",
+    "follow_up": "What does the $group stage do, and when would you use it?"
+   },
+   {
+    "question": "How do you delete documents in MongoDB, and what should you watch out for before doing it?",
+    "answer": "Use deleteOne() to remove the first matching document or deleteMany() to remove all matching documents. The main thing to watch out for is the filter: a too-broad filter can delete far more data than intended. In production, it’s common to check the filter with find() first, or run the delete inside a safer workflow when the criteria are complex.",
+    "real_world": "A common mistake is deleting every user with a loose filter like `{ status: 'inactive' }` when the intent was to remove only one test account. Teams often verify the exact matched set before running cleanup jobs.",
+    "code_lang": "javascript",
+    "code": "db.users.deleteOne({ email: \"test@example.com\" })\ndb.sessions.deleteMany({ expired: true })",
+    "follow_up": "How would you confirm which documents a delete filter will match before running it?"
+   },
+   {
+    "question": "What does `upsert` mean in MongoDB updates?",
+    "answer": "An upsert updates a matching document if one exists, and inserts a new document if none matches. It’s useful when you want to make sure a record exists without doing a separate read first. The trade-off is that you need a filter and update that make sense for both the update and insert cases, or you can accidentally create incomplete documents.",
+    "real_world": "This is common for syncing profile or settings records where the application should create the row if it’s missing. It also helps in retry logic when an operation may be repeated safely.",
+    "code_lang": "javascript",
+    "code": "db.profiles.updateOne(\n  { userId: 42 },\n  { $set: { theme: \"dark\" } },\n  { upsert: true }\n)",
+    "follow_up": "What happens if the filter uses fields that are not present in the update document?"
+   },
+   {
+    "question": "What is the difference between `replaceOne` and an update with `$set`?",
+    "answer": "`replaceOne()` replaces the entire matched document, except for the `_id` field. An update with `$set` changes only the specified fields and leaves the rest of the document intact. Use `$set` for small edits; use replacement only when you really want the whole document shape to change.",
+    "real_world": "A common bug is accidentally wiping out fields like `createdAt` or nested settings because a full replacement was used instead of a partial update. This is especially risky when documents have many optional fields.",
+    "code_lang": "javascript",
+    "code": "db.users.replaceOne(\n  { _id: 1 },\n  { _id: 1, name: \"Ava\", active: true }\n)",
+    "follow_up": "When would a full document replacement be preferable to a partial update?"
+   },
+   {
+    "question": "What is the purpose of projection in a find query?",
+    "answer": "Projection lets you choose which fields to return from matching documents. It reduces network transfer and can make queries simpler when you only need a few fields. By default MongoDB returns all fields except `_id`, so projection is useful when documents are large or contain sensitive data you do not want to send back.",
+    "real_world": "Teams use projection in APIs to avoid returning large blobs or internal fields to the frontend. It can also reduce latency when documents contain many nested subdocuments.",
+    "code_lang": "javascript",
+    "code": "db.users.find(\n  { active: true },\n  { name: 1, email: 1, _id: 0 }\n)",
+    "follow_up": "What is a common mistake people make when writing projection rules?"
+   },
+   {
+    "question": "How do sort, limit, and skip work together in MongoDB?",
+    "answer": "`sort()` orders the results, `limit()` caps how many documents are returned, and `skip()` ignores a number of matching documents before returning results. They are often used for pagination. The trade-off is that large `skip()` values can become inefficient, so for big datasets teams often switch to cursor-based pagination instead.",
+    "real_world": "Pagination in admin dashboards often starts with `skip` and `limit`, but performance can degrade when users browse deep into the result set. This is one reason cursor-based paging is common in production systems.",
+    "code_lang": "javascript",
+    "code": "db.orders.find({ status: \"open\" })\n  .sort({ createdAt: -1 })\n  .skip(20)\n  .limit(10)",
+    "follow_up": "Why can large `skip()` values be slow, and what is a better alternative?"
+   },
+   {
+    "question": "What is the difference between an embedded array and a top-level collection of documents?",
+    "answer": "An embedded array stores related items inside one document, while a top-level collection stores them as separate documents. Embedding is good when the related data is usually read together and stays small enough to fit comfortably in one document. Separate documents are better when the related data grows a lot or needs independent updates and queries.",
+    "real_world": "An order document might embed line items because they are read with the order almost every time. A comments collection is often separate because comments can grow without bound and need their own queries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the downsides of embedding too much data in one document?"
+   },
+   {
+    "question": "What is a compound index, and when would you use one?",
+    "answer": "A compound index indexes more than one field together, such as `{ lastName: 1, firstName: 1 }`. It helps when your queries filter or sort by those fields in that order. The key idea is that the field order matters, so you should build the index around the queries you actually run most often.",
+    "real_world": "Teams use compound indexes for common list pages like “active users sorted by created time” or searches that filter by tenant and status together. Without the right compound index, those queries can become slow as data grows.",
+    "code_lang": "javascript",
+    "code": "db.users.createIndex({ tenantId: 1, status: 1 })",
+    "follow_up": "How do you decide the field order in a compound index?"
+   },
+   {
+    "question": "What does it mean for a query to be supported by an index in MongoDB?",
+    "answer": "It means MongoDB can use the index to narrow down results instead of scanning many documents. This usually improves performance, especially on large collections. But an index is not always used just because it exists; the query shape, sort, and field order all matter.",
+    "real_world": "A team may add an index and still see a slow endpoint because the filter does not match the index pattern. In practice, engineers often check the query plan when performance is unexpectedly poor.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you check whether MongoDB is using the index you expected?"
+   },
+   {
+    "question": "What is the purpose of `countDocuments`, and how is it different from just fetching results?",
+    "answer": "`countDocuments()` returns the number of documents matching a filter without returning the documents themselves. It is useful for totals in pagination, dashboards, and validation checks. Fetching all matching documents just to count them is wasteful when you do not need the actual data.",
+    "real_world": "An API that returns a paginated list often also returns the total count so the UI can show page numbers. Counting separately is much cheaper than sending all matching rows back to the application.",
+    "code_lang": "javascript",
+    "code": "const total = await db.orders.countDocuments({ status: \"open\" })",
+    "follow_up": "When might counting documents still be expensive?"
+   },
+   {
+    "question": "What is a cursor in MongoDB?",
+    "answer": "A cursor is the server-side handle that lets you iterate through query results in batches. In the driver, you usually consume it as an async stream or convert it to an array. Cursors matter because they avoid pulling every matching document into memory at once.",
+    "real_world": "This is important when exporting large datasets or processing long result sets in a background job. If you load everything into memory, the worker can become slow or crash.",
+    "code_lang": "javascript",
+    "code": "const cursor = db.logs.find({ level: \"error\" })\nfor await (const doc of cursor) {\n  console.log(doc)\n}",
+    "follow_up": "What is the risk of calling `toArray()` on a very large cursor?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "When would you use a unique index in MongoDB, and what failure mode should you expect if duplicates already exist?",
+    "answer": "Use a unique index when a field or combination of fields must not repeat, such as a user email or tenant-scoped username. It lets the database enforce the invariant instead of relying only on application code. If duplicates already exist, creating the index fails until the bad data is cleaned up. You also need to handle duplicate-key errors in writes, because the database will reject conflicting inserts or updates.",
+    "real_world": "Teams use this to stop race conditions where two app servers try to create the same account at the same time. It is also common during migrations, where a uniqueness rule is added after the collection already has data.",
+    "code_lang": "javascript",
+    "code": "db.users.createIndex({ email: 1 }, { unique: true })\n\ntry {\n  await db.collection('users').insertOne({ email: 'a@example.com' })\n} catch (e) {\n  // handle duplicate key error\n}",
+    "follow_up": "How would you clean up existing duplicates before adding the unique index?"
+   },
+   {
+    "question": "How do multikey indexes work when you index an array field, and what trade-off does that create?",
+    "answer": "When you index an array field, MongoDB creates index entries for each array element, so queries can match any element efficiently. The trade-off is that large arrays increase index size and write cost, because every array update may touch many index entries. Multikey indexes are useful, but they can also make some compound-index patterns less flexible. You should check whether the query shape actually benefits from indexing the array field before adding it.",
+    "real_world": "This matters in tagging systems, product catalogs, and event data where a field can have many values. A team may see slow writes because a frequently updated array explodes index maintenance.",
+    "code_lang": "javascript",
+    "code": "db.posts.createIndex({ tags: 1 })\n// Query can use the index for any matching tag\ndb.posts.find({ tags: 'mongodb' })",
+    "follow_up": "What limitations should you know about compound indexes that include an array field?"
+   },
+   {
+    "question": "How do you decide between a single-field index and a compound index for a query pattern?",
+    "answer": "A single-field index is simpler and cheaper to maintain, but a compound index is better when queries usually filter or sort by multiple fields together. The main rule is to match the index to the real query shape, not just the schema. Compound indexes can also satisfy queries on a prefix of the indexed fields, which makes them more versatile. If the extra write cost is not justified by read performance, a single-field index may be enough.",
+    "real_world": "This comes up when a team adds indexes for a slow page and later discovers they created three separate indexes where one compound index would have served the real workload better. It also matters in dashboards that filter by tenant and status on almost every request.",
+    "code_lang": "javascript",
+    "code": "db.orders.createIndex({ tenantId: 1, status: 1, createdAt: -1 })\n\n// Can use the same index efficiently\ndb.orders.find({ tenantId: 't1', status: 'open' }).sort({ createdAt: -1 })",
+    "follow_up": "How would you verify whether MongoDB is actually using that index for the query?"
+   },
+   {
+    "question": "What does an index prefix mean in MongoDB, and why is it important for query design?",
+    "answer": "For a compound index, the leftmost fields form the usable prefix. A query can often use the index efficiently when it filters on that leading portion, but not when it skips earlier fields and starts with a later one. This matters because the order of fields in the index is not arbitrary. You should put the most selective and most common query filters first, especially when they also support sorting.",
+    "real_world": "A team often expects `{a: 1, b: 1, c: 1}` to help a query on `b` alone, then wonders why the query still scans too much. This is a common source of surprise during performance tuning.",
+    "code_lang": "javascript",
+    "code": "db.events.createIndex({ tenantId: 1, type: 1, createdAt: -1 })\n// Good prefix use\ndb.events.find({ tenantId: 't1' })\n// Poor use of the same index\ndb.events.find({ type: 'click' })",
+    "follow_up": "How would you reorder fields in a compound index for mixed filter and sort queries?"
+   },
+   {
+    "question": "When should you use `explain()` in MongoDB, and what are you looking for in the output?",
+    "answer": "Use `explain()` when a query is slower than expected or after changing indexes or query shape. You want to see whether MongoDB is scanning lots of documents, whether an index is being used, and whether the query needs a blocking sort. It is a debugging tool for real workload behavior, not just a theoretical check. The exact fields in the output vary, so focus on the execution plan and whether the scan volume matches expectations.",
+    "real_world": "A production search endpoint may look fine in staging but time out on large tenants. `explain()` helps confirm whether the database is doing an index scan, a collection scan, or an expensive sort.",
+    "code_lang": "javascript",
+    "code": "db.orders.find({ tenantId: 't1', status: 'open' })\n  .sort({ createdAt: -1 })\n  .explain('executionStats')",
+    "follow_up": "What would make you add or change an index after reading an explain plan?"
+   },
+   {
+    "question": "What is the difference between `readConcern` and `writeConcern`, and why do they matter in production?",
+    "answer": "`writeConcern` controls how much acknowledgement MongoDB must give before a write is considered successful, while `readConcern` controls how much consistency you want when reading data. They matter because stronger guarantees can reduce the chance of seeing stale or lost data, but they can also increase latency. In most teams, the choice depends on whether the operation is user-facing, financial, or just background processing. The right setting is a trade-off between correctness, availability, and performance.",
+    "real_world": "This matters when an order must not be acknowledged until it is safely persisted, or when a background job can tolerate slightly stale reads. It also matters during failover testing, where weaker guarantees can expose surprising behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose concern settings for an idempotent event processor?"
+   },
+   {
+    "question": "When would you use a transaction in MongoDB, and what cost does it add?",
+    "answer": "Use a transaction when multiple writes must succeed or fail together, especially across documents or collections where partial updates would corrupt business state. The cost is additional coordination overhead, so transactions should not replace a good data model for every case. If a write can be made atomic within one document, that is usually simpler and faster. Transactions are for consistency boundaries that cannot be handled by a single-document update.",
+    "real_world": "This shows up in workflows like transferring inventory between records or creating an order and its line items together. Without a transaction, a failure in the middle can leave the system with half-completed state.",
+    "code_lang": "javascript",
+    "code": "const session = client.startSession()\nawait session.withTransaction(async () => {\n  await orders.insertOne(order, { session })\n  await inventory.updateOne({ sku }, { $inc: { qty: -1 } }, { session })\n})",
+    "follow_up": "When would you redesign the schema to avoid needing a transaction?"
+   },
+   {
+    "question": "What is a partial index, and when is it better than indexing the whole collection?",
+    "answer": "A partial index only includes documents that match a filter, so it is smaller and cheaper to maintain than a full index. It is a good fit when queries target a subset of documents, such as active records or incomplete jobs. The trade-off is that only queries compatible with the filter can benefit from it. It helps performance, but it also makes index selection more dependent on query shape.",
+    "real_world": "Teams often use this for soft-deleted records or tasks that are still open. It can reduce index size dramatically when most documents are archived or inactive.",
+    "code_lang": "javascript",
+    "code": "db.jobs.createIndex(\n  { status: 1, createdAt: -1 },\n  { partialFilterExpression: { status: 'open' } }\n)",
+    "follow_up": "How is a partial index different from a sparse index?"
+   },
+   {
+    "question": "What is the difference between a sparse index and a partial index?",
+    "answer": "A sparse index omits documents where the indexed field is missing, while a partial index omits documents that do not match an explicit filter. Partial indexes are more flexible because the filter can express business rules, not just field presence. Sparse indexes are simpler but less precise, and the same query may behave differently depending on whether the field is null, missing, or filtered out. In practice, partial indexes are usually the better tool when you need control over which documents are indexed.",
+    "real_world": "This matters when some documents have optional fields and only a subset should be searchable. A poorly chosen sparse index can lead to surprising query results or inconsistent performance expectations.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What risks come from relying on an index that excludes some documents?"
+   },
+   {
+    "question": "How would you debug a query that became slow after a data growth spike even though the index did not change?",
+    "answer": "First check the actual query shape and whether the plan still uses the intended index. Then compare the cardinality and selectivity of the filter values, because an index that was helpful on a small dataset can become less effective as the data distribution changes. I would also look for sort, skip, or array predicates that create extra work. The fix may be a new index, a different index order, or a query rewrite.",
+    "real_world": "This is common when one tenant or category becomes much larger than the rest and previously fast queries start timing out. It also happens after a launch when a new usage pattern changes data distribution.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or logs would you collect before changing the query or index?"
+   },
+   {
+    "question": "How do you design a MongoDB schema when the access patterns are known but the data has some one-to-many relationships?",
+    "answer": "I’d start from the queries, not the ER model: keep together data that is usually read together, and separate data that changes at a very different rate or grows without bound. Embedding works well for bounded, parent-owned children; referencing is better when the child is shared, very large, or independently queried. The trade-off is fewer joins and faster reads versus duplication, larger documents, and harder consistency. In real projects, the schema often mixes both.",
+    "real_world": "This matters when modeling things like orders and line items, or posts and comments. A bad choice can create either expensive multi-document reads or documents that grow until updates and replication become painful.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide whether a child array is still safe to embed?"
+   },
+   {
+    "question": "What happens if a single MongoDB document grows very large, and what practical limits or risks does that create?",
+    "answer": "Very large documents can hurt performance because every read or write moves more data, and updates to growing arrays can become expensive. MongoDB also has a maximum document size, so unbounded growth can eventually become a hard failure instead of just a slowdown. Even before that, large documents can increase memory pressure, replication lag, and the cost of network transfer. The fix is usually to split out unbounded data into separate documents or buckets.",
+    "real_world": "This shows up with audit logs, chat histories, or event arrays appended to a parent record. Teams often discover the problem only after a few hot documents become noticeably slower than the rest.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What data would you keep in the parent document versus moving into a separate collection?"
+   },
+   {
+    "question": "How do array filters help you update one element inside an embedded array without rewriting the whole array in application code?",
+    "answer": "Array filters let you target matching array elements in an update, so you can modify specific items in place. That keeps the update server-side and avoids a read-modify-write loop in the application. It matters because it reduces race conditions and can be much simpler than fetching the document, editing the array locally, and saving it back. The main trade-off is that the update syntax is less obvious and needs careful matching conditions.",
+    "real_world": "This is common for cart items, task lists, or nested permissions where only one element changes. Without targeted updates, two concurrent requests can overwrite each other’s array changes.",
+    "code_lang": "javascript",
+    "code": "db.orders.updateOne(\n  { _id: orderId },\n  { $set: { \"items.$[item].qty\": 3 } },\n  { arrayFilters: [{ \"item.sku\": \"ABC123\" }] }\n)",
+    "follow_up": "When would you choose to replace the whole document instead?"
+   },
+   {
+    "question": "How do you model and enforce a unique constraint on a field that is only unique for active records, not across the entire collection?",
+    "answer": "A partial unique index is the usual fit: it enforces uniqueness only for documents that match a filter, such as active records. That avoids blocking duplicates that are allowed in archived or soft-deleted documents. The key trade-off is that your application must use the same business rule consistently, or it may accidentally allow duplicates outside the indexed subset. It’s more precise than a global unique index when the business rule is conditional.",
+    "real_world": "This is common for soft-delete patterns, where a username or email can be reused after a record is deactivated. It also helps in systems where only one “current” version should be active at a time.",
+    "code_lang": "javascript",
+    "code": "db.users.createIndex(\n  { email: 1 },\n  { unique: true, partialFilterExpression: { active: true } }\n)",
+    "follow_up": "What can go wrong if your query does not include the same filter as the partial index?"
+   },
+   {
+    "question": "What is the difference between atomicity on a single MongoDB document and atomicity across multiple documents?",
+    "answer": "MongoDB guarantees atomic updates at the single-document level, so changes to one document are applied atomically even if multiple fields are modified. Across multiple documents, you need a transaction if you want all-or-nothing behavior. The trade-off is that single-document modeling is simpler and faster, while multi-document consistency is more flexible but adds coordination overhead. This is why schema design and transaction use are closely linked.",
+    "real_world": "A money transfer or inventory reservation can fail halfway if the data is split across documents and not wrapped in a transaction. Teams often redesign collections to keep the most important invariants within one document when possible.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you redesign the schema instead of adding a transaction?"
+   },
+   {
+    "question": "How would you approach pagination in MongoDB if the result set is large and users can jump to later pages?",
+    "answer": "For large datasets, cursor-based pagination is usually better than skipping many documents, because large skips still require MongoDB to walk past the skipped records. A stable sort key, often a timestamp plus a tie-breaker like _id, lets you fetch the next page after the last seen item. The trade-off is that page numbers are harder to support, but performance is more predictable. Offset pagination is only reasonable for small result sets or admin tools.",
+    "real_world": "This matters in feeds, audit logs, and search results where page 500 should not get slower as the dataset grows. Using skip for deep paging is a common source of slow queries in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you keep cursor-based pagination stable when new records are inserted during browsing?"
+   },
+   {
+    "question": "What is a covered query in MongoDB, and why can it be much faster than a normal indexed query?",
+    "answer": "A covered query is satisfied entirely from the index, so MongoDB does not need to fetch the full document. That reduces disk I/O and can make the query much faster, especially for high-volume reads. To get that benefit, the filter and projected fields must all be available from the index. The trade-off is that the index can get wider, which increases write cost and storage usage.",
+    "real_world": "This is useful for read-heavy endpoints like autocomplete, lookup APIs, or dashboards. A team may add a seemingly good index and still miss the speedup because the projection pulls in a field not in the index.",
+    "code_lang": "javascript",
+    "code": "db.orders.find(\n  { status: \"open\" },\n  { _id: 0, status: 1, createdAt: 1 }\n).hint({ status: 1, createdAt: 1 })",
+    "follow_up": "How would you verify from explain output that the query is actually covered?"
+   },
+   {
+    "question": "How do you choose between TTL-based cleanup and application-driven deletion for temporary data?",
+    "answer": "TTL indexes are best when the data can expire based on time and exact deletion timing is not critical. They are simple to operate because MongoDB cleans up the data automatically, but expiration is not instantaneous. Application-driven deletion gives you precise control, which is important when cleanup must happen in a specific workflow or order. The trade-off is operational simplicity versus control and predictability.",
+    "real_world": "Session tokens, password reset links, and temporary verification codes are common TTL candidates. For billing or compliance data, teams often avoid TTL because they need explicit lifecycle handling and auditability.",
+    "code_lang": "javascript",
+    "code": "db.sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })",
+    "follow_up": "What should your application do if expired documents can still exist for a short time?"
+   },
+   {
+    "question": "What happens during an index build on a busy collection, and what trade-offs should you consider before adding one in production?",
+    "answer": "An index build consumes resources because MongoDB must scan existing data and maintain the new index as writes continue. Even when the build is designed to avoid long blocking periods, it still adds CPU, disk, and replication overhead. The main trade-off is better read performance later versus temporary load and possible impact on write-heavy workloads now. In production, you should consider timing, collection size, and whether the index is actually needed by real queries.",
+    "real_world": "This often matters during a production incident when a team rushes to add an index to fix slow queries. The index build itself can worsen latency if the cluster is already under pressure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test an index candidate safely before creating it in production?"
+   },
+   {
+    "question": "How do you test MongoDB-backed code so that query behavior and data shape changes are caught before production?",
+    "answer": "I’d use a mix of unit tests for schema validation and business rules, integration tests against a real MongoDB instance, and query-plan checks for critical paths. Tests should cover both expected data and edge cases like missing fields, duplicates, and concurrent updates. The key trade-off is that mocks are fast but can miss real query behavior, while real database tests are slower but catch index and operator issues. For performance-sensitive queries, I’d also keep a representative data set and verify the plan shape.",
+    "real_world": "This catches regressions when a developer changes a field name, adds an array, or accidentally turns a selective query into a collection scan. Teams often only notice these bugs after a deploy unless they test against real MongoDB behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of MongoDB bugs do mocks usually miss?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does replication actually work in MongoDB, and what consistency and durability guarantees do you really get from a replica set?",
+    "answer": "MongoDB uses an oplog-based replication model: the primary records writes, and secondaries apply them asynchronously in roughly the same order. A write acknowledged only by the primary can still be rolled back if that primary steps down before secondaries replicate it. Stronger durability comes from `writeConcern` that waits for replication, but that increases latency and can still depend on whether the write was journaled. Reads from secondaries can be stale, so your guarantees depend on both read preference and concern.",
+    "real_world": "A common incident is a service assuming an acknowledged write is globally visible, then reading from a secondary and not finding it yet. Another is losing a small window of writes after failover because the app used weak write acknowledgment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of writes can be rolled back after failover, and how would you detect that operationally?"
+   },
+   {
+    "question": "What happens during primary election and failover in a MongoDB replica set, and what does the application typically observe?",
+    "answer": "When the primary becomes unreachable or loses majority, the replica set runs an election and one eligible secondary becomes primary if it has the most up-to-date log. During that window, writes fail and many drivers surface retryable errors or topology-change exceptions until a new primary is elected. Long-running operations can be interrupted, and clients with stale topology may briefly send writes to the wrong node. The practical effect is a short write outage and possible retries, not transparent zero-downtime behavior.",
+    "real_world": "Teams often discover this during maintenance or a network blip: a 5 to 30 second failover turns into user-visible errors because the application does not retry idempotently. If background jobs are not retry-safe, they may duplicate side effects after reconnect.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a write path safe under retryable writes and primary stepdown?"
+   },
+   {
+    "question": "How does sharding route queries, and why does shard key choice dominate both performance and scalability?",
+    "answer": "MongoDB shards data by shard key ranges or hashed values and routes requests through `mongos`, which targets one shard when the shard key is known and may scatter a query to many shards otherwise. A good shard key balances write distribution, preserves enough locality for common queries, and avoids frequent chunk movement. A bad key creates hotspots, unbalanced chunks, and expensive scatter-gather reads. You are optimizing both distribution and targeting, and those goals often conflict.",
+    "real_world": "A timestamp-based shard key can make all new writes pile onto one shard, saturating it while others sit mostly idle. On the other hand, a fully hashed key spreads writes well but can make range queries fan out across the cluster.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer a ranged shard key over a hashed shard key despite the hotspot risk?"
+   },
+   {
+    "question": "What actually happens when chunks split and migrate in a sharded cluster, and what are the failure modes to watch for?",
+    "answer": "As data grows, chunks are split to keep ranges manageable, and the balancer migrates chunks between shards to even out data and load. During migration, MongoDB copies documents, catches up with changes, and then commits ownership changes, which adds metadata churn and some extra work on the donor and recipient. If many chunks are moving, latency can spike and config metadata lookups become more active. Orphaned data and stale routing are usually transient, but they can confuse troubleshooting and inflate storage until cleanup finishes.",
+    "real_world": "A cluster that looks fine off-hours may slow down badly during the day because balancing overlaps with a write-heavy workload. Operators often misread the symptom as a query regression when the real issue is chunk migration pressure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you diagnose whether a latency spike is caused by scatter-gather queries or by balancing activity?"
+   },
+   {
+    "question": "How do WiredTiger locking and concurrency control work, and why do people still see write conflicts if MongoDB has document-level locking?",
+    "answer": "WiredTiger uses document-level concurrency with optimistic conflict detection, not a model where every write simply blocks on a document lock and waits. Two operations can proceed and then one gets a write conflict when it tries to commit changes against a document modified by the other. Multi-document transactions increase the chance of these conflicts because they hold snapshots longer and touch more data. So document-level locking improves concurrency, but it does not eliminate retries under contention.",
+    "real_world": "This shows up in hot counters, inventory reservations, and heavily updated user state where many workers touch the same records. If the application does not retry transient conflicts, throughput collapses even though CPU and IO look healthy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What schema or update-pattern changes would you make to reduce write conflicts on a hot document?"
+   },
+   {
+    "question": "How do snapshot isolation and transactions in MongoDB behave under contention, and what surprises people coming from relational databases?",
+    "answer": "MongoDB transactions give you a consistent snapshot and atomic commit across multiple documents, but they are not free-standing serial execution. Under contention, you can hit transient transaction errors, write conflicts, and commit-time failures that require retrying the whole unit of work. Long transactions also retain more history and can increase cache and replication pressure. People are often surprised that the happy path works like SQL, but the operational envelope is tighter and retries are part of the design.",
+    "real_world": "A service that wraps every request in a transaction may pass tests and then fail in production with rising abort rates under load. The hidden cost is not just latency per request, but extra memory pressure and replication lag.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What workloads are a poor fit for MongoDB transactions even if they make the application code look simpler?"
+   },
+   {
+    "question": "Why can a query use an index and still be slow, especially with sort, range predicates, and large result sets?",
+    "answer": "Using an index is only the start; the planner might still scan a huge index range, fetch many full documents, or spill work to sort because the index order does not satisfy the requested sort. Range predicates on leading fields often limit how much of the remaining index can be used efficiently. If selectivity is poor, an indexed plan can still read far more keys and documents than expected. The key metrics are keys examined, docs examined, memory for sort, and whether the plan avoids extra fetches.",
+    "real_world": "A classic production bug is adding a filter that looks selective in dev but matches a large fraction of real data, turning a fast indexed endpoint into a p95 disaster. Another is sorting on a field not aligned with the filter index, causing in-memory sorts and sudden latency cliffs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you redesign the index if the query filters by tenant, ranges on createdAt, and sorts by createdAt descending?"
+   },
+   {
+    "question": "What are collation gotchas in MongoDB indexes and queries, and how can they silently break performance or uniqueness guarantees?",
+    "answer": "Collation affects string comparison and sort behavior, so an index built with one collation generally only supports queries using a compatible collation. If the query collation differs, MongoDB may ignore the index for that string comparison and fall back to a less efficient plan. Collation also changes what counts as equal for unique indexes, which matters for case-insensitive or locale-aware uniqueness. Teams often miss this because the query still returns correct results, just with very different performance or duplicate-handling behavior.",
+    "real_world": "A login system may intend usernames to be case-insensitive, but without the right unique index and matching collation it can admit conflicting values. Conversely, adding collation to a query can suddenly bypass the expected index and create latency spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement case-insensitive uniqueness for a username field without relying on application-only checks?"
+   },
+   {
+    "question": "What are the trade-offs of using `$lookup` versus denormalizing data in MongoDB, especially at scale?",
+    "answer": "`$lookup` is convenient for combining collections, but it shifts work to query time and can become expensive when the join side is large, unselective, or sharded in a way that prevents efficient locality. Denormalization makes reads simpler and faster, but it increases write amplification and consistency work when duplicated fields change. The decision usually comes down to read frequency, tolerance for stale copies, and whether the joined relationship is bounded. MongoDB supports joins, but its performance model still favors data that is co-located for common access patterns.",
+    "real_world": "Teams often start with normalized collections for clean modeling, then hit a wall when a dashboard performs many lookups under load. A common fix is to duplicate a small subset of fields into the primary document and update them asynchronously.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of relationships would you still keep normalized even if denormalization makes one endpoint faster?"
+   },
+   {
+    "question": "How do TTL indexes actually delete data, and what operational edge cases matter for retention and storage planning?",
+    "answer": "TTL expiration is not immediate; a background process removes expired documents later, so retention is approximate rather than exact to the second. Deletions can arrive in bursts, which means index maintenance, replication traffic, and storage fragmentation can be noticeable on large volumes. TTL also only works off a time-based field and is best for straightforward expiry policies, not business rules that need auditing or coordinated side effects. You should treat it as eventual cleanup, not a precise scheduler.",
+    "real_world": "Teams using TTL for session or event cleanup are often surprised when old documents remain visible for a while after their expiry time. At high churn, the delete workload itself can become part of the cluster's steady-state capacity planning.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you avoid TTL indexes and handle expiry in the application or a scheduled job instead?"
+   },
+   {
+    "question": "How does MongoDB’s query planner choose between candidate indexes, and why can the plan cache make a once-good query suddenly bad after the data distribution changes?",
+    "answer": "MongoDB evaluates candidate plans and caches a winning shape, so later queries with the same shape may reuse that plan without re-evaluating every option. If cardinality or value distribution shifts, the cached plan can become a poor choice even though the indexes are unchanged. This shows up as more keys examined, more documents fetched, or an in-memory sort where the old data shape hid the problem. The trade-off is lower planning overhead versus the risk of stale plan choices.",
+    "real_world": "A common incident is a query that was fast for months, then became slow after one tenant or status value started dominating the collection. Teams often find that clearing or invalidating the cached plan fixes it temporarily, but the real fix is a better index or query shape.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics in `explain(\"executionStats\")` would tell you the cached plan is the wrong one?"
+   },
+   {
+    "question": "What is index intersection in MongoDB, and when would you avoid relying on it even if it appears to work?",
+    "answer": "Index intersection combines multiple indexes to satisfy one query, usually by intersecting record identifiers from each scan. It can help when no single compound index exists, but it is often less efficient than a purpose-built compound index because it does more work and gives the planner fewer ways to support sort order. It also becomes less attractive when one predicate is low-selectivity or the result set is large. I treat it as a fallback, not a primary design strategy for hot paths.",
+    "real_world": "Teams sometimes think two single-field indexes are enough for every combination, then discover latency spikes on high-volume endpoints. Adding the right compound index usually cuts both CPU and disk reads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide the field order for the compound index that replaces an index-intersection plan?"
+   },
+   {
+    "question": "How do `hint()` and plan forcing help in MongoDB, and what risks do they introduce in production?",
+    "answer": "`hint()` tells MongoDB which index to use, which is useful for diagnosing planner issues or protecting a critical query from a bad plan choice. The downside is that it hard-codes an access path, so if data distribution changes or a better index is added, the query may stay stuck on a suboptimal plan. It also couples application behavior to index names and deployment order. I use it sparingly and prefer to fix schema, indexes, or query shape first.",
+    "real_world": "This matters when one endpoint regresses after a release and you need a safe short-term mitigation before a full reindex or query rewrite. A forced plan can stop the incident, but it often becomes technical debt if nobody revisits it.",
+    "code_lang": "javascript",
+    "code": "db.orders.find(\n  { status: \"OPEN\", customerId: 42 }\n).hint({ customerId: 1, status: 1 })\n .explain(\"executionStats\")",
+    "follow_up": "What would make you remove a `hint()` after using it as an incident workaround?"
+   },
+   {
+    "question": "How do `bulkWrite` operations behave in MongoDB, and what are the trade-offs between ordered and unordered batches?",
+    "answer": "`bulkWrite` reduces network round trips and server overhead by grouping many writes into one request. Ordered batches stop at the first error, which preserves a predictable sequence but hurts throughput and partial progress. Unordered batches can continue after errors and may be parallelized internally, so they usually perform better for backfills or idempotent ingestion. The trade-off is simpler failure handling versus maximum throughput.",
+    "real_world": "During large imports, switching from one-write-per-request to batched unordered writes often cuts ingest time dramatically. But if you need strict dependency between operations, ordered mode is safer even though one bad document can stall the batch.",
+    "code_lang": "javascript",
+    "code": "db.users.bulkWrite([\n  { updateOne: { filter: { _id: 1 }, update: { $set: { active: true } }, upsert: true } },\n  { insertOne: { document: { _id: 2, name: \"A\" } } }\n], { ordered: false })",
+    "follow_up": "How would you make a bulk backfill idempotent so retries are safe after partial failure?"
+   },
+   {
+    "question": "What are the performance and correctness implications of retryable writes in MongoDB?",
+    "answer": "Retryable writes let the driver safely retry certain single-statement writes after transient network or failover errors without applying them twice. The benefit is higher availability during elections and brief connectivity loss, but there is bookkeeping overhead on the server and it does not cover every multi-step application workflow. Correctness still depends on the operation being one that MongoDB can identify and deduplicate. You should not assume retries magically make non-idempotent business logic safe.",
+    "real_world": "Without retryable writes, a primary step-down can surface random write failures to the app even though the cluster recovers quickly. With them enabled, many of those incidents turn into brief latency blips instead of visible errors.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design around the cases where a write times out at the client and you cannot tell whether it committed?"
+   },
+   {
+    "question": "How does the balancer interact with hot shards, and why doesn’t moving chunks automatically fix a bad shard key?",
+    "answer": "The balancer moves chunks to keep data and chunk counts reasonably even across shards, but it cannot split one hot key’s write load across multiple shards if the shard key funnels those writes to the same range or value. Balanced storage is not the same as balanced throughput. If the access pattern is concentrated, migrations may just shuffle cold data while the hot shard remains overloaded. That is why shard key cardinality and write distribution matter more than balancer activity.",
+    "real_world": "A classic production surprise is a cluster with equal disk usage but one shard pegged on CPU and write locks because all recent traffic hits the same tenant or timestamp range. The fix is usually a better shard key or a redesign, not more balancing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What shard key patterns help avoid monotonic-write hotspots while keeping queries targetable?"
+   },
+   {
+    "question": "What is the oplog in MongoDB, and how do you reason about oplog window, replication lag, and rollback risk?",
+    "answer": "The oplog is the capped sequence of replicated operations that secondaries read and apply. The oplog window is how far back in time those entries still exist; if a secondary falls behind beyond that window, it may need a full resync instead of catching up incrementally. Large lag also increases exposure during failover because secondaries may not have applied recent writes. So oplog sizing is really about recovery margin under your peak write rate, not just average traffic.",
+    "real_world": "Teams often size the oplog for normal load, then a backfill or traffic spike shrinks the effective window from days to hours and a slow secondary falls off the end. That turns a routine node restart into a long resync and reduced redundancy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What cluster signals would tell you the oplog window is becoming unsafe before a node actually falls behind too far?"
+   },
+   {
+    "question": "How do change streams work under the hood in MongoDB, and what operational limitations should you plan for?",
+    "answer": "Change streams are driven from the replica set or sharded cluster’s replication log, exposing inserts, updates, deletes, and some metadata changes as an ordered stream per deployment context. They are great for event-driven integrations, but they depend on replication history being retained long enough for consumers to resume from a token. If a consumer is down too long or the history rolls over, resuming may fail and you need another recovery path. They also add load if many consumers watch broad scopes unnecessarily.",
+    "real_world": "This matters when teams use MongoDB as an event source for search indexing or cache invalidation. A consumer outage that exceeds retained history can create silent data drift unless you have a replay or rebuild process.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a consumer so it can recover safely if its resume token is no longer valid?"
+   },
+   {
+    "question": "What are the trade-offs of using time series collections in MongoDB instead of modeling time-stamped events in a normal collection?",
+    "answer": "Time series collections optimize storage and query patterns for measurements over time by organizing writes and reads differently from a general-purpose collection. They can improve compression and scan efficiency for common time-window queries, but they are not a free replacement for every event table because query flexibility, update patterns, and indexing options differ. You should choose them when the workload matches append-heavy, time-bounded analytics on measurements. If the data behaves more like mutable business records, a normal collection is usually a better fit.",
+    "real_world": "For metrics, sensor readings, or application telemetry, time series collections can reduce storage and speed up windowed reads. Teams get into trouble when they try to use them for entities that are frequently updated or queried on many non-time dimensions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What workload characteristics would push you away from a time series collection even if every document has a timestamp?"
+   },
+   {
+    "question": "What failure modes do you watch for when `mongos` targets a sharded query, especially with scatter-gather and stale metadata?",
+    "answer": "If a query does not include a targetable shard key pattern, `mongos` may fan it out to many or all shards, which increases latency and amplifies the slowest shard’s behavior. Metadata can also change during chunk migrations, so routers may need to refresh placement information and retry parts of the operation. Most of the time that is handled transparently, but it adds tail latency and makes broad queries expensive at scale. Good shard keys and targeted queries are what keep the router cheap.",
+    "real_world": "A dashboard query that is harmless on a single replica set can become a cluster-wide scatter-gather after sharding, consuming CPU everywhere and causing noisy-neighbor incidents. Another common symptom is sporadic p99 spikes during active rebalancing because routers are refreshing metadata.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prove from query behavior or explain output that a sharded query is scatter-gather rather than targeted?"
+   }
+  ]
+ }
+}

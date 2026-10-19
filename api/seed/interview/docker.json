@@ -1,0 +1,485 @@
+{
+ "slug": "docker",
+ "name": "Docker",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Docker, in simple terms, and why would you use it instead of installing everything directly on your machine?",
+    "answer": "Docker packages an application and its runtime dependencies into a container that runs the same way across environments. It helps avoid “works on my machine” problems because the app sees a consistent filesystem, process space, and configuration. You use it when you want an app to be easy to run, isolate dependencies, and move between laptops, CI, and servers with less drift.",
+    "real_world": "A team may ship a service that runs locally but fails in staging because of a different library version. Putting it in Docker makes local development and CI use the same runtime setup.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a container and a virtual machine?"
+   },
+   {
+    "question": "What is the difference between a Docker image and a Docker container?",
+    "answer": "An image is the immutable template: code, libraries, and metadata needed to create a runtime. A container is a running instance of that image with its own writable layer and process state. The same image can be used to start many containers, and changing a running container does not change the image itself.",
+    "real_world": "In production, teams build one image in CI and run many containers from it on different hosts. When debugging, they often inspect the running container rather than the image because that is where the live process state exists.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does Docker know what process to start when a container runs?"
+   },
+   {
+    "question": "What does a Dockerfile do?",
+    "answer": "A Dockerfile is a text file with step-by-step instructions for building an image. It usually starts from a base image and then copies files, installs dependencies, and defines the default command. Its main value is repeatable builds: the same Dockerfile should produce the same image contents, given the same inputs.",
+    "real_world": "Teams use Dockerfiles in CI so every build is consistent and reviewable in source control. A common bug is putting environment-specific files into the image by accident, which makes the build less portable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does the order of instructions in a Dockerfile matter?"
+   },
+   {
+    "question": "What is the purpose of `FROM` and `RUN` in a Dockerfile?",
+    "answer": "`FROM` sets the base image your image starts from, such as an OS or language runtime. `RUN` executes commands at build time and commits the result into a new image layer, such as installing packages. `FROM` chooses the starting point; `RUN` changes the image contents during the build.",
+    "real_world": "A Java app may use a JDK base image for building and a smaller JRE-based image for runtime. If you install tools with `RUN`, they become part of the image unless you use a multi-stage build.",
+    "code_lang": "dockerfile",
+    "code": "FROM python:3.12-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install -r requirements.txt\nCOPY . .\nCMD [\"python\", \"app.py\"]",
+    "follow_up": "What is the difference between `CMD` and `ENTRYPOINT`?"
+   },
+   {
+    "question": "What is the difference between `CMD` and `ENTRYPOINT`?",
+    "answer": "`CMD` provides the default command or default arguments for a container, and users can easily override it at run time. `ENTRYPOINT` defines the main executable that should always run, with `CMD` often used to supply default arguments to it. For beginners, the key idea is that `CMD` is more replaceable, while `ENTRYPOINT` is more fixed.",
+    "real_world": "This matters for images that behave like a tool, such as a script or CLI wrapper. If you choose the wrong one, users may find it awkward or impossible to pass different arguments when starting the container.",
+    "code_lang": "dockerfile",
+    "code": "FROM alpine\nENTRYPOINT [\"echo\"]\nCMD [\"hello\"]",
+    "follow_up": "How do you override the command when starting a container?"
+   },
+   {
+    "question": "What does `docker run` do?",
+    "answer": "`docker run` creates a container from an image and starts it. Under the hood it is roughly a combination of creating the container and starting it, with optional flags for ports, environment variables, volumes, and command overrides. It is the most common command you use to launch something from an image.",
+    "real_world": "A developer may use `docker run` to quickly test a database or app without installing it locally. In CI, the same command can spin up services for integration tests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if the image is not already on the machine?"
+   },
+   {
+    "question": "How do Docker ports work, and why do you need `-p`?",
+    "answer": "Containers have their own network namespace, so a process listening on port 80 inside the container is not automatically reachable from the host. `-p` publishes a container port on a host port so traffic can reach the container from your machine or other systems. This is how you access web apps running in containers from a browser.",
+    "real_world": "A common beginner mistake is starting a web server in a container and then wondering why `localhost:3000` on the host does not work. Publishing the port makes the service reachable outside the container.",
+    "code_lang": "bash",
+    "code": "docker run -p 8080:80 nginx",
+    "follow_up": "What is the difference between `EXPOSE` in a Dockerfile and `-p` at runtime?"
+   },
+   {
+    "question": "What does a volume do in Docker?",
+    "answer": "A volume stores data outside the container’s writable layer so it survives container deletion and restart. You use it for persistent data like databases, uploads, or caches you want to keep between runs. Volumes also make it easier to share data between the host and a container, though bind mounts are often used for development.",
+    "real_world": "If you run Postgres in a container without a volume, deleting the container can delete the database data with it. Mounting a volume prevents accidental data loss during restarts or redeploys.",
+    "code_lang": "bash",
+    "code": "docker run -d \\\n  -v pgdata:/var/lib/postgresql/data \\\n  postgres",
+    "follow_up": "When would you use a bind mount instead of a named volume?"
+   },
+   {
+    "question": "What is a bind mount, and when is it useful?",
+    "answer": "A bind mount maps a specific file or directory from the host into the container. It is useful in development when you want live code changes on the host to appear immediately inside the container. The trade-off is tighter coupling to the host filesystem, which makes it less portable than a named volume.",
+    "real_world": "Frontend and backend teams often use bind mounts during local development so code edits refresh the app without rebuilding the image every time. In production, they usually prefer the image plus volumes or object storage rather than relying on host paths.",
+    "code_lang": "bash",
+    "code": "docker run -it \\\n  -v \"$PWD\":/app \\\n  -w /app \\\n  node:20 bash",
+    "follow_up": "How is a bind mount different from copying files into the image with `COPY`?"
+   },
+   {
+    "question": "What is the default Docker network behavior when you run a container?",
+    "answer": "By default, a container gets its own network namespace and is connected to a bridge network so it can communicate with the host and, depending on setup, other containers. Containers on the same user-defined network can reach each other by name, which is often how services talk in local development. Understanding networking helps when one container can’t reach another or when ports are not exposed correctly.",
+    "real_world": "A common setup is an app container talking to a database container by service name instead of hard-coding an IP address. If networking is misconfigured, the app may fail even though both containers are running.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do containers find each other by name in Docker Compose?"
+   },
+   {
+    "question": "What happens when you use the `-d` flag with `docker run`?",
+    "answer": "`-d` runs the container in detached mode, so Docker starts it in the background and returns control to your terminal. You use it for long-running services like web servers or databases when you do not want the terminal attached to their output. The trade-off is that you need other commands like `docker logs` to inspect what the container is doing. If the process exits immediately, the container will stop even if it was started detached.",
+    "real_world": "This is common when starting a local API server or database during development. A beginner often thinks the container is \"gone\" because the terminal is free, but it is still running in the background.",
+    "code_lang": "bash",
+    "code": "docker run -d --name web nginx\n\ndocker ps\n\ndocker logs web",
+    "follow_up": "How do you stop and remove a detached container?"
+   },
+   {
+    "question": "How do you remove Docker containers and images, and what is the difference between `stop`, `rm`, and `rmi`?",
+    "answer": "`docker stop` tells a running container to exit gracefully. `docker rm` deletes a stopped container, and `docker rmi` deletes an image. You cannot remove a running container with `rm` unless you force it, and you cannot remove an image if something still depends on it. This separation matters because containers are runtime instances, while images are the reusable templates they come from.",
+    "real_world": "Teams often clean up old test containers and disk space in CI or on dev laptops. Beginners commonly remove the wrong thing and expect an image to disappear when only the container was deleted.",
+    "code_lang": "bash",
+    "code": "docker stop myapp\ndocker rm myapp\ndocker rmi myimage",
+    "follow_up": "What happens if you try to remove an image that still has containers based on it?"
+   },
+   {
+    "question": "What is the purpose of `docker pull` and when would you use it instead of `docker run`?",
+    "answer": "`docker pull` downloads an image without starting a container. `docker run` will usually pull the image first if it is not already present, then create and start a container from it. You use `pull` when you want to fetch an image ahead of time, verify it is available, or separate download from execution. This is useful in scripted environments where you want more control over timing and failure handling.",
+    "real_world": "In CI pipelines, teams often pull images before a deployment step so the network download does not happen at the same time as startup. It also helps when you want to pre-cache images on a machine before running tests.",
+    "code_lang": "bash",
+    "code": "docker pull redis\ndocker run --name cache redis",
+    "follow_up": "How does Docker decide whether to use a local image or pull a new one?"
+   },
+   {
+    "question": "What does `docker exec` do, and how is it different from `docker run`?",
+    "answer": "`docker exec` runs a new command inside an already running container. `docker run` creates a new container from an image and starts its main process. `exec` is commonly used for debugging, opening a shell, or running maintenance commands inside a service container. It only works if the container is already running, which is a key limitation.",
+    "real_world": "If a database container is running and you need to inspect files or run a client inside it, `docker exec` is the usual tool. New users often try `docker run` again and accidentally start a second, separate container.",
+    "code_lang": "bash",
+    "code": "docker exec -it myapp sh\n\ndocker exec mydb ls /var/lib/mysql",
+    "follow_up": "Why would you use `-it` with `docker exec`?"
+   },
+   {
+    "question": "What does the `-it` flag mean in Docker, and when do you need it?",
+    "answer": "`-i` keeps standard input open, and `-t` allocates a pseudo-terminal. Together they let you interact with a process like a shell inside the container. You typically use them when you want an interactive session, such as `sh`, `bash`, or a REPL. Without them, some commands behave non-interactively or immediately exit.",
+    "real_world": "This comes up when debugging a container or exploring its filesystem. Without `-it`, a shell session often feels broken because it does not behave like a normal terminal.",
+    "code_lang": "bash",
+    "code": "docker run -it alpine sh\n# inside the container\nls\nexit",
+    "follow_up": "What changes if you omit `-t` but keep `-i`?"
+   },
+   {
+    "question": "What does the `WORKDIR` instruction do in a Dockerfile?",
+    "answer": "`WORKDIR` sets the current directory for subsequent instructions like `RUN`, `COPY`, and `CMD`. If the directory does not exist, Docker creates it. This makes Dockerfiles clearer and avoids hardcoding long paths in every command. It also reduces mistakes when relative paths are used later in the file.",
+    "real_world": "This matters when a build works locally but fails in CI because files are copied into the wrong place. A consistent working directory makes builds more predictable.",
+    "code_lang": "dockerfile",
+    "code": "FROM node:20\nWORKDIR /app\nCOPY package.json .\nRUN npm install\nCOPY . .\nCMD [\"node\", \"server.js\"]",
+    "follow_up": "What is the difference between `WORKDIR` and `cd` in a `RUN` command?"
+   },
+   {
+    "question": "Why does the order of instructions in a Dockerfile matter for build speed?",
+    "answer": "Docker caches build steps, so earlier layers can be reused if nothing relevant changed. Put stable instructions like package installation before frequently changing files like application source code. If you copy the whole project first, any code change can invalidate later layers and force a full rebuild. Good ordering can make builds much faster and more repeatable.",
+    "real_world": "Teams notice this when a small code change suddenly makes Docker rebuild dependencies every time. Reordering the Dockerfile can cut build times from minutes to seconds.",
+    "code_lang": "dockerfile",
+    "code": "FROM python:3.12\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install -r requirements.txt\nCOPY . .\nCMD [\"python\", \"app.py\"]",
+    "follow_up": "What kinds of changes usually invalidate the cache?"
+   },
+   {
+    "question": "What is `.dockerignore`, and why should you use it?",
+    "answer": "`.dockerignore` tells Docker which files and directories to exclude from the build context. This keeps unnecessary files out of the image build, which can make builds faster and reduce the chance of accidentally copying secrets or local artifacts. It is similar in spirit to `.gitignore`, but it affects what Docker can see during `docker build`. Forgetting it is a common beginner mistake.",
+    "real_world": "Without `.dockerignore`, large folders like `node_modules`, build output, or local caches can slow down builds and bloat image context transfers. It can also accidentally include credentials or environment files.",
+    "code_lang": "text",
+    "code": "node_modules\n.git\n.env\nbuild\n",
+    "follow_up": "What is the build context, and why does Docker need it?"
+   },
+   {
+    "question": "How can you inspect container logs, and why is that important?",
+    "answer": "You can use `docker logs <container>` to see the container’s stdout and stderr output. This is important because many containers are designed to write logs to standard output instead of files. Logs are often the fastest way to understand startup failures, crashes, or misconfiguration. If a container exits quickly, logs are usually the first place to look.",
+    "real_world": "When an app works on your machine but fails in Docker, logs often show missing environment variables, bad ports, or missing files. Teams rely on container logs heavily in both development and production troubleshooting.",
+    "code_lang": "bash",
+    "code": "docker logs myapp\ndocker logs -f myapp",
+    "follow_up": "What is the difference between `docker logs` and attaching to a container?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How would you structure a Dockerfile to keep rebuilds fast for a typical web app, and what trade-offs are you making?",
+    "answer": "Put the least frequently changing steps first, usually copying dependency manifests and installing dependencies before copying the full source. That lets Docker reuse cached layers when you change application code, which is the common case during development. The trade-off is that you may need separate steps for different build contexts, but the build becomes much faster and more predictable. In multi-stage builds, you can also keep the final image smaller by copying only the build output into a runtime image.",
+    "real_world": "A team changing one line in a frontend app does not want to reinstall all npm packages on every build. Reordering the Dockerfile can cut CI build time from minutes to seconds.",
+    "code_lang": "dockerfile",
+    "code": "FROM node:20\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\nCMD [\"npm\",\"start\"]",
+    "follow_up": "When would you use a multi-stage build instead of a single-stage Dockerfile?"
+   },
+   {
+    "question": "What is a multi-stage Docker build, and why is it better than building everything in one image?",
+    "answer": "A multi-stage build uses multiple `FROM` instructions so you can compile or package in one stage and copy only the needed artifacts into a smaller runtime stage. That keeps the final image smaller and reduces the attack surface because build tools do not ship to production. It also lets you use different base images for building and running. The trade-off is a slightly more complex Dockerfile, but it is usually worth it for production images.",
+    "real_world": "This matters when a Go or Java service ships with compilers, package managers, or test tools that should not be in production. Smaller images also pull faster in CI and on new nodes.",
+    "code_lang": "dockerfile",
+    "code": "FROM golang:1.22 AS build\nWORKDIR /src\nCOPY . .\nRUN go build -o app .\n\nFROM gcr.io/distroless/base\nCOPY --from=build /src/app /app\nCMD [\"/app\"]",
+    "follow_up": "What can go wrong if you copy too much from the build stage into the runtime stage?"
+   },
+   {
+    "question": "How do Docker image layers and caching work, and what causes the cache to be invalidated?",
+    "answer": "Each Dockerfile instruction usually creates a layer, and Docker can reuse a cached layer if the instruction and its inputs have not changed. If a file copied into a layer changes, or an earlier step changes, later layers often need to rebuild too. This is why copying only package manifests before installing dependencies is so effective. The key trade-off is between cache reuse and keeping the Dockerfile easy to understand.",
+    "real_world": "In CI, a single changed source file should not force a full dependency install. Understanding layer caching helps teams keep pipelines fast and avoid unnecessary registry traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug a build that suddenly stopped using the cache?"
+   },
+   {
+    "question": "What is the difference between a named volume and a bind mount, and when would you choose one over the other?",
+    "answer": "A named volume is managed by Docker, while a bind mount maps a specific host path into the container. Named volumes are usually better for persistent application data because Docker controls the location and lifecycle, making them easier to move between environments. Bind mounts are better for local development when you want live code changes or direct access to host files. The trade-off is convenience versus portability and tighter control.",
+    "real_world": "Developers often use bind mounts for hot reload during local work, but production databases should usually store data in named volumes. Using the wrong option can lead to broken permissions or accidental data loss.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can bind mounts cause when the container runs as a different user than the host?"
+   },
+   {
+    "question": "How do you choose between a container restart policy and letting an orchestrator handle restarts?",
+    "answer": "Restart policies are useful for single-host setups because they let Docker restart a container when it exits unexpectedly or when the daemon comes back. In a real production cluster, though, an orchestrator is usually better because it can reschedule containers, manage health checks, and spread load across nodes. The trade-off is simplicity versus resilience and control. Restart policies are a local safety net, not a replacement for orchestration.",
+    "real_world": "A small service running on one VM may just need `--restart unless-stopped`. At larger scale, relying only on Docker restarts can leave the service unavailable if the host itself dies.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a container exiting and a container being unhealthy?"
+   },
+   {
+    "question": "What happens if a container process writes a lot to stdout or stderr, and why should you care?",
+    "answer": "Container logs go to stdout and stderr, so large or noisy output can consume disk space and make debugging harder if log rotation is not configured. If an application writes logs to files inside the container instead, those logs are easy to lose unless you mount or ship them elsewhere. The practical approach is to log to stdout/stderr and let Docker or your log platform collect them. The trade-off is simplicity in the app versus log management outside the container.",
+    "real_world": "A chatty debug build can fill up the Docker log files on a node and affect other workloads. Teams often discover this only after a disk-pressure incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you reduce log noise without losing useful diagnostic information?"
+   },
+   {
+    "question": "How do environment variables work in Docker, and when would you use them instead of baking values into the image?",
+    "answer": "Environment variables let you inject configuration at runtime with `-e`, an env file, or Compose, so the same image can run in different environments. You should use them for environment-specific settings like endpoints, feature flags, or credentials placeholders, not for secrets you cannot protect properly. Baking config into the image makes it harder to promote the same artifact across dev, staging, and prod. The trade-off is convenience versus portability and safer deployments.",
+    "real_world": "A team that hardcodes API URLs in the image often needs separate builds for staging and production. Using runtime config lets one image move through the pipeline unchanged.",
+    "code_lang": "bash",
+    "code": "docker run -e APP_ENV=prod -e API_URL=https://api.example.com myapp",
+    "follow_up": "What is the difference between passing secrets as environment variables and using Docker secrets?"
+   },
+   {
+    "question": "How would you debug a container that exits immediately after starting?",
+    "answer": "First check the container logs and exit code, because the process inside likely failed fast. Then run the image interactively or override the command to inspect files, environment variables, and the startup script. Common causes are a missing dependency, a bad entrypoint, a wrong working directory, or an app that daemonizes and exits. The goal is to identify whether the failure is in the image, the command, or the runtime environment.",
+    "real_world": "This is common when a new image works on a laptop but dies in CI or on a server. Fast exits can hide useful errors unless you inspect logs immediately.",
+    "code_lang": "bash",
+    "code": "docker ps -a\ndocker logs <container>\ndocker inspect <container>\ndocker run --rm -it --entrypoint sh myimage",
+    "follow_up": "What clues would you look for in the exit code or logs?"
+   },
+   {
+    "question": "What is the practical difference between building for development and building for production in Docker?",
+    "answer": "Development images usually include tooling, source mounts, and fast iteration features like live reload. Production images should be smaller, immutable, and contain only what is needed to run the app. That often means multi-stage builds, non-root users, and no development dependencies. The trade-off is developer convenience versus security, performance, and repeatability in production.",
+    "real_world": "A service that ships the same image for both dev and prod often ends up with extra tools, larger attack surface, and slower cold starts. Splitting the two workflows makes each environment better suited to its job.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you keep the same between dev and prod images, and what would you change?"
+   },
+   {
+    "question": "How do you make a container run as a non-root user, and why is that important?",
+    "answer": "You can create or switch to a non-root user in the Dockerfile and ensure the app files are owned correctly. Running as non-root reduces the impact if the application is compromised, because the process has fewer permissions inside the container and on mounted paths. You also need to think about ports and file permissions, since low ports and host-mounted directories can cause issues. The trade-off is a bit more setup for a meaningful security improvement.",
+    "real_world": "Security reviews often flag images that run everything as root by default. This becomes especially important when the container mounts sensitive host directories or handles untrusted input.",
+    "code_lang": "dockerfile",
+    "code": "FROM alpine:3.20\nRUN adduser -D appuser\nWORKDIR /app\nCOPY --chown=appuser:appuser . .\nUSER appuser\nCMD [\"./app\"]",
+    "follow_up": "What permission problems can appear when you combine non-root containers with bind mounts?"
+   },
+   {
+    "question": "How do you pass configuration into a container at runtime, and what are the trade-offs between environment variables, mounted config files, and baked-in image defaults?",
+    "answer": "Environment variables are the simplest for small, scalar settings and work well with twelve-factor style apps. Mounted config files are better when the app expects structured configuration or you want to keep secrets and environment-specific settings out of the image. Baked-in defaults are good for sane fallback behavior, but they make the image less reusable across environments. In practice, teams often combine them: image defaults, overridden by env vars, with sensitive or large configs mounted at runtime.",
+    "real_world": "A team ships the same web image to dev, staging, and prod, but only database URLs and feature flags change. Using runtime config avoids rebuilding the image for every environment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you keep secrets out of image layers and logs when using runtime configuration?"
+   },
+   {
+    "question": "What happens if a container writes files inside its filesystem and you do not use a volume or mount?",
+    "answer": "Those writes go into the container’s writable layer, which disappears when the container is removed. That is fine for ephemeral state, caches, or scratch data, but it is a bad fit for user uploads, databases, or anything you need after recreation. It also makes backups and sharing data between containers harder. The key trade-off is convenience versus persistence and operational control.",
+    "real_world": "A service works in testing but loses uploaded files after every redeploy because the app writes to `/app/uploads` inside the container. Mounting persistent storage fixes the data loss.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a volume over a bind mount for persisted data?"
+   },
+   {
+    "question": "How do you inspect what changed inside a running container when it behaves differently from your local environment?",
+    "answer": "First compare the container’s environment, filesystem, and startup command to what you expect locally. Then use `docker exec` to inspect files, environment variables, installed packages, and the running process, and check logs for startup errors. If the issue is still unclear, reproduce with the same image tag and the same runtime flags. The main idea is to verify assumptions one layer at a time instead of guessing.",
+    "real_world": "A containerized app fails only in production because a config file is missing in the image. Execing into the container quickly shows the path is empty and the startup script is looking in the wrong place.",
+    "code_lang": "bash",
+    "code": "docker ps\ndocker exec -it myapp sh\nprintenv | sort\nls -la /app\ncat /app/config.yaml",
+    "follow_up": "What would you check if the container works interactively but still fails when started by the orchestrator?"
+   },
+   {
+    "question": "What is the difference between exposing a port in a Dockerfile and publishing a port when you run a container?",
+    "answer": "Exposing a port in the Dockerfile is mostly documentation and metadata that says the container expects to listen on that port. Publishing a port at runtime creates the actual host-to-container mapping, which is what makes the service reachable from outside Docker. Expose alone does not make traffic flow. The trade-off is that image metadata describes intent, while runtime flags control real network access.",
+    "real_world": "A backend image has `EXPOSE 8080`, but nothing is reachable from the browser until the run command publishes the port. This is a common source of confusion in local development.",
+    "code_lang": "dockerfile",
+    "code": "FROM node:20\nWORKDIR /app\nCOPY . .\nEXPOSE 8080\nCMD [\"node\", \"server.js\"]",
+    "follow_up": "How would you connect two containers together so they can talk by service name instead of host IPs?"
+   },
+   {
+    "question": "How do you decide whether to copy source code into the image or mount it from the host during development?",
+    "answer": "Copying source into the image gives you a reproducible build and matches production more closely, because the container contains exactly what it needs. Mounting source from the host gives faster edit-run feedback and is better for local development, but it can hide missing build steps or platform-specific issues. Most teams use mounts for development and image copies for production. The trade-off is speed versus fidelity.",
+    "real_world": "Developers want hot reload locally, but production failures happen because the production image never ran the same install or build steps. Using a production-style image in CI catches those mistakes earlier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure a Docker setup so dev and prod share most of the same Dockerfile?"
+   },
+   {
+    "question": "What is a health check in Docker, and why is it not the same thing as the container process being alive?",
+    "answer": "A health check is an app-level signal that the service is actually ready and working, not just running. A process can be alive while it is hung, missing a dependency, or returning errors, so liveness alone is not enough for production reliability. Health checks help orchestrators and load balancers avoid sending traffic to broken instances. The trade-off is that checks add some overhead and must be designed carefully so they reflect real readiness.",
+    "real_world": "A containerized API starts successfully but fails every request because its database migration did not complete. A health check that verifies the real dependency would have kept traffic away.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should a health check verify for a web service, and what should it avoid?"
+   },
+   {
+    "question": "How do you troubleshoot a container build that fails on one machine but succeeds on another?",
+    "answer": "Start by comparing Docker versions, the base image tag, and the exact build context being sent. Build differences often come from cached layers, line ending differences, missing files due to `.dockerignore`, or architecture differences between machines. Rebuilding without cache can help isolate whether the problem is cache-related or truly in the Dockerfile. In real projects, build reproducibility matters as much as the application code itself.",
+    "real_world": "One developer’s build passes locally but fails in CI because a file was excluded by `.dockerignore`. Another common cause is relying on a cached layer that is not available in a clean build environment.",
+    "code_lang": "bash",
+    "code": "docker build --no-cache -t myapp .\ndocker build --progress=plain -t myapp .\ndocker image inspect myapp",
+    "follow_up": "How do you make builds more reproducible across developer laptops and CI runners?"
+   },
+   {
+    "question": "When would you use Docker Compose instead of running containers with plain `docker run` commands?",
+    "answer": "Use Compose when your application needs multiple services, shared networks, persistent storage, and repeatable startup configuration. It captures the whole local environment in one file, which is much easier than remembering a long set of `docker run` flags. For a single simple container, plain `run` may be enough. The trade-off is that Compose adds another abstraction, but it usually pays off once you have more than one service or a team environment.",
+    "real_world": "A backend depends on PostgreSQL, Redis, and a worker process. Compose lets the team bring up the whole stack consistently with one command instead of hand-assembling containers every time.",
+    "code_lang": "yaml",
+    "code": "services:\n  web:\n    build: .\n    ports: [\"8080:8080\"]\n  db:\n    image: postgres:16\n    volumes: [\"pgdata:/var/lib/postgresql/data\"]\nvolumes:\n  pgdata: {}",
+    "follow_up": "How would you handle different settings for development, testing, and production in Compose?"
+   },
+   {
+    "question": "How do image tags affect deployment safety, and why is relying on `latest` usually a bad idea?",
+    "answer": "Tags are how you identify what exact image you are deploying, so using a stable, specific tag makes rollbacks and audits possible. `latest` is not a real guarantee of freshness; it is just another mutable tag that can point to different content over time. If deployments pull mutable tags, you can get different behavior without changing your deployment config. The trade-off is convenience versus traceability and reproducibility.",
+    "real_world": "A team deploys `latest` and later cannot reproduce a production bug because the image tag has moved. Pinning versions or digests makes the release history much safer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the operational benefit of pinning an image by digest instead of by tag?"
+   },
+   {
+    "question": "What are the security and maintenance reasons to keep container images small, beyond just saving disk space?",
+    "answer": "Smaller images usually contain fewer packages, which reduces the attack surface and the number of things that can become outdated or vulnerable. They also pull faster and start faster, which matters in CI and autoscaling environments. But making an image smaller should not come at the cost of clarity or correctness, and sometimes debugging tools are worth a larger image in non-production environments. The main trade-off is security and speed versus convenience and tooling.",
+    "real_world": "A production image built from a full OS base accumulates unnecessary shells, package managers, and utilities. A slimmer runtime image is easier to audit and faster to distribute across many nodes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you keep debugging tools available without shipping them in the final production image?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you walk me through what actually happens under the hood when Docker starts a Linux container?",
+    "answer": "Docker typically asks containerd/runc to create a process with specific Linux namespaces and cgroups, then mounts the image layers with a union filesystem and pivots into that root filesystem. Namespaces isolate things like PID, network, mount, and hostname views, while cgroups enforce resource accounting and limits. The container is not a VM; it is just a process tree on the host kernel with constrained visibility and resources. That matters because many failure modes are really Linux process, filesystem, or kernel-behavior issues rather than Docker-specific bugs.",
+    "real_world": "This comes up when a container can see unexpected host resources, ignores signals, or gets OOM-killed even though the app logs look normal. Teams debugging production incidents often need to look at cgroup memory, namespace wiring, and mount state, not just `docker ps`.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes on Windows or macOS, where Docker is not using the host Linux kernel directly?"
+   },
+   {
+    "question": "What are the main trade-offs between overlay-based storage and using volumes for heavy write workloads?",
+    "answer": "The writable container layer on overlay-based drivers is convenient but usually slower for write-heavy paths because each write can involve copy-up and extra metadata work. Volumes bypass that image-layer path and are usually the better choice for databases, queues, and large temporary working sets. The trade-off is operational: volumes need explicit lifecycle management and backup strategy, while the container layer is ephemeral and easy to throw away. For read-mostly application files, layered images are fine; for sustained writes, use volumes.",
+    "real_world": "A common incident is a stateful service placed on the container filesystem that performs well in dev but shows latency spikes and disk amplification in production. Moving its data path to a volume often fixes both performance and surprise disk growth on the host.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you benchmark whether the storage driver is the bottleneck for a specific workload?"
+   },
+   {
+    "question": "How does Docker enforce memory limits, and what failure modes do you watch for when a container runs out of memory?",
+    "answer": "Docker relies on Linux cgroups for memory accounting and limits, so the kernel decides whether allocations are allowed and which process gets killed under pressure. If a container exceeds its effective memory limit, you often see an OOM kill rather than a clean application exception, and the whole container may exit if PID 1 dies. Memory limits are not the same as reservations, and page cache can make usage look surprising. You need to distinguish a container-local OOM from host-wide memory pressure because the remediation is different.",
+    "real_world": "In production, teams often set a limit that looks safe in steady state but forget startup spikes, compaction, or traffic bursts. The result is a container that passes health checks, then gets repeatedly OOM-killed during peak load and causes cascading retries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you tune memory settings differently for a JVM service versus a native Go service in containers?"
+   },
+   {
+    "question": "What can go wrong with PID 1 inside a container, and how do you design around it?",
+    "answer": "PID 1 has special signal-handling and child-reaping responsibilities on Linux, so an app that runs fine as a normal process may misbehave when it becomes the container's init process. It may ignore termination signals it does not handle, or leak zombie processes if it forks and never reaps children. The usual fix is to run the app in exec form and, if needed, use a tiny init process to forward signals and reap children. This directly affects graceful shutdown and deploy safety.",
+    "real_world": "A classic outage during rolling deploys is containers taking too long to stop because SIGTERM never reaches the real app process, so the platform eventually sends SIGKILL. That can corrupt in-flight work or cause dropped requests if the service needed a short drain period.",
+    "code_lang": "bash",
+    "code": "# bad: shell becomes PID 1\nCMD myserver --serve\n\n# better: app is PID 1\nCMD [\"myserver\", \"--serve\"]",
+    "follow_up": "How would you verify in a running container whether signal forwarding is set up correctly?"
+   },
+   {
+    "question": "How does Docker networking actually connect containers, and what are the scaling or debugging limits of the default bridge model?",
+    "answer": "On a single host, Docker usually creates a bridge network, veth pairs for containers, and NAT rules so containers can reach out and optionally receive published traffic. Service-to-service traffic on user-defined bridges also gets embedded DNS-based name resolution. This is simple and works well at modest scale, but lots of port publishing, NAT state, and per-host network complexity can make debugging and performance harder. The key trade-off is convenience versus transparency and scale.",
+    "real_world": "Teams hit this when hundreds of containers on one host create hard-to-read iptables state, ephemeral-port exhaustion, or confusing source IP behavior. Debugging often requires checking both Docker network config and the host's packet path.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose host networking or a macvlan-style approach instead of the default bridge?"
+   },
+   {
+    "question": "Why do containers sometimes have DNS problems even when basic networking looks fine?",
+    "answer": "DNS inside containers is a layered path: the app resolver behavior, the container's `/etc/resolv.conf`, Docker's embedded DNS in some network modes, and the upstream nameserver all matter. Problems often come from resolver caching assumptions, search domains causing extra lookups, large responses hitting UDP limits, or stale upstream config after host network changes. Containers may still reach raw IPs, which makes the issue look intermittent or application-specific. You debug it by separating name resolution from connectivity and testing from inside the network namespace.",
+    "real_world": "This shows up as sporadic timeouts to dependencies while pinging an IP still works, especially after VPN changes, node reconfiguration, or split-horizon DNS setups. Production impact can be broad because every service discovery lookup starts failing before any app code changed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you investigate whether the problem is the application resolver, Docker's DNS layer, or the upstream DNS server?"
+   },
+   {
+    "question": "How do you make Docker builds reproducible and supply-chain-safe, beyond just pinning a tag?",
+    "answer": "Tags are mutable, so reproducibility improves when you pin base images by digest and control dependency resolution inside the build. You also want deterministic inputs where possible, minimal network access during later stages, and clear separation between build-time tools and runtime contents. Build provenance and SBOM generation help with auditing, but they do not replace pinning and review of what enters the image. The trade-off is slower updates and more maintenance versus stronger repeatability and incident response.",
+    "real_world": "During a security incident, teams often need to answer exactly which base filesystem and packages were in a deployed image weeks ago. If builds were using mutable tags or unpinned package installs, that answer becomes guesswork and remediation takes much longer.",
+    "code_lang": "dockerfile",
+    "code": "FROM alpine@sha256:... \nRUN apk add --no-cache ca-certificates\nCOPY app /app\nENTRYPOINT [\"/app\"]",
+    "follow_up": "What parts of a typical package installation step are still non-reproducible even if the base image is pinned by digest?"
+   },
+   {
+    "question": "What is BuildKit changing compared with the classic Docker build flow, and why does it matter in large CI systems?",
+    "answer": "BuildKit uses a more explicit build graph, supports better cache import/export, can run independent steps in parallel, and adds features like secret and SSH mounts that avoid baking credentials into layers. In large CI, that improves cache hit rates across machines and reduces rebuild time when only some inputs changed. It also makes remote and multi-platform builds more practical. The trade-off is that teams need to understand cache scope and build graph behavior, or they get surprising misses and inconsistent performance.",
+    "real_world": "At scale, classic local-only cache behavior causes expensive cold builds on every ephemeral CI runner. With BuildKit and shared cache, teams can cut minutes from hot paths, but misconfigured cache keys can also silently eliminate the benefit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design cache import and export for ephemeral CI runners building the same repo many times a day?"
+   },
+   {
+    "question": "What are the hard parts of running multi-architecture Docker images in production?",
+    "answer": "A multi-arch image tag is usually a manifest list that points to different image variants per architecture, so pull-time selection is automatic if the registry and client support it. The hard parts are native dependencies, compiler output differences, performance variance, and testing: an image that builds on amd64 may behave differently on arm64 even with the same source. Emulation can help in CI but is slower and can hide timing or syscall differences. You need architecture-aware testing and artifact verification, not just a successful build.",
+    "real_world": "This matters when teams add arm-based nodes for cost or power reasons and assume existing images are portable. Production issues often appear in crypto libraries, database drivers, or CPU-specific optimizations that were never exercised on the second architecture.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is emulation acceptable for CI, and when do you insist on native builders for each architecture?"
+   },
+   {
+    "question": "If you had to explain why 'one process per container' is a guideline rather than a hard rule, what would you say?",
+    "answer": "The rule exists because a single main concern per container makes lifecycle, health, logs, scaling, and failure isolation much simpler. But there are valid exceptions, like tightly coupled helper processes, short-lived init behavior, or legacy software that expects a local sidecar process and cannot be cleanly split. The risk is that multiple long-running processes in one container usually need supervision, coordinated shutdown, and more careful observability. So the right question is whether the processes really share lifecycle and scaling characteristics.",
+    "real_world": "Teams sometimes bundle a web server and background worker together to simplify deployment, then discover they need to scale them independently or one crashes while the other keeps the container looking alive. That mismatch turns a convenience decision into an operational blind spot.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you do run multiple long-lived processes in one container, how do you handle supervision and health reporting safely?"
+   },
+   {
+    "question": "How does Docker use cgroups for CPU control, and what is the practical difference between CPU shares, quotas, and cpuset pinning?",
+    "answer": "They solve different problems. CPU shares are relative weighting under contention, so they do little if the host is otherwise idle; quotas cap total CPU time over a period; cpuset restricts which cores a container may run on. In production, quotas can cause latency spikes from throttling, while cpuset can help cache locality but risks hotspotting a few cores. I usually treat shares as soft fairness, quotas as hard isolation, and cpuset as a specialized performance tool.",
+    "real_world": "A service can look healthy at average load but suffer p99 latency spikes because CFS throttling kicks in every period. Teams often discover this only after setting aggressive CPU limits in Kubernetes or plain Docker and then correlating tail latency with throttled time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you investigate whether CPU throttling is the reason a container's latency suddenly increased?"
+   },
+   {
+    "question": "What actually happens to a container's disk space when image layers, writable layers, and copy-on-write interact under heavy churn?",
+    "answer": "The image is read-only layers plus a thin writable layer for the container. When a process modifies a file from a lower layer, the storage driver typically has to copy it up into the writable layer first, which adds I/O and metadata overhead. Repeated rewrites, many small files, or lots of deletes can fragment performance and make `docker system df` confusing because space is shared across layers. The key trade-off is image-layer efficiency versus poor behavior for write-heavy mutable data.",
+    "real_world": "I've seen applications write caches and temporary indexes into the container filesystem and then slow down badly after a few hours. Moving those paths to a volume or tmpfs often fixes both throughput and disk pressure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose tmpfs over a named volume for a container write path?"
+   },
+   {
+    "question": "Why can `docker build` become a bottleneck at scale in CI even when individual Dockerfiles are well structured?",
+    "answer": "At scale, the bottleneck is often cache distribution, not Dockerfile syntax. If runners are ephemeral, each build may start cold, pull many base layers, rebuild dependency layers, and then push near-duplicate results back to a registry. Network egress, registry throughput, and decompression time can dominate CPU time, especially for large language or package ecosystems. The architecture decision is whether to invest in remote cache, shared builders, prebuilt base images, or more deterministic dependency layers.",
+    "real_world": "A team may cut a build from 12 minutes to 4 locally but still see 10-minute CI builds because every runner has to rehydrate caches from scratch. Registry saturation during peak commit times becomes the real incident, not slow compilation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you collect to tell whether your CI build time is dominated by compute, cache misses, or registry transfer?"
+   },
+   {
+    "question": "How does Docker image distribution work under the hood, and what are the failure modes when many hosts pull the same image during a deployment?",
+    "answer": "An image is pulled as a manifest plus content-addressed blobs, and hosts can reuse any blobs they already have locally. The common failure modes are registry rate limits, saturated network links, slow decompression, and long startup tails when thousands of nodes pull at once. Small config changes can still trigger a full rollout if the digest changes, even when most bytes are shared. In large fleets, pre-pulling, regional registries, and careful rollout pacing matter more than just reducing image size.",
+    "real_world": "A deployment can fail not because the app is bad, but because the registry or NAT gateway becomes the bottleneck when the whole cluster pulls a new digest at once. That shows up as image pull backoffs and staggered startup across nodes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the operational difference between tagging an image and deploying by digest?"
+   },
+   {
+    "question": "What are the trade-offs of using host networking for a container instead of bridge or overlay networking?",
+    "answer": "Host networking removes an isolation layer, so packets avoid per-container NAT and port publishing, which can reduce overhead and simplify some latency-sensitive cases. The cost is port collisions, weaker network isolation, and less flexibility for running multiple copies on the same host. It also changes observability and firewall assumptions because the process now appears directly on the host network stack. I only use it when the performance or protocol requirement clearly outweighs the scheduling and security costs.",
+    "real_world": "This comes up with high packet-rate proxies, metrics agents, or software that relies on broadcast or host-local ports. It can solve a throughput problem and then create an operations problem because only one instance can bind a required port per host.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether the networking overhead is actually significant enough to justify host mode?"
+   },
+   {
+    "question": "What does `--init` protect you from, and why is it sometimes still not enough for a production container?",
+    "answer": "`--init` inserts a minimal init process that forwards signals and reaps orphaned zombie processes, which fixes many PID 1 issues for simple containers. It is not a full supervisor: it will not manage complex process trees, restart child processes by policy, or coordinate multi-service shutdown ordering. If the container intentionally runs several long-lived processes, you usually need explicit process management or a different design. So `--init` is a safety net, not a general service manager.",
+    "real_world": "Without reaping, short-lived child processes can accumulate as zombies and eventually cause strange behavior under load tests or cron-like workloads. Teams often add `--init` after seeing clean shutdowns fail or process tables grow unexpectedly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you do need multiple long-lived processes in one container, how would you structure shutdown and health semantics?"
+   },
+   {
+    "question": "How do user namespaces change container isolation, and what operational trade-offs do they introduce?",
+    "answer": "User namespaces map container UIDs and GIDs to different host IDs, so root in the container is not root on the host. That improves blast-radius reduction, especially around filesystem and daemon escape scenarios, but it complicates bind mounts, file ownership, and compatibility with some images or host tools. The main trade-off is stronger isolation versus more operational friction around permissions. It is one of the better hardening features when you can support the ownership model end to end.",
+    "real_world": "A common surprise is that a bind-mounted directory suddenly becomes unwritable because the container's apparent UID no longer maps the way operators expect. Security teams like userns; application teams often feel the pain first in CI agents and stateful workloads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is running as a non-root user inside the container different from enabling user namespaces?"
+   },
+   {
+    "question": "What are the real security implications of mounting `/var/run/docker.sock` into a container?",
+    "answer": "It effectively gives that container control over the Docker daemon, which usually means control over the host. From there it can start privileged containers, mount host filesystems, inspect secrets, or escape intended isolation boundaries. People do it for build or deployment automation because it's convenient, but it should be treated as host-level access, not ordinary container access. Safer alternatives depend on the use case, such as remote builders or narrower APIs.",
+    "real_world": "This is a frequent production shortcut in CI runners and internal tooling. Incidents happen when an otherwise low-privilege app is compromised and the attacker pivots through the Docker socket to take over the node.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If a team needs to build images in CI, what alternatives would you evaluate instead of exposing the host Docker socket?"
+   },
+   {
+    "question": "How do seccomp, capabilities, and privileged mode fit together when hardening Docker containers?",
+    "answer": "They control different layers of privilege. Capabilities trim what the process can do in the kernel, seccomp filters which syscalls are allowed, and privileged mode broadly disables many of those protections and grants extensive device and kernel access. The safe default is to avoid privileged mode, drop unnecessary capabilities, and only loosen seccomp when an application has a demonstrated need. Hardening is about least privilege, but the trade-off is occasional compatibility debugging for software that assumes broad host access.",
+    "real_world": "This matters with network tools, tracing agents, and storage-related software that suddenly fail in containers because they expect capabilities not present by default. The wrong fix is often `--privileged`, which works fast and creates a much larger risk surface.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of a workload that legitimately needs extra capabilities but not full privileged mode?"
+   },
+   {
+    "question": "What actually happens during `docker stop`, and what edge cases make graceful shutdown fail in production?",
+    "answer": "Docker sends a termination signal to the container's main process, waits for a grace period, and then force-kills it if it has not exited. Graceful shutdown fails when the app ignores signals, PID 1 does not forward them, shutdown work takes longer than the timeout, or the process is stuck on I/O and cannot make progress. The result is partial writes, dropped in-flight requests, or long deploy times. Good production design means explicit signal handling, bounded drain logic, and timeouts matched to real shutdown behavior.",
+    "real_world": "A common incident is a service that exits cleanly in local tests but drops requests during rolling restarts because load balancer deregistration and app shutdown are not aligned. Another is databases or workers being SIGKILLed mid-flush because the stop timeout was too short.",
+    "code_lang": "bash",
+    "code": "docker run --name app myimage\n# later\ndocker stop -t 30 app\n# sends the configured stop signal, waits up to 30s, then kills if needed",
+    "follow_up": "How would you coordinate readiness, connection draining, and stop timeouts to avoid request loss during deployments?"
+   }
+  ]
+ }
+}

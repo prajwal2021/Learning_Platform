@@ -1,0 +1,485 @@
+{
+ "slug": "computer-networks",
+ "name": "Computer networks (TCP/IP, HTTP, DNS, TLS)",
+ "category": "Computer science",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between HTTP and TCP/IP?",
+    "answer": "TCP/IP is the networking stack that moves packets between hosts and provides transport over the network. HTTP is an application-layer protocol that uses TCP, or sometimes newer transports, to request and send web resources. In short, TCP/IP is the plumbing and HTTP is one protocol that runs on top of it. You use HTTP when you need a standard way for clients and servers to exchange web data.",
+    "real_world": "When a browser loads a page, DNS finds the server, TCP connects to it, and HTTP carries the request and response. If the page is slow, the problem could be in any of those layers, not just the app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is TCP preferred over UDP for most web traffic?"
+   },
+   {
+    "question": "What happens in a TCP three-way handshake?",
+    "answer": "The client sends a SYN to start a connection, the server replies with SYN-ACK to acknowledge and offer its own initial sequence number, and the client sends ACK to finish setup. This establishes a reliable connection state on both sides before application data starts flowing. The handshake matters because it synchronizes sequence numbers and confirms both endpoints are reachable.",
+    "real_world": "If a firewall blocks one of these packets, a connection may time out even though the server looks up and healthy. This is often the first clue when debugging network connectivity issues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a TCP connection being established and an HTTP request succeeding?"
+   },
+   {
+    "question": "What is the role of DNS in loading a website?",
+    "answer": "DNS translates a human-readable domain name like example.com into an IP address that routers can reach. The browser or operating system usually checks cached results first, then queries DNS servers if needed. Without DNS, users would have to remember IP addresses instead of names. It is one of the first steps before a browser can connect to a server.",
+    "real_world": "A bad DNS record can take a site down even when the web servers are healthy. Teams often debug outages by checking whether the domain resolves to the expected IP address.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a DNS A record and a CNAME record?"
+   },
+   {
+    "question": "What is HTTPS, and how is it different from HTTP?",
+    "answer": "HTTPS is HTTP running over TLS, which encrypts the traffic and verifies the server’s identity with certificates. Plain HTTP sends data in cleartext, so anyone on the path can read or modify it more easily. HTTPS protects confidentiality and integrity, and it is the standard for most modern websites.",
+    "real_world": "If a login form uses plain HTTP, usernames and passwords can be exposed on public Wi-Fi. Browsers also warn users when a site is not using HTTPS.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does TLS actually verify during a connection?"
+   },
+   {
+    "question": "What is a certificate in TLS?",
+    "answer": "A TLS certificate binds a public key to the identity of a server, usually a domain name, and is signed by a certificate authority. During the handshake, the client checks that the certificate is valid and trusted before sending sensitive data. The certificate does not encrypt traffic by itself; it helps authenticate the server and support key exchange.",
+    "real_world": "If a certificate expires or the hostname does not match, browsers show security errors and many clients refuse to connect. This is a common production issue after certificate renewals or domain changes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why do clients trust a certificate authority instead of just any certificate?"
+   },
+   {
+    "question": "What is the difference between a GET and a POST request?",
+    "answer": "GET is used to retrieve data and should not change server state in normal use. POST is used to submit data to the server, often creating or processing something. GET parameters are commonly placed in the URL, while POST data is usually in the request body. The key idea is that GET is for safe reads and POST is for actions that may have side effects.",
+    "real_world": "Search pages use GET so results can be bookmarked and shared in a URL. Form submissions like signups or payments usually use POST because they change data on the server.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does it mean for an HTTP method to be idempotent?"
+   },
+   {
+    "question": "What does it mean for an HTTP method to be idempotent?",
+    "answer": "An idempotent method can be called multiple times with the same result as calling it once. In HTTP, methods like GET, PUT, and DELETE are typically treated as idempotent because repeating them should not keep changing the outcome. This matters for retries: if a request times out, the client can safely retry more easily when the operation is idempotent.",
+    "real_world": "Payment and order systems care a lot about this because a network timeout should not create duplicate orders or charge a customer twice. Teams often design APIs so retries are safe after transient failures.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is POST usually not considered idempotent?"
+   },
+   {
+    "question": "What is the purpose of HTTP status codes?",
+    "answer": "Status codes tell the client whether a request succeeded, failed, or needs more action. They are grouped by range, such as 2xx for success, 4xx for client errors, and 5xx for server errors. They matter because clients, browsers, caches, and monitoring tools use them to decide what to do next. For example, 404 means the resource was not found, while 500 means the server hit an unexpected problem.",
+    "real_world": "A team might alert on a sudden rise in 500 responses because it points to an application bug or outage. Frontend code also uses status codes to show the right error message to users.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you return 401 versus 403?"
+   },
+   {
+    "question": "Why do web apps use cookies?",
+    "answer": "Cookies let a server ask the browser to store small pieces of data and send them back on later requests to the same site. They are commonly used for sessions, so a user can stay logged in across pages and requests. Cookies are different from local storage because they are automatically included with HTTP requests when the browser rules allow it. They must be handled carefully because they can expose session data if used insecurely.",
+    "real_world": "A common bug is a user being logged out unexpectedly because the session cookie was not set correctly or expired too soon. Security teams also inspect cookie flags to reduce theft and cross-site attacks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does the HttpOnly flag help protect against?"
+   },
+   {
+    "question": "What is the difference between IP address and MAC address?",
+    "answer": "An IP address is a logical address used for routing traffic across networks, while a MAC address identifies a network interface on a local network segment. IP addresses can change as devices move between networks, but MAC addresses are tied to hardware or a virtual interface. Routers forward packets using IP addresses, while switches on a LAN use MAC addresses to deliver frames locally. You need both because network communication happens at multiple layers.",
+    "real_world": "When someone says a device cannot reach the internet, the issue may be local layer 2 connectivity, routing, or DNS, not just the IP address itself. Network teams use both addresses when tracing where traffic fails.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does ARP relate to IP and MAC addresses?"
+   },
+   {
+    "question": "What is a port number used for in networking?",
+    "answer": "A port number identifies which application or service on a host should receive the traffic. The IP address gets packets to the right machine, and the port gets them to the right process. For example, a web server might listen on port 80 or 443 while a database listens on another port. It matters because multiple services can share one IP address without conflicting.",
+    "real_world": "When a developer points a client at the wrong port, the connection may succeed at the network level but fail at the application level. This is a common source of “connection refused” or timeout errors during local development and deployment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a listening port and an ephemeral port?"
+   },
+   {
+    "question": "What happens when you type a URL into your browser and press Enter?",
+    "answer": "The browser parses the URL, resolves the domain name with DNS, opens a TCP connection to the server, and then sends an HTTP request. If the URL uses HTTPS, TLS is negotiated before the HTTP request is sent. The server responds with data, and the browser may make additional requests for images, CSS, and JavaScript. This matters because failures can happen at several different layers, not just in the web app.",
+    "real_world": "Teams often debug “the site is down” by checking DNS, connectivity, TLS, and HTTP separately. A slow page load can also come from many extra asset requests after the first HTML response.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "At what step would you expect DNS caching to change the behavior?"
+   },
+   {
+    "question": "What is DNS caching, and why does it matter?",
+    "answer": "DNS caching stores previously resolved domain-to-IP answers for a period of time so clients and resolvers do not have to query DNS every time. It improves speed and reduces load on DNS servers. The trade-off is that changes to records may not be seen immediately because old answers can be reused until they expire. That is why DNS changes can take time to propagate in practice.",
+    "real_world": "After a server migration, some users may still hit the old IP because their resolver cached the previous record. This often looks like an inconsistent rollout even when the new DNS record is correct.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What determines how long a DNS answer can be cached?"
+   },
+   {
+    "question": "What is the difference between a domain name and a URL?",
+    "answer": "A domain name is the human-readable name that identifies a site, like example.com. A URL is a full address that includes the scheme, domain, and often a path, query string, and fragment. So example.com is a domain, while https://example.com/login?tab=1 is a URL. This matters because different parts of a URL are handled at different layers.",
+    "real_world": "A bug in URL parsing can send requests to the wrong path or strip query parameters. In logging and monitoring, confusing domains with full URLs can also make troubleshooting harder.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts of a URL are sent to the server, and which parts are handled only by the browser?"
+   },
+   {
+    "question": "What is an HTTP header, and why would you use one?",
+    "answer": "An HTTP header is metadata sent with a request or response. Headers are used for things like content type, caching, authentication, compression, and custom app metadata. They let clients and servers describe how to interpret or handle the body without changing the body itself. They matter because many protocol features live in headers rather than the main payload.",
+    "real_world": "If the server sends the wrong Content-Type header, browsers may display or download content incorrectly. Missing caching headers can also make a site slower than necessary.",
+    "code_lang": "http",
+    "code": "GET / HTTP/1.1\nHost: example.com\nAccept: text/html\nAuthorization: Bearer token123",
+    "follow_up": "What is the difference between a request header and a response header?"
+   },
+   {
+    "question": "What is the difference between a browser cache and HTTP caching?",
+    "answer": "Browser cache is the storage in the client, while HTTP caching is the protocol behavior that tells clients and intermediaries what can be reused and for how long. HTTP caching uses headers such as cache-control and validators like ETag so responses can be reused safely. The browser cache is one place those rules are applied, but proxies and CDNs can also cache. This matters because good caching reduces latency and load, but stale caching can serve outdated content.",
+    "real_world": "A frontend team may deploy a new JavaScript bundle, but users keep getting the old one because cache headers are too aggressive. Troubleshooting often starts with checking whether the browser or a CDN cached the response.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between cache-control no-cache and no-store?"
+   },
+   {
+    "question": "What does it mean to open a TCP connection?",
+    "answer": "Opening a TCP connection means both sides establish a reliable byte stream so they can send data in order and detect loss. Before application data is exchanged, the endpoints coordinate connection state so each side knows the other is ready. TCP also handles retransmission and ordering, which is why it is used for protocols that need dependable delivery. The trade-off is extra overhead compared with a connectionless protocol.",
+    "real_world": "If a service is overloaded, clients may fail while trying to open connections even before any request reaches the application. Connection pools are often used to reduce this overhead in real systems.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why might a team choose a protocol other than TCP for some traffic?"
+   },
+   {
+    "question": "What is TLS trying to protect you from?",
+    "answer": "TLS protects the confidentiality and integrity of data in transit, and it helps the client verify it is talking to the intended server. It prevents passive eavesdropping and makes active tampering much harder. It does not protect the server from being compromised, and it does not make the application itself secure if the code has vulnerabilities. This matters because it secures the channel, not the whole system.",
+    "real_world": "Without TLS, credentials and session data can be exposed on untrusted networks. Even with TLS, teams still need to secure application logic, because TLS does not stop bugs like injection or broken authorization.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does the client check during certificate validation?"
+   },
+   {
+    "question": "What is the difference between a forward DNS lookup and a reverse DNS lookup?",
+    "answer": "A forward lookup maps a name to an IP address. A reverse lookup maps an IP address back to a name. Forward lookups are what browsers and clients use to reach services, while reverse lookups are often used for logging, troubleshooting, and some mail or security checks. They are separate records and one does not automatically imply the other exists.",
+    "real_world": "Operations teams often use reverse DNS to make log entries more readable when investigating traffic. A missing or incorrect reverse record can make troubleshooting harder, especially in mail and security environments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why might reverse DNS be configured differently from forward DNS?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do TCP and UDP differ in the kinds of problems they solve, and when would you choose one over the other?",
+    "answer": "TCP gives you ordered, reliable delivery with congestion control, which is useful when losing or reordering data would break the application. UDP removes that overhead and lets the application decide how to handle loss, retries, or ordering, which can reduce latency. In practice, TCP is common for web traffic and file transfer, while UDP fits real-time media, gaming, and custom protocols that tolerate some loss.",
+    "real_world": "A video call team may switch media transport from TCP to UDP to avoid head-of-line blocking that causes freezes when one packet is delayed. On the other hand, an API team usually prefers TCP because partial or reordered requests are much harder to reason about.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What trade-offs does TCP’s reliability introduce under packet loss or high latency?"
+   },
+   {
+    "question": "What is head-of-line blocking in TCP, and why does it matter for application performance?",
+    "answer": "With TCP, bytes are delivered in order, so if one segment is lost, later data is held back until the missing piece is retransmitted. That means a single lost packet can delay everything behind it, even if those later packets already arrived. It matters most for latency-sensitive or multiplexed workloads, because the user sees stalls instead of graceful degradation.",
+    "real_world": "Teams often see this when a page feels frozen even though the network is still active, because one delayed packet holds up the rest of the stream. It is one reason HTTP/2 over TCP can still suffer under loss, and why some systems move to transport designs that avoid this behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do protocols like HTTP/2 and HTTP/3 differ in how they handle this problem?"
+   },
+   {
+    "question": "What is the difference between an HTTP request being sent over a persistent connection and opening a new connection each time?",
+    "answer": "A persistent connection reuses the same TCP connection for multiple requests, which avoids repeated handshake costs and can improve latency. Opening a new connection every time adds setup overhead and can also increase load on clients and servers. The trade-off is that long-lived connections consume resources and need good timeout and pooling behavior.",
+    "real_world": "In production, poor connection reuse often shows up as higher p95 latency and too many short-lived sockets on the server. Fixing keep-alive or connection pooling can make a bigger difference than optimizing application code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can happen if a connection pool is too small or too large?"
+   },
+   {
+    "question": "How would you debug a case where DNS looks correct but users still cannot reach a site?",
+    "answer": "I would separate name resolution from connectivity and TLS by checking whether the client gets the expected IP address, whether that IP is reachable, and whether the service is listening on the right port. Then I would look for issues like stale DNS caches, split-horizon DNS, routing problems, firewall rules, or a certificate that does not match the hostname. The key is to test each layer independently instead of assuming DNS is the only cause.",
+    "real_world": "This happens during migrations when a new record is published but some users still hit the old backend because of caching or propagation timing. It also happens when DNS is fine but the load balancer or security group blocks traffic after the lookup succeeds.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What commands or tools would you use first to isolate the failure?"
+   },
+   {
+    "question": "What is the purpose of an HTTP reverse proxy, and what trade-offs does it introduce?",
+    "answer": "A reverse proxy sits in front of application servers and can terminate TLS, load balance traffic, cache responses, and hide internal topology. It simplifies the backend and can improve performance and security, but it also becomes part of the critical path. If it is misconfigured, it can break headers, timeouts, client IP visibility, or streaming behavior.",
+    "real_world": "Many teams use Nginx, Envoy, or a cloud load balancer to centralize TLS and routing rules instead of duplicating them in every app. When problems happen, a proxy misconfiguration can make healthy application pods look broken from the outside.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you preserve the original client IP and protocol information through a reverse proxy?"
+   },
+   {
+    "question": "Why would an API use JSON over HTTP instead of something like gRPC, and what are the trade-offs?",
+    "answer": "JSON over HTTP is simple, widely supported, easy to debug with standard tools, and works well across browsers and many client stacks. gRPC usually gives better performance, stricter schemas, and good support for streaming, but it is less convenient for ad hoc debugging and not as natural for browser clients. The choice depends on interoperability, latency needs, tooling, and team complexity.",
+    "real_world": "Public-facing APIs often stay on JSON because external partners can call them without special tooling. Internal service-to-service traffic may move to gRPC when serialization overhead, schema safety, or streaming support matters more than simplicity.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you keep JSON externally but use gRPC internally?"
+   },
+   {
+    "question": "What does the HTTP Host header do, and why is it important for virtual hosting?",
+    "answer": "The Host header tells the server which hostname the client wants, even when multiple sites share the same IP address. That lets one IP and one reverse proxy serve many domains and route each request to the right application. Without it, the server would not know which virtual host to select in most shared-hosting setups.",
+    "real_world": "This matters when several customer domains point to the same load balancer or edge proxy. A missing or wrong Host header can send traffic to the default site, which looks like an outage or a misrouted request.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if a proxy rewrites or strips the Host header?"
+   },
+   {
+    "question": "What is the difference between symmetric and asymmetric encryption in TLS?",
+    "answer": "Asymmetric cryptography is used to authenticate the server and safely establish shared secrets, while symmetric cryptography is used for the bulk data after the handshake. Symmetric algorithms are much faster, so TLS only uses public-key operations for the initial trust and key exchange. This split gives you both identity and performance.",
+    "real_world": "If a team sees high CPU during handshakes but not during normal traffic, the asymmetric part of TLS is often the culprit. That is why session resumption and connection reuse can have a noticeable effect on busy services.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does TLS use a handshake before application data starts flowing?"
+   },
+   {
+    "question": "What are SNI and certificate hostname validation, and why do both matter?",
+    "answer": "SNI lets a client tell the server which hostname it wants during the TLS handshake, so the server can present the right certificate when multiple sites share one IP. Hostname validation checks that the certificate actually matches the name the client intended to reach. You need both because SNI helps the server choose a cert, and validation ensures the cert is trusted for that host.",
+    "real_world": "This often breaks when a site works in a browser but fails for an older client or a custom agent that does not send SNI. It also shows up when a certificate is valid but issued for the wrong hostname, causing handshake failures in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you diagnose a TLS failure that only affects one hostname on a shared endpoint?"
+   },
+   {
+    "question": "How do you test network-related changes safely before rolling them out to production?",
+    "answer": "I would test behavior at multiple layers: unit or contract tests for request formatting, integration tests against real services or mocks, and staging checks that validate DNS, TLS, and connectivity from representative networks. For risky changes, I would use canaries and monitor error rates, latency, handshake failures, and packet-level symptoms if available. The goal is to catch protocol or infrastructure regressions before they hit all users.",
+    "real_world": "A small change to proxy headers or timeouts can silently break mobile clients or one region while passing local tests. Canarying and synthetic probes often catch these problems sooner than application metrics alone.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you watch first during a network-related rollout?"
+   },
+   {
+    "question": "How do connection timeouts and read timeouts differ, and why do you usually want both set in an HTTP client?",
+    "answer": "A connection timeout limits how long you wait to establish the TCP/TLS connection; a read timeout limits how long you wait for data after the connection is already open. They fail different parts of the request path, so one can be fine while the other hangs. In practice, setting both prevents a client from getting stuck forever on a dead host or on a slow upstream that accepted the connection but stopped responding. The right values depend on the service and retry policy.",
+    "real_world": "This comes up when an API dependency is partially unhealthy: connections may succeed quickly, but requests stall under load. Without read timeouts, threads or event-loop resources get tied up until the service recovers or the process is killed.",
+    "code_lang": "python",
+    "code": "import requests\nrequests.get(\n    'https://api.example.com/data',\n    timeout=(2, 5)  # connect, read\n)",
+    "follow_up": "How do you choose timeout values when a request goes through several downstream services?"
+   },
+   {
+    "question": "What is the difference between a 301 and a 302 redirect, and when would you use each one?",
+    "answer": "A 301 indicates a permanent redirect, while a 302 indicates a temporary one. In practice, browsers and caches may treat them differently, and search engines may update indexing for 301s more aggressively. You use 301 when the old URL should no longer be the canonical location, and 302 when the move is short-lived or conditional. The trade-off is between long-term consistency and flexibility during migrations or experiments.",
+    "real_world": "Teams use 301s when consolidating old product URLs after a site redesign. They use 302s for maintenance pages or A/B routing where the original URL should remain the primary address.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide between a 302 and a 307 redirect?"
+   },
+   {
+    "question": "What does TCP retransmission protect against, and what kinds of latency problems can it introduce?",
+    "answer": "Retransmission lets TCP recover from lost packets by resending data the sender believes was not acknowledged. That gives reliability over an unreliable network, but it also adds delay when loss happens because the sender must detect the loss and wait to resend. On busy or lossy links, retransmissions can amplify latency and make performance look inconsistent even when bandwidth is available. It matters because application timeouts and tail latency often come from loss, not just raw throughput.",
+    "real_world": "This shows up during packet loss on Wi-Fi or flaky mobile links: requests may succeed, but p95 and p99 latency spike. Teams often misdiagnose it as server slowness when the actual issue is network loss and retransmits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether a slow request is due to packet loss, server load, or application-level backpressure?"
+   },
+   {
+    "question": "What is the purpose of the HTTP Cache-Control header, and how do max-age and no-cache differ?",
+    "answer": "Cache-Control tells browsers, CDNs, and proxies how they may store and reuse a response. `max-age` says a response can be reused without revalidation for a period of time, while `no-cache` means it can be stored but must be revalidated before reuse. That distinction matters because `no-cache` is not the same as “don’t store,” and misuse can cause stale data or unnecessary revalidation traffic. Good caching reduces latency and origin load, but only if freshness rules match the data.",
+    "real_world": "This matters for assets like JavaScript bundles and avatars, where caching improves page load times dramatically. It also matters for APIs returning personalized or rapidly changing data, where incorrect cache directives can leak or stale data can be served.",
+    "code_lang": "http",
+    "code": "Cache-Control: public, max-age=3600\nETag: \"abc123\"",
+    "follow_up": "When would you add ETag or Last-Modified on top of Cache-Control?"
+   },
+   {
+    "question": "How does HTTP content negotiation work, and when would you use the Accept header?",
+    "answer": "Content negotiation lets a client tell the server which representation it prefers, such as JSON versus XML or different languages. The `Accept` header is the main signal, and the server chooses a response that best matches the client’s preferences if it supports one. This is useful when one endpoint serves multiple formats, but it adds complexity because the server has to keep variants consistent and caches have to key on the right headers. In many APIs, teams avoid broad negotiation and instead use explicit endpoints or media types to reduce ambiguity.",
+    "real_world": "This comes up in public APIs that support both browser-readable HTML and machine-readable JSON. It also matters for internationalized sites that serve localized content based on client preferences.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do caches handle content-negotiated responses correctly?"
+   },
+   {
+    "question": "What happens if a TLS certificate is expired or the hostname does not match, and how should a client react?",
+    "answer": "A client should reject the connection because it cannot verify it is talking to the intended server. An expired certificate means the server’s identity proof is no longer valid, and a hostname mismatch means the certificate was issued for a different name. Ignoring these errors defeats TLS’s protection against impersonation and man-in-the-middle attacks. In production clients, the right behavior is usually fail closed, then fix the certificate or routing problem.",
+    "real_world": "This happens during certificate renewals gone wrong or when a load balancer is pointed at the wrong backend certificate. Users often see a browser warning or a sudden wave of client failures after a deploy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely roll out certificate renewals to avoid accidental outages?"
+   },
+   {
+    "question": "What is DNS TTL, and how does it affect changing records during a migration?",
+    "answer": "TTL is the time a resolver may cache a DNS answer before asking again. A long TTL reduces query traffic and improves performance, but it also delays propagation when you change records during a migration or failover. A short TTL makes changes take effect faster, but increases lookup load and can expose more users to resolver variability. In practice, teams often lower TTL ahead of a planned change, then raise it after the migration stabilizes.",
+    "real_world": "This matters when moving traffic to a new IP address or CDN endpoint. If the TTL is too high, some users keep hitting the old infrastructure long after the cutover.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can still happen even if you lower the TTL before a cutover?"
+   },
+   {
+    "question": "Why might an HTTP/1.1 request be sent with chunked transfer encoding, and what problem does it solve?",
+    "answer": "Chunked transfer encoding lets a server send a response body without knowing its final size up front. That helps for streaming responses, dynamic generation, and proxies that start forwarding data before the full body is ready. The trade-off is that some intermediaries and clients need to handle streaming correctly, and you lose a fixed `Content-Length` unless it can be computed ahead of time. It is useful when latency to first byte matters more than waiting for the entire payload to finish.",
+    "real_world": "This comes up in server-sent events, log streaming, and endpoints that generate large exports on the fly. Without chunking or streaming, the client waits for the full body before seeing anything.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug a client that hangs while reading a chunked response?"
+   },
+   {
+    "question": "What is a proxy CONNECT tunnel, and why is it used for HTTPS through an HTTP proxy?",
+    "answer": "`CONNECT` tells an HTTP proxy to open a raw TCP tunnel to the target host and port, after which the client performs TLS directly through that tunnel. The proxy no longer sees the HTTP contents because they are encrypted end to end between client and origin. This is useful for corporate proxies and tooling that must traverse an intermediary without terminating TLS. The trade-off is that the proxy has less visibility into traffic unless it is explicitly configured for TLS inspection.",
+    "real_world": "Developers often hit this when configuring HTTPS access behind a corporate proxy or when debugging package managers and browsers in locked-down environments. If the proxy does not support CONNECT, HTTPS requests may fail even though plain HTTP works.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a tunneling proxy and a TLS-terminating proxy?"
+   },
+   {
+    "question": "How do you diagnose whether a latency spike is caused by the network, the server, or the application code?",
+    "answer": "Start by separating connection time, TLS handshake time, first-byte time, and total response time. If connection and handshake are slow, the issue is often network path, DNS, or certificate overhead; if time to first byte is high, the server may be overloaded or waiting on downstream calls; if the body transfer is slow, bandwidth or streaming behavior may be the issue. Correlating client logs, server metrics, and packet-level traces helps avoid guessing. The key is to measure each phase instead of treating “request latency” as one number.",
+    "real_world": "This is a common production incident pattern: dashboards show an endpoint is slow, but the cause turns out to be one overloaded downstream dependency or a regional network problem. Breaking the request into phases makes the root cause much easier to isolate.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you add to an HTTP client to make this diagnosis easier next time?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how TCP flow control and congestion control differ, and how each one limits throughput?",
+    "answer": "Flow control protects the receiver: the receive window tells the sender how much unread data the receiver can buffer. Congestion control protects the network: the sender adjusts its congestion window based on loss, delay, or ECN signals to avoid overloading the path. Actual in-flight data is effectively bounded by the smaller of those windows. This matters because a transfer can be slow either because the receiver is the bottleneck or because the network path is congested, and the fixes are completely different.",
+    "real_world": "A service can look \"network bound\" even on a clean link if the receiving process is slow and advertises a small window. In production, teams often misread this as bandwidth shortage and scale the wrong layer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would high bandwidth-delay product links change your tuning strategy for TCP send and receive buffers?"
+   },
+   {
+    "question": "What problem does TCP TIME_WAIT solve, and why does it sometimes show up as an operational issue on busy systems?",
+    "answer": "TIME_WAIT exists so late packets from an old connection are not mistaken for a new one using the same 4-tuple, and so the side that actively closed can reliably handle the final ACK/retransmission corner cases. On busy clients or proxies, many short-lived outbound connections can consume ephemeral ports and leave lots of sockets in TIME_WAIT. The right fix is usually connection reuse or pooling, not trying to bypass the state machine. Reducing churn matters more than tweaking kernel behavior.",
+    "real_world": "A NAT gateway or egress proxy making large numbers of short HTTP calls can run out of source ports before CPU is high. The symptom is random connection failures under load even though the upstream is healthy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish ephemeral port exhaustion from file descriptor exhaustion during an incident?"
+   },
+   {
+    "question": "How does path MTU affect TCP performance, and what breaks when PMTUD fails?",
+    "answer": "Path MTU determines the largest packet that can cross the whole route without fragmentation. With PMTUD, endpoints learn that size and avoid sending segments that will be dropped or fragmented downstream. If PMTUD fails, often because ICMP is filtered, you can get a black hole where small packets work but larger transfers stall or hang. MSS clamping or PLPMTUD can mitigate it, but both are workarounds for a path visibility problem.",
+    "real_world": "This shows up after VPN, tunnel, or firewall changes: health checks pass, but file uploads or TLS handshakes intermittently hang. Teams often chase the application first because the failure is size-dependent and not a full outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can MTU issues show up more often after adding encapsulation like VXLAN, GRE, or IPsec?"
+   },
+   {
+    "question": "When would you choose HTTP/2 multiplexing over opening many parallel TCP connections, and what trade-offs come with it?",
+    "answer": "HTTP/2 multiplexing reduces connection setup cost and lets many streams share one connection, which is usually better for latency, CPU, and TLS overhead. But all streams still ride on one TCP connection, so packet loss can impact every stream on that connection. Multiple TCP connections can isolate loss and per-connection congestion state, at the cost of more handshakes, more memory, and less fairness. The right choice depends on loss characteristics, request sizes, and whether the client and proxies actually handle HTTP/2 well.",
+    "real_world": "A browser talking to a nearby CDN usually benefits from HTTP/2, while some service-to-service paths with lossy links perform better with more than one connection. Incidents happen when teams assume protocol upgrades automatically improve tail latency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does HTTP/3 change that trade-off?"
+   },
+   {
+    "question": "What are the practical differences between TLS 1.2 and TLS 1.3 from a performance and operations point of view?",
+    "answer": "TLS 1.3 removes old, weaker negotiation paths and generally reduces handshake round trips, which improves connection setup latency. It also encrypts more of the handshake, which is better for privacy but can reduce visibility for some middleboxes and troubleshooting tools. Operationally, 1.3 tends to simplify cipher choices, but compatibility with legacy clients and appliances can still matter. The main trade-off is faster, cleaner handshakes versus needing to validate your ecosystem supports the newer behavior end to end.",
+    "real_world": "Teams often enable TLS 1.3 and see faster connection setup from modern clients, then discover an old load balancer, firewall, or client library in the path behaves differently. That mismatch can create selective outages that are hard to reproduce.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is 0-RTT in TLS 1.3, and why is it risky for some application requests?"
+   },
+   {
+    "question": "How does DNS negative caching work, and why can it make incident recovery slower than expected?",
+    "answer": "Resolvers can cache negative answers like NXDOMAIN or sometimes no-data responses for a period derived from zone policy, so failed lookups are not retried immediately. That reduces load on authoritative servers, but it means a mistaken deletion or missing record can keep failing even after you restore it. During recovery, people often focus on positive TTLs and forget that previous failures may also be cached. The result is an outage that appears \"fixed\" from the zone file but persists for users.",
+    "real_world": "A bad deploy removes a record for a few minutes, then the record is restored, but clients behind recursive resolvers still get NXDOMAIN. That is why rollbacks on DNS mistakes can take longer than the original change window.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a cached NXDOMAIN operationally different from a SERVFAIL during debugging?"
+   },
+   {
+    "question": "What is the difference between recursive and iterative DNS resolution, and why does it matter for performance and control?",
+    "answer": "In recursive resolution, a resolver takes responsibility for chasing the answer through the DNS hierarchy and returns the final result or failure. In iterative resolution, each server answers with the best information it has, often a referral to another server, and the requester continues the lookup. Most clients use recursive resolvers because it centralizes caching and reduces client complexity. It matters because where recursion happens determines latency, cache hit rate, privacy boundaries, and who you trust to validate and observe queries.",
+    "real_world": "Enterprises often force clients through internal recursive resolvers for policy, logging, and split-horizon names. If those resolvers are overloaded or misconfigured, every application feels slow even though authoritative DNS is healthy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the trade-offs of using a public recursive resolver versus running your own?"
+   },
+   {
+    "question": "If a service sees many connections but low request throughput, how would you reason about SYN backlog, accept backlog, and application saturation?",
+    "answer": "A TCP connection can reach the kernel before the application has accepted it, so overload can happen in multiple queues. SYN backlog pressure means handshakes are not completing smoothly; accept backlog pressure means handshakes completed but the app is not calling accept fast enough or is blocked downstream. Low throughput with many established sockets often points to worker starvation, lock contention, or slow backends rather than raw network failure. You need to check queue overflows, retransmissions, socket states, and app latency together.",
+    "real_world": "During a traffic spike, a load balancer may report the port as reachable while clients still time out because the app cannot drain accepted connections. Without looking at both kernel and app metrics, teams often blame the wrong layer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or commands would you check first on Linux to separate backlog issues from slow request handling?"
+   },
+   {
+    "question": "What is ephemeral port exhaustion, and how can it happen even when a server is not handling that much traffic?",
+    "answer": "Ephemeral port exhaustion happens when a host runs out of available local source ports for new outbound connections. It is driven by connection churn, tuple reuse rules, NAT behavior, and TIME_WAIT, not just request volume. A process making many short-lived connections to a small set of destinations can exhaust ports surprisingly quickly, especially through a shared egress IP. The fix is usually to reuse connections, spread egress across more source IPs if needed, and reduce unnecessary retries.",
+    "real_world": "A modest-traffic microservice can trigger this if it opens a fresh TCP connection for every database or HTTP call. The failure pattern is nasty: some requests succeed, others get connect errors, and the backend looks innocent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does a NAT or egress proxy make ephemeral port exhaustion more likely or more visible?"
+   },
+   {
+    "question": "What’s the difference between a 503 and a 429 at an API edge, and how should retries differ?",
+    "answer": "A 429 means the client hit a rate limit, so the request was rejected due to policy rather than general service unavailability. A 503 means the service is currently unavailable or overloaded, and it may recover independently of that client’s behavior. Retry logic should treat them differently: 429 should respect any retry guidance and often needs client-side pacing, while 503 usually calls for bounded backoff with jitter and attention to idempotency. Collapsing both into generic retries can amplify an outage.",
+    "real_world": "At an API gateway, returning 503 for quota enforcement causes clients and SDKs to retry aggressively, which looks like a traffic spike and worsens overload. Clear semantics help both human operators and automated clients behave correctly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design retry and circuit-breaker behavior for idempotent versus non-idempotent operations?"
+   },
+   {
+    "question": "Can you walk me through what TCP keepalive does versus an application-level heartbeat, and when each one is actually useful?",
+    "answer": "TCP keepalive is a kernel-level probe to detect dead peers on an otherwise idle connection, but it usually works on long time scales and only tells you the socket is still reachable. An application heartbeat is explicit protocol traffic, so it can verify liveness, freshness, and sometimes end-to-end health of intermediaries or the remote service itself. Keepalive is cheap and generic; heartbeats are faster and more meaningful but add protocol complexity and traffic. In production, relying only on TCP keepalive often means dead connections are detected far too late for user-facing systems.",
+    "real_world": "Long-lived connections like WebSockets or database pools can sit behind NATs and load balancers that silently drop idle state. Teams often add heartbeats because otherwise failures show up minutes later as hangs instead of fast reconnects.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose heartbeat intervals when there are NATs or load balancers with idle timeouts in the path?"
+   },
+   {
+    "question": "What are the practical trade-offs of Nagle’s algorithm and delayed ACKs, and how can they interact badly?",
+    "answer": "Nagle tries to reduce tiny TCP packets by holding small writes until previous data is acknowledged, which improves efficiency but can add latency. Delayed ACK lets the receiver wait briefly before acknowledging, also to reduce packet overhead. Together they can create stalls for chatty request-response protocols that send many small writes, because the sender waits for an ACK and the receiver waits to send one. Disabling Nagle can reduce tail latency for interactive traffic, but it may increase packet count and CPU cost.",
+    "real_world": "A service that writes headers and body in separate tiny sends can suddenly show mysterious tens-of-milliseconds latency bumps. This often appears in RPC systems or custom protocols after a code change increases small writes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you saw this pattern, how would you verify it from packet captures or socket-level metrics?"
+   },
+   {
+    "question": "How does HTTP/2 flow control work, and what kinds of production issues can it cause even though multiplexing is supposed to help?",
+    "answer": "HTTP/2 has flow control at both the connection level and per-stream level, using window updates to limit how much data can be in flight. It prevents one side from being overwhelmed, but it also means a slow consumer or a bad implementation can stall unrelated traffic if the connection-level window is exhausted. Large responses can dominate memory and buffering if window sizes are too high, while windows that are too small can cap throughput on high-latency links. Multiplexing helps concurrency, but flow-control tuning and fair scheduling still matter.",
+    "real_world": "Teams sometimes see one large download make many small RPCs slow on the same connection, even though there is no TCP head-of-line issue between streams. The root cause is often connection-level window pressure or poor prioritization behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or traces would you look at to distinguish TCP congestion from HTTP/2 flow-control stalls?"
+   },
+   {
+    "question": "What does an anycast IP actually buy you for DNS or HTTP edges, and what failure modes does it introduce?",
+    "answer": "Anycast advertises the same IP from multiple locations so routing usually sends clients to a nearby healthy site, which improves latency and distribution without client changes. It works well for stateless or replicated edge services, especially DNS and CDN front doors. The trade-off is that routing decisions are outside your application’s control, so traffic can shift abruptly during BGP changes, partial failures, or DDoS mitigation. Debugging gets harder because two users hitting the same IP may land in different regions with different behavior.",
+    "real_world": "A regional edge issue can affect only a subset of networks because upstream routing keeps sending those users to the bad site. During incidents, operators often need per-site health checks and route withdrawals, not just app-level failover.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is anycast generally easier for UDP services like DNS than for long-lived TCP connections?"
+   },
+   {
+    "question": "How do TLS session resumption and 0-RTT work, and what are the security and operational trade-offs?",
+    "answer": "Session resumption lets a client and server reuse prior cryptographic state so later connections avoid a full handshake and reduce CPU and latency. In TLS 1.3, 0-RTT can send application data before handshake completion, which cuts latency further but allows replay of that early data. Because of replay risk, 0-RTT is only safe for requests that are effectively replay-tolerant, and many systems restrict it to reads or disable it entirely. Operationally, resumption improves connection-heavy workloads, but ticket key management and load-balanced consistency matter.",
+    "real_world": "At CDN or API edges, resumption can materially reduce handshake cost during connection churn from mobile clients. Teams get into trouble when they enable 0-RTT for endpoints that mutate state and accidentally make replay attacks possible.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you terminate TLS on many edge nodes, what has to be coordinated for resumption to keep working well?"
+   },
+   {
+    "question": "What is DNS split-horizon, and what kinds of surprises does it create in hybrid or multi-environment systems?",
+    "answer": "Split-horizon DNS returns different answers depending on where the query comes from, typically to expose private addresses internally and public ones externally. It is useful for hybrid networks and migrations, but it can create confusing behavior because the same hostname resolves differently for laptops, CI, containers, and production hosts. That complicates debugging, certificate use, and assumptions baked into service discovery. The main trade-off is operational convenience versus hidden environment-specific behavior.",
+    "real_world": "A service may work from a developer machine on VPN but fail from a cloud runner because each sees a different address family or target. Incidents often involve stale assumptions about which resolver path a workload actually uses.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design health checks and debugging steps when the same name can legitimately resolve to different targets?"
+   },
+   {
+    "question": "In TCP, what are half-open and half-closed connections, and why do they matter for failure handling?",
+    "answer": "A half-open connection usually means one side believes the connection still exists while the other side is gone or has lost state, often after crashes, NAT expiry, or network partitions. A half-closed connection is a valid TCP state where one direction has been closed with FIN but the other direction can still send. These states matter because application code often assumes close is symmetric and immediate, which leads to hangs, broken pooling, or data loss around shutdown. Good systems handle EOF, resets, and idle detection explicitly instead of assuming the socket state tells the whole story.",
+    "real_world": "After a backend restarts, clients may keep pooled sockets that look idle and healthy until the next write fails. During draining or graceful shutdown, misunderstanding half-close semantics can truncate uploads or responses.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a client pool robust against stale but seemingly open TCP connections?"
+   },
+   {
+    "question": "What’s the difference between an HTTP retry that is safe at the transport level and one that is safe at the application level?",
+    "answer": "A transport-level retry is about whether the client can resend bytes after a timeout, reset, or connection failure without corrupting the protocol exchange. Application-level safety is stricter: it asks whether repeating the operation changes business state, especially when the first attempt may have actually reached the server. A POST that timed out after the server committed is the classic case where transport retries are easy to trigger but semantically dangerous. The usual fix is idempotency keys, conditional requests, or explicit deduplication on the server side.",
+    "real_world": "Payment, order, and provisioning APIs regularly face duplicate side effects when clients retry after ambiguous failures. Mature APIs often add request IDs so clients can retry aggressively without creating double charges or duplicate resources.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design an idempotency-key system so it works across retries, timeouts, and server restarts?"
+   },
+   {
+    "question": "What does it mean for a DNS resolver to validate DNSSEC, and what operational trade-offs come with turning it on?",
+    "answer": "A validating resolver checks DNSSEC signatures and the chain of trust from the root down, so clients can detect forged or tampered DNS answers rather than trusting the resolver blindly. It raises the security bar against cache poisoning and some interception attacks, but it also introduces failure modes when zones are mis-signed, keys are rolled incorrectly, or intermediate records are missing. In those cases, answers that used to resolve may become hard failures. The trade-off is stronger integrity versus more brittle operations and more complex DNS management.",
+    "real_world": "Organizations enabling validating resolvers sometimes discover third-party domains they depend on have broken DNSSEC deployments. The outage looks like selective name resolution failure even though authoritative servers are reachable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What symptoms would distinguish a DNSSEC validation failure from a normal NXDOMAIN or SERVFAIL incident?"
+   },
+   {
+    "question": "How would you reason about choosing a larger initial congestion window or using pacing at the sender, and what can go wrong?",
+    "answer": "A larger initial congestion window can improve short-flow latency because more data is delivered before waiting for ACKs, which matters for web responses and RPCs. Pacing smooths transmission over time instead of blasting a burst, reducing queue buildup and packet loss, especially on fast senders or shallow buffers. The trade-off is that aggressive startup can harm fairness or increase loss on constrained paths, while poor pacing implementations can underutilize the link. You choose based on workload shape, RTT distribution, and whether the network is more bottlenecked by bandwidth, buffers, or burst sensitivity.",
+    "real_world": "At scale, many user-facing requests are small enough that startup behavior dominates completion time. Operators often improve tail latency with pacing, while badly tuned bursts can trigger drops in load balancers, Wi‑Fi links, or mobile networks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why do short-lived flows care more about the initial window than long bulk transfers do?"
+   }
+  ]
+ }
+}

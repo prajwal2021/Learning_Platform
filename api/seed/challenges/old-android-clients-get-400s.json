@@ -1,0 +1,313 @@
+{
+  "slug": "old-android-clients-get-400s",
+  "title": "Older Android clients get 400s after the API release",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "api-design",
+    "mobile-clients",
+    "backward-compatibility",
+    "incident-response"
+  ],
+  "scenario": "Within an hour of deploying v3.12 of the API, the error rate for Android app versions older than 8.4 rises to 42%. The endpoint POST /orders/address now requires a new field, delivery_instructions, with no default. About 18% of active Android devices are on versions that cannot send the field for at least two weeks.",
+  "goal": "Restore order address submissions for older Android clients and prevent the same kind of API break in future releases.",
+  "concepts": [
+    {
+      "key": "http-400",
+      "name": "HTTP 400",
+      "summary": "HTTP 400 means the server rejected the request as invalid or malformed. It is usually caused by client input that fails server-side validation.",
+      "used_here": "Older Android clients receive 400 responses when calling POST /orders/address after the API release."
+    },
+    {
+      "key": "api-endpoint",
+      "name": "API endpoint",
+      "summary": "An API endpoint is a specific URL and HTTP method that clients call to perform an operation. The server defines what input it accepts and what response it returns.",
+      "used_here": "POST /orders/address is the endpoint whose behavior changed in v3.12."
+    },
+    {
+      "key": "request-contract",
+      "name": "Request contract",
+      "summary": "A request contract is the set of fields, types, and rules a client must follow when calling an API. Changing it can break clients that were built against the old contract.",
+      "used_here": "The endpoint contract changed when delivery_instructions became mandatory."
+    },
+    {
+      "key": "request-validation",
+      "name": "Request validation",
+      "summary": "Request validation checks that incoming data has required fields and valid values before the server processes it. Validation failures often return HTTP 400.",
+      "used_here": "The server now validates that delivery_instructions is present before accepting the address request."
+    },
+    {
+      "key": "backward-compatibility",
+      "name": "Backward compatibility",
+      "summary": "Backward compatibility means newer server code still works with older clients. It matters when clients cannot all upgrade immediately.",
+      "used_here": "Android versions older than 8.4 cannot send the new field, so the server must keep accepting their existing request shape."
+    },
+    {
+      "key": "server-side-default",
+      "name": "Server-side default",
+      "summary": "A server-side default is a value the server supplies when a client omits a field. It lets old clients continue working when a new field is added.",
+      "used_here": "The API can treat missing delivery_instructions as no instructions instead of rejecting the request."
+    },
+    {
+      "key": "mobile-rollout",
+      "name": "Mobile app rollout",
+      "summary": "Mobile app rollout is slow because app stores, staged releases, and user update behavior delay adoption. A backend cannot assume every phone will update immediately.",
+      "used_here": "18% of active Android devices cannot send the new field for at least two weeks."
+    },
+    {
+      "key": "canary-deploy",
+      "name": "Canary deploy",
+      "summary": "A canary deploy releases a change to a small percentage of traffic before full rollout. It reduces blast radius and gives real production feedback.",
+      "used_here": "The hotfix can be deployed gradually while watching whether old Android 400s fall."
+    },
+    {
+      "key": "observability",
+      "name": "Observability",
+      "summary": "Observability is using logs, metrics, and traces to understand system behavior. Good dimensions, such as endpoint and app version, make incidents diagnosable.",
+      "used_here": "The team needs error rates split by endpoint, platform, app version, and validation reason."
+    },
+    {
+      "key": "api-versioning",
+      "name": "API versioning",
+      "summary": "API versioning lets clients explicitly use a contract version, such as v1 or v2. Servers can support old and new versions at the same time.",
+      "used_here": "A future contract that requires delivery_instructions can be limited to clients that opt into that version."
+    },
+    {
+      "key": "capability-negotiation",
+      "name": "Capability negotiation",
+      "summary": "Capability negotiation means a client tells the server which features or fields it supports. The server then chooses behavior that matches that client.",
+      "used_here": "The server can require delivery_instructions only from clients that declare they support sending it."
+    },
+    {
+      "key": "deprecation",
+      "name": "Deprecation",
+      "summary": "Deprecation is the planned removal of old behavior after warning and measurement. It avoids surprising clients that still depend on the old behavior.",
+      "used_here": "Support for requests without delivery_instructions should be removed only after old Android usage is low enough."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Find the first useful slice",
+      "question": "You are on call and see the overall Android error rate jump after v3.12. Which first check is most likely to identify whether this is a client compatibility problem?",
+      "concept_keys": [
+        "http-400",
+        "api-endpoint",
+        "observability"
+      ],
+      "options": [
+        {
+          "text": "Break down 400 responses by endpoint, Android app version, and validation error message for the last two hours.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Compare database CPU, lock waits, and connection pool usage before and after the v3.12 deployment.",
+          "correct": false,
+          "hint": "A database problem usually shows up as 5xx errors, latency, or timeouts. Here the status code says the server is deliberately rejecting the request.",
+          "id": "b"
+        },
+        {
+          "text": "Inspect CDN cache hit rate and edge latency for all mobile API traffic after the release.",
+          "correct": false,
+          "hint": "Caching and edge latency can cause broad availability issues. A 400 on a POST endpoint points more toward request shape or validation.",
+          "id": "c"
+        },
+        {
+          "text": "Check whether the Android crash-free session rate changed after the backend deployment completed.",
+          "correct": false,
+          "hint": "Client crashes can matter, but the symptom is server-side 400 responses. Start with the requests the server is rejecting.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The fastest useful slice is by endpoint, app version, and validation reason because HTTP 400 means the API rejected input. If the 42% errors are concentrated on POST /orders/address for Android versions older than 8.4 with a missing-field validation message, that directly connects the release to a client contract mismatch. Database metrics are tempting during any incident, but they would not explain a version-specific 400 spike."
+    },
+    {
+      "title": "Interpret the evidence",
+      "question": "The logs show that 96% of the new 400s are POST /orders/address requests from Android versions older than 8.4, and the validation error is missing delivery_instructions. What is the root cause?",
+      "concept_keys": [
+        "request-contract",
+        "request-validation",
+        "backward-compatibility",
+        "mobile-rollout"
+      ],
+      "options": [
+        {
+          "text": "The app-store rollout for Android 8.4 is too slow, so the main failure is that users have not upgraded quickly enough.",
+          "correct": false,
+          "hint": "Slow mobile upgrades are expected in production. Backend contracts must account for clients that remain installed after a server deploy.",
+          "id": "a"
+        },
+        {
+          "text": "The order service is overloaded, and the missing-field message is a fallback error returned during high traffic.",
+          "correct": false,
+          "hint": "Overload normally causes timeouts, 429s, or 5xx responses. A specific validation message concentrated on old versions is a stronger signal.",
+          "id": "b"
+        },
+        {
+          "text": "The API introduced a backward-incompatible request contract by requiring a field that older deployed clients cannot send.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Older Android clients are sending malformed JSON because their networking library cannot serialize the address payload correctly.",
+          "correct": false,
+          "hint": "If serialization were broken, you would expect parse errors or many missing fields. The evidence points to one field that changed with this release.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The server now requires delivery_instructions, but 18% of active Android devices are on versions that cannot send it for at least two weeks. That makes the new request contract incompatible with already deployed clients. Blaming slow app upgrades is tempting, but slow upgrades are a normal mobile constraint, not the root cause."
+    },
+    {
+      "title": "Choose the immediate mitigation",
+      "question": "You need to stop the failed orders today while keeping v3.12 running for unaffected clients. What change should you make first?",
+      "concept_keys": [
+        "request-validation",
+        "server-side-default",
+        "backward-compatibility",
+        "mobile-rollout"
+      ],
+      "options": [
+        {
+          "text": "Ask the mobile team to ship Android 8.4.1 with the new field marked required in the client form.",
+          "correct": false,
+          "hint": "A mobile release cannot reliably reach the affected 18% today. The failing validation is happening on the server.",
+          "id": "a"
+        },
+        {
+          "text": "Make delivery_instructions optional on the server and treat a missing value as no delivery instructions.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Add a support banner telling users to type delivery instructions into the address line until they upgrade.",
+          "correct": false,
+          "hint": "This may reduce support tickets, but it does not change the server validation that is returning 400.",
+          "id": "c"
+        },
+        {
+          "text": "Force Android users below 8.4 to upgrade immediately before they can submit an order address.",
+          "correct": false,
+          "hint": "That would block the same users for at least two weeks because many devices cannot receive or install the new app immediately.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The immediate fix is to restore compatibility by accepting the request shape older clients already send. A missing delivery_instructions value can safely mean no delivery instructions, so the server should not return 400 for that case. Forcing a mobile upgrade is unreliable because the scenario says the affected devices cannot all send the field for at least two weeks."
+    },
+    {
+      "title": "Make the hotfix safe",
+      "question": "You update the validation rule so delivery_instructions may be missing. Which implementation detail is most important before deploying the hotfix?",
+      "concept_keys": [
+        "server-side-default",
+        "request-validation",
+        "backward-compatibility"
+      ],
+      "options": [
+        {
+          "text": "Accept the missing field only for Android clients older than 8.4, and reject it for every other caller.",
+          "correct": false,
+          "hint": "Client-specific branching can be useful, but it increases complexity and can misclassify callers. The key is whether the field is truly required for order processing.",
+          "id": "a"
+        },
+        {
+          "text": "Save failed requests to a retry queue and replay them after the user upgrades the Android app.",
+          "correct": false,
+          "hint": "The user is trying to place an order now. Retrying the same invalid request later does not help unless the server accepts the old shape.",
+          "id": "b"
+        },
+        {
+          "text": "Treat missing and empty delivery_instructions as no instructions, and ensure later order processing handles that value without failure.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Store the missing value as the literal string \"N/A\" so drivers can see that the client omitted it.",
+          "correct": false,
+          "hint": "A visible placeholder can leak into customer or driver workflows. Think about the business meaning of an omitted optional field.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The server needs a well-defined default meaning: no delivery instructions. That default must be safe for later order processing, notifications, and fulfillment so the hotfix does not simply move the failure downstream. Restricting the change only to old Android sounds precise, but it adds fragile branching when the domain can accept an omitted optional note."
+    },
+    {
+      "title": "Verify the production fix",
+      "question": "The hotfix is ready. What rollout and verification plan best confirms it worked without creating a larger incident?",
+      "concept_keys": [
+        "canary-deploy",
+        "observability",
+        "http-400",
+        "api-endpoint"
+      ],
+      "options": [
+        {
+          "text": "Wait for Android 8.4 adoption to pass 95%, then deploy the backend change during the next maintenance window.",
+          "correct": false,
+          "hint": "The affected users are failing now. The server-side hotfix should reduce 400s before mobile adoption changes.",
+          "id": "a"
+        },
+        {
+          "text": "Run the backend unit tests and deploy normally if the validation test for missing delivery_instructions passes.",
+          "correct": false,
+          "hint": "Tests are necessary, but the incident depends on real client traffic and version distribution. Production metrics still need to confirm the behavior.",
+          "id": "b"
+        },
+        {
+          "text": "Deploy to a small percentage of API instances, then monitor POST /orders/address 400 rate and successful submissions by Android app version before ramping up.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Deploy to all instances immediately, then check the overall API error rate once traffic has averaged out over 24 hours.",
+          "correct": false,
+          "hint": "Overall averages can hide a client-version-specific regression. A full deploy also increases blast radius before you know the hotfix behaves correctly.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A canary limits risk and uses the same dimensions that diagnosed the incident: endpoint, status code, and Android version. The expected result is that POST /orders/address 400s for versions older than 8.4 return near their previous baseline while successful submissions rise. Watching only the overall API error rate for 24 hours could miss the affected 18% or delay rollback if the hotfix has a problem."
+    },
+    {
+      "title": "Prevent the next break",
+      "question": "After the incident is stable, the product team still wants delivery_instructions to become mandatory for clients that support it. What is the best long-term API approach?",
+      "concept_keys": [
+        "api-versioning",
+        "capability-negotiation",
+        "request-contract",
+        "deprecation",
+        "mobile-rollout"
+      ],
+      "options": [
+        {
+          "text": "Set a calendar date two weeks from now and remove support for missing delivery_instructions on that date.",
+          "correct": false,
+          "hint": "Two weeks is the minimum time some devices cannot send the field, not proof that nearly all active clients have upgraded. Deprecation should be based on measured adoption and risk.",
+          "id": "a"
+        },
+        {
+          "text": "Require delivery_instructions only from clients that opt into a newer API contract or explicitly declare support, while keeping the old contract during a measured deprecation period.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Reject old clients with a clear 400 message that says they must upgrade to continue submitting order addresses.",
+          "correct": false,
+          "hint": "A clearer error is still an outage for users who cannot upgrade immediately. It does not solve the compatibility problem.",
+          "id": "c"
+        },
+        {
+          "text": "Document that delivery_instructions is required and rely on mobile teams to read the API changelog before each release.",
+          "correct": false,
+          "hint": "Documentation helps coordination, but it does not protect already-installed clients. The server still needs a way to distinguish which contract a caller can satisfy.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A newer explicit contract or declared capability lets the server enforce delivery_instructions only for clients that can actually send it. The old request shape should remain supported until usage data shows it is safe to remove. A fixed two-week cutoff is risky because mobile adoption depends on app-store rollout and user behavior, not just engineering intent."
+    }
+  ],
+  "takeaway": "Mobile APIs must remain compatible with already-installed clients because backend deploys happen much faster than app upgrades. Additive fields should be optional or have server-side defaults unless the server can tell that a client has opted into a newer contract. Deprecate old behavior only after measuring real adoption and monitoring client-version-specific errors.",
+  "review_issues": []
+}

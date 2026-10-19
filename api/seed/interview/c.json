@@ -1,0 +1,405 @@
+{
+ "slug": "c",
+ "name": "C",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between `=` and `==` in C?",
+    "answer": "`=` assigns a value to a variable, while `==` compares two values for equality and produces 0 or 1. A common beginner bug is writing `if (x = 5)` when they meant `if (x == 5)`. The assignment version changes `x` and the condition is usually true because the assigned value is nonzero.",
+    "real_world": "This kind of bug can make a login check or loop condition behave incorrectly and be hard to spot in code review. It is one of the first things experienced C developers look for in conditionals.",
+    "code_lang": "c",
+    "code": "int x = 3;\nif (x == 3) {\n    printf(\"equal\\n\");\n}",
+    "follow_up": "What values does an `if` condition accept in C?"
+   },
+   {
+    "question": "What is a pointer in C, and why would you use one?",
+    "answer": "A pointer is a variable that stores the memory address of another object. You use pointers when you need to modify data through a function, work with dynamic memory, or pass around large structures without copying them. They are powerful but require care because invalid or uninitialized pointers cause crashes and undefined behavior.",
+    "real_world": "Pointers are common in APIs that fill output values, manage buffers, or build data structures like linked lists and trees. Many production bugs in C come from bad pointer handling.",
+    "code_lang": "c",
+    "code": "int x = 10;\nint *p = &x;\n*p = 20;\nprintf(\"%d\\n\", x);",
+    "follow_up": "What is the difference between a pointer and the value it points to?"
+   },
+   {
+    "question": "What is a function prototype in C, and why do you need one?",
+    "answer": "A function prototype tells the compiler the function’s name, return type, and parameter types before it is used. This lets the compiler check calls for type mismatches and generate correct code. Without a prototype, older C rules could allow unsafe implicit assumptions, which is a common source of bugs.",
+    "real_world": "In larger codebases, prototypes usually live in header files so multiple `.c` files can call the same function consistently. Missing or wrong prototypes can cause subtle crashes or corrupted values at runtime.",
+    "code_lang": "c",
+    "code": "int add(int a, int b);\n\nint main(void) {\n    printf(\"%d\\n\", add(2, 3));\n}",
+    "follow_up": "What should a header file contain in C?"
+   },
+   {
+    "question": "What does `NULL` mean in C?",
+    "answer": "`NULL` is a special macro used to represent a null pointer, meaning the pointer points to no valid object. It is used to mark missing results, empty lists, or the end of pointer-based data structures. You should check for `NULL` before dereferencing a pointer to avoid a crash.",
+    "real_world": "Functions that allocate memory or search data often return `NULL` to signal failure or not found. Code that forgets to check can fail only under memory pressure or uncommon inputs.",
+    "code_lang": "c",
+    "code": "int *p = NULL;\nif (p == NULL) {\n    printf(\"no value\\n\");\n}",
+    "follow_up": "What happens if you dereference a null pointer?"
+   },
+   {
+    "question": "What is a `struct` in C?",
+    "answer": "A `struct` groups related variables of possibly different types into one named type. It is used to model records like a user, point, or packet header. Structs make code clearer and let you pass a single object instead of many separate values.",
+    "real_world": "Structs are common in data models, protocol parsing, and embedded code where you need a clear layout of fields. They help keep related state together and reduce parameter lists.",
+    "code_lang": "c",
+    "code": "struct Point {\n    int x;\n    int y;\n};\nstruct Point p = {1, 2};",
+    "follow_up": "How do you access fields in a struct through a pointer?"
+   },
+   {
+    "question": "What is the stack versus the heap in C?",
+    "answer": "The stack is where local variables typically live and is managed automatically as functions call and return. The heap is used for dynamic memory that you allocate and free manually. Stack allocation is fast and short-lived; heap allocation is more flexible but easier to leak or misuse.",
+    "real_world": "You use the heap when an object must outlive the current function or when its size is only known at runtime. Many crashes in C come from returning pointers to stack memory or forgetting to free heap memory.",
+    "code_lang": "c",
+    "code": "int *make_value(void) {\n    int x = 5;\n    return &x;\n}",
+    "follow_up": "Why is returning the address of a local variable a bug?"
+   },
+   {
+    "question": "What does `#include` do in C?",
+    "answer": "`#include` copies the contents of a header file into the source file before compilation. It is how you bring in declarations for library functions, types, constants, and your own shared interfaces. It does not link code by itself; it only makes declarations visible to the compiler.",
+    "real_world": "Headers let multiple source files share the same function and type declarations without duplicating them. Missing includes often show up as compile errors or mismatched declarations across files.",
+    "code_lang": "c",
+    "code": "#include <stdio.h>\n\nint main(void) {\n    printf(\"hello\\n\");\n}",
+    "follow_up": "What is the difference between a header file and a source file?"
+   },
+   {
+    "question": "What is the difference between `char *s = \"hello\";` and `char s[] = \"hello\";`?",
+    "answer": "`char *s` points to a string literal, which should not be modified. `char s[]` creates a writable array initialized with those characters. The pointer version is smaller and can be reassigned, but the array version gives you your own storage. Modifying a string literal is undefined behavior, so this distinction matters a lot.",
+    "real_world": "A common crash happens when code writes into a string literal through a `char *`. Teams often switch to a character array when they need to mutate the contents safely.",
+    "code_lang": "c",
+    "code": "char *p = \"hello\";\nchar a[] = \"hello\";\n\na[0] = 'H';\n/* p[0] = 'H';  // unsafe */",
+    "follow_up": "Why is `const char *` often used for string parameters?"
+   },
+   {
+    "question": "What is the purpose of `static` in C?",
+    "answer": "`static` has two common meanings. Inside a function, it gives a local variable static storage duration, so its value persists between calls. At file scope, it limits visibility to that source file, which is useful for private helper functions or globals. Both uses help control lifetime or scope, depending on where you place it.",
+    "real_world": "File-scope `static` is widely used to avoid symbol collisions between source files in larger projects. Function-local `static` is useful for caching or counting calls without using a global variable.",
+    "code_lang": "c",
+    "code": "static int helper(void) {\n    static int count = 0;\n    return ++count;\n}",
+    "follow_up": "What is the difference between `static` and `extern` at file scope?"
+   },
+   {
+    "question": "What does `malloc` do, and what must you do with the memory it returns?",
+    "answer": "`malloc` allocates a block of memory on the heap and returns a pointer to it, or `NULL` if allocation fails. You use it when the amount of memory is not known at compile time or needs to outlive the current stack frame. Any memory allocated with `malloc` must eventually be released with `free`. Forgetting to free it causes leaks; using it after freeing causes undefined behavior.",
+    "real_world": "This matters in long-running services and embedded code where leaks accumulate over time. It also comes up when returning dynamically sized data from a function.",
+    "code_lang": "c",
+    "code": "int *p = malloc(10 * sizeof *p);\nif (p == NULL) return 1;\n\np[0] = 42;\nfree(p);",
+    "follow_up": "What problems can happen if you call `free` twice on the same pointer?"
+   },
+   {
+    "question": "What is the difference between `break` and `continue` in a loop?",
+    "answer": "`break` exits the nearest loop immediately. `continue` skips the rest of the current iteration and moves to the next one. They are often used for early exit or to skip invalid items, and the difference matters because they affect control flow in different ways. In nested loops, they only affect the innermost loop.",
+    "real_world": "These are common in input-validation loops and search code. Confusing them can make a loop run too long or skip work you expected to happen.",
+    "code_lang": "c",
+    "code": "for (int i = 0; i < 5; i++) {\n    if (i == 2) continue;\n    if (i == 4) break;\n    printf(\"%d\\n\", i);\n}",
+    "follow_up": "What is the difference between `break` and `return` in a function?"
+   },
+   {
+    "question": "What happens when you pass a variable to a function in C?",
+    "answer": "C passes arguments by value, so the function receives a copy of the variable. If you pass a pointer, the pointer value is copied, but it can still refer to the original object, allowing the function to modify that object. This is why functions that need to change caller data usually take pointers. Understanding this prevents surprises when a function appears not to change a variable.",
+    "real_world": "This is a frequent beginner bug when someone expects a function to update an integer argument directly. It also matters for APIs that fill output parameters through pointers.",
+    "code_lang": "c",
+    "code": "void inc(int x) { x++; }\nvoid inc2(int *x) { (*x)++; }\n\nint n = 1;\ninc(n);\ninc2(&n);",
+    "follow_up": "How would you write a function that swaps two integers?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you avoid buffer overflows when working with strings in C?",
+    "answer": "The key is to always know the destination buffer size and pass that size into any copying or formatting function. Prefer bounded operations that take a length, and make sure you reserve space for the terminating `\\0`. If a function can fail because the output does not fit, check its return value and treat truncation as an error unless your design explicitly allows it. The trade-off is that safer APIs are a little more verbose, but they prevent memory corruption.",
+    "real_world": "This comes up when reading user input, building log messages, or copying filenames from external sources. A single off-by-one bug can become a crash or a security issue.",
+    "code_lang": "c",
+    "code": "char dst[8];\nconst char *src = \"toolong\";\nif (snprintf(dst, sizeof dst, \"%s\", src) >= (int)sizeof dst) {\n    /* truncated */\n}",
+    "follow_up": "How would you handle a dynamically sized string when the final length is not known ahead of time?"
+   },
+   {
+    "question": "When would you choose `calloc` over `malloc` in a C program?",
+    "answer": "Use `calloc` when you want allocated memory to start zeroed, such as arrays of counters, pointers, or flags. That can simplify initialization and avoid bugs from reading uninitialized data. `malloc` is fine when you will immediately overwrite every byte anyway, and it avoids the zeroing cost. In performance-sensitive code, the choice depends on whether the initialization cost matters more than the safety and convenience of a known initial state.",
+    "real_world": "Teams often use `calloc` for request state or lookup tables so that new objects start in a predictable state. It helps prevent rare bugs caused by stale garbage values in newly allocated memory.",
+    "code_lang": "c",
+    "code": "int *counts = calloc(n, sizeof *counts);\nif (!counts) {\n    /* handle allocation failure */\n}\n/* counts[i] starts as 0 */",
+    "follow_up": "What happens if you use `malloc` and then read an element before writing to it?"
+   },
+   {
+    "question": "How do you detect and fix a memory leak in C?",
+    "answer": "A memory leak happens when allocated memory is no longer reachable and therefore can never be freed. You usually find it with tooling such as Valgrind or AddressSanitizer, then trace ownership to see which code path missed a `free`. The fix is to make ownership explicit: every allocation should have a clear place where it is released, including error paths. In larger codebases, consistent cleanup patterns matter more than individual `free` calls.",
+    "real_world": "Leaks often show up in long-running servers where memory usage slowly grows over hours or days. Short test runs may miss them entirely, so production monitoring and leak tools both matter.",
+    "code_lang": "c",
+    "code": "char *p = malloc(100);\nif (!p) return -1;\nif (do_work(p) != 0) {\n    free(p);\n    return -1;\n}\nfree(p);",
+    "follow_up": "How do you structure a function so that every early return still cleans up correctly?"
+   },
+   {
+    "question": "What are the risks of using `realloc`, and how do you use it safely?",
+    "answer": "`realloc` may move the allocation, so the original pointer can become invalid if the call succeeds. If it fails, it returns `NULL` and the original block is still valid, so you should assign the result to a temporary pointer first. You also need to be careful when growing arrays of pointers or structs, because any new region is uninitialized. The main trade-off is convenience versus the need for careful failure handling.",
+    "real_world": "This is common when building a dynamic array or growing a read buffer for file input. A sloppy `realloc` pattern can leak memory or lose the only pointer to the allocation on failure.",
+    "code_lang": "c",
+    "code": "int *tmp = realloc(arr, new_count * sizeof *arr);\nif (!tmp) {\n    /* arr is still valid */\n    return -1;\n}\narr = tmp;",
+    "follow_up": "How would you handle the case where `new_count * sizeof *arr` overflows?"
+   },
+   {
+    "question": "What happens if you return a pointer to a local variable in C?",
+    "answer": "You get undefined behavior because the local variable’s lifetime ends when the function returns. The pointer may seem to work briefly, but it points into stack memory that can be reused by later calls. The correct fix is to return by value, have the caller provide storage, or allocate memory with a lifetime that extends beyond the function. This is a common source of intermittent crashes.",
+    "real_world": "This bug often survives basic testing because the memory still contains the old value for a while. It then fails later under optimization, recursion, or different compiler settings.",
+    "code_lang": "c",
+    "code": "int *bad(void) {\n    int x = 42;\n    return &x; /* wrong */\n}",
+    "follow_up": "What are safe alternatives if a function needs to hand data back to the caller?"
+   },
+   {
+    "question": "How do you design error handling in C without exceptions?",
+    "answer": "C usually uses return codes plus output parameters or explicit error objects. The important part is to define a consistent convention: for example, zero for success and nonzero for failure, with outputs only valid on success. For multi-step functions, a single cleanup path reduces leaks and duplicated logic. The trade-off is more boilerplate, but the behavior is explicit and easy to integrate across modules.",
+    "real_world": "This shows up in file parsers, network code, and system utilities where each call can fail for different reasons. Teams often standardize one error style so callers know exactly what to check.",
+    "code_lang": "c",
+    "code": "int parse(const char *s, int *out) {\n    if (!s || !out) return -1;\n    *out = atoi(s);\n    return 0;\n}",
+    "follow_up": "How would you make the error reporting more useful than just success or failure?"
+   },
+   {
+    "question": "What is undefined behavior in C, and why is it important?",
+    "answer": "Undefined behavior means the C standard gives no requirements for what happens, so the program may crash, seem to work, or produce arbitrary results. It matters because compilers optimize under the assumption that undefined behavior does not occur, which can make bugs non-obvious and hard to reproduce. Common examples include out-of-bounds access, use-after-free, and signed integer overflow. The practical rule is to treat UB as a correctness bug, not just a runtime bug.",
+    "real_world": "Many production-only failures are caused by undefined behavior that never showed up in tests. The optimizer may transform code in ways that expose the bug only on certain builds.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools or compiler options do you use to catch undefined behavior during development?"
+   },
+   {
+    "question": "How do you make a C program easier to test?",
+    "answer": "Write small functions with clear inputs and outputs, and separate pure logic from I/O and global state. If a function depends on time, randomness, files, or sockets, pass those dependencies in through interfaces or wrappers so tests can replace them. Deterministic code is much easier to unit test than code that reaches directly into the environment. The trade-off is a little more structure up front, but it pays back in simpler debugging and safer changes.",
+    "real_world": "This matters when testing parsers, protocol handlers, or business logic that would otherwise require real files or network connections. Good seams let you write fast tests that catch regressions before integration testing.",
+    "code_lang": "c",
+    "code": "int add_tax(int cents, int rate) {\n    return cents + cents * rate / 100;\n}\n/* easy to test because it has no I/O */",
+    "follow_up": "How would you test a function that reads from a file or socket?"
+   },
+   {
+    "question": "How do you decide between passing a structure by value and passing a pointer to it in C?",
+    "answer": "Pass by value when the object is small and you want a copy so the callee cannot modify the caller’s data. Pass a pointer when the object is large, when you need to mutate it, or when you want to avoid copying cost. The trade-off is simpler ownership and safety versus performance and shared state. In APIs, const pointers are common when you want efficiency without allowing mutation.",
+    "real_world": "This comes up in code that processes records or configuration objects. A team may switch an API from by-value to pointer when profiling shows copies are dominating a hot path.",
+    "code_lang": "c",
+    "code": "typedef struct { int x, y; } Point;\nvoid move_point(Point *p) { p->x++; p->y++; }\nvoid print_point(Point p) { printf(\"%d,%d\\n\", p.x, p.y); }",
+    "follow_up": "When would you make the pointer parameter `const`, and what does that buy you?"
+   },
+   {
+    "question": "How do `const` qualifiers help in C, and where would you put them?",
+    "answer": "`const` documents intent and lets the compiler catch accidental writes. You can use it for read-only data, function parameters, and pointers, but the position matters: `const int *p` means the pointed-to int is read-only, while `int *const p` means the pointer itself cannot change. Using `const` in interfaces makes code easier to reason about and can allow callers to pass immutable data safely. It is not a security boundary, just a compile-time contract.",
+    "real_world": "Teams use `const` heavily in parsing and formatting code to keep helpers from mutating input buffers. It also helps when APIs need to accept string literals without warnings.",
+    "code_lang": "c",
+    "code": "void log_name(const char *name);\nconst int *p1;\nint *const p2 = NULL;",
+    "follow_up": "What is the difference between `const char *`, `char * const`, and `const char * const`?"
+   },
+   {
+    "question": "What does `sizeof` actually give you in C, and what are common mistakes with it?",
+    "answer": "`sizeof` returns the size in bytes of a type or an object at compile time in most cases. A common mistake is using it on a pointer when you meant the pointed-to array, which only gives pointer size. Another is assuming `sizeof` on a function parameter can recover the original array length; it cannot if the parameter is declared as an array type. It is reliable for counting elements only when used on the actual array object, not after decay.",
+    "real_world": "This bug shows up in copy loops and `memset` calls, where developers think they are clearing an entire buffer but only clear a pointer-sized region. That can leave stale data or create security issues.",
+    "code_lang": "c",
+    "code": "int a[10];\nprintf(\"%zu\\n\", sizeof(a) / sizeof(a[0])); // 10\nvoid f(int b[]) {\n    printf(\"%zu\\n\", sizeof(b)); // pointer size\n}",
+    "follow_up": "How would you pass an array so the callee can still know its length?"
+   },
+   {
+    "question": "When should you use `memcmp` versus comparing fields one by one in C?",
+    "answer": "Use field-by-field comparison for logical equality, especially for structs with padding, pointers, floats, or fields that should be compared semantically rather than byte-for-byte. `memcmp` is only safe when the object representation is fully meaningful and stable for equality, which is not true for many structs. Field-by-field comparison is clearer and avoids false mismatches due to padding bytes. `memcmp` can still be useful for raw byte buffers or fixed binary blobs.",
+    "real_world": "A common production bug is comparing two structs with `memcmp` and getting inconsistent results because padding bytes were uninitialized. That can break caches, deduplication, or protocol logic.",
+    "code_lang": "c",
+    "code": "typedef struct { int id; char flag; } S;\nint equal(const S *a, const S *b) {\n    return a->id == b->id && a->flag == b->flag;\n}",
+    "follow_up": "When is it safe to use `memcmp` on a struct, if ever?"
+   },
+   {
+    "question": "What is the difference between `fgets` and `gets`, and how do you read a line safely?",
+    "answer": "`gets` is unsafe because it has no way to limit input size, so it can overflow the buffer. `fgets` takes a buffer size and stops after reading at most that many bytes, which makes it the standard safe choice for line input. You still need to handle the newline it may keep and check for truncation or EOF. Safe input handling is about both bounds and validating what was actually read.",
+    "real_world": "This matters in CLI tools and daemons that read config files or user input. A missed size check can turn into a crash or a security vulnerability.",
+    "code_lang": "c",
+    "code": "char buf[128];\nif (fgets(buf, sizeof buf, stdin)) {\n    buf[strcspn(buf, \"\\n\")] = '\\0';\n}",
+    "follow_up": "How would you detect that the input line was longer than the buffer?"
+   },
+   {
+    "question": "What happens if you write past the end of a local array in C?",
+    "answer": "Writing past the end of an array causes undefined behavior. In practice it may silently corrupt nearby stack data, crash immediately, or appear to work until later. The exact failure depends on compiler, optimization, and surrounding code, which makes these bugs hard to reproduce. The fix is to track lengths carefully and make bounds checking part of the API design.",
+    "real_world": "These bugs often appear as unrelated crashes much later in execution, making them painful to debug. They are common in parsers, protocol handlers, and code that manually builds strings.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you use tools or compiler settings to catch this kind of bug earlier?"
+   },
+   {
+    "question": "How do you use `assert` effectively in C, and what should you not use it for?",
+    "answer": "Use `assert` for internal invariants that should never fail if the program is correct, such as pointer relationships or state machine assumptions. Do not use it for recoverable runtime errors, because assertions can be compiled out in release builds. That means it is great for catching programmer mistakes during development, but wrong for user input validation or I/O failures. In production code, combine assertions with explicit error handling where failure is expected.",
+    "real_world": "This is useful when debugging corruption in complex stateful code, where an invariant violation points directly to the bug. It is also common in tests and debug builds to catch impossible states early.",
+    "code_lang": "c",
+    "code": "assert(node != NULL);\nassert(index < count);\nif (f == NULL) return -1;",
+    "follow_up": "What kinds of bugs are assertions good at finding that tests might miss?"
+   },
+   {
+    "question": "How do you structure a C API so the caller knows who owns allocated memory?",
+    "answer": "Make ownership explicit in the function contract, usually by documenting whether the caller must free returned memory or whether the callee retains ownership. Common patterns are returning a newly allocated pointer, or having the caller provide a buffer and size. Ambiguous ownership leads to leaks, double frees, and use-after-free bugs. Clear naming and paired free functions help, especially across module boundaries.",
+    "real_world": "This matters in libraries and shared code where different teams may not read the implementation. Many long-lived bugs come from one side assuming the other side owns the buffer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the API differently if the returned data could be large or optional?"
+   },
+   {
+    "question": "What is the purpose of `volatile` in C, and what problem does it solve?",
+    "answer": "`volatile` tells the compiler that a value may change outside the normal flow of the program, so it should not optimize away loads and stores to that object. It is mainly used for memory-mapped hardware registers, signal handlers, or other external agents that can change memory unexpectedly. It does not make code thread-safe and does not replace synchronization. Using it for concurrency is a common mistake.",
+    "real_world": "Embedded code often needs `volatile` for device registers that change without direct writes from the CPU. In normal multithreaded application code, it usually does not fix the real synchronization problem.",
+    "code_lang": "c",
+    "code": "volatile int *reg = (volatile int *)0x1000;\nint x = *reg;",
+    "follow_up": "If `volatile` does not make threads safe, what should you use instead?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How do the `restrict` qualifier and aliasing rules affect optimization in C, and when is it safe to use `restrict`?",
+    "answer": "`restrict` tells the compiler that, for that pointer's lifetime in the scope, the pointed-to object is only accessed through that pointer or values derived from it. That can enable vectorization, load/store reordering, and fewer reloads because the compiler can rule out overlap. It is only safe when you can guarantee those no-alias conditions; if two `restrict` pointers actually refer to overlapping storage, behavior is undefined. I use it in hot loops like copy, transform, or numeric kernels where the calling convention can enforce non-overlap.",
+    "real_world": "In image or DSP code, adding `restrict` to inner-loop parameters can make the difference between scalar code and auto-vectorized code. Teams sometimes introduce silent miscompilations by adding it to \"speed things up\" without proving the buffers never overlap.",
+    "code_lang": "c",
+    "code": "void saxpy(int n, float *restrict y,\n           const float *restrict x, float a) {\n    for (int i = 0; i < n; i++) {\n        y[i] += a * x[i];\n    }\n}",
+    "follow_up": "What is the difference between violating `restrict` and ordinary aliasing assumptions under the strict aliasing rules?"
+   },
+   {
+    "question": "Can you explain the strict aliasing rule in C and a bug it can cause in optimized builds?",
+    "answer": "The strict aliasing rule lets the compiler assume that pointers of unrelated types do not refer to the same object, with a few exceptions like character types. If you write through one type and read through an incompatible type, the compiler may cache values or reorder operations as if they cannot alias, so code can work at `-O0` and fail at `-O2`. The safe alternatives are `memcpy`, unions only where your implementation documents the behavior you rely on, or redesigning the representation. This matters because aliasing violations often surface as rare production-only data corruption.",
+    "real_world": "A common incident is packet parsing or float-int bit punning that passes tests in debug builds but breaks after a compiler upgrade or when LTO is enabled.",
+    "code_lang": "c",
+    "code": "float f = 1.0f;\nint *ip = (int *)&f;   // aliasing violation\n*ip = 0;\nprintf(\"%f\\n\", f);",
+    "follow_up": "Why is `memcpy` the usual safe way to reinterpret object representations in portable C?"
+   },
+   {
+    "question": "How do alignment requirements and object representation affect correctness and performance in C?",
+    "answer": "Every type has an alignment requirement, and accessing an object through a pointer that is insufficiently aligned can be slower, trap, or produce undefined behavior depending on the architecture. Object representation matters too: padding bytes in structs are not part of the abstract value, and not every bit pattern is valid for every type. For performance, aligned data helps SIMD and cache behavior; for correctness, serialization and packed layouts need explicit handling rather than assuming in-memory layout is portable. I treat alignment as an interface concern whenever data crosses allocators, devices, or network/storage boundaries.",
+    "real_world": "Code that casts a byte buffer to a struct often works on x86 and then crashes on ARM due to unaligned access. Another common issue is hashing or comparing whole structs and accidentally including indeterminate padding bytes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use explicit packing attributes, and what trade-offs do they introduce?"
+   },
+   {
+    "question": "What do you look for when evaluating the thread-safety of a C library API?",
+    "answer": "I separate reentrancy, thread safety, and atomicity because they are different guarantees. I look for hidden global state, static internal buffers, error reporting mechanisms, initialization order, signal-safety claims, and whether the API forces callers to share mutable objects. A good API makes ownership explicit, keeps per-thread or per-instance state in caller-provided handles, and documents what can be called concurrently on the same object versus different objects. If it relies on global configuration, I expect locking strategy and lifecycle rules to be spelled out.",
+    "real_world": "A classic failure mode is using a library that returns pointers to internal static buffers; it passes single-threaded tests and then requests start clobbering each other's results under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you retrofit thread safety into an existing C API without breaking all callers?"
+   },
+   {
+    "question": "How do C11 atomics differ from using `volatile` or a mutex, and when would you choose each?",
+    "answer": "C11 atomics provide defined inter-thread synchronization and ordering; `volatile` does not make an operation atomic and does not establish happens-before between threads. A mutex is the right choice when you need to protect a larger invariant or perform multiple related updates atomically from the application's point of view. Atomics are best for simple shared state like flags, counters, reference counts, or lock-free algorithms, but memory ordering must be chosen carefully. I default to a mutex unless profiling shows contention or latency where atomic primitives clearly help.",
+    "real_world": "Teams sometimes replace a lock with a `volatile int` flag and get heisenbugs that only appear on weaker memory models or under higher core counts.",
+    "code_lang": "c",
+    "code": "#include <stdatomic.h>\n\natomic_int ready = 0;\nint data;\n\nvoid publish(void) {\n    data = 42;\n    atomic_store_explicit(&ready, 1, memory_order_release);\n}",
+    "follow_up": "Why would the consumer load `ready` with `memory_order_acquire`, and what could go wrong with `memory_order_relaxed` here?"
+   },
+   {
+    "question": "How do memory ordering and cache coherence show up in real C code on multicore systems?",
+    "answer": "Cache coherence only guarantees that writes eventually become visible in a coherent way; it does not by itself give the ordering your algorithm needs. On modern CPUs and compilers, reads and writes can be reordered unless you use atomics with the right memory order or stronger synchronization. In practice, that means a flag can become visible before the data it is supposed to guard, or a consumer can observe stale values. The key is to model the data dependency explicitly with acquire-release or stronger ordering where needed.",
+    "real_world": "Single-producer/single-consumer ring buffers often look correct in code review but drop or duplicate items under stress because head/tail updates were made visible out of order.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement a bounded SPSC queue in C with minimal synchronization overhead?"
+   },
+   {
+    "question": "What are the trade-offs between array-of-structs and struct-of-arrays layouts in C for performance-sensitive code?",
+    "answer": "Array-of-structs is usually simpler and better when you touch most fields of each element together, because one cache line fetch gives you a whole record. Struct-of-arrays is often faster when you process one or two fields across many elements, because it improves cache locality, prefetching, and SIMD utilization by avoiding unused data. The trade-off is API complexity, more bookkeeping, and sometimes worse write combining when multiple arrays are updated. I choose based on access patterns, not aesthetics, and I validate with profiling because the crossover depends on field sizes and loop structure.",
+    "real_world": "Game engines, analytics pipelines, and signal-processing code often switch to struct-of-arrays and see large speedups in hot loops, but pay for it with harder-to-maintain code and more complex allocation logic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you benchmark these two layouts without measuring mostly the compiler or allocator?"
+   },
+   {
+    "question": "How do you think about integer overflow and conversion bugs in production C code?",
+    "answer": "Signed overflow is undefined behavior, and even when unsigned overflow is defined modulo arithmetic, it can still break size calculations, bounds checks, and protocol logic. The high-risk places are allocation sizes, index arithmetic, narrowing conversions, and mixing signed and unsigned values in comparisons. I prefer explicit range checks before arithmetic, use wider intermediate types where appropriate, and design APIs so sizes stay in one domain instead of bouncing between `int`, `size_t`, and platform-dependent types. Compilers aggressively optimize under the assumption that undefined overflow never happens, so these bugs can turn into security issues.",
+    "real_world": "A common vulnerability is `count * elem_size` wrapping to a small value, leading to an undersized allocation followed by a write overflow. Another is a negative length promoted to a huge unsigned value and passing validation unexpectedly.",
+    "code_lang": "c",
+    "code": "size_t bytes;\nif (count != 0 && elem_size > SIZE_MAX / count)\n    return -1;\nbytes = count * elem_size;",
+    "follow_up": "What specific signed/unsigned comparison pattern in C has caused you trouble, and how do you avoid it?"
+   },
+   {
+    "question": "What problems do you watch for when designing or reviewing callback-based C APIs?",
+    "answer": "The big issues are lifetime, reentrancy, threading, and ownership of the callback context pointer. I want the API to define whether callbacks can be invoked synchronously during registration, from arbitrary threads, after cancellation starts, or after the owning object is freed. It should also specify whether the callback may call back into the library, and what locks are held when it runs, because that drives deadlock risk. A robust pattern is a user-supplied context pointer plus explicit registration and teardown rules that prevent use-after-free.",
+    "real_world": "Many shutdown crashes come from a background thread invoking a callback after the caller freed the context object. Deadlocks also happen when libraries invoke callbacks while holding internal locks and the callback re-enters the same library.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make callback teardown race-free without forcing every caller to stop the world?"
+   },
+   {
+    "question": "How do you reason about ABI compatibility in C across shared libraries or plugin boundaries?",
+    "answer": "In C, ABI is about more than function names: calling convention, type sizes, alignment, struct layout, enum representation, and ownership conventions all matter. Exposing concrete structs in public headers couples you to layout details, so a common strategy is opaque handles plus accessor functions to keep the ABI stable while implementations evolve. I also avoid assuming `long`, pointer, or `size_t` widths across platforms, and I treat varargs and packed structs as especially fragile at boundaries. Versioning and symbol management matter because ABI breaks often show up as crashes, not clean compile errors.",
+    "real_world": "A library can appear source-compatible yet crash when an application loads a new shared object because a public struct gained a field or changed alignment. Plugin ecosystems are especially sensitive because components may be built with different compilers or flags.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you expose a public struct anyway, and how would you reduce the compatibility risk?"
+   },
+   {
+    "question": "What exactly makes `setjmp`/`longjmp` dangerous in large C systems, and when is it still a reasonable tool?",
+    "answer": "`longjmp` skips normal control flow, so cleanup code, lock release, and partially-updated invariants can be bypassed. It also interacts badly with automatic variables modified after `setjmp` unless they are handled carefully, because their values after the jump may not be what you expect. It is reasonable in tightly-scoped runtimes like parsers, embedders, or error-unwind paths where ownership and cleanup are centralized. In general, if you use it, you need a clear discipline for resource management and thread boundaries.",
+    "real_world": "This shows up in interpreters and legacy network daemons where a fatal parse or request error needs to abort deeply nested code. Production incidents usually come from leaked locks or file descriptors after a jump bypasses cleanup.",
+    "code_lang": "c",
+    "code": "jmp_buf env;\n\nvoid f(void) {\n    FILE *fp = fopen(\"x.txt\", \"r\");\n    if (!fp) longjmp(env, 1);\n    /* ... */\n    fclose(fp);\n}\n",
+    "follow_up": "How would you design cleanup so `longjmp` does not leak resources?"
+   },
+   {
+    "question": "How do sequence points and unsequenced modifications still bite advanced C code, especially under optimization?",
+    "answer": "If an expression both modifies and reads the same scalar object without sequencing between those operations, the behavior is undefined. Compilers use that freedom aggressively, so code that 'worked' in debug builds can change or break when optimized. The safe rule is to separate side effects into distinct statements and avoid clever expressions with multiple increments, assignments, or macro expansions. This matters because the bug is semantic, not just stylistic.",
+    "real_world": "These bugs often survive tests and only surface after a compiler upgrade or a different optimization level in release builds.",
+    "code_lang": "c",
+    "code": "int i = 1;\nint a[3] = {0,1,2};\na[i] = i++;   /* undefined behavior */\n",
+    "follow_up": "What code review patterns do you use to catch this class of bug?"
+   },
+   {
+    "question": "What are the practical consequences of signed integer overflow being undefined in C, beyond 'it’s a bug'?",
+    "answer": "Because signed overflow is undefined, the compiler can assume it never happens and transform code in ways that remove checks or change loop behavior. That means overflow bugs can become security issues or logic errors, not just wrong arithmetic. In performance-sensitive code, use unsigned arithmetic only when wraparound semantics are truly intended, or add explicit bounds checks before the operation. For critical paths, teams often use sanitizers in CI and narrower helper APIs for checked math.",
+    "real_world": "A common incident is a size calculation overflowing before `malloc`, leading to a too-small allocation and a later out-of-bounds write.",
+    "code_lang": "c",
+    "code": "size_t n = rows * cols;\nif (cols != 0 && n / cols != rows) {\n    return -1; /* overflow */\n}\nvoid *p = malloc(n);\n",
+    "follow_up": "How do you safely compute allocation sizes for nested structures or flexible payloads?"
+   },
+   {
+    "question": "How do flexible array members actually work, and what mistakes do you watch for when using them?",
+    "answer": "A flexible array member is the last member of a struct and lets you allocate header and variable-length trailing data as one object. `sizeof` the struct does not include the payload, so allocation must add the extra bytes explicitly, usually with overflow checks. You cannot treat it like an independently allocated array, and copying the struct by value only copies the fixed part. It is great for locality and fewer allocations, but easy to get wrong around sizing and lifetime.",
+    "real_world": "Packet buffers, message frames, and arena-managed strings often use this pattern to reduce fragmentation and improve cache behavior.",
+    "code_lang": "c",
+    "code": "struct msg {\n    uint32_t len;\n    char data[];\n};\n\nstruct msg *m = malloc(sizeof(*m) + payload_len);\nm->len = payload_len;\n",
+    "follow_up": "How would you serialize and version a struct with a flexible array member across processes?"
+   },
+   {
+    "question": "What is the difference between storage duration and linkage in C, and why does it matter for large codebases?",
+    "answer": "Storage duration answers how long an object exists: automatic, static, allocated, or thread storage. Linkage answers whether an identifier refers to the same entity across scopes or translation units: no linkage, internal linkage, or external linkage. In large systems this matters because lifetime bugs and symbol-collision bugs are different classes of problems, but both are controlled by declarations. Getting it right improves encapsulation, testability, and linker behavior.",
+    "real_world": "Teams hit this when a helper symbol intended to be file-local leaks into the global symbol table, or when a static-duration object hides unwanted shared state across requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you audit a C library for unintended global state?"
+   },
+   {
+    "question": "How do you reason about padding bytes in structs when dealing with hashing, persistence, or security-sensitive comparisons?",
+    "answer": "Padding bytes are part of the object representation but may hold unspecified values, so treating a whole struct as a stable byte string is often wrong. Hashing or comparing raw bytes can produce false mismatches, leak stack data, or break across compilers and architectures. The safe approach is to compare or serialize fields explicitly, or to fully initialize the representation when that contract is required. This is one reason wire formats should not be bare in-memory structs.",
+    "real_world": "Production bugs show up when cache keys are built with raw struct bytes and identical logical values miss due to different padding contents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When, if ever, is zero-initializing a struct enough to make raw-byte comparison acceptable?"
+   },
+   {
+    "question": "What are the trade-offs between `inline`, macros, and function calls in performance-critical C?",
+    "answer": "Macros avoid call overhead but duplicate code, evaluate arguments multiple times unless carefully written, and make debugging harder. `inline` gives the compiler a typed function body it may inline without those macro hazards, but it is still only a hint and its linkage rules can be subtle across headers and translation units. A normal function call can be best when code size and I-cache pressure matter more than a tiny call overhead. The right choice depends on profile data, not intuition.",
+    "real_world": "Hot-path code sometimes gets slower after aggressive inlining because binary size grows and instruction-cache misses dominate.",
+    "code_lang": "c",
+    "code": "#define MIN(a,b) ((a) < (b) ? (a) : (b))\nint x = 1, y = 2;\nint m = MIN(x++, y++); /* side effects happen more than once */\n",
+    "follow_up": "How would you expose a small utility in a header without creating ODR-like linkage problems in C?"
+   },
+   {
+    "question": "How do you use compiler and linker visibility controls in C to improve robustness and startup performance?",
+    "answer": "Exporting only your public API reduces accidental ABI surface, symbol collisions, and relocation work for shared libraries. Keeping internal functions and globals hidden also gives the toolchain more freedom to optimize calls and data access within the library. The trade-off is a bit more build-system discipline and explicit API annotation. It is especially valuable in plugin ecosystems or large services with many shared objects.",
+    "real_world": "A common production problem is a plugin accidentally interposing on a symbol name it was never meant to share, causing behavior that depends on load order.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What C-level choices make symbol versioning and long-term shared-library compatibility easier?"
+   },
+   {
+    "question": "What failure modes do you think about with signal handlers in C, and what code is actually safe there?",
+    "answer": "An async signal can interrupt code at almost any point, so most library functions are unsafe because they may use internal locks or inconsistent state. In a handler, you should do the minimum: set a flag of an appropriate type, write to a pipe, or trigger a dedicated recovery path using only async-signal-safe operations. Doing allocation, logging through stdio, or taking locks in the handler can deadlock or corrupt state. Signal handling needs a design, not just a callback.",
+    "real_world": "Teams often discover this after a timeout or SIGTERM handler deadlocks while trying to log through a buffered logging library.",
+    "code_lang": "c",
+    "code": "static volatile sig_atomic_t stop = 0;\n\nvoid on_sigint(int signo) {\n    (void)signo;\n    stop = 1;\n}\n",
+    "follow_up": "How would you shut down a multithreaded server cleanly after receiving SIGTERM?"
+   },
+   {
+    "question": "How do you think about allocator behavior in C under contention and at scale, rather than just `malloc`/`free` correctness?",
+    "answer": "At scale, allocation cost is about synchronization, fragmentation, locality, and object lifetime patterns, not just big-O. General-purpose allocators are good defaults, but hot paths with many small objects can suffer from lock contention, cache misses, and memory blowup from fragmentation or per-thread caches. Pool allocators, arenas, or slab-like designs can reduce overhead when object sizes and lifetimes are predictable, but they make ownership and peak memory trade-offs more explicit. You pick based on allocation profile and failure mode, not aesthetics.",
+    "real_world": "High-QPS services often hit RSS growth or latency spikes because freed memory is retained in allocator caches or fragmented across size classes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics and experiments would you run before replacing the system allocator?"
+   }
+  ]
+ }
+}

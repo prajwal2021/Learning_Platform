@@ -1,0 +1,485 @@
+{
+ "slug": "linux",
+ "name": "Linux",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the Linux kernel, and how is it different from a Linux distribution?",
+    "answer": "The kernel is the core part of Linux that talks to hardware and manages processes, memory, and devices. A distribution bundles the kernel with user-space tools, package management, and system defaults, like Ubuntu or Fedora. You use the kernel for low-level OS functions, while the distribution is the full operating system experience you install and administer.",
+    "real_world": "This matters when troubleshooting because a problem might be in the kernel, but more often it is in a distribution package, service, or configuration. In cloud images, the same kernel concept applies even though the rest of the OS is minimal.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts of the system are considered user space?"
+   },
+   {
+    "question": "How do file permissions work in Linux?",
+    "answer": "Linux permissions are based on three classes: owner, group, and others, and three basic rights: read, write, and execute. You view them with `ls -l`, and change them with `chmod` or `chown`. A common mistake is giving execute permission to a file that is not meant to be run, or forgetting that directory permissions control access differently than file permissions.",
+    "real_world": "A bad permission setting can break deployments or expose secrets, especially when services run under different users. Teams often fix incidents caused by a config file being readable only by the wrong account.",
+    "code_lang": "bash",
+    "code": "chmod 640 app.conf\nchown appuser:appgroup app.conf\nls -l app.conf",
+    "follow_up": "What is the difference between `chmod 644` and `chmod 755`?"
+   },
+   {
+    "question": "What does it mean when a process is running in the background, and how do you manage it from the shell?",
+    "answer": "A background process is one the shell is not waiting on, so you can keep using the terminal. You can start one with `command &`, bring a stopped job back with `fg`, or list jobs with `jobs`. The key idea is that shell jobs are not the same as system services, so backgrounding is useful for short-lived work, not daemon management.",
+    "real_world": "This comes up when you start a long build or copy and want your terminal back. It also helps explain why a process can disappear when you close the shell if it was not detached properly.",
+    "code_lang": "bash",
+    "code": "sleep 100 &\njobs\nfg %1",
+    "follow_up": "When would you use `nohup` instead of `&`?"
+   },
+   {
+    "question": "What is the difference between `stdin`, `stdout`, and `stderr`?",
+    "answer": "`stdin` is standard input, `stdout` is normal output, and `stderr` is for error messages. Separating them lets you redirect errors differently from normal results, which is very useful in scripts and pipelines. A common mistake is sending errors into a pipeline that expects clean data on `stdout`.",
+    "real_world": "In production scripts, separating `stderr` helps logging and makes it easier to detect failures in automation. It also prevents error text from corrupting machine-readable output.",
+    "code_lang": "bash",
+    "code": "grep 'ERROR' app.log > matches.txt\ngrep 'ERROR' app.log 2> errors.txt",
+    "follow_up": "How would you redirect both `stdout` and `stderr` to a file?"
+   },
+   {
+    "question": "What does the `root` user do, and why is using it directly risky?",
+    "answer": "`root` is the superuser account with full administrative privileges. It can change any file, start or stop services, and modify system settings, so a mistake has system-wide impact. In practice, you use `sudo` for specific commands instead of staying logged in as root, because it reduces the chance of accidental damage and improves auditing.",
+    "real_world": "Many outages start with someone running one command as root and deleting or changing more than intended. In cloud environments, limiting direct root use is a standard safety practice.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does `sudo` differ from logging in as root?"
+   },
+   {
+    "question": "How do you find where you are in the filesystem and move around it?",
+    "answer": "Use `pwd` to print the current directory and `cd` to change directories. Paths can be absolute, starting from `/`, or relative, starting from the current directory. A common beginner error is confusing `.` for the current directory and `..` for the parent directory, or assuming a relative path works from every location.",
+    "real_world": "This comes up constantly when editing config files, running scripts, or checking logs on a server. Many support mistakes are really just being in the wrong directory.",
+    "code_lang": "bash",
+    "code": "pwd\ncd /var/log\ncd ..",
+    "follow_up": "What is the difference between an absolute path and a relative path?"
+   },
+   {
+    "question": "What is a package manager, and why do you use one?",
+    "answer": "A package manager installs, updates, and removes software in a controlled way, along with its dependencies. On Linux this is important because it keeps software consistent with the system’s repositories and makes upgrades and security fixes manageable. The main trade-off is convenience and consistency versus the limitations of what is packaged for your distribution.",
+    "real_world": "In operations, package managers are the standard way to roll out security updates across servers. They also help avoid the common problem of manually installing libraries that later break during upgrades.",
+    "code_lang": "bash",
+    "code": "apt update\napt install nginx",
+    "follow_up": "What problems can happen if you mix packages from different sources?"
+   },
+   {
+    "question": "What is a symbolic link, and when would you use one?",
+    "answer": "A symbolic link is a special file that points to another file or directory path. It is useful for aliases, versioned directories, or making one location appear in another place without copying data. The important limitation is that a symlink can become broken if the target is moved or deleted.",
+    "real_world": "Symlinks are common in deployment setups where `current` points to the latest release directory. They also show up in log directories and shared configuration layouts.",
+    "code_lang": "bash",
+    "code": "ln -s /opt/app/releases/2026-01-01 /opt/app/current\nls -l /opt/app/current",
+    "follow_up": "How is a symbolic link different from a hard link?"
+   },
+   {
+    "question": "How do you see what is happening on a Linux system when it seems slow or overloaded?",
+    "answer": "You usually start by checking CPU, memory, disk, and process usage with tools like `top`, `free`, and `df`. The goal is to identify whether the bottleneck is CPU, RAM, or storage before guessing at a fix. A common beginner mistake is focusing on one metric and missing that a system can be slow because it is waiting on disk or running out of memory.",
+    "real_world": "This is a standard first step during an incident when a server becomes unresponsive or a service starts timing out. Quick checks often reveal a full disk, a memory leak, or a runaway process.",
+    "code_lang": "bash",
+    "code": "top\nfree -h\ndf -h",
+    "follow_up": "What would you check next if memory usage is high?"
+   },
+   {
+    "question": "How do `cp`, `mv`, and `rm` differ, and what are the common mistakes people make with them?",
+    "answer": "`cp` copies a file or directory, `mv` moves or renames it, and `rm` deletes it. The main beginner mistake is assuming `mv` makes a backup; it usually just changes the pathname, so there is no second copy left behind. Another common issue is using `rm` too broadly with wildcards and deleting more than intended. I also would not use `rm -r` casually because it recursively removes directories and their contents.",
+    "real_world": "This matters during cleanup scripts and deploys, where one wrong `rm` can wipe out a working directory. Teams often teach new hires to use `ls` first and to be careful with glob patterns.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if you `mv` a file across filesystems?"
+   },
+   {
+    "question": "What is the difference between `cat`, `less`, and `head`/`tail`?",
+    "answer": "`cat` prints a file all at once, `less` lets you page through a file interactively, and `head` and `tail` show the beginning or end of a file. For large files, `less` is usually better than `cat` because it does not flood the terminal. `tail -f` is commonly used to follow a log as new lines are appended. The key idea is choosing the tool based on whether you need a quick peek or interactive inspection.",
+    "real_world": "When a service is failing, engineers often use `tail -f` to watch logs in real time while reproducing the problem. `less` is useful when a log file is huge and you need to search within it.",
+    "code_lang": "bash",
+    "code": "less /var/log/syslog\nhead -n 20 config.txt\ntail -f app.log\ncat notes.txt",
+    "follow_up": "How do you search inside `less`?"
+   },
+   {
+    "question": "What does a shell wildcard like `*` or `?` do?",
+    "answer": "Wildcards are expanded by the shell before the command runs. `*` matches any number of characters, while `?` matches exactly one character. This is useful for operating on groups of files, but it can be dangerous if the pattern matches more or fewer files than expected. A common mistake is assuming the program itself interprets the wildcard; in most cases the shell does it first.",
+    "real_world": "This matters in cleanup and batch-processing scripts, where a pattern can accidentally include files you did not mean to touch. It also explains why quoting arguments sometimes changes behavior.",
+    "code_lang": "bash",
+    "code": "ls *.log\nrm backup-??.tar\ncp img-*.png /tmp/",
+    "follow_up": "What is the difference between quoting and not quoting a wildcard?"
+   },
+   {
+    "question": "How do you search for text in Linux files?",
+    "answer": "The standard tool is `grep`, which searches files or input for lines matching a pattern. It is commonly used with options to search recursively, ignore case, or show line numbers. `grep` is fast and works well in pipelines because it reads from standard input too. A beginner mistake is forgetting that simple patterns are not full regular expressions unless you use the right mode, so the matching behavior can be different than expected.",
+    "real_world": "Engineers use `grep` to find error messages in logs or to locate configuration values across a tree of files. It is a basic skill for debugging and incident response.",
+    "code_lang": "bash",
+    "code": "grep 'ERROR' app.log\ngrep -r 'listen_port' /etc/myapp\ncat app.log | grep -n 'timeout'",
+    "follow_up": "When would you use `grep` instead of searching in an editor?"
+   },
+   {
+    "question": "What are environment variables, and why do people use them?",
+    "answer": "Environment variables are key-value settings inherited by child processes from the current shell or process. They are commonly used to pass configuration like paths, modes, or credentials into programs without hardcoding them. You can set them for one command, for one shell session, or permanently through shell startup files. The trade-off is convenience versus visibility, because they can be easy to override or accidentally expose.",
+    "real_world": "Teams use environment variables in containers and deployment scripts to change configuration between environments without changing application code. They are also a common source of bugs when a missing or wrong variable changes runtime behavior.",
+    "code_lang": "bash",
+    "code": "export APP_ENV=dev\npython app.py\nDB_HOST=localhost psql\nprintenv APP_ENV",
+    "follow_up": "What is the difference between shell variables and environment variables?"
+   },
+   {
+    "question": "What is a process, and how do you see running processes?",
+    "answer": "A process is a running instance of a program with its own state and process ID. You can inspect them with tools like `ps` for a snapshot or `top` for a live view. This helps you identify which programs are using CPU, memory, or other resources. A common mistake is confusing a process name with the actual command and arguments that were started.",
+    "real_world": "This comes up when a server is unresponsive and you need to find the exact process causing the load. It is also useful to confirm that a daemon actually started after a deploy.",
+    "code_lang": "bash",
+    "code": "ps aux | grep nginx\ntop\nps -ef",
+    "follow_up": "How do you stop a process safely?"
+   },
+   {
+    "question": "What is a Linux log file, and where do logs usually come from?",
+    "answer": "A log file is a record of events written by the kernel, system services, or applications. Logs are used to diagnose failures, audit behavior, and understand what happened before a crash or outage. On Linux, logs may be plain files, or they may be managed by a logging system and viewed with dedicated tools. The important idea is that logs are time-ordered evidence, not just debugging noise.",
+    "real_world": "When a deployment fails, logs often tell you whether the problem is configuration, permissions, network access, or a crash during startup. Support teams use them to reconstruct incidents after the fact.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you find the logs for a service managed by systemd?"
+   },
+   {
+    "question": "What does `chmod` do, and when would you use it instead of changing ownership?",
+    "answer": "`chmod` changes the permission bits on a file or directory, such as read, write, and execute access. You use it when the current owner already should have access control adjusted, rather than changing which user or group owns the file. Ownership is managed separately with `chown`. A common mistake is trying to fix an access issue with `chmod` when the real problem is that the file belongs to the wrong user or group.",
+    "real_world": "This matters when a service cannot read its config or write its data directory. The fix may require either adjusting permissions or correcting ownership, depending on who the process runs as.",
+    "code_lang": "bash",
+    "code": "chmod 644 config.ini\nchmod +x deploy.sh\nchown appuser:appgroup /var/lib/app",
+    "follow_up": "How do permission bits differ on files versus directories?"
+   },
+   {
+    "question": "What is a directory, and how is it different from a regular file?",
+    "answer": "A directory is a special file that maps names to files and subdirectories. A regular file stores data like text, binary content, or a script. Directories are what let the filesystem organize paths hierarchically. A beginner mistake is thinking a directory is just a folder of bytes; in Linux it is an entry structure managed by the filesystem.",
+    "real_world": "This distinction matters when you are troubleshooting path errors or file operations that fail because a command expected a file but got a directory. It also helps explain why listing and deleting directories uses different commands than regular files.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How can you tell whether a path is a file, directory, or symlink from the command line?"
+   },
+   {
+    "question": "What is a file descriptor, in simple terms?",
+    "answer": "A file descriptor is a small number a process uses to refer to an open file, socket, or other I/O resource. Standard input, output, and error are just the first three descriptors most processes have open. This abstraction lets programs read from and write to many kinds of resources in the same way. Beginners often think a descriptor is the file itself, but it is really the process’s handle to an open resource.",
+    "real_world": "This comes up in shell redirection, when a service writes to a log file, or when a program opens too many files and hits limits. It is also the foundation of piping and network I/O in Unix systems.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do shell redirection and pipes relate to file descriptors?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide between a hard link and a symbolic link in a real system setup?",
+    "answer": "A hard link points to the same inode as the original file, so the data stays available even if the original name is removed. A symbolic link is a separate path reference, so it can cross filesystems and can point to directories, but it breaks if the target moves or disappears. In practice, hard links are for the same filesystem and stable file identity, while symlinks are for flexible path indirection. The trade-off is reliability versus flexibility.",
+    "real_world": "Teams use symlinks for versioned deployments like `current -> release-2026-10-16`, while hard links are more common in deduplication or backup workflows. A broken symlink in production often looks like a missing config or binary even though the file existed yesterday.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell, from the shell, whether a path is a symlink and where it points?"
+   },
+   {
+    "question": "What happens if two commands write to the same file at the same time, and how do you avoid corrupting it?",
+    "answer": "If two processes append or overwrite the same file concurrently, their writes can interleave or one can truncate data from the other, depending on how the file is opened. Shell redirection does not provide coordination by itself. For safety, use file locking, write to a temporary file and rename it atomically, or design one writer and multiple readers. The key is to avoid treating a normal file like a transactional datastore.",
+    "real_world": "This shows up in log rotation, generated config files, and cron jobs that both update the same state file. Without coordination, a periodic job can partially overwrite another process’s output and create hard-to-debug corruption.",
+    "code_lang": "bash",
+    "code": "tmp=$(mktemp)\nprintf '%s\n' 'new content' > \"$tmp\"\n# do work, then atomically replace\nmv \"$tmp\" /etc/app/config.conf",
+    "follow_up": "Why is renaming a temp file safer than writing directly to the destination?"
+   },
+   {
+    "question": "When would you use `find` instead of `grep`, and what problem does that solve?",
+    "answer": "`find` searches the filesystem by name, type, size, age, permissions, and other metadata, while `grep` searches file contents. If you need all Python files modified in the last day, or all empty directories, `find` is the right tool. If you need lines matching a pattern inside files, use `grep`. They often work together when you want both path filtering and content search.",
+    "real_world": "This matters in incident response and cleanup tasks, like finding recently changed config files or locating large rotated logs before a disk fills up. Using the wrong tool can make a search much slower or miss the files you actually need.",
+    "code_lang": "bash",
+    "code": "find /var/log -type f -name '*.log' -mtime -1\nfind . -type f -name '*.conf' -exec grep -nH 'timeout' {} +",
+    "follow_up": "How would you search only within files of a certain type and skip binaries?"
+   },
+   {
+    "question": "What is an exit code in Linux, and how do you use it to build reliable shell scripts?",
+    "answer": "An exit code tells you whether a command succeeded, usually `0` for success and nonzero for failure. Shell scripts should check exit codes so they stop on unexpected errors instead of continuing with bad state. This matters for automation, because a failed command can otherwise look successful if you never inspect it. In pipelines and wrappers, you also need to understand which command’s exit status you are testing.",
+    "real_world": "In CI, a deploy script may continue after a failed download unless it checks exit status, leaving the service half-updated. Exit codes are also how monitoring tools determine whether a health check passed.",
+    "code_lang": "bash",
+    "code": "if ! curl -fsS https://example.com/health; then\n  echo \"health check failed\" >&2\n  exit 1\nfi\necho \"ok\"",
+    "follow_up": "What’s the difference between a command failing and a pipeline failing?"
+   },
+   {
+    "question": "How do you inspect disk usage when a server is almost full, and what would you do first?",
+    "answer": "Start by finding which filesystem is full with `df`, then identify the largest directories and files with `du` or similar tools. If usage doesn’t match what you expect, check for deleted files still held open by processes, because they can keep space consumed until the process exits. The practical trade-off is between a quick top-level scan and a deeper inode/process investigation. Freeing the right data matters more than deleting something random.",
+    "real_world": "A common production issue is a node at 100% disk because logs grew unexpectedly or a container kept writing to a deleted file. If you only look at directory sizes, you can miss space held by open file descriptors.",
+    "code_lang": "bash",
+    "code": "df -h /\ndu -sh /var/log/* 2>/dev/null | sort -h\nlsof +L1",
+    "follow_up": "What would you look for if `df` shows the disk is full but `du` does not add up?"
+   },
+   {
+    "question": "What is the difference between a hard reboot and a graceful shutdown on Linux?",
+    "answer": "A graceful shutdown asks services to stop cleanly, flush buffers, and unmount filesystems before power goes away. A hard reboot skips that coordination, which can leave filesystems needing recovery and applications with partial writes. In real systems, graceful shutdown is safer for data integrity, while hard reboot is a last resort when the machine is hung. The trade-off is speed versus the risk of corruption and longer recovery later.",
+    "real_world": "This matters on database servers, stateful application nodes, and VMs during maintenance. An abrupt power cycle can turn a simple restart into a filesystem repair or data-loss incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does Linux know whether it should run filesystem checks after an unclean shutdown?"
+   },
+   {
+    "question": "How do you compare two text files in Linux, and when is that better than opening them in an editor?",
+    "answer": "Use a diff tool when you want to see exactly what changed, not just inspect one file at a time. It is better than an editor for configs, deployment artifacts, and generated files because it highlights line-level differences and can be used in automation. For directories or many files, recursive comparison tools are even more useful. The main trade-off is readability versus the overhead of learning the output format.",
+    "real_world": "This comes up when comparing a working config with a broken one after a deployment. It is also common when reviewing changes on servers where you only have shell access.",
+    "code_lang": "bash",
+    "code": "diff -u app.conf app.conf.bak\n# compare directories\n diff -ru old/ new/",
+    "follow_up": "How would you compare two config directories and ignore generated files?"
+   },
+   {
+    "question": "What does it mean to change a process’s nice value, and when would you do it?",
+    "answer": "The nice value influences scheduling priority for CPU time. A lower-priority job can be made less disruptive so interactive work and critical services stay responsive, while a higher-priority job can get more CPU if needed and permitted. It is not a guarantee of performance, just a hint to the scheduler. This is useful when you want batch work to be polite on shared systems.",
+    "real_world": "Teams use this for backups, indexing, or report generation on servers that also run customer-facing workloads. If a batch job starves the system, latency spikes even if total CPU is not fully understood at first glance.",
+    "code_lang": "bash",
+    "code": "nice -n 10 tar -czf backup.tgz /data\nrenice 5 -p 1234",
+    "follow_up": "How is nice value different from using cgroups or containers to limit resources?"
+   },
+   {
+    "question": "How do you safely handle spaces and special characters in filenames from the shell?",
+    "answer": "Always quote variables and prefer commands that use null-delimited input when processing many paths. Unquoted expansions can split one filename into multiple words or let globbing change what gets passed to a command. This is one of the most common shell bugs in production scripts. The safe pattern is to treat filenames as data, not as shell syntax.",
+    "real_world": "This breaks cleanup scripts, backup jobs, and ad hoc admin commands when a file contains spaces, tabs, or newlines. A script that works in test directories often fails on real customer data because naming is less controlled.",
+    "code_lang": "bash",
+    "code": "while IFS= read -r -d '' f; do\n  printf '%s\n' \"$f\"\ndone < <(find . -type f -print0)",
+    "follow_up": "What goes wrong if you write `for f in $(find ...)`?"
+   },
+   {
+    "question": "When would you use `systemd` service management instead of running a command manually in a terminal?",
+    "answer": "Use a service manager when the process should start on boot, restart after failure, run under a controlled user, and integrate with logging and dependencies. Running it manually is fine for one-off testing, but it is fragile for anything long-lived or critical. Service management adds supervision and makes behavior more predictable across reboots and crashes. The trade-off is extra configuration in exchange for operational reliability.",
+    "real_world": "This is how teams run APIs, workers, and scheduled daemons in production. If someone starts a service in their shell and logs out, it may die unless it is managed properly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you check first if a service keeps restarting and never becomes healthy?"
+   },
+   {
+    "question": "How do you inspect a network connection problem on a Linux host, starting from the shell?",
+    "answer": "I’d first confirm whether it’s name resolution, routing, or the remote service itself. I usually check local interface state and routes, then test DNS and connectivity separately, because “can’t connect” often turns out to be the wrong hostname or a blocked port. After that I verify listening sockets or firewall rules on the host if the service should be local. The key is to narrow the failure domain before changing anything.",
+    "real_world": "This comes up when an app works on one node but not another, or when a deployment fails because a health check cannot reach a backend. A quick split between DNS, network path, and application port saves a lot of guesswork.",
+    "code_lang": "bash",
+    "code": "ip addr\nip route\ngetent hosts example.com\nss -lntp\ncurl -v http://127.0.0.1:8080",
+    "follow_up": "How would you distinguish a DNS issue from a TCP connectivity issue?"
+   },
+   {
+    "question": "What’s the practical difference between a process being started from the shell and being managed by systemd?",
+    "answer": "A shell-started process is tied to that session unless you deliberately detach it, while systemd supervises the service across reboots, captures logs, and can restart it if it fails. For anything persistent or operationally important, systemd gives you a standard place to define dependencies, environment, restart policy, and health behavior. The trade-off is more setup, but much better reliability and observability.",
+    "real_world": "Teams often start a service manually during testing and then forget to convert it into a unit file. It later dies after logout or reboot, which looks like a random outage.",
+    "code_lang": "bash",
+    "code": "systemctl status nginx\nsystemctl start nginx\nsystemctl enable nginx\njournalctl -u nginx --since today",
+    "follow_up": "What would you put in a minimal systemd unit for a custom application?"
+   },
+   {
+    "question": "How do you use `ps` and `top` together when you suspect one process is causing high CPU or memory use?",
+    "answer": "`top` is good for a live view and quick triage, while `ps` is better for a precise snapshot you can filter or script. I’d use `top` to identify the candidate PID, then `ps` with columns like PID, PPID, CPU, RSS, and command to understand whether it’s a single process, a child process, or a runaway worker. That helps distinguish a true leak from normal bursty load. If needed, I’d then inspect threads or child processes next.",
+    "real_world": "This is common when a node gets slow and one service is blamed without proof. A snapshot plus live view makes it easier to correlate spikes with a specific worker or deployment.",
+    "code_lang": "bash",
+    "code": "top\nps -p 1234 -o pid,ppid,pcpu,rss,cmd\nps --sort=-pcpu -eo pid,pcpu,rss,cmd | head",
+    "follow_up": "How would you tell whether the memory growth is a leak or expected caching?"
+   },
+   {
+    "question": "What happens when you redirect output to a file and the file already exists?",
+    "answer": "By default, shell redirection like `>` truncates the file and writes from the start, so you can lose the old contents immediately. If you use `>>`, the shell appends instead. This matters because a typo in a redirection can destroy a log or config file even if the command itself would have been harmless. In scripts, I prefer writing to a temp file and moving it into place atomically when possible.",
+    "real_world": "A common production mistake is generating a config or report with `>` and overwriting the previous good version. Another is truncating a log file that a running process still expects to append to.",
+    "code_lang": "bash",
+    "code": "echo new > output.txt\n# overwrites the file\n\necho more >> output.txt\n# appends instead",
+    "follow_up": "When would you use `mktemp` and `mv` instead of writing directly to the final path?"
+   },
+   {
+    "question": "How do you check whether a service is actually listening on the port you expect?",
+    "answer": "I’d verify both the process and the socket, because a process can be running without binding the right port. `ss` is the usual first check since it shows listening ports and the owning process, which helps catch cases where the service failed to bind due to a config error or another process already using the port. If the port is local-only or bound to the wrong interface, the service may look healthy but still be unreachable from the network.",
+    "real_world": "This is a common failure after changing a service port or binding address in a container or VM. The app may be up, but health checks still fail because it’s listening only on localhost.",
+    "code_lang": "bash",
+    "code": "ss -lntp | grep ':8080'\nps -fp 1234\nlsof -iTCP:8080 -sTCP:LISTEN",
+    "follow_up": "What would you check if the service is listening locally but not reachable from another host?"
+   },
+   {
+    "question": "How do you safely rotate or inspect logs on a busy Linux system?",
+    "answer": "I’d avoid editing active log files directly and use the logging or rotation mechanism the service expects. For inspection, I usually read the current file or query the journal, depending on where the logs are written, because copying or truncating a hot log can race with the writer. For rotation, the key is coordinating with the service so it reopens files cleanly, otherwise you can lose logs or keep filling disk with an old deleted inode. The trade-off is operational simplicity versus less disk usage and easier retention.",
+    "real_world": "This matters when a log file grows until a disk fills up, or when a team manually truncates logs and later wonders why new entries stopped appearing. Proper rotation prevents both space issues and log loss.",
+    "code_lang": "bash",
+    "code": "journalctl -u myservice --since '1 hour ago'\nlogrotate -d /etc/logrotate.conf\nls -lh /var/log/myservice.log",
+    "follow_up": "How would you confirm that a service reopened its log file after rotation?"
+   },
+   {
+    "question": "What is the difference between `kill`, `kill -9`, and letting a process shut down normally?",
+    "answer": "A normal shutdown signal gives the process a chance to clean up, flush data, and release resources. `kill -9` forces immediate termination and cannot be handled, so it is a last resort when a process is stuck or ignoring gentler signals. The trade-off is safety versus certainty: forceful termination can leave partial writes, stale locks, or inconsistent state. In production, I usually try a graceful signal first and only escalate if the process won’t exit.",
+    "real_world": "This comes up with databases, queue workers, and batch jobs that hold locks or write files. Using `-9` too early can create harder recovery problems than the original hang.",
+    "code_lang": "bash",
+    "code": "kill 1234\nkill -TERM 1234\nkill -9 1234",
+    "follow_up": "How would you decide whether it is safe to use `kill -9` on a particular service?"
+   },
+   {
+    "question": "How do you find which files or directories are consuming unexpected space on a machine?",
+    "answer": "I start by locating the largest directories, then drill down to the biggest files. `du` is the usual tool for this because it summarizes disk usage by path, which is more useful than looking at file lists when you need to find where space went. I also check for deleted files still held open by processes, because they do not appear in normal directory listings but can still consume disk. That distinction is important when `df` says the disk is full but `du` does not add up.",
+    "real_world": "A server can look empty in the application directory while the filesystem is still full because logs or deleted files are held open. This is a classic incident during log growth or runaway temp file creation.",
+    "code_lang": "bash",
+    "code": "du -sh /var/* | sort -h\ndu -sh /var/log/* | sort -h\nlsof +L1",
+    "follow_up": "What’s the difference between `df` and `du`, and why can they disagree?"
+   },
+   {
+    "question": "How do you compare two Linux approaches for doing the same task, like `cron` versus `systemd timers`?",
+    "answer": "I compare them based on reliability, observability, and how they fit the rest of the system. `cron` is simple and widely understood, but `systemd timers` integrate better with service management, logs, dependencies, and missed-run handling. For a one-off host task, cron may be enough; for a service-oriented environment, timers are often easier to operate. The right choice depends on how much state, logging, and coordination you need.",
+    "real_world": "Teams often use cron for years until they need better auditability or want a job to run after a missed window on reboot. Then switching to a timer can simplify operations.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a scheduled job more reliable in production?"
+   },
+   {
+    "question": "What should you check first when a Linux command works interactively but fails in a script or service?",
+    "answer": "I first compare the environment: PATH, working directory, shell, permissions, and any variables the command depends on. Scripts and services usually run with a much smaller environment than an interactive shell, so commands that seem obvious may not be found or may behave differently. I also look for quoting issues and differences between shells, because interactive testing can hide those bugs. The fix is usually to make dependencies explicit rather than relying on login-shell behavior.",
+    "real_world": "This happens a lot when a deployment script works manually but fails in CI or systemd because it cannot find a binary or config file. Making the execution context explicit prevents fragile automation.",
+    "code_lang": "bash",
+    "code": "#!/bin/sh\ncd /opt/app || exit 1\nexport PATH=/usr/local/bin:/usr/bin:/bin\nexec ./run-job",
+    "follow_up": "How would you debug a service that only fails when started by systemd?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain what actually happens when a Linux system starts swapping, and why a machine can look CPU-idle but still be effectively down?",
+    "answer": "Swapping is page reclamation under memory pressure: the kernel evicts anonymous pages to swap so RAM can be reused for active pages and page cache. If the working set no longer fits, the system spends most of its time faulting pages back in and pushing others out, which can make run queues short and CPU usage deceptively low. The real bottleneck becomes storage latency and lock contention around reclaim, not CPU. I look at major page faults, PSI memory pressure, swap I/O, and whether the OOM killer is imminent; the fix is usually reducing memory demand, not just adding swap.",
+    "real_world": "In production this shows up as request timeouts with low CPU graphs, especially after a memory leak or too many JVMs on one node. Teams often misdiagnose it as a storage outage because disk goes busy while the application appears half-alive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish page cache growth from a true memory leak on a busy host?"
+   },
+   {
+    "question": "What are cgroups and namespaces doing under the hood in containers, and what Linux limits still surprise people in production?",
+    "answer": "Namespaces isolate what a process can see, like PIDs, mounts, network stacks, and hostnames; cgroups control and account for resources like CPU, memory, and I/O. A container is still just Linux processes sharing one kernel, so host kernel behavior, scheduler decisions, and global limits still matter. Common surprises are OOM kills inside a memory cgroup, CPU throttling from quotas causing latency spikes, PID limits, and filesystem semantics leaking through bind mounts. The key trade-off is lightweight isolation versus weaker separation than a VM.",
+    "real_world": "A service can look healthy by host metrics while being throttled hard by its own cgroup, so app latency jumps even though node CPU is only moderately used. Another common incident is a container hitting its memory limit and getting killed while the host still has free RAM.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do CPU shares and CPU quota differ, and when does quota become the wrong tool?"
+   },
+   {
+    "question": "How does the Linux scheduler balance fairness, latency, and throughput, and what failure modes have you seen from CPU overcommit?",
+    "answer": "The scheduler tries to give runnable tasks fair CPU time while favoring interactivity and keeping cores busy; in practice it balances per-CPU run queues, task wakeups, affinity, and cache locality. Overcommit hurts when runnable demand greatly exceeds cores, because context switching rises, caches get colder, and tail latency grows even if average CPU looks acceptable. Quotas or pinned CPUs can make it worse by forcing throttling or imbalance between cores. I care less about raw utilization than run queue depth, steal time in VMs, and latency under load.",
+    "real_world": "A common production pattern is many worker processes sized for throughput that collapse p99 latency during traffic bursts because they create too many runnable tasks. Another is noisy-neighbor effects in shared clusters where one cgroup burns its slice and gets throttled every period.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you check to tell CPU saturation from lock contention or I/O wait?"
+   },
+   {
+    "question": "When would you use epoll instead of one thread per connection, and what Linux behaviors matter at high connection counts?",
+    "answer": "One thread per connection is simple but scales poorly because stacks, scheduler overhead, and context switches grow with connection count. epoll lets you wait on many fds in one or a few event loops, so cost tracks active events more than total open sockets. At scale you need to think about nonblocking I/O, backpressure, listen backlog, file descriptor limits, and fairness so one hot connection does not starve others. The trade-off is more complex application logic for much better memory efficiency and concurrency.",
+    "real_world": "This matters for proxies, API gateways, and chat systems where tens of thousands of mostly idle connections are normal. Teams often hit per-process fd limits or accept-queue overflows long before they run out of CPU.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What’s the difference between the SYN backlog and the accept queue, and how can each fail under load?"
+   },
+   {
+    "question": "What happens internally when a process forks on Linux, and why can fork be expensive even with copy-on-write?",
+    "answer": "fork creates a new task with duplicated process metadata and page tables, but actual memory pages are shared initially through copy-on-write. That makes small forks cheap, but with large address spaces the page-table copy and TLB effects can still be significant, especially in memory-heavy runtimes. The child also inherits file descriptors and signal state, which can cause subtle bugs if it does much work before exec. In high-scale servers, preforking or using worker pools can avoid repeated fork overhead.",
+    "real_world": "Large application servers sometimes stall during deploy hooks or helper-process creation because forking a huge process image is slower than expected. Another real bug is leaked inherited sockets in child processes, keeping connections or files open after the parent thinks they are gone.",
+    "code_lang": "c",
+    "code": "pid_t pid = fork();\nif (pid == 0) {\n    execl(\"/usr/bin/helper\", \"helper\", NULL);\n    _exit(127);\n}\nif (pid > 0) {\n    waitpid(pid, NULL, 0);\n}",
+    "follow_up": "Why is vfork or posix_spawn sometimes preferable, and what are the risks?"
+   },
+   {
+    "question": "How do you reason about page cache versus direct application I/O, and when does the cache become a source of trouble rather than a benefit?",
+    "answer": "The page cache speeds reads and absorbs writes by keeping file data in RAM, which is great when access has locality and memory pressure is reasonable. It becomes a problem when large streaming I/O evicts hot cache, when dirty-page writeback causes latency spikes, or when people mistake cache usage for free memory loss. Buffered I/O can hide device latency until reclaim or writeback hits hard, while direct I/O avoids cache pollution at the cost of stricter alignment and often more complex tuning. The right choice depends on whether reuse or predictable latency matters more.",
+    "real_world": "Backup jobs and large scans often blow out cache and degrade database performance on the same host even though the jobs themselves are low priority. Teams also panic at 'used memory' rising when most of it is healthy page cache that will be reclaimed if needed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you investigate writeback-induced latency on a node serving both logs and a database?"
+   },
+   {
+    "question": "Can you walk through how Linux handles signals, and what signal-related bugs show up in real services?",
+    "answer": "Signals are asynchronous notifications delivered to a process or specific thread, but the handler runs with severe restrictions: only async-signal-safe operations are safe there. In services, the practical issues are handling SIGTERM for graceful shutdown, dealing with interrupted syscalls, reaping children to avoid zombies, and making sure multithreaded programs know which thread receives what. SIGKILL cannot be caught, so if cleanup matters you must respond correctly to softer signals first. The trade-off is simple control hooks with a lot of edge cases around timing and reentrancy.",
+    "real_world": "A common incident is a service that exits immediately on SIGTERM without draining connections, causing avoidable errors during rolling deploys. Another is zombie accumulation from subprocesses that are never waited on, eventually exhausting PID space or confusing monitoring.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do process groups and PID 1 behavior inside containers change signal handling?"
+   },
+   {
+    "question": "What is the thundering herd problem on Linux, and how do modern kernels and application designs avoid it?",
+    "answer": "The thundering herd happens when many waiters wake for a single event, then most go back to sleep after wasting CPU and causing contention. It used to show up heavily around accept loops and shared locks; modern kernels reduce it with more selective wakeups, but application design still matters. Typical fixes are one acceptor per socket path, load-balanced listeners, epoll-based eventing, or sharding work so fewer threads contend for the same wakeups. The trade-off is less parallelism on a single queue in exchange for much better efficiency.",
+    "real_world": "You see this in overloaded proxies where dozens of workers wake on incoming connections and spend more time contending than serving traffic. Similar patterns happen with queue consumers polling too aggressively and burning CPU while throughput barely increases.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you compare using SO_REUSEPORT with a single acceptor handing off work?"
+   },
+   {
+    "question": "How do mount namespaces and bind mounts affect isolation, and what subtle filesystem bugs do they cause in deployments?",
+    "answer": "Mount namespaces give a process its own view of the mount tree, while bind mounts let existing paths appear elsewhere without copying data. They are powerful for isolation and packaging, but they also preserve underlying filesystem behavior, propagation rules, and permission constraints in ways people miss. Bugs often come from mount propagation unexpectedly sharing changes, masking files by mounting over paths, or assuming a container cannot reach sensitive host content through an overly broad bind mount. The trade-off is flexible composition versus very sharp edges in security and operability.",
+    "real_world": "A deployment can quietly hide a packaged config directory by bind-mounting an empty host path over it, leading to mysterious startup failures. Another common issue is host log directories mounted into containers with ownership or relabeling mismatches, causing writes to fail only in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is mount propagation, and why does it matter for Kubernetes or nested container runtimes?"
+   },
+   {
+    "question": "If a Linux host has intermittent multi-second latency spikes but average CPU, memory, and disk look fine, how would you investigate kernel-level causes?",
+    "answer": "I would look for time-correlated evidence of stalls rather than averages: scheduler delays, PSI, softirq load, run-queue spikes, reclaim activity, blocked tasks, and storage tail latency. Then I’d use targeted tools like perf, eBPF tracing, sar or vmstat history, and kernel logs to test hypotheses such as CPU throttling, packet storms, lock contention, direct reclaim, writeback stalls, or filesystem pauses. The key is to separate user-space slowness from kernel time spent waiting or contending. Intermittent incidents usually need high-resolution timelines, not dashboard averages.",
+    "real_world": "This is how teams find issues like cgroup CPU throttling every quota period, NIC interrupt imbalance on one core, or ext4/journal stalls that only hit p99. Without kernel-level inspection, the incident gets blamed on the application because the node looks 'mostly healthy.'",
+    "code_lang": "bash",
+    "code": "vmstat 1\npidstat -w 1\niostat -xz 1\nperf top\njournalctl -k -f",
+    "follow_up": "Which eBPF-based probes would you choose first for scheduler delay versus block I/O latency?"
+   },
+   {
+    "question": "Can you explain what actually happens during a page fault on Linux, and why major versus minor faults matter for performance?",
+    "answer": "A page fault happens when a process touches a virtual address that is not currently mapped the way the CPU expects. A minor fault is usually satisfied without disk I/O, like mapping a zero page, populating a copy-on-write page, or attaching an already cached file-backed page; a major fault requires blocking on storage. The distinction matters because high minor faults can be normal under memory churn, while major faults usually show real latency and throughput collapse. You also need to separate first-touch behavior from sustained faulting under reclaim pressure.",
+    "real_world": "A service can look healthy in CPU graphs but still have tail latency spikes because workers block on major faults after cold restarts, aggressive memory limits, or reclaim storms.",
+    "code_lang": "bash",
+    "code": "pid=$(pgrep myservice)\nawk '/Minflt|Majflt/ {print}' /proc/$pid/status\nvmstat 1\nperf stat -p $pid -e page-faults,minor-faults,major-faults sleep 10",
+    "follow_up": "How would you reduce page-fault-driven latency in a memory-constrained service without just adding more RAM?"
+   },
+   {
+    "question": "What actually happens when Linux runs out of memory, and how do you reason about the OOM killer in production?",
+    "answer": "Linux does not simply fail the next allocation immediately; it first tries reclaim, compaction, and may stall tasks badly before invoking the OOM killer. The OOM killer picks a victim based on memory usage and badness heuristics, but cgroup-scoped OOM and global OOM behave differently. In production, the painful part is often the long reclaim period before the kill, not just the kill itself. You need to know whether the failure is global memory pressure, a memory cgroup limit, or unreclaimable kernel memory.",
+    "real_world": "In containers, teams often think 'the kernel killed my app randomly' when the real issue is a cgroup limit causing local OOM while the host still has free memory.",
+    "code_lang": "bash",
+    "code": "dmesg -T | grep -i -E 'out of memory|killed process'\ncat /sys/fs/cgroup/memory.events 2>/dev/null || true\ncat /proc/pressure/memory\n",
+    "follow_up": "What signals or metrics would tell you a host is heading toward OOM before the actual kill?"
+   },
+   {
+    "question": "How do you think about ext4 versus XFS for Linux production systems, and what trade-offs actually matter?",
+    "answer": "Both are mature general-purpose filesystems, but the trade-offs show up under scale and operational patterns rather than benchmarks in isolation. XFS is often strong for very large filesystems and parallel metadata-heavy workloads, while ext4 is simpler operationally for many teams and has predictable behavior in common deployments. The right choice depends on file count, file size distribution, snapshot and resize workflows, repair expectations, and failure recovery characteristics. I would also care about the storage stack underneath because RAID, cloud block storage, and write barriers can dominate behavior.",
+    "real_world": "Teams hit surprises when millions of small files make metadata operations the bottleneck, or when filesystem repair and mount times after a crash become part of the incident budget.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What mount options or workload patterns would you review before blaming the filesystem itself?"
+   },
+   {
+    "question": "What is inode exhaustion, how is it different from running out of disk space, and how do you diagnose it quickly?",
+    "answer": "A filesystem can have free data blocks but no free inodes left, which means you cannot create new files even though df still shows available space. This usually happens with huge numbers of small files, caches, mail spools, or bad temp-file behavior. The fast diagnosis is to compare block usage and inode usage, then find the directories with extreme file counts. Fixing it may mean cleanup, changing application behavior, or recreating the filesystem with inode characteristics that fit the workload.",
+    "real_world": "This causes confusing outages where apps fail with 'No space left on device' while dashboards still show plenty of free gigabytes.",
+    "code_lang": "bash",
+    "code": "df -h /var\ndf -i /var\nfind /var -xdev -printf '%h\\n' | sort | uniq -c | sort -nr | head",
+    "follow_up": "What application or deployment patterns tend to create inode leaks over time?"
+   },
+   {
+    "question": "How does TCP accept backlog actually work on Linux, and what production issues come from misunderstanding it?",
+    "answer": "There are effectively separate queues involved: pending half-open connections during the handshake and fully established connections waiting for accept. The application's listen backlog, kernel limits, and the speed at which the process calls accept all matter. If the accept path falls behind, clients can see connection timeouts or resets even when CPU looks fine, because the bottleneck is queueing and wakeup behavior, not raw compute. Tuning backlog helps, but usually you also need to look at worker model, SYN floods, and latency in the application accept loop.",
+    "real_world": "A service can pass health checks yet drop bursts of new traffic during deploys because workers stop accepting briefly and the listen queue overflows.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you confirm whether dropped connections are due to SYN backlog pressure, accept queue overflow, or application-level slowness?"
+   },
+   {
+    "question": "What is the difference between softirq, hardirq, and ksoftirqd, and why does that matter when diagnosing packet loss or CPU imbalance?",
+    "answer": "Hard IRQ context is the immediate interrupt handling path and must stay short; Linux defers more work into softirqs so interrupt processing does not monopolize the CPU. If softirq work cannot be drained promptly in normal return-from-interrupt paths, ksoftirqd kernel threads pick it up in process context. That matters because heavy network receive processing can show up as softirq saturation or ksoftirqd CPU rather than your service process using CPU. It often points to NIC queue imbalance, packet storms, or CPU affinity problems, not just a 'slow app.'",
+    "real_world": "Hosts with uneven RSS or bad IRQ pinning can drop packets on one CPU while others are mostly idle, producing intermittent latency and retransmits.",
+    "code_lang": "bash",
+    "code": "grep -E 'NET_RX|NET_TX' /proc/softirqs\ncat /proc/interrupts\nps -eLo pid,psr,comm,%cpu | grep ksoftirqd",
+    "follow_up": "What Linux features would you use to spread network processing more evenly across CPUs?"
+   },
+   {
+    "question": "How do NUMA effects show up on Linux, and when do they become a real production problem?",
+    "answer": "On NUMA systems, memory is physically attached to different CPU nodes, so remote memory access has higher latency and lower effective bandwidth than local access. Linux tries to place memory and threads well, but migrations, first-touch allocation, cpuset constraints, and container placement can create imbalance. NUMA becomes a real problem when memory-intensive workloads span sockets poorly, because average CPU may still look acceptable while tail latency and throughput degrade. The fix is often placement and affinity work, not changing the application code first.",
+    "real_world": "Databases and JVM services often regress after scaling up to larger dual-socket machines because threads bounce across nodes and start paying remote-memory penalties.",
+    "code_lang": "bash",
+    "code": "numactl --hardware\nnumastat -p $(pgrep myservice)\ncat /proc/zoneinfo | head",
+    "follow_up": "How would you test whether a latency problem is truly NUMA-related rather than cache misses or scheduler noise?"
+   },
+   {
+    "question": "What are Linux capabilities, and why are they often a better security boundary than just running something as root or non-root?",
+    "answer": "Capabilities split root-like privileges into narrower units, so a process can be granted only the specific privileged operations it needs. That reduces blast radius compared with full root, but it is not a complete sandbox because capabilities interact with namespaces, file capabilities, ambient capabilities, and privileged syscalls in subtle ways. In practice, they are useful for least privilege around networking, binding low ports, or packet capture. You still need to understand what the process can do after exec and inside containers.",
+    "real_world": "A common hardening step is letting a service bind to a privileged port without giving it full root, which limits damage if the service is compromised.",
+    "code_lang": "bash",
+    "code": "getcap /usr/bin/myservice\nsetcap 'cap_net_bind_service=+ep' /usr/bin/myservice\ncapsh --print",
+    "follow_up": "What are the common mistakes teams make with capabilities in containers or systemd units?"
+   },
+   {
+    "question": "How do seccomp filters work on Linux, and what are the trade-offs when you use them to harden services?",
+    "answer": "Seccomp restricts which syscalls a process may make, usually with a filter evaluated by the kernel on each syscall entry. It is effective because the syscall boundary is a narrow choke point, but the trade-off is operational fragility: upgrades, new libraries, JITs, or uncommon code paths can hit denied syscalls in production. Good seccomp profiles are workload-specific and tested under realistic behavior, not copied blindly. It reduces attack surface; it does not replace namespaces, capabilities, or MAC systems.",
+    "real_world": "Containerized workloads sometimes fail only under load or on one architecture because a seccomp profile blocked a syscall used by a newer runtime path.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug a suspected seccomp denial when the application just reports a generic crash or permission error?"
+   },
+   {
+    "question": "What are zombie processes and orphan processes on Linux, and when do they indicate a real systems problem rather than just a cosmetic one?",
+    "answer": "A zombie is a dead child that still has an exit status waiting to be reaped by its parent, so it holds a process table slot but does not consume CPU or memory like a live process. An orphan is a live process whose parent exited; it gets reparented and can keep running normally. Zombies become a real issue when a buggy supervisor or PID 1 fails to reap children, because enough accumulation can exhaust PID space or signal broken lifecycle management. In containers, this often appears when the main process was never designed to act as an init.",
+    "real_world": "A container can look fine at first but gradually fail to spawn subprocesses because zombies accumulate and no reaper is present.",
+    "code_lang": "bash",
+    "code": "ps -eo pid,ppid,stat,comm | awk '$3 ~ /Z/ {print}'\nps -p 1 -o pid,comm,args=",
+    "follow_up": "Why does PID 1 have special signal and child-reaping behavior, and how does that affect container entrypoints?"
+   }
+  ]
+ }
+}

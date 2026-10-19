@@ -1,0 +1,372 @@
+{
+  "slug": "admin-login-loop-after-key-rotation",
+  "title": "Admins are stuck in a login loop for 24 hours",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "jwt",
+    "jwks",
+    "key-rotation",
+    "caching",
+    "authentication"
+  ],
+  "scenario": "Right after a planned admin SSO signing-key rotation, about 60% of admin login attempts appear to succeed and then immediately redirect back to the login page. The admin UI has not changed. API servers verify admin JWTs using the identity provider's JWKS endpoint, and they cache that JWKS response with Cache-Control max-age=86400. Admin JWTs expire after 1 hour.",
+  "goal": "Find the root cause and design a safe JWT signing-key rotation process that does not cause login loops.",
+  "concepts": [
+    {
+      "key": "jwt",
+      "name": "JWT",
+      "summary": "A JSON Web Token is a signed token that carries claims such as who the user is and when the token expires. APIs can verify the signature locally instead of calling the identity provider on every request.",
+      "used_here": "Admins receive JWTs after login, and API servers verify those tokens before serving admin requests."
+    },
+    {
+      "key": "jwks",
+      "name": "JWKS",
+      "summary": "A JSON Web Key Set is a document that publishes public keys used to verify signed tokens. It often contains more than one key during rotation.",
+      "used_here": "API servers fetch the identity provider's JWKS to learn which public keys can verify admin JWTs."
+    },
+    {
+      "key": "signing-key",
+      "name": "Signing key",
+      "summary": "A signing key is the private key used to sign tokens, paired with a public key used to verify them. If verifiers do not have the matching public key, valid tokens will be rejected.",
+      "used_here": "The identity provider changed which key signs admin JWTs during the rotation."
+    },
+    {
+      "key": "key-rotation",
+      "name": "Key rotation",
+      "summary": "Key rotation replaces old cryptographic keys with new ones. Safe rotation requires an overlap period so old and new tokens can both be verified.",
+      "used_here": "The incident started immediately after rotating the admin JWT signing key."
+    },
+    {
+      "key": "cache-ttl",
+      "name": "Cache TTL",
+      "summary": "A cache TTL is how long a cached value is considered usable before it should be refreshed. Long TTLs make changes propagate slowly.",
+      "used_here": "API servers cache the JWKS for 24 hours, so different servers can have different key sets during that window."
+    },
+    {
+      "key": "kid",
+      "name": "kid",
+      "summary": "The kid, or key ID, is a JWT header field that tells the verifier which public key should verify the token. It avoids guessing when multiple keys are published.",
+      "used_here": "Logs include the token kid and the cached JWKS keys to show whether a verifier has the matching public key."
+    },
+    {
+      "key": "api-server",
+      "name": "API server",
+      "summary": "An API server handles backend requests from the UI. In a fleet, different requests from the same user may hit different servers.",
+      "used_here": "Some admin API servers have fresher JWKS caches than others."
+    },
+    {
+      "key": "request-tracing",
+      "name": "Request tracing",
+      "summary": "Request tracing links logs and metadata across the steps of one user flow. It helps compare what happened during successful and failed attempts.",
+      "used_here": "Tracing the login and the next API call shows which server handled the request and why verification passed or failed."
+    },
+    {
+      "key": "cookie",
+      "name": "Cookie",
+      "summary": "A cookie stores browser state such as a session identifier or token reference. Cookie settings can cause login loops, but they are not the only cause.",
+      "used_here": "Cookie behavior is a plausible first suspect because the symptom is a redirect back to login."
+    },
+    {
+      "key": "load-balancer",
+      "name": "Load balancer",
+      "summary": "A load balancer distributes requests across backend servers. Its routing can expose differences between servers in the same fleet.",
+      "used_here": "Admin requests may land on different API servers after login."
+    },
+    {
+      "key": "token-expiration",
+      "name": "Token expiration",
+      "summary": "Token expiration is the time after which a token must no longer be accepted. Verifiers check this using claims such as exp.",
+      "used_here": "Admin JWTs expire after 1 hour, which affects how long old verification keys must remain available."
+    },
+    {
+      "key": "signature-verification",
+      "name": "Signature verification",
+      "summary": "Signature verification proves that a token was signed by the trusted issuer and was not modified. Disabling it makes forged tokens possible.",
+      "used_here": "API servers must keep verifying JWT signatures even during incident mitigation."
+    },
+    {
+      "key": "controlled-restart",
+      "name": "Controlled restart",
+      "summary": "A controlled restart or cache refresh updates instances in a planned, monitored way. It is safer than ad hoc changes across the fleet.",
+      "used_here": "After publishing the right key set, API servers can be rolled so they load the corrected JWKS."
+    },
+    {
+      "key": "jwt-claims",
+      "name": "JWT claims",
+      "summary": "JWT claims are fields such as issuer, audience, algorithm, and expiration that define what the token is and where it is valid. Verifiers should check them in addition to the signature.",
+      "used_here": "The API should verify the expected issuer, audience, algorithm, and expiration for admin tokens."
+    },
+    {
+      "key": "rate-limited-refresh",
+      "name": "Rate-limited refresh",
+      "summary": "A rate-limited refresh retries a cached lookup only occasionally to avoid overload. It is useful when an unknown key ID may mean the key set changed.",
+      "used_here": "An API server can refresh JWKS once on an unknown kid without creating a thundering herd."
+    },
+    {
+      "key": "synthetic-check",
+      "name": "Synthetic check",
+      "summary": "A synthetic check is an automated test that simulates a real user flow. It confirms behavior across the system, not just one component.",
+      "used_here": "Synthetic admin logins can prove that every API server accepts valid tokens during rotation."
+    },
+    {
+      "key": "metrics",
+      "name": "Metrics",
+      "summary": "Metrics are numeric measurements collected over time, such as error counts or success rates. They show whether a fix works across the fleet.",
+      "used_here": "Unknown-kid errors, signature failures, and login success rate show whether the incident is resolved."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Choose the first place to look",
+      "question": "The login page redirects admins back to login after a successful SSO response. What is the best first diagnostic step?",
+      "concept_keys": [
+        "jwt",
+        "jwks",
+        "kid",
+        "api-server",
+        "request-tracing",
+        "cookie",
+        "load-balancer",
+        "token-expiration"
+      ],
+      "options": [
+        {
+          "text": "Trace several successful and failed flows, recording the JWT kid, API server hostname, JWKS cache age, and verification error.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Inspect browser session cookies and redirect parameters for a broken domain, path, or SameSite setting.",
+          "correct": false,
+          "hint": "Browser state can cause login loops, but the timing points to the key rotation. First collect backend evidence that explains why the API decides the user is unauthenticated.",
+          "id": "b"
+        },
+        {
+          "text": "Ask the identity provider to issue longer-lived admin JWTs so users do not need to reauthenticate.",
+          "correct": false,
+          "hint": "The failures happen immediately after login, not near token expiry. Longer token lifetime can also make key transitions harder to reason about.",
+          "id": "c"
+        },
+        {
+          "text": "Increase load-balancer stickiness so each admin keeps hitting one API server after completing login.",
+          "correct": false,
+          "hint": "Stickiness can hide fleet differences before you understand them. It is better to preserve which server handled each request and compare the authorization result.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Tracing the login and the next API call captures the variables affected by a signing-key rotation: token header, verifier instance, cached key set age, and the exact verification error. Cookie debugging is tempting because the symptom is a redirect loop, but it does not explain why the backend would reject a freshly issued token."
+    },
+    {
+      "title": "Interpret the traces",
+      "question": "The traces show this pattern: failed flows receive a JWT with kid=K2, then admin-api-17 logs `JWT verification failed: unknown kid K2`; its JWKS cache age is 19 hours and cached keys are [K1]. Successful flows receive a JWT with kid=K2, then admin-api-04 logs `verified kid K2`; its JWKS cache age is 3 minutes and cached keys are [K2]. What does this show?",
+      "concept_keys": [
+        "jwt",
+        "jwks",
+        "kid",
+        "api-server",
+        "cache-ttl",
+        "key-rotation",
+        "signature-verification",
+        "cookie",
+        "load-balancer",
+        "token-expiration"
+      ],
+      "options": [
+        {
+          "text": "The load balancer is routing failed users to unhealthy API servers that cannot reach the database.",
+          "correct": false,
+          "hint": "The failed server is making an authentication decision before application data access matters. Focus on the difference between the token header and the cached verification keys.",
+          "id": "a"
+        },
+        {
+          "text": "The identity provider and API servers have clock skew, so K2 tokens are not valid yet on some nodes.",
+          "correct": false,
+          "hint": "Clock skew usually produces not-before or expiration errors. The logged error says the verifier does not know which key should verify the token.",
+          "id": "b"
+        },
+        {
+          "text": "The admin cookie is sometimes dropped by the browser before the first API call is sent.",
+          "correct": false,
+          "hint": "The API is receiving a JWT and producing a key-related verification error. A missing cookie would usually appear as no credential, not an unknown key ID.",
+          "id": "c"
+        },
+        {
+          "text": "The signer started issuing K2 tokens before all verifiers could load K2, and 24-hour JWKS caches left some servers with K1 only.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "A token with kid=K2 is valid only on servers whose JWKS cache contains K2. Servers still holding a 19-hour-old K1-only cache reject the same kind of token as `unknown kid`, while a server with a fresh cache accepts it. The cookie explanation is less likely because the API logs show a received JWT and a key lookup failure, not a missing credential."
+    },
+    {
+      "title": "Mitigate without weakening auth",
+      "question": "You check the identity provider's current JWKS endpoint and it lists only K2. About 40% of API servers still have K1-only JWKS cached, while other servers have K2. Admin JWTs expire after 1 hour. What should you do first to safely reduce user impact?",
+      "concept_keys": [
+        "jwks",
+        "signing-key",
+        "key-rotation",
+        "cache-ttl",
+        "signature-verification",
+        "controlled-restart",
+        "api-server",
+        "token-expiration"
+      ],
+      "options": [
+        {
+          "text": "Increase admin JWT lifetime from 1 hour to 24 hours so fewer admins need another login during the incident.",
+          "correct": false,
+          "hint": "Longer-lived tokens do not give a verifier the missing public key. They also increase the time that any rotation mistake affects production.",
+          "id": "a"
+        },
+        {
+          "text": "Publish a JWKS containing both K1 and K2, then perform a controlled API cache refresh or restart so verifiers load the combined key set.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Switch the identity provider back to signing K1 tokens while leaving the current JWKS endpoint unchanged.",
+          "correct": false,
+          "hint": "That can help servers with old K1 caches, but it can break servers that already refreshed to a K2-only key set. A mixed fleet needs a key set that covers both valid token families.",
+          "id": "c"
+        },
+        {
+          "text": "Temporarily disable JWT signature verification on admin APIs until all 24-hour JWKS caches expire.",
+          "correct": false,
+          "hint": "This would make the admin API accept forged or modified tokens. Incident mitigation should restore the correct trust material, not remove the trust check.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Publishing both public keys lets APIs verify tokens signed before and after the rotation, and a controlled refresh moves stale instances to the same combined key set. Disabling verification would remove the security boundary for admin APIs. Simply switching the signer back to K1 is also unsafe because some servers already have a K2-only cache."
+    },
+    {
+      "title": "Design the safe rotation schedule",
+      "question": "After the incident is mitigated, you need a safe process for the next rotation from K2 to K3. The JWKS cache TTL is 24 hours, and admin JWTs expire after 1 hour. Which schedule is safe?",
+      "concept_keys": [
+        "jwks",
+        "signing-key",
+        "key-rotation",
+        "cache-ttl",
+        "token-expiration",
+        "kid"
+      ],
+      "options": [
+        {
+          "text": "At the switch time, reduce JWKS max-age to 5 minutes and remove K2 after the last K2 token expires.",
+          "correct": false,
+          "hint": "Servers that already cached the old response may keep using its original 24-hour TTL. A shorter TTL set at switch time cannot retroactively update those caches.",
+          "id": "a"
+        },
+        {
+          "text": "Add K3 to JWKS and immediately start signing K3; keep K2 in JWKS for 1 hour because admin JWTs expire in 1 hour.",
+          "correct": false,
+          "hint": "Token lifetime is only one part of the timeline. Verifiers may not see the new public key until their existing 24-hour JWKS cache expires.",
+          "id": "b"
+        },
+        {
+          "text": "Start signing K3 first, publish K3 in JWKS within 5 minutes, and keep K2 in JWKS for 24 hours.",
+          "correct": false,
+          "hint": "Even a short publishing delay can create tokens that no verifier can validate yet. The new verification key must be visible before it is needed.",
+          "id": "c"
+        },
+        {
+          "text": "Add K3 to JWKS while still signing K2, wait at least 24 hours, then sign K3; keep K2 in JWKS for at least 25 hours after the last K2 token is issued.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The new public key must be published for at least the 24-hour JWKS TTL before any token is signed with it, so cached verifiers can learn K3. After the last K2 token is issued, keeping K2 for 1 hour of token lifetime plus 24 hours of cache TTL gives a 25-hour overlap. The tempting 5-minute TTL change does not help servers already honoring a 24-hour cached response."
+    },
+    {
+      "title": "Handle multiple keys correctly",
+      "question": "During overlap, the JWKS contains multiple keys. What verifier behavior should the API servers implement?",
+      "concept_keys": [
+        "jwt",
+        "jwks",
+        "kid",
+        "signature-verification",
+        "jwt-claims",
+        "rate-limited-refresh",
+        "cache-ttl"
+      ],
+      "options": [
+        {
+          "text": "Call the identity provider introspection endpoint on every request and skip local JWT signature verification.",
+          "correct": false,
+          "hint": "Online introspection is a different token validation model and adds a runtime dependency. If you use JWTs locally, the API still needs correct signature and claim checks.",
+          "id": "a"
+        },
+        {
+          "text": "Read the JWT kid, select the matching public key, require the expected alg, issuer, audience, and expiration, and rate-limit a JWKS refresh on unknown kid before rejecting.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Try every key in the JWKS until one verifies the signature, and accept whatever alg the token header names.",
+          "correct": false,
+          "hint": "Trying keys can mask configuration mistakes, and accepting the token's algorithm choice is dangerous. The verifier should enforce the expected token properties.",
+          "id": "c"
+        },
+        {
+          "text": "Always use the newest key in JWKS for verification, and reject tokens whose kid refers to an older key.",
+          "correct": false,
+          "hint": "During a safe overlap, older tokens can still be valid until they expire. The verifier needs to choose the intended key, not assume newest means only valid.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The kid gives a deterministic way to find the intended verification key while multiple keys are published. The API must still pin expected claims such as algorithm, issuer, audience, and expiration, and an unknown kid can trigger a controlled refresh before rejection. Trying every key is tempting, but it can hide rotation mistakes and becomes unsafe if claim checks are loose."
+    },
+    {
+      "title": "Confirm the fix worked",
+      "question": "After publishing the overlapping JWKS and deploying the safer rotation behavior, what evidence best confirms the incident is resolved across production?",
+      "concept_keys": [
+        "synthetic-check",
+        "metrics",
+        "jwt",
+        "jwks",
+        "kid",
+        "api-server",
+        "signature-verification",
+        "cache-ttl",
+        "token-expiration"
+      ],
+      "options": [
+        {
+          "text": "Check that the identity provider's JWKS endpoint returns HTTP 200 and contains the newest key.",
+          "correct": false,
+          "hint": "The source endpoint can be correct while API servers still use cached or incomplete key sets. You need evidence from the verifiers that make the authorization decision.",
+          "id": "a"
+        },
+        {
+          "text": "Run synthetic admin flows across all API servers with valid K1 and K2 tokens until K1 expires, and watch unknown-kid and signature-failure metrics fall near zero with no per-server skew.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Wait 24 hours for all JWKS caches to expire, then review whether support tickets have stopped.",
+          "correct": false,
+          "hint": "Waiting may eventually reduce symptoms, but it does not prove the new rotation process is safe. Active checks catch remaining split-brain behavior sooner.",
+          "id": "c"
+        },
+        {
+          "text": "Verify that one admin can load the dashboard once without being redirected back to login.",
+          "correct": false,
+          "hint": "A single successful request may have hit a server with the right cache. The original failure was fleet-wide and intermittent, so confirmation must cover the fleet.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The incident was caused by different API servers having different verification keys, so confirmation must test across servers and token generations. Synthetic flows plus metrics for unknown kid and signature failures show whether valid tokens are accepted everywhere. Checking only the JWKS endpoint or one successful dashboard load misses stale verifier caches."
+    }
+  ],
+  "takeaway": "JWT key rotation needs overlap: publish the new public key before signing with it, and keep old public keys long enough for issued tokens and verifier caches to age out. Long JWKS TTLs turn an unsafe rotation into a fleet split where the same user experience depends on which API server handles the next request. Carrying multiple public keys during rotation is normal; disabling signature verification is not a safe fix.",
+  "review_issues": [
+    "Step 3: The percentages are inconsistent with the scenario. The scenario says about 60% of login attempts loop/fail, but Step 3 says only about 40% of API servers still have K1-only JWKS; with uniform routing and K2-signed tokens, that would imply about 40% failures and 60% successes. Change one percentage or explain non-uniform traffic distribution.",
+    "Step 4: The explanation overstates the required old-key retention period. For a planned rotation where K3 was pre-published for the full 24-hour JWKS TTL before signing starts, K2 generally only needs to remain published until K2-signed tokens have expired, plus clock-skew/leeway. Keeping K2 for 25 hours after the last K2 token is issued is conservative and safe, but not strictly required as the explanation implies."
+  ]
+}

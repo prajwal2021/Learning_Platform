@@ -1,0 +1,297 @@
+{
+  "slug": "sessions-expire-after-six-minutes",
+  "title": "Users are logged out after six minutes instead of six hours",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "sessions",
+    "redis",
+    "configuration",
+    "ttl",
+    "incident-response"
+  ],
+  "scenario": "A session-service refactor changed TTL configuration from integer seconds to a duration string. The intended session lifetime is 6 hours, but after the deploy all new logins start expiring after about 6 minutes. The service creates about 9,000 new sessions per minute, and existing sessions created before the deploy remain valid, so the incident appears gradually during the first hour rather than as an instant outage.",
+  "goal": "Find the cause, apply a safe fix, and prevent future TTL unit mistakes from reaching production.",
+  "concepts": [
+    {
+      "key": "session",
+      "name": "Session",
+      "summary": "A session is server-side state that proves a user is logged in after authentication. The client usually holds only an identifier, while the server stores the session data.",
+      "used_here": "The session-service writes login sessions to Redis and later checks them on requests."
+    },
+    {
+      "key": "redis",
+      "name": "Redis",
+      "summary": "Redis is an in-memory key-value store often used for fast lookups. It can automatically delete keys after a configured lifetime.",
+      "used_here": "Redis stores session keys for logged-in users."
+    },
+    {
+      "key": "ttl",
+      "name": "TTL",
+      "summary": "TTL means time to live: how long a stored item remains valid before it expires. A wrong TTL can make data disappear too early or stay too long.",
+      "used_here": "The intended session TTL is 6 hours, but new session keys are being written with a much shorter lifetime."
+    },
+    {
+      "key": "duration-string",
+      "name": "Duration string",
+      "summary": "A duration string is a text value like `6h`, `30m`, or `21600s` that represents an amount of time. It is safer when the unit is explicit.",
+      "used_here": "The refactor changed the session TTL setting from integer seconds to a string duration."
+    },
+    {
+      "key": "configuration",
+      "name": "Configuration",
+      "summary": "Configuration is deploy-time data that changes service behavior without changing code. Bad configuration can cause production incidents even when the code deploy succeeds.",
+      "used_here": "The TTL value used by the session-service comes from deployment configuration."
+    },
+    {
+      "key": "canary",
+      "name": "Canary deploy",
+      "summary": "A canary deploy sends a small amount of production traffic to a new version or setting before full rollout. It limits blast radius and gives time to check real behavior.",
+      "used_here": "A small rollout can confirm that newly created sessions now receive the intended TTL before all logins use the fix."
+    },
+    {
+      "key": "config-validation",
+      "name": "Configuration validation",
+      "summary": "Configuration validation checks values at startup or deploy time and fails fast when they are invalid. It prevents silently running with dangerous settings.",
+      "used_here": "The session-service should not accept ambiguous numeric TTL strings that can be read as the wrong unit."
+    },
+    {
+      "key": "integration-test",
+      "name": "Integration test",
+      "summary": "An integration test checks how several real components work together, not just one function in isolation. It catches mistakes at boundaries such as config parsing and database writes.",
+      "used_here": "A test can start the service with a 6-hour TTL and verify Redis receives an expiration near 21,600 seconds."
+    },
+    {
+      "key": "metrics-alerting",
+      "name": "Metrics and alerting",
+      "summary": "Metrics record operational behavior over time, and alerts notify engineers when values become abnormal. They are useful for detecting regressions soon after deploys.",
+      "used_here": "The team should watch session expiration behavior and TTLs after session-service deploys."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the failing behavior",
+      "question": "Users report they can log in successfully, then are logged out about six minutes later. Existing users from before the deploy are mostly unaffected. What should you check first to narrow the problem?",
+      "concept_keys": [
+        "session",
+        "redis",
+        "ttl"
+      ],
+      "options": [
+        {
+          "text": "Roll back the frontend cookie banner change because browser storage issues often look like logout loops.",
+          "correct": false,
+          "hint": "Client-side storage can cause login problems, but the reports mention a consistent delay after successful login. A browser-only issue would not usually spare older server-side sessions.",
+          "id": "a"
+        },
+        {
+          "text": "Add more session-service instances because 9,000 logins per minute may be overloading the login path.",
+          "correct": false,
+          "hint": "Capacity problems usually show latency, errors, or failed logins during the write path. Here the login succeeds and fails later on a regular time boundary.",
+          "id": "b"
+        },
+        {
+          "text": "Create a fresh login, inspect the corresponding Redis session key lifetime, and compare it with the recent session-service deploy.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Inspect auth gateway 401 rates by region and check whether one edge location is rejecting valid cookies.",
+          "correct": false,
+          "hint": "Regional 401s can show where users feel the symptom, but this incident affects new logins broadly after a service change. First separate an authentication check failure from state disappearing too soon.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The most direct first check is the lifetime assigned to a newly created session key, because the symptom is delayed logout after successful login. Existing sessions staying valid suggests the read path and Redis as a whole are not broken. Regional 401 dashboards are useful context, but they do not tell you whether new server-side state is being written with the wrong expiration."
+    },
+    {
+      "title": "Interpret the first finding",
+      "question": "You create a test account login at 10:12. Its Redis session key shows a TTL of about 358 seconds immediately after creation, while a session created before the deploy still has more than 4 hours left. What does this most strongly indicate?",
+      "concept_keys": [
+        "redis",
+        "ttl",
+        "session"
+      ],
+      "options": [
+        {
+          "text": "Redis memory pressure is evicting random session keys after they are created.",
+          "correct": false,
+          "hint": "Eviction usually depends on memory pressure and policy, not a stable lifetime starting from creation. The old key still having hours left is also an important contrast.",
+          "id": "a"
+        },
+        {
+          "text": "The load balancer is sending users to a session-service instance that cannot read Redis.",
+          "correct": false,
+          "hint": "A routing or read failure would tend to break validation immediately or intermittently. The measured lifetime on the stored key points to behavior at write time.",
+          "id": "b"
+        },
+        {
+          "text": "The browser cookie max-age is six minutes, so the Redis key is probably unrelated.",
+          "correct": false,
+          "hint": "A cookie limit can cause logout, but the server-side key also has a six-minute lifetime. When two clocks match, do not ignore the server-side one.",
+          "id": "c"
+        },
+        {
+          "text": "The session creation path is writing new keys with a TTL of roughly 360 seconds.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "A fresh key with about 358 seconds remaining means the service wrote an expiration near 360 seconds when it created the session. Old keys retaining hours of TTL shows Redis is not globally shortening every key. A load-balancer issue would not explain a stored expiration countdown matching the user-visible logout time."
+    },
+    {
+      "title": "Find the bad change",
+      "question": "You review the config history. Before the refactor, the service used `SESSION_TTL_SECONDS=21600`. The refactor introduced `SESSION_TTL` as a duration string, and the deployment manifest now has `SESSION_TTL=360` because a checklist line said \"6 hours = 360 minutes\" and the unit was omitted. Startup logs say `parsed session ttl: 360s`. What is the root cause?",
+      "concept_keys": [
+        "configuration",
+        "duration-string",
+        "ttl"
+      ],
+      "options": [
+        {
+          "text": "The new duration parser accepted an ambiguous unitless value and interpreted `360` as seconds, not minutes or hours.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Redis cannot store expirations longer than 360 seconds when keys are written with a string duration.",
+          "correct": false,
+          "hint": "Redis supports expirations far longer than six hours. The startup log already shows what value the application handed to Redis.",
+          "id": "b"
+        },
+        {
+          "text": "The old `SESSION_TTL_SECONDS=21600` value was too large, so the refactor intentionally capped it at 360 seconds.",
+          "correct": false,
+          "hint": "A cap would normally appear as an explicit product or security decision. Here the manifest value and the parsed startup value line up exactly.",
+          "id": "c"
+        },
+        {
+          "text": "The logout is caused by the cleanup job deleting sessions every six minutes regardless of the key TTL.",
+          "correct": false,
+          "hint": "A separate cleanup job would not need the application to parse the TTL as 360 seconds. The fresh Redis key already has that lifetime at creation.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The root cause is a time-unit mismatch introduced by accepting a bare numeric duration string. The previous value was correctly 21,600 seconds for six hours; the new manifest used `360` intending minutes, while the service parsed it as 360 seconds. A Redis limit is a tempting guess, but Redis did exactly what the application requested."
+    },
+    {
+      "title": "Apply a safe immediate fix",
+      "question": "You need to stop new six-minute sessions quickly without creating a larger security or storage problem. What is the safest immediate production action?",
+      "concept_keys": [
+        "configuration",
+        "duration-string",
+        "canary",
+        "ttl"
+      ],
+      "options": [
+        {
+          "text": "Run a Redis script that extends every existing session to six hours and leave the deployed config unchanged.",
+          "correct": false,
+          "hint": "A bulk script can help with already-created bad sessions, but it does not fix the path creating 9,000 new sessions per minute. It also risks changing older sessions in ways users and security controls do not expect.",
+          "id": "a"
+        },
+        {
+          "text": "Deploy `SESSION_TTL=6h` or `SESSION_TTL=21600s` to a small canary, verify a fresh Redis key is near 21,600 seconds, then roll it out.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Increase the browser cookie max-age to six hours so clients keep sending the session identifier longer.",
+          "correct": false,
+          "hint": "The client can only present an identifier for state that still exists. If the server-side key expires after about 360 seconds, a longer cookie will not restore it.",
+          "id": "c"
+        },
+        {
+          "text": "Set session keys to never expire until the team has time to redesign the configuration format.",
+          "correct": false,
+          "hint": "This would stop the short logout symptom, but it changes the security model and can grow storage without bound. A quick fix should still preserve the intended six-hour lifetime.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Using an explicit supported duration preserves the intended six-hour policy and fixes the creation path. A canary limits risk and lets you verify that new Redis keys now count down from about 21,600 seconds before the full rollout. Setting sessions to never expire is tempting under pressure, but it creates security and storage risks unrelated to the original requirement."
+    },
+    {
+      "title": "Make the configuration hard to misuse",
+      "question": "After the immediate fix, you need a code change that prevents this class of mistake from silently reaching production again. Which change is best?",
+      "concept_keys": [
+        "duration-string",
+        "config-validation",
+        "configuration"
+      ],
+      "options": [
+        {
+          "text": "Treat numbers below 1,000 as minutes and numbers at or above 1,000 as seconds, matching the common cases.",
+          "correct": false,
+          "hint": "Heuristics can make one example work while creating surprising edge cases. A TTL setting should not change meaning because a value crosses an arbitrary threshold.",
+          "id": "a"
+        },
+        {
+          "text": "Require an explicit duration unit such as `s`, `m`, or `h`, enforce allowed bounds around the session policy, and fail startup on invalid values.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Move the TTL into a runtime feature flag so the on-call engineer can edit it without a deploy.",
+          "correct": false,
+          "hint": "Fast edits reduce recovery time, but they can also make mistakes faster to apply. The core problem is ambiguous meaning, not only deployment speed.",
+          "id": "c"
+        },
+        {
+          "text": "Keep accepting bare numbers for compatibility, but update the README to say that numeric TTLs are seconds.",
+          "correct": false,
+          "hint": "Documentation helps during review, but production still depends on every future edit being read and remembered. The incident happened because the running service accepted a value that looked reasonable to a human.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The durable fix is to make invalid or ambiguous configuration impossible to run with. Requiring units and bounds makes `360` fail instead of becoming a silent six-minute lifetime. Keeping numeric compatibility with a README is the tempting low-friction path, but it leaves the same failure mode available for the next change."
+    },
+    {
+      "title": "Prove the fix and catch regressions",
+      "question": "What test and monitoring plan best confirms the fix and detects a repeat after future deploys?",
+      "concept_keys": [
+        "integration-test",
+        "metrics-alerting",
+        "redis",
+        "ttl"
+      ],
+      "options": [
+        {
+          "text": "Add an end-to-end login test that checks the user is still logged in after 30 seconds.",
+          "correct": false,
+          "hint": "A 30-second check proves only that the session lasts longer than 30 seconds. It would not catch a six-minute TTL when the requirement is six hours.",
+          "id": "a"
+        },
+        {
+          "text": "Add a parser unit test for `6h`, and rely on existing login success-rate alerts for production detection.",
+          "correct": false,
+          "hint": "A parser test is useful, but the incident crossed the boundary from config to Redis writes. Login success can stay healthy while sessions expire too soon later.",
+          "id": "b"
+        },
+        {
+          "text": "Add an integration test that starts the service with the six-hour config and verifies a new Redis key TTL is near 21,600 seconds, plus alerts on abnormal session expiration rates after deploys.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Add a dashboard of total active sessions and check it manually during weekly operations review.",
+          "correct": false,
+          "hint": "Total active sessions may decline slowly and can be affected by traffic patterns. A weekly manual review is too late for a deploy that creates 9,000 short-lived sessions per minute.",
+          "id": "d"
+        }
+      ],
+      "explanation": "An integration test verifies the real boundary that failed: configured duration to Redis key expiration. The expected value should be around 21,600 seconds, allowing a small delay for test execution. Monitoring expiration rates or sampled new-session TTLs after deploys catches production regressions quickly, while a 30-second login check would miss this exact incident."
+    }
+  ],
+  "takeaway": "When configuration represents time, make the unit explicit and validate it before the service starts. For TTL incidents, measure the stored lifetime of newly written data and compare it with the intended policy. A safe fix restores the intended expiration, not an unlimited lifetime that creates new security and storage problems.",
+  "review_issues": [
+    "Step 3: The upfront scenario and concept text reveal the later root cause before the question asks for it: they already state that the refactor changed TTL config from integer seconds to a duration string, and the config-validation concept mentions ambiguous numeric TTL strings.",
+    "Step 4: The upfront canary concept text reveals the later correct mitigation by saying a small rollout can confirm newly created sessions receive the intended TTL before all logins use the fix.",
+    "Step 6: The upfront integration-test and metrics-alerting concept text reveal the later correct test/monitoring answer by saying to verify Redis receives an expiration near 21,600 seconds and to watch session expiration behavior/TTLs after deploys."
+  ]
+}

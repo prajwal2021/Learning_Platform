@@ -1,0 +1,485 @@
+{
+ "slug": "aws",
+ "name": "AWS",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is AWS, in simple terms?",
+    "answer": "AWS is a cloud platform that lets you rent computing, storage, databases, networking, and other services instead of running all the hardware yourself. You use it when you want to start quickly, scale on demand, or avoid managing physical infrastructure. The main trade-off is giving up some control for speed and flexibility.",
+    "real_world": "A startup might use AWS to launch an app without buying servers first. A larger company might move bursty workloads there to handle traffic spikes without overprovisioning.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a Region and an Availability Zone?"
+   },
+   {
+    "question": "What is the difference between a Region and an Availability Zone in AWS?",
+    "answer": "A Region is a geographic area, and an Availability Zone is a separate data center location within that Region. You choose a Region for latency, compliance, and where your users are, and you use multiple AZs for higher availability. If one AZ fails, workloads in another AZ can keep running if you designed for it.",
+    "real_world": "Teams often place production systems across multiple AZs so a single data center outage does not take the service down. A common mistake is assuming one AZ is enough for high availability.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does this affect how you deploy an application for high availability?"
+   },
+   {
+    "question": "What is an EC2 instance?",
+    "answer": "An EC2 instance is a virtual machine running in AWS. You use it when you want full control over the operating system, installed software, and runtime environment. The trade-off is that you are responsible for more setup and maintenance than with managed services.",
+    "real_world": "A team may run a legacy web app on EC2 because it expects a specific OS configuration. Another common use is hosting custom software that does not fit a managed platform.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose EC2 instead of a managed service like Lambda or Elastic Beanstalk?"
+   },
+   {
+    "question": "What is S3 used for?",
+    "answer": "Amazon S3 is object storage for things like files, images, backups, logs, and static website assets. It is durable and simple to access through APIs, but it is not a file system in the traditional sense. You use it when you need cheap, scalable storage rather than a mounted disk.",
+    "real_world": "A common pattern is storing application uploads in S3 instead of on the app server’s local disk. Another is keeping logs in S3 for later analysis and long-term retention.",
+    "code_lang": "python",
+    "code": "import boto3\ns3 = boto3.client('s3')\ns3.upload_file('report.pdf', 'my-bucket', 'reports/report.pdf')",
+    "follow_up": "What is the difference between object storage like S3 and block storage like EBS?"
+   },
+   {
+    "question": "What is an IAM user, role, and policy?",
+    "answer": "An IAM user represents a person or application with long-term credentials, while a role is assumed temporarily and is usually preferred for AWS services and workloads. A policy is a document that defines permissions, such as what actions are allowed on which resources. The key idea is least privilege: give only the access that is needed.",
+    "real_world": "A common security mistake is using an IAM user access key on an EC2 instance instead of giving the instance a role. Teams also use roles for cross-account access and temporary admin access.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is it safer to use roles than long-lived access keys?"
+   },
+   {
+    "question": "What is a security group in AWS?",
+    "answer": "A security group is a virtual firewall for an instance or other resource that controls inbound and outbound traffic. It is stateful, so if inbound traffic is allowed, the response traffic is automatically allowed back out. You use it to restrict network access to only the ports and sources you need.",
+    "real_world": "A common production issue is accidentally opening SSH or a database port to the whole internet. Security groups are one of the first places to check when a service is unreachable or too exposed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a security group different from a network ACL?"
+   },
+   {
+    "question": "What is the difference between EBS and EFS?",
+    "answer": "EBS is block storage attached to a single EC2 instance at a time, like a virtual hard drive. EFS is a shared file system that multiple instances can mount at once. Use EBS for instance storage and EFS when several servers need the same files.",
+    "real_world": "A web app with multiple EC2 instances may need EFS for shared uploads or shared content. A database server usually uses EBS because it needs fast block storage attached to one machine.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose S3 instead of EBS or EFS?"
+   },
+   {
+    "question": "What is a load balancer in AWS?",
+    "answer": "A load balancer distributes incoming traffic across multiple targets such as EC2 instances or containers. It helps with availability, scaling, and removing unhealthy instances from service. You use it when one server is not enough or when you want a stable entry point for your application.",
+    "real_world": "If one app server crashes, a load balancer can stop sending it traffic while the remaining servers keep working. It is also useful during deployments so users do not hit an instance that is restarting.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does a load balancer work better when your app is stateless?"
+   },
+   {
+    "question": "What is AWS Lambda?",
+    "answer": "Lambda is a serverless compute service that runs code in response to events without you managing servers. It is a good fit for short-lived tasks, API handlers, and event-driven automation. The trade-off is less control over the runtime and execution model than on a virtual machine.",
+    "real_world": "Teams often use Lambda for file-processing jobs, webhook handlers, and scheduled maintenance tasks. It is a common way to avoid keeping an always-on server running for small workloads.",
+    "code_lang": "javascript",
+    "code": "exports.handler = async (event) => {\n  return {\n    statusCode: 200,\n    body: 'Hello from Lambda'\n  };\n};",
+    "follow_up": "What kinds of workloads are a bad fit for Lambda?"
+   },
+   {
+    "question": "What is the difference between an Amazon VPC and the public internet in AWS?",
+    "answer": "A VPC is your isolated virtual network inside AWS, where you control IP ranges, subnets, route tables, and network access. The public internet is outside that boundary. You use a VPC when you need private networking, controlled exposure to the internet, or separation between tiers like web, app, and database. A common beginner mistake is putting everything in one subnet and losing the ability to isolate resources.",
+    "real_world": "Teams often put databases in private subnets so they are not directly reachable from the internet. This reduces attack surface and makes network access easier to reason about.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do public and private subnets differ in a VPC?"
+   },
+   {
+    "question": "What is an AWS subnet, and why would you split a VPC into multiple subnets?",
+    "answer": "A subnet is a range of IP addresses inside a VPC. You split a VPC into multiple subnets to separate resources by function, security level, or Availability Zone, such as public web servers and private databases. This helps with fault isolation and network design. A common mistake is assuming a subnet is the same thing as a security boundary by itself; access still depends on routes and security controls.",
+    "real_world": "A team may place application servers in one subnet and databases in another so only the app layer can reach the database. This also makes it easier to recover if one AZ has issues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a subnet public versus private?"
+   },
+   {
+    "question": "What is an Internet Gateway in AWS, and when do you need one?",
+    "answer": "An Internet Gateway lets resources in a VPC communicate with the public internet, assuming routing and security rules allow it. You need it for public-facing instances or for resources that must initiate internet traffic from a public subnet. Without it, the VPC is isolated from direct internet access. A common mistake is attaching an Internet Gateway but forgetting the route table entry, so traffic still does not flow.",
+    "real_world": "If a web server must serve users on the internet, the subnet route table usually sends default traffic to an Internet Gateway. Without that, the server can exist but not be reachable publicly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What route table change is required for a subnet to use an Internet Gateway?"
+   },
+   {
+    "question": "What is a route table in AWS, and what does it control?",
+    "answer": "A route table decides where network traffic from a subnet goes. It contains rules that send traffic to targets like an Internet Gateway, NAT device, or local VPC routes. Each subnet is associated with a route table, so routing can differ by subnet. Beginners often confuse route tables with security groups, but route tables control path, while security groups control allowed traffic.",
+    "real_world": "A private subnet typically has a route to a NAT device for outbound internet access, but no route that lets the public internet initiate connections back in. That pattern is very common for app servers and databases.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a route table different from a network ACL?"
+   },
+   {
+    "question": "What is a NAT Gateway in AWS, and why would you use it?",
+    "answer": "A NAT Gateway allows instances in a private subnet to reach the internet for outbound traffic without being directly reachable from the internet. You use it for things like package downloads, updates, or calling external APIs from private resources. It is a common choice when you want private instances to initiate connections but not accept inbound public traffic. A beginner mistake is putting a NAT Gateway in a private subnet; it must be in a public subnet with internet access.",
+    "real_world": "A private application server may need to download dependencies or call third-party services during startup. NAT lets that happen while keeping the server itself private.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can't you just use an Internet Gateway for private subnet instances?"
+   },
+   {
+    "question": "What is Amazon RDS, and when would you choose it over running a database on EC2?",
+    "answer": "Amazon RDS is a managed relational database service. You choose it when you want AWS to handle routine database tasks like provisioning, backups, and some maintenance instead of managing the database server yourself on EC2. It is a good fit for standard relational workloads where you want less operational overhead. The trade-off is less low-level control than self-managing a database on EC2.",
+    "real_world": "Small teams often move from a self-managed database on EC2 to RDS to reduce patching and backup work. That usually lowers operational risk and frees time for product work.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are some reasons you might still choose a database on EC2?"
+   },
+   {
+    "question": "What is an Amazon S3 bucket policy, and how is it different from an IAM policy?",
+    "answer": "A bucket policy is a resource-based policy attached to an S3 bucket that defines who can access that bucket and what they can do. An IAM policy is attached to a user, group, or role and controls what that identity can access. In practice, both can affect access, and the final permission depends on the combination. Beginners often assume an IAM allow is enough, but the bucket policy and object ownership settings can still block access.",
+    "real_world": "This matters when a team tries to share a bucket with another AWS account or make objects readable by a specific service. Misconfigured bucket policies are a common reason uploads or downloads fail unexpectedly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if an IAM policy allows S3 access but the bucket policy denies it?"
+   },
+   {
+    "question": "What is CloudWatch used for in AWS?",
+    "answer": "CloudWatch is AWS’s monitoring and observability service. You use it to collect metrics, logs, and alarms so you can see how resources are behaving and react to problems. For example, you can watch CPU, memory-related custom metrics, error logs, or trigger notifications when something crosses a threshold. A common beginner mistake is only looking at metrics and ignoring logs, which often contain the real cause of a problem.",
+    "real_world": "A service may appear healthy from a basic health check while its logs show repeated database connection failures. CloudWatch helps you spot that before users report outages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a metric, a log, and an alarm?"
+   },
+   {
+    "question": "What is an Amazon AMI, and why is it useful?",
+    "answer": "An AMI, or Amazon Machine Image, is a template used to launch EC2 instances. It includes the operating system and often preinstalled software, configuration, and permissions needed to start a server consistently. AMIs are useful for repeatable deployments and scaling because every instance can start from the same base image. A beginner mistake is changing a running instance manually and assuming that change applies to the AMI automatically.",
+    "real_world": "Teams often bake a new AMI when they want to roll out a patched OS or a known app version across many servers. That makes deployments more repeatable than configuring each instance by hand.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you update many EC2 instances using a new AMI?"
+   },
+   {
+    "question": "What is AWS Auto Scaling, and what problem does it solve?",
+    "answer": "Auto Scaling automatically adds or removes resources based on demand or health. It solves the problem of manually resizing capacity when traffic changes, which can cause slowdowns during spikes or wasted cost during quiet periods. In AWS, it is commonly used with EC2 to keep application capacity aligned with load. A common mistake is scaling the instances without checking whether the application is actually stateless and safe to scale horizontally.",
+    "real_world": "A retail site may scale out before a sales event and scale back afterward to avoid paying for idle servers. It also helps replace unhealthy instances without manual intervention.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of apps are easiest to scale horizontally?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How would you decide between an Application Load Balancer and a Network Load Balancer?",
+    "answer": "Use an ALB when you need HTTP/HTTPS features like host/path-based routing, header inspection, or integration with containers and serverless targets. Use an NLB when you need very high throughput, low latency, static IPs, or to pass through non-HTTP traffic at layer 4. The trade-off is richer routing versus simpler, faster transport-level forwarding. In practice, the protocol and routing needs usually decide it.",
+    "real_world": "A team might move an API behind an ALB to route `/api` and `/admin` to different services without changing DNS. Another team running a TCP service may choose an NLB because clients require stable IPs and the service is sensitive to latency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can show up if you put the wrong kind of load balancer in front of a service?"
+   },
+   {
+    "question": "What is the difference between an IAM role assumed by an EC2 instance and long-lived access keys on the instance?",
+    "answer": "An instance role gives temporary credentials that AWS rotates automatically, so you avoid storing static secrets on disk. Long-lived access keys are easier to misuse and harder to rotate safely, especially if the instance image or user data leaks. Roles also let you change permissions centrally without redeploying the server. For production workloads, roles are the standard choice unless you have a specific integration that cannot use them.",
+    "real_world": "A common incident is finding access keys baked into an AMI or deployed by user data, then discovering they were copied into logs or backup snapshots. Replacing that with an instance role usually removes a whole class of credential-rotation work.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does an application on EC2 actually get temporary credentials from its role?"
+   },
+   {
+    "question": "When would you use an SQS queue instead of having one service call another service directly over HTTP?",
+    "answer": "Use SQS when you want to decouple services, absorb traffic spikes, or tolerate temporary failures in the downstream service. Direct HTTP calls are simpler and give immediate responses, but they create tighter coupling and make retries and backpressure harder. With SQS, producers can keep working while consumers process at their own pace, but you accept eventual consistency and more operational plumbing. It is a good fit for background jobs, fan-out, and bursty workloads.",
+    "real_world": "A checkout service may enqueue order fulfillment tasks so customers are not blocked by a slow warehouse integration. If the downstream system is down, the queue buffers work instead of dropping requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of duplicate-processing bugs can happen with SQS, and how would you design around them?"
+   },
+   {
+    "question": "How do you choose between DynamoDB and RDS for a new application?",
+    "answer": "Choose DynamoDB when your access patterns are well understood, you want predictable scale, and you can model data around key-based lookups rather than joins. Choose RDS when you need relational queries, transactions across multiple tables, ad hoc reporting, or familiar SQL tooling. DynamoDB reduces operational overhead and can scale very well, but the schema and query model are more constrained. RDS is more flexible for relational work, but you must manage indexing, connections, and scaling more carefully.",
+    "real_world": "A product catalog with simple lookups by product ID or category can work well in DynamoDB. An order-management system with joins between customers, orders, and payments is often easier to build and debug on RDS.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does a bad DynamoDB key design look like in production?"
+   },
+   {
+    "question": "What happens if an EC2 instance in an Auto Scaling group becomes unhealthy, and what should the application do to make replacement safe?",
+    "answer": "If health checks fail, the Auto Scaling group can terminate the instance and launch a replacement based on the launch template. The application should be stateless or store state externally, because anything only on the instance may be lost during replacement. You also want graceful shutdown so in-flight requests can finish or be drained before termination. This matters because autoscaling only works well when instances are disposable.",
+    "real_world": "Teams often discover hidden state on local disk after autoscaling replaces a node and sessions or uploads disappear. Moving state to a database, cache, or object store makes replacements boring instead of risky.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle session data for a horizontally scaled web app on AWS?"
+   },
+   {
+    "question": "How would you debug an AWS Lambda function that suddenly starts timing out after a deployment?",
+    "answer": "First check CloudWatch logs and metrics to see whether the function is actually running longer or stuck before it even starts. Then compare the deployment changes for things like a slower dependency, VPC attachment, missing permission, or an increase in cold-start cost. If it is calling external services, look for retries, DNS issues, or connection pooling problems. Timeouts are usually a symptom of either code regressions or an environment change, not just Lambda itself.",
+    "real_world": "A deployment can look fine in tests but time out in production because a new call to a private database now goes through a misconfigured network path. Logs and per-step timing are usually the fastest way to isolate the slow stage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you measure to tell whether the timeout is caused by cold starts or by downstream latency?"
+   },
+   {
+    "question": "What is the practical difference between an S3 bucket policy and an S3 object ACL?",
+    "answer": "Bucket policies are the main way to manage access now because they are easier to audit, express cross-account rules clearly, and fit with IAM-based authorization. ACLs are older and much more limited; they are object-level or bucket-level permissions and are harder to reason about at scale. In most new designs, you prefer bucket policies and avoid ACLs unless you have a specific legacy requirement. The trade-off is simplicity and centralized control versus older, more granular but messy permissioning.",
+    "real_world": "A common production issue is an object uploaded by one account that another account cannot read because the team relied on ACL behavior they did not fully understand. A bucket policy usually makes that access model explicit and easier to review.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you grant another AWS account read-only access to a bucket you own?"
+   },
+   {
+    "question": "What happens if a service in a private subnet needs to reach an AWS service like S3, but you do not want that traffic to go through the public internet?",
+    "answer": "You would usually use a VPC endpoint, often a gateway endpoint for S3, so traffic stays on the AWS network instead of hairpinning through a NAT device or public route. This reduces cost, removes an internet dependency, and is easier to lock down with endpoint and bucket policies. The trade-off is that you must configure the endpoint and verify routing and permissions correctly. This is common for private workloads that still need AWS APIs or object storage.",
+    "real_world": "Teams often discover that a private app is paying for a lot of NAT traffic just to download artifacts from S3. Adding an endpoint can cut cost and remove a failure point when outbound internet access is restricted.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What can go wrong if the endpoint policy is correct but the bucket policy is not?"
+   },
+   {
+    "question": "How would you approach blue-green or canary deployments on AWS, and what are the main trade-offs?",
+    "answer": "Blue-green keeps two complete environments and switches traffic all at once, which makes rollback fast but doubles cost during deployment. Canary sends a small percentage of traffic to the new version first, which reduces blast radius but requires more careful traffic shifting and monitoring. The right choice depends on risk tolerance, cost, and how well you can measure errors and latency. In either case, automated health checks and rollback criteria matter more than the label you use.",
+    "real_world": "A payments or checkout service often benefits from canary releases because a small bug can be expensive. A low-risk internal app may prefer blue-green because the operational simplicity is worth the extra cost.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you use to decide whether to continue or roll back a canary?"
+   },
+   {
+    "question": "Why might an AWS deployment be slow or flaky because of DNS, and how would you investigate it?",
+    "answer": "DNS issues can cause services to resolve slowly, fail over unexpectedly, or keep using stale endpoints after a change. In AWS this often shows up when traffic moves between load balancers, private endpoints, or scaled services and clients cache names longer than expected. I would check resolver behavior, TTLs, health checks, and whether the application re-resolves names or caches connections too aggressively. The key point is that name resolution can become a hidden dependency during failover or cutover.",
+    "real_world": "A cutover from one load balancer to another can look fine in AWS but still fail for clients that cache the old address too long. That leads to partial outages that are hard to reproduce from a shell prompt.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a migration to reduce DNS-related downtime?"
+   },
+   {
+    "question": "How do security groups and network ACLs differ, and when would you use each one?",
+    "answer": "A security group is stateful and attached to an ENI or resource, so return traffic is automatically allowed. A network ACL is stateless and applies at the subnet level, so you must explicitly allow both inbound and outbound flows. In practice, security groups are the primary control for most workloads, while ACLs are useful for coarse subnet-level guardrails or explicit deny rules. The trade-off is simplicity and statefulness versus broader, less granular control.",
+    "real_world": "This matters when you are troubleshooting traffic that works in one direction but not the other, especially with custom subnet hardening. Teams also use NACLs to block known-bad ranges before traffic reaches instances.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you check first if a service in one subnet can connect out, but responses never make it back?"
+   },
+   {
+    "question": "When would you choose an Application Load Balancer over a Network Load Balancer for a web service?",
+    "answer": "Choose an ALB when you need HTTP-aware routing, host- or path-based routing, TLS termination, or integration with web frameworks and containers. Choose an NLB when you need very low latency, TCP/UDP traffic, or preserving client source IP with a simpler layer-4 setup. ALBs are usually better for modern HTTP APIs and microservices; NLBs are better for non-HTTP protocols or extreme performance needs. The trade-off is richer routing versus lower-level performance and protocol flexibility.",
+    "real_world": "A common case is putting multiple APIs behind one endpoint and routing /api and /admin to different target groups. Another is exposing gRPC or raw TCP services where an ALB is the wrong fit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What operational problems can happen if you put a service that needs long-lived TCP connections behind the wrong load balancer?"
+   },
+   {
+    "question": "How does an Auto Scaling group decide to replace or launch instances, and what signals would you rely on in a real system?",
+    "answer": "An Auto Scaling group reacts to desired capacity, scaling policies, and health checks from EC2 or a load balancer. If an instance is unhealthy, it is terminated and replaced to return the group to the desired state. In a real system, I would rely on application and load balancer health signals, not just CPU, because CPU alone does not tell you whether requests are succeeding. The key trade-off is using simple metrics that are easy to tune versus more accurate signals that may be slower or harder to define.",
+    "real_world": "This matters when a deployment or bad config causes a subset of instances to start returning errors while CPU still looks normal. If the health check is too weak, broken instances stay in service; if it is too strict, you get cascading replacements.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the health check endpoint so an instance can fail fast without taking the whole service down?"
+   },
+   {
+    "question": "What is the difference between an IAM policy attached to a role and a resource-based policy, and when do you need both?",
+    "answer": "An IAM policy attached to a role controls what that principal can do. A resource-based policy is attached to the target resource and controls who can access it. You often need both when cross-account access is involved or when the resource itself must explicitly trust an external principal. The trade-off is centralized identity control versus permissions defined at the resource boundary.",
+    "real_world": "This comes up with S3, KMS, SNS, and Lambda when one account needs to access another account’s resource. Misunderstanding this usually leads to access denied errors that are hard to trace because one side is permissive and the other is not.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug an access denied error when the role policy looks correct but the call still fails?"
+   },
+   {
+    "question": "How would you decide between passing secrets through environment variables and using AWS Secrets Manager or Parameter Store?",
+    "answer": "Use a secrets service when you need rotation, tighter access control, auditability, or to avoid baking secrets into deploy artifacts. Environment variables are simple, but they spread secrets into process state and deployment systems and are harder to rotate safely. Secrets Manager is better for actual secrets; Parameter Store is often enough for non-secret configuration. The trade-off is operational simplicity versus better security and lifecycle management.",
+    "real_world": "This matters when rotating database passwords without restarting every service manually. It also helps avoid leaking credentials into logs, crash dumps, or CI/CD output.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes do you need in the application if a secret can rotate while the process is still running?"
+   },
+   {
+    "question": "What happens if an instance in a private subnet needs to call S3, and how would you choose between a NAT gateway and a VPC endpoint?",
+    "answer": "A NAT gateway sends traffic out to the public AWS service endpoints through the internet path, while a VPC endpoint keeps traffic on the AWS network. For S3, a gateway endpoint is usually the better choice because it avoids NAT data processing charges and removes an external dependency. NAT is broader because it works for many destinations, but it is more expensive and less restrictive. The trade-off is service-specific private access versus generic outbound internet access.",
+    "real_world": "This is a common cost and reliability issue for fleets that do lots of S3 reads and writes. Teams often discover a NAT bill only after traffic grows or a private subnet starts relying on it for everything.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What breaks if you remove the NAT gateway before confirming every outbound dependency has a VPC endpoint?"
+   },
+   {
+    "question": "How do you choose between storing data in DynamoDB and querying it directly versus putting it behind a cache like ElastiCache?",
+    "answer": "DynamoDB is the primary datastore when your access patterns are known and you need predictable single-digit millisecond reads at scale. A cache is useful when the source of truth is elsewhere and you want to offload repeated reads or expensive computation. If the data must be durable and queryable, cache alone is not enough because it is an optimization, not the system of record. The trade-off is operational simplicity and durability versus lower latency and reduced database load.",
+    "real_world": "This matters when a hot read path starts overwhelming the database during traffic spikes. A cache can stabilize latency, but only if you understand cache invalidation and accept occasional stale reads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What cache invalidation strategy would you use for data that changes a few times per minute?"
+   },
+   {
+    "question": "What would you check if an ECS service starts failing health checks after a deployment, but the container logs look normal?",
+    "answer": "I would first check the target group health check path, port, and response code expectations, then confirm the task is actually listening on the mapped port. Next I would verify the service’s network setup, security groups, and whether the app is binding to the correct interface inside the container. I would also compare the old and new task definition for changed startup time, env vars, or command arguments. The key is to separate app readiness from container liveness and from load balancer reachability.",
+    "real_world": "This happens a lot when an image works locally but not behind the load balancer. The container may be healthy from Docker’s perspective while the ALB still marks it unhealthy because the app is not ready or is listening on localhost only.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make the service start safely if it needs time to warm up before it can answer traffic?"
+   },
+   {
+    "question": "How would you decide whether to use CloudFormation or Terraform for provisioning AWS infrastructure?",
+    "answer": "CloudFormation is the native AWS option and integrates tightly with AWS features and change sets. Terraform is multi-cloud and often more flexible for teams managing mixed environments or wanting a broader ecosystem. The real decision is usually about team familiarity, state management, and how much you value portability versus native integration. Both can work well if you keep modules small and review infrastructure changes like code.",
+    "real_world": "This matters when a team wants repeatable environments across dev, staging, and production. It also comes up during incidents, when you need to understand exactly what changed between two deployments.",
+    "code_lang": "yaml",
+    "code": "Resources:\n  AppBucket:\n    Type: AWS::S3::Bucket\n    Properties:\n      BucketName: my-app-artifacts\n",
+    "follow_up": "What problems can happen if multiple people or pipelines modify the same Terraform state?"
+   },
+   {
+    "question": "How do you debug an S3 access problem when the same credentials work from one service but not from another?",
+    "answer": "I would compare the exact principal used in both cases, then check the bucket policy, IAM policy, and whether a VPC endpoint policy or SCP is also in play. Differences in region, encryption requirements, or object ownership can also make identical-looking requests behave differently. The fastest way to debug is to inspect the denied action and the resource ARN, then narrow down which policy layer is blocking it. The main lesson is that S3 authorization is the combination of several checks, not just one policy.",
+    "real_world": "This shows up when a batch job can read objects but a web service cannot, even though they share the same account. It can also happen after a migration where object ownership or encryption settings changed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prove whether the deny is coming from the bucket policy, the IAM policy, or an endpoint policy?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does STS AssumeRole actually work under the hood, and what failure modes do you plan for at scale?",
+    "answer": "AssumeRole returns short-lived credentials signed by AWS STS after AWS evaluates the caller’s identity policy, the target role’s trust policy, and any session policies or tags. In production, the main issues are credential refresh timing, clock skew, regional STS reachability, and thundering herds when many workers refresh at once. Good clients cache credentials, refresh before expiry with jitter, and avoid assuming roles per request. Cross-account chains also increase latency and make authorization debugging harder because multiple policy layers and session context are involved.",
+    "real_world": "A common incident is a fleet that all refreshes credentials on the hour, briefly overloading STS or the app’s own credential broker. Another is pods failing only in one region because they use the global STS endpoint and hit routing or egress issues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design credential delivery for thousands of short-lived Kubernetes jobs in multiple AWS accounts?"
+   },
+   {
+    "question": "Walk me through how DynamoDB partitions data and throughput, and what hot partition failures look like in a real system.",
+    "answer": "DynamoDB hashes the partition key to distribute items across physical partitions, and read/write capacity is enforced per partition as well as at the table level. If traffic concentrates on a small set of partition keys, you can get throttling even when overall table capacity looks fine. Good designs spread writes, avoid monotonically hot keys, and use techniques like write sharding or time bucketing when access patterns are skewed. Adaptive capacity helps, but it does not make a badly skewed key design disappear.",
+    "real_world": "Teams often discover this during flash sales or tenant imbalance: one customer or one timestamp bucket receives most writes and only that slice gets throttled. CloudWatch may show table-level headroom while the application sees elevated latency and conditional write retries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What key design would you use for a multi-tenant event ingestion system with bursty tenants and time-range queries?"
+   },
+   {
+    "question": "What are the consistency and ordering guarantees of S3 today, and what edge cases still surprise people in distributed systems?",
+    "answer": "S3 provides strong read-after-write consistency for puts, deletes, and overwrites of objects, including list results, but that does not make multi-object workflows transactional. Clients still need to handle retries, idempotency, and partial completion when writing sets of objects or updating related metadata elsewhere. People also get surprised by versioning interactions, multipart upload cleanup, and the fact that object replacement is atomic per key but not coordinated across keys. At scale, request patterns and key layout still matter for performance, even though old prefix-randomization guidance is much less central than it used to be.",
+    "real_world": "A pipeline may write data files to S3 and then update a catalog or queue message; if the second step fails, downstream readers see incomplete batches. Another common issue is abandoned multipart uploads quietly consuming storage until lifecycle rules clean them up.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make an S3-based ingest pipeline exactly-once from the consumer’s point of view?"
+   },
+   {
+    "question": "When an ALB starts returning 502s or 504s intermittently under load, how do you reason about where the failure is happening?",
+    "answer": "A 502 usually means the load balancer could not get a valid response from the target, while a 504 generally points to a timeout waiting on the target, but you still need to separate LB behavior from app, network, and dependency issues. I correlate ALB access logs, target response time, target connection errors, health status changes, and instance or pod metrics like CPU, memory, file descriptors, and connection backlog. Under load, common causes are keepalive mismatches, slow dependency calls, exhausted ephemeral ports, TLS handshake issues, or targets accepting connections but not making progress. The key is to trace one failing request path end to end and compare it to healthy requests.",
+    "real_world": "A classic production incident is idle timeout mismatch: the backend closes keepalive connections sooner than the ALB expects, causing bursts of 502s during reuse. Another is a service that looks healthy but is thread-starved, so requests queue until the ALB times them out.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What specific metrics and logs would you put on a dashboard before you have an incident like this?"
+   },
+   {
+    "question": "How do EBS volumes actually behave under load, and what are the main performance traps when you run stateful systems on EC2?",
+    "answer": "EBS is network-attached block storage, so latency and throughput depend on the volume type, configured performance, instance limits, and the I/O pattern. The common traps are assuming provisioned IOPS guarantees low latency at any queue depth, ignoring instance-level EBS bandwidth caps, and running random small I/O on a volume profile meant for sequential throughput. Filesystem tuning, queue depth, and burst behavior also matter, and restoring from snapshots can have first-read penalties unless you pre-warm or use features that initialize blocks ahead of time. For databases, you have to size storage and instance together, not independently.",
+    "real_world": "Teams often scale up volume size or IOPS and see little improvement because the EC2 instance is already at its EBS throughput cap. Another issue is a database failover onto a fresh volume from snapshot that shows elevated latency until the working set is touched.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you benchmark and validate an EBS layout for a write-heavy PostgreSQL workload before production?"
+   },
+   {
+    "question": "What are the trade-offs between SQS Standard and FIFO in a high-throughput architecture, beyond just ordering?",
+    "answer": "Standard queues prioritize scale and availability with at-least-once delivery, so consumers must be idempotent and tolerate duplicates and best-effort ordering. FIFO gives ordering per message group and deduplication semantics, but throughput and parallelism are constrained by message group design, so a few hot groups can bottleneck the system. In practice, the decision is often about whether you can encode correctness with idempotency keys and commutative processing instead of requiring strict serialized handling. Visibility timeout tuning, poison message handling, and backpressure strategy matter for both.",
+    "real_world": "A payments or ledger workflow may need per-account ordering, but if all events use one message group, throughput collapses. On the other side, teams using Standard queues often get bitten when a retried consumer causes duplicate side effects because downstream writes were not idempotent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design consumers so that duplicate deliveries never create duplicate external side effects?"
+   },
+   {
+    "question": "In Route 53, what really happens during failover, and why do people overestimate how fast DNS-based recovery will be?",
+    "answer": "Route 53 can change what answer authoritative DNS returns based on health checks or routing policy, but clients and intermediate resolvers cache prior answers until TTL expiry, and some clients cache more aggressively than you expect. That means DNS failover is not an instant traffic switch; it is bounded by TTL, resolver behavior, connection reuse, and application retry logic. Health checks also only tell you what they probe, so partial failures inside a region or app can still serve bad endpoints. For low-RTO systems, DNS is usually one layer of failover, not the whole plan.",
+    "real_world": "A regional incident often reveals that some clients keep sending traffic to the old endpoint for minutes because of cached DNS and persistent connections. Teams that test only by running dig from a laptop miss the real behavior of mobile SDKs, JVMs, sidecars, and corporate resolvers.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If DNS alone is too slow for your recovery target, what AWS patterns would you add on top?"
+   },
+   {
+    "question": "How do you think about blast radius and failure isolation when designing multi-account AWS environments?",
+    "answer": "Multiple accounts are one of the strongest isolation boundaries AWS gives you for IAM, quotas, billing, and incident containment, so I use them to separate environments, security domains, and sometimes high-risk workloads. The trade-off is operational complexity: cross-account networking, logging, access management, and CI/CD all become more deliberate. Good designs centralize guardrails like SCPs and logging, but avoid building a single shared-services account that becomes a hard dependency for everything. The goal is to ensure one compromised role, runaway deployment, or quota exhaustion event cannot take down unrelated systems.",
+    "real_world": "A bad Terraform apply or credential leak is much easier to contain when production and non-production are in separate accounts with limited trust paths. I have also seen centralized egress or DNS architectures create a hidden single point of failure across many accounts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you centralize across accounts, and what would you deliberately keep decentralized?"
+   },
+   {
+    "question": "What happens during an ECS or EKS rolling deployment if tasks or pods become ready before they can really handle production traffic?",
+    "answer": "The orchestrator will move traffic based on readiness or health signals, not on whether the app has fully warmed caches, established dependency pools, or loaded large models. That creates a failure mode where the deployment looks healthy but new instances have much higher latency or error rates for the first minute, which can trigger cascading retries and rollback loops. The fix is to make readiness meaningful, separate startup from liveness, and coordinate drain and deregistration delays so old capacity stays in service until new capacity is genuinely ready. Capacity headroom matters, because deployments amplify cold-start effects.",
+    "real_world": "A common incident is a service that reports ready as soon as the HTTP port opens, then melts under real traffic while loading data lazily. On ALB-backed services, poor deregistration timing can also cut off in-flight requests during replacement.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would a good readiness check include for a service that depends on a database, cache, and background model load?"
+   },
+   {
+    "question": "Can you explain how API throttling and eventual control-plane consistency show up in AWS automation, and how you make infrastructure workflows reliable?",
+    "answer": "AWS control planes are distributed systems, so create or update calls can succeed before every downstream subsystem reflects the new state, and APIs may throttle aggressively during bursts. Reliable automation treats many operations as asynchronous, uses retries with exponential backoff and jitter, polls for observed state, and is careful about idempotency so reruns are safe. You also have to distinguish a hard failure from a not-yet-visible resource, especially with IAM, ENIs, and recently created network objects. Fast parallel provisioning is useful, but unbounded concurrency can turn transient throttling into systemic failure.",
+    "real_world": "A deployment may create a role and immediately try to use it, only to fail for a short period because the new permissions have not propagated everywhere yet. Another common issue is large-scale instance or stack creation hitting API limits and then partially succeeding, leaving cleanup and retries to reconcile drift.",
+    "code_lang": "bash",
+    "code": "for i in 1 2 3 4 5; do\n  aws ec2 describe-instances --instance-ids \"$ID\" && break\n  sleep $((RANDOM % 4 + 2**i))\ndone",
+    "follow_up": "Which AWS resources have you found most prone to propagation delays or throttling, and how would you design around that?"
+   },
+   {
+    "question": "How do you reason about S3 request-rate scaling today, and what patterns still create bottlenecks or surprise 503 Slow Down errors?",
+    "answer": "S3 no longer requires key-name randomization for basic horizontal scaling, but request distribution still matters because hot prefixes, bursty writers, and small-object storms can hit adaptive partitioning limits. I look at request concurrency, object size, retry behavior, and whether clients are concentrating writes or LISTs on a narrow working set. 503 Slow Down usually means the client should back off with jitter, reduce fan-out, and avoid retry amplification. LIST-heavy designs are often the real bottleneck, so inventory files, manifests, or event-driven indexing usually scale better than repeatedly scanning prefixes.",
+    "real_world": "A common production incident is a batch job launching thousands of workers that all write checkpoints into the same narrow prefix and then aggressively retry, turning a transient throttle into a prolonged outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you change if the workload is millions of tiny objects per hour and downstream consumers need near-real-time discovery?"
+   },
+   {
+    "question": "What are the main performance and correctness trade-offs when using CloudFront in front of dynamic APIs, not just static assets?",
+    "answer": "For APIs, CloudFront can cut latency, absorb spikes, and provide TLS termination and DDoS shielding, but cache keys and header forwarding become correctness-critical. If you forward too much, the cache hit rate collapses; if you forward too little, you can leak personalized or authenticated responses. You also need to think about origin keep-alives, timeout behavior, stale content strategy, and whether edge caching helps enough to justify extra invalidation and debugging complexity. For many APIs, selective caching of idempotent GETs and shielding the origin matter more than trying to cache everything.",
+    "real_world": "Teams often put CloudFront in front of an API and accidentally include volatile headers or cookies in the cache key, dropping hit rate so low that the origin still takes full load while troubleshooting gets harder.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the cache key for a multitenant API with auth, localization, and a small set of cacheable endpoints?"
+   },
+   {
+    "question": "How does cross-AZ traffic affect AWS architecture decisions, both for resilience and cost?",
+    "answer": "Cross-AZ traffic is usually the right default for resilience, but it is not free in either latency or cost, so I treat it as an explicit design variable. Stateful chatty systems, replication-heavy databases, centralized NAT, and east-west service meshes can generate a surprising bill and add tail latency when every request bounces between zones. The usual pattern is to keep request handling and dependent state as zone-local as practical, then replicate or fail over across AZs intentionally. You want multi-AZ durability, but not accidental cross-AZ dependence on every hot path.",
+    "real_world": "A classic incident is an internal service in one AZ talking to a cache or NAT path in another AZ; everything still works, but p99 rises and the data-transfer line item grows until someone notices.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What AWS components most commonly create hidden cross-AZ charges in otherwise simple architectures?"
+   },
+   {
+    "question": "How would you design and operate idempotency for an event-driven AWS system where retries and duplicates are expected?",
+    "answer": "I assume at-least-once delivery almost everywhere, so handlers must make side effects safe to repeat. That usually means a stable idempotency key, a deduplication store with a clear retention window, and making downstream writes conditional rather than hoping retries do not happen. The hard part is choosing the boundary: dedupe per message, per business operation, or per target side effect. You also need to account for partial completion, where the handler commits one side effect and crashes before recording success.",
+    "real_world": "In payment, order, and provisioning flows, duplicate deliveries are normal during retries or consumer restarts; without idempotency, a small backlog replay can create double charges or duplicate resources.",
+    "code_lang": "python",
+    "code": "def handle(event):\n    key = event[\"idempotency_key\"]\n    ok = ddb.put_item(\n        Item={\"k\": key},\n        ConditionExpression=\"attribute_not_exists(k)\"\n    )\n    if not ok:\n        return \"already processed\"\n    charge_customer(event)\n    publish_receipt(event)\n    return \"done\"",
+    "follow_up": "Where would you store the idempotency record if the business operation can take hours and may need compensation?"
+   },
+   {
+    "question": "What actually fails when you hit EC2 capacity problems, and how do you build systems that tolerate them?",
+    "answer": "Capacity failures show up as instance launches being delayed or rejected for a specific type, AZ, or purchase option, even when your templates are otherwise correct. The fix is architectural flexibility: multiple instance types, multiple AZs, mixed purchase options where appropriate, and avoiding hidden coupling to one family or local resource. For stateful systems, you also need to separate control-plane success from data-plane readiness, because eventually capacity returns but your replacement may still be cold. Capacity planning in AWS is about reducing constraints, not assuming the fleet always exists on demand.",
+    "real_world": "A real outage pattern is an Auto Scaling group pinned to one large instance family in one AZ; a spike triggers scale-out, launches fail, and the service keeps shedding traffic even though the account limits are fine.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you change the design if the workload depends on local NVMe or GPUs and flexibility is much lower?"
+   },
+   {
+    "question": "How do you approach RDS Proxy or connection pooling in AWS, and what problems does it actually solve versus not solve?",
+    "answer": "It mainly protects relational databases from connection storms, especially from highly concurrent or bursty clients like serverless functions, by multiplexing and reusing backend connections. That improves stability during spikes and failovers, but it does not make slow queries fast or fix poor transaction design. Long-lived transactions, session state, and features that require connection affinity reduce pooling efficiency, so application behavior still matters. I use pooling to control concurrency at the database boundary, not as a substitute for query tuning or schema work.",
+    "real_world": "A common incident is a Lambda-driven workload opening far more database connections than the DB can handle; CPU may look fine while the database still falls over due to connection management overhead.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What application patterns break multiplexing or make a proxy much less effective?"
+   },
+   {
+    "question": "What are the real trade-offs between using KMS directly and relying on envelope encryption through AWS services?",
+    "answer": "Using AWS services with KMS-backed encryption is usually the operational sweet spot because the service handles data-key generation, caching, and bulk encryption efficiently. Calling KMS directly for every object or record gives you tighter control and auditability, but it adds latency, cost, and dependency on KMS request quotas and availability on your hot path. The usual pattern is envelope encryption: use KMS to protect data keys, then encrypt data locally or through the managed service. I reserve direct KMS usage for cases where key separation or application-level cryptographic control is a real requirement.",
+    "real_world": "Teams sometimes put per-request KMS decrypts in synchronous request paths and then discover p99 latency and throttling problems during traffic spikes or regional issues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design for a service that must keep working briefly if KMS calls start failing?"
+   },
+   {
+    "question": "If a CloudFormation stack update gets stuck or rolls back partway through, how do you debug it without making things worse?",
+    "answer": "First I separate control-plane failure from resource reality: inspect stack events, then check the actual state of the failing resources because the stack can lag or be blocked by dependencies. Common causes are immutable property changes, drift, deletion protection, out-of-band edits, and custom resources that timed out or never sent completion signals. I avoid repeatedly retrying blind updates, because that can compound replacement attempts or orphan resources. The goal is to restore a convergent path: fix drift, unblock dependencies, or use stack import/recreation for the specific resource if needed.",
+    "real_world": "Production pain usually comes when a failed update leaves load balancers, databases, or IAM resources half-changed, and a rushed retry creates a second outage by replacing something that was still serving traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you handle custom resources safely so a Lambda timeout does not wedge the whole stack?"
+   },
+   {
+    "question": "How would you choose between Aurora replicas, ElastiCache, and DynamoDB Accelerator for read scaling, and what failure modes matter most?",
+    "answer": "They solve different bottlenecks. Aurora replicas preserve SQL semantics but still depend on replica lag and database-shaped scaling; ElastiCache gives very low-latency reads for application-managed cache keys but introduces invalidation and warmup complexity; DAX is specifically for DynamoDB read latency and repeated-item access patterns, not general-purpose caching. I choose based on whether I need transactional database behavior, cacheable object access, or key-value acceleration. The main failure modes are stale reads, cache stampedes, uneven hit rates, and applications that quietly become dependent on the cache always being hot.",
+    "real_world": "Teams often add a cache to fix p99, but the real incident happens later when a node replacement or deployment cold-starts the cache and the backing store cannot absorb the sudden miss storm.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What techniques do you use to prevent cache stampedes during expirations or regional failover?"
+   },
+   {
+    "question": "How do you think about egress architecture in AWS at scale, especially NAT gateways, private connectivity, and observability?",
+    "answer": "At scale, egress is a reliability and cost architecture problem, not just a routing checkbox. NAT gateways are simple and highly available within an AZ, but they can become expensive for high-volume traffic, and centralizing them across AZs adds both transfer cost and extra failure coupling. For AWS service traffic, endpoints usually reduce cost and blast radius; for external dependencies, I care about AZ-local egress, clear routing ownership, and flow-level visibility. Observability matters because egress failures often look like random app timeouts until you correlate routes, DNS, port exhaustion, and downstream reachability.",
+    "real_world": "A frequent surprise is a shared NAT path carrying image pulls, package installs, and third-party API calls for many clusters; one traffic surge causes timeouts across unrelated services.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you monitor to distinguish downstream slowness from a saturated or misdesigned egress path?"
+   }
+  ]
+ }
+}

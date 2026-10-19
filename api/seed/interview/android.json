@@ -1,0 +1,485 @@
+{
+ "slug": "android",
+ "name": "Android development",
+ "category": "Mobile",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is an Activity in Android, and when would you use one?",
+    "answer": "An Activity is a single screen with a user interface. You use it for things like a login screen, a settings page, or a detail view that the user can navigate to. It owns a lifecycle, so you must handle creation, pause, resume, and destruction correctly. For anything mostly visual and user-facing, an Activity is the basic starting point.",
+    "real_world": "If you forget the Activity lifecycle, you can lose user input when the app rotates or gets backgrounded. Teams often use this for every top-level screen in a simple app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does an Activity differ from a Fragment?"
+   },
+   {
+    "question": "What is a Fragment, and why would you choose it instead of another Activity?",
+    "answer": "A Fragment represents part of a UI inside an Activity. You use it when you want reusable screen pieces, flexible layouts for tablets and phones, or independent navigation within one Activity. Fragments are tied to the Activity lifecycle, so they need careful state handling. A common use is a list on one side and details on the other in larger screens.",
+    "real_world": "A common mistake is putting too much logic into fragments and then losing state during navigation or configuration changes. Teams also use fragments to share code between phone and tablet layouts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the Fragment lifecycle, and why can it be tricky?"
+   },
+   {
+    "question": "What is the AndroidManifest.xml file used for?",
+    "answer": "The manifest tells Android about your app’s components and required capabilities. It declares Activities, permissions, intent filters, and app-level metadata. Android uses it to know what parts of your app exist and what the app is allowed to do. If something is missing there, the system may not launch your screen or allow access to a feature.",
+    "real_world": "A common production issue is forgetting to declare a permission or activity, which causes crashes or screens that never open. It is also where teams define which activity starts first.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between declaring something in the manifest and requesting it at runtime?"
+   },
+   {
+    "question": "What is an Intent in Android?",
+    "answer": "An Intent is a message telling Android to do something, such as open a screen, share data, or start a service. Explicit intents target a specific component in your app, while implicit intents ask the system to find an app that can handle the action. They are the main way components communicate. Use them whenever you need navigation or to hand work off to another app.",
+    "real_world": "If the intent is built incorrectly, the wrong screen opens or no app handles the action. They are also used for standard flows like opening the camera or sharing text.",
+    "code_lang": "java",
+    "code": "Intent intent = new Intent(this, DetailActivity.class);\nintent.putExtra(\"id\", 42);\nstartActivity(intent);",
+    "follow_up": "When would you use an implicit intent instead of an explicit one?"
+   },
+   {
+    "question": "What does the Android lifecycle mean for an Activity?",
+    "answer": "The lifecycle is the sequence of states an Activity goes through as the user opens, leaves, and returns to it. The important methods are creation, start, resume, pause, stop, and destroy. You use them to start and stop work at the right time, like loading data or releasing resources. Knowing the lifecycle helps avoid crashes, leaks, and lost UI state.",
+    "real_world": "Background audio, camera access, and network calls often need lifecycle-aware cleanup. Beginners commonly put everything in one method and then wonder why the app behaves strangely after rotation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should usually happen in onPause versus onStop?"
+   },
+   {
+    "question": "What is a View, and how is it different from a ViewGroup?",
+    "answer": "A View is a single UI element such as a TextView or Button. A ViewGroup is a container that holds other Views and controls their layout, like LinearLayout or ConstraintLayout. You combine them to build the screen hierarchy. Understanding this helps when debugging layout problems or reading XML.",
+    "real_world": "If a layout is slow or too deep, it can cause rendering issues. Teams often simplify nested ViewGroups to make screens easier to maintain and faster to draw.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is ConstraintLayout often preferred over deeply nested layouts?"
+   },
+   {
+    "question": "What is the purpose of RecyclerView?",
+    "answer": "RecyclerView shows large or changing lists efficiently. It reuses item views instead of creating a new one for every row, which improves scrolling performance. You provide an adapter and a layout manager to control how data is displayed. It is the standard choice for lists and grids in modern Android apps.",
+    "real_world": "Without RecyclerView, list screens can become slow and memory-heavy. It is commonly used for feeds, inboxes, and search results.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the role of an Adapter in RecyclerView?"
+   },
+   {
+    "question": "What is an Adapter in Android UI code?",
+    "answer": "An Adapter connects data to a UI component like RecyclerView or ListView. It creates item views and binds each piece of data into the right row or cell. This separates the data model from the screen rendering. You use it whenever the UI repeats the same item shape many times.",
+    "real_world": "A bad adapter implementation can make scrolling janky or show the wrong data in recycled rows. This is one of the first places teams look when a list screen feels buggy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is view recycling, and why does it matter?"
+   },
+   {
+    "question": "What is the difference between dp and sp in Android?",
+    "answer": "dp is used for layout dimensions, and it helps keep sizes consistent across different screen densities. sp is used for text sizes, and it also respects the user’s font scaling preference. Using the wrong unit can make UI elements too small, too large, or inaccessible. In practice, width, height, and padding are usually dp, while text is usually sp.",
+    "real_world": "If a team uses px by mistake, the UI can look fine on one device and broken on another. Accessibility issues often come from ignoring sp for text.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use px, if ever?"
+   },
+   {
+    "question": "What happens if you need permission for a feature like the camera?",
+    "answer": "Some permissions must be both declared in the manifest and requested from the user at runtime. You should only ask when the feature is needed, explain why, and handle the case where the user refuses. If you skip the runtime request, the operation will fail even if the permission is in the manifest. Good apps degrade gracefully when permission is denied.",
+    "real_world": "Camera or location features often fail in testing because the permission flow was not handled end to end. Teams also see crashes when code assumes permission was granted and calls the API anyway.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between normal permissions and runtime permissions?"
+   },
+   {
+    "question": "What is the purpose of a Context in Android?",
+    "answer": "Context is the handle Android uses to give you access to app resources and system services. You need it for things like loading strings and layouts, starting components, showing dialogs, and getting shared preferences. A common mistake is keeping a long-lived reference to an Activity context and accidentally leaking it. In general, use the most specific valid context for the job.",
+    "real_world": "A crash or memory leak can happen if a background object holds an Activity context after the Activity is destroyed. Developers also hit issues when they try to create UI elements with the wrong context.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use an Activity context versus an application context?"
+   },
+   {
+    "question": "What is the difference between onCreate, onStart, onResume, onPause, onStop, and onDestroy in an Activity?",
+    "answer": "These are lifecycle callbacks that tell you what state the Activity is in. onCreate is for initial setup, onStart means it is becoming visible, and onResume means the user can interact with it. onPause and onStop are used when the Activity is losing focus or becoming hidden, and onDestroy is the final cleanup step if it is called. The key idea is to put work in the right callback so you do not waste resources or lose state.",
+    "real_world": "If you start a camera or animation in the wrong callback, it may keep running when the app is not visible. If you save state too late, user input can be lost during rotation or process death.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of work belong in onPause versus onStop?"
+   },
+   {
+    "question": "What is a layout resource in Android?",
+    "answer": "A layout resource is an XML file that describes how UI elements are arranged on screen. Android inflates that XML into actual View objects at runtime. Layouts help separate UI structure from code and make it easier to reuse and change screens. Common layouts include linear and constraint-based arrangements.",
+    "real_world": "A team may tweak spacing and alignment in XML without changing Kotlin or Java code. If a layout is poorly structured, the screen can become hard to maintain and slower to render.",
+    "code_lang": "xml",
+    "code": "<LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"match_parent\"\n    android:orientation=\"vertical\">\n\n    <TextView\n        android:layout_width=\"wrap_content\"\n        android:layout_height=\"wrap_content\"\n        android:text=\"Hello\" />\n</LinearLayout>",
+    "follow_up": "What does it mean to inflate a layout?"
+   },
+   {
+    "question": "What is the difference between match_parent and wrap_content?",
+    "answer": "match_parent makes a view fill the available space from its parent in that dimension. wrap_content makes it just big enough to fit its content. Choosing the wrong one can cause clipping, wasted space, or awkward UI spacing. Most beginners learn to check both width and height carefully when a screen looks wrong.",
+    "real_world": "A button set to match_parent by mistake can stretch across the whole screen instead of sizing to its label. A TextView set to wrap_content may be cut off if its container is too small.",
+    "code_lang": "xml",
+    "code": "<Button\n    android:layout_width=\"wrap_content\"\n    android:layout_height=\"match_parent\"\n    android:text=\"Save\" />",
+    "follow_up": "How do parent layout rules affect these sizes?"
+   },
+   {
+    "question": "What is a ViewModel used for in Android?",
+    "answer": "A ViewModel holds UI-related data so it can survive configuration changes like rotation. It helps keep screen state out of the Activity or Fragment and reduces the chance of losing data when the UI is recreated. A ViewModel should not be used for direct UI work or for storing references to Views. It is mainly for preparing and owning screen data.",
+    "real_world": "If a user types into a form and rotates the phone, the ViewModel can keep that text available. Without it, beginners often lose the current state and have to rebuild it manually.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should and should not go inside a ViewModel?"
+   },
+   {
+    "question": "What is the difference between a local variable, a field, and a property in Android code?",
+    "answer": "A local variable exists only inside a method or block. A field belongs to an object instance, so it stays available across method calls as long as the object exists. In Kotlin, a property is the language feature you usually use to expose or store data, and it may have backing fields or custom accessors. The key point is scope and lifetime: locals are temporary, fields and properties can hold state.",
+    "real_world": "A common beginner bug is declaring a variable inside onCreate and then trying to use it in another method, where it no longer exists. That often leads to null handling mistakes or code that cannot compile.",
+    "code_lang": "kotlin",
+    "code": "class MainActivity : Activity() {\n    private var count = 0\n\n    fun increment() {\n        val local = 1\n        count += local\n    }\n}",
+    "follow_up": "When would you make a property private instead of public?"
+   },
+   {
+    "question": "What is the difference between findViewById and view binding?",
+    "answer": "findViewById looks up a view at runtime by its ID, while view binding generates a type-safe binding class for your layout. View binding reduces boilerplate and avoids many null and cast mistakes. It also makes code easier to read because you access views directly through the binding object. The trade-off is that you need to enable and use the generated binding class correctly.",
+    "real_world": "A typo in an ID can cause a crash or a null problem with findViewById if you are not careful. View binding helps prevent those issues in screens with many widgets.",
+    "code_lang": "kotlin",
+    "code": "private lateinit var binding: ActivityMainBinding\n\noverride fun onCreate(savedInstanceState: Bundle?) {\n    super.onCreate(savedInstanceState)\n    binding = ActivityMainBinding.inflate(layoutInflater)\n    setContentView(binding.root)\n    binding.title.text = \"Hello\"\n}",
+    "follow_up": "What problems can still happen even when using view binding?"
+   },
+   {
+    "question": "What is a Gradle file used for in an Android project?",
+    "answer": "Gradle files describe how the project is built. They declare dependencies, build types, compile settings, and other configuration the Android toolchain needs. This is where you add libraries and control things like debug versus release behavior. Beginners often mix up app code with build configuration, but Gradle is separate from the UI and business logic.",
+    "real_world": "When a library is added incorrectly, the app may fail to sync or build even though the Kotlin code is fine. Teams also use Gradle settings to keep debug tools out of release builds.",
+    "code_lang": "groovy",
+    "code": "dependencies {\n    implementation 'androidx.core:core-ktx:1.13.1'\n    testImplementation 'junit:junit:4.13.2'\n}",
+    "follow_up": "What is the difference between implementation and testImplementation?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide between using LiveData and StateFlow in an Android app?",
+    "answer": "Use StateFlow when you want a coroutine-native stream with an explicit current value and easy composition in Kotlin. LiveData is still fine when you need lifecycle-aware observation from XML-based UI or existing architecture that already uses it. In new Kotlin-first code, StateFlow is usually the better default because it works well with suspend functions, operators, and testing. The trade-off is that LiveData handles lifecycle awareness for you, while StateFlow needs collection to be tied to lifecycle correctly.",
+    "real_world": "This comes up when migrating a screen from LiveData to coroutines. Teams often see stale UI or missed updates if they mix the two without a clear source of truth.",
+    "code_lang": "kotlin",
+    "code": "val uiState = MutableStateFlow(UiState())\n\nviewModelScope.launch {\n    repository.itemsFlow.collect { items ->\n        uiState.value = uiState.value.copy(items = items)\n    }\n}",
+    "follow_up": "How would you collect a Flow in an Activity or Fragment without leaking work when the screen is stopped?"
+   },
+   {
+    "question": "When would you choose a Service, a foreground Service, or WorkManager?",
+    "answer": "Use a regular Service only for work that should continue while the app is in the foreground and is directly tied to the app’s process. Use a foreground Service when the user can notice the ongoing task, like navigation or active playback, because Android expects a persistent notification. Use WorkManager for deferrable, guaranteed background work such as uploads, sync, or cleanup, especially when the app may be killed. The main trade-off is immediacy versus system-managed reliability.",
+    "real_world": "A file upload that must finish even if the app is swiped away is usually a WorkManager job, not a Service. A music player or turn-by-turn navigation typically needs a foreground Service.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems happen if you try to do long background work with a plain coroutine in a UI scope?"
+   },
+   {
+    "question": "What is the practical difference between launching coroutines in lifecycleScope and viewModelScope?",
+    "answer": "lifecycleScope is tied to a lifecycle owner like an Activity or Fragment, so the work is cancelled when that lifecycle is destroyed. viewModelScope survives configuration changes and is cancelled when the ViewModel is cleared, which makes it better for screen state and data loading. Use lifecycleScope for UI-tied work such as animations or one-off collection, and viewModelScope for business logic and repository calls. The trade-off is scope duration versus how much UI cleanup you want automatically.",
+    "real_world": "If you start a network call in an Activity scope and rotate the device, the request may be cancelled and restarted. In a ViewModel, the same load can survive rotation and avoid flicker.",
+    "code_lang": "kotlin",
+    "code": "class MyViewModel : ViewModel() {\n    fun load() {\n        viewModelScope.launch { repository.refresh() }\n    }\n}",
+    "follow_up": "How would you cancel or restart work when the user leaves a screen before it finishes?"
+   },
+   {
+    "question": "How do you handle configuration changes without losing important UI state?",
+    "answer": "Keep durable screen state in a ViewModel or saved state mechanism, not in views or Activity fields. Use ViewModel for state that can be recreated from memory after rotation, and use saved state for small pieces that must survive process death, like a draft query or selected tab. Avoid storing derived UI data only in the view hierarchy because it is easy to lose on recreation. The trade-off is simplicity versus resilience across process death and recreation.",
+    "real_world": "A search screen that loses the current query on rotation feels broken, even if the search results are still loading. A checkout form often needs both ViewModel state and saved state for a smoother recovery.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kind of state would you put in SavedStateHandle versus a repository?"
+   },
+   {
+    "question": "What is the difference between a cold Flow and a hot Flow in Android code?",
+    "answer": "A cold Flow starts producing values when someone collects it, so each collector can trigger new work. A hot flow, like SharedFlow or StateFlow, exists independently of collectors and can keep the latest value or broadcast events. Cold flows are good for one-shot data streams from repositories, while hot flows are better for UI state and shared events. The trade-off is resource usage and replay behavior versus simplicity and per-collector freshness.",
+    "real_world": "If two screens collect a cold flow that wraps a network call, you may accidentally make the request twice. A StateFlow avoids that for shared screen state.",
+    "code_lang": "kotlin",
+    "code": "val state = MutableStateFlow(0)\nstate.value = 1\nstate.collect { value ->\n    println(value)\n}",
+    "follow_up": "When would you use SharedFlow instead of StateFlow?"
+   },
+   {
+    "question": "How do you avoid memory leaks with an Android Context?",
+    "answer": "Do not keep a long-lived reference to an Activity or View context in objects that outlive the screen, such as singletons or static fields. If you need a context that can live for the app’s lifetime, use the application context, but only for work that does not require UI theming or a window. Passing context into short-lived operations is fine; the problem is holding the wrong one too long. The trade-off is safety versus access to UI-specific behavior.",
+    "real_world": "A common leak is a singleton image loader storing an Activity context after the user rotates the device. That keeps the old Activity alive and can cause growing memory usage.",
+    "code_lang": "kotlin",
+    "code": "class Repo(ctx: Context) {\n    private val appCtx = ctx.applicationContext\n}",
+    "follow_up": "How would you detect a context leak in a real app?"
+   },
+   {
+    "question": "What are the trade-offs between XML layouts and Jetpack Compose?",
+    "answer": "XML is mature, familiar, and works well with existing view-based code and libraries. Compose is more concise for dynamic UI, easier to model as state, and often reduces boilerplate, but it changes how you think about rendering and side effects. In mixed codebases, the biggest issue is interop complexity and keeping state hoisted correctly. The choice often depends on team familiarity, existing screens, and how much UI is still view-based.",
+    "real_world": "Many teams keep XML for stable legacy screens and start new flows in Compose. Problems usually show up at the boundary where a Compose screen hosts old Views or vice versa.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to migrate an existing screen to Compose?"
+   },
+   {
+    "question": "What is the difference between unit tests, instrumentation tests, and UI tests on Android?",
+    "answer": "Unit tests run on the JVM and are best for fast testing of pure Kotlin or Java logic. Instrumentation tests run on an Android device or emulator and can touch Android framework APIs, databases, and resources. UI tests exercise the visible screen flow, often with Espresso or Compose testing, and are slower but closer to user behavior. The trade-off is speed and isolation versus real platform coverage.",
+    "real_world": "Repository logic can usually be covered by unit tests, while a crash caused by a bad Fragment transaction needs an instrumentation test. Teams usually keep most coverage in unit tests and reserve device tests for risky paths.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kind of bug would you never rely on a unit test alone to catch?"
+   },
+   {
+    "question": "What can go wrong with RecyclerView performance, and how do you fix it?",
+    "answer": "Performance problems usually come from doing too much work in onBindViewHolder, creating unnecessary object churn, or triggering too many list updates. Use DiffUtil or ListAdapter so only changed rows update, and avoid re-measuring or decoding images on every bind. Also make sure you are not calling notifyDataSetChanged unless you really need a full refresh, because it prevents fine-grained animations and efficient updates. The trade-off is a little setup complexity for much smoother scrolling.",
+    "real_world": "A feed screen that stutters when new items load often has expensive binding logic or full-list refreshes. Switching to DiffUtil usually makes the issue obvious in profiling.",
+    "code_lang": "kotlin",
+    "code": "class ItemsAdapter : ListAdapter<Item, VH>(DIFF) {\n    companion object {\n        val DIFF = object : DiffUtil.ItemCallback<Item>() {\n            override fun areItemsTheSame(a: Item, b: Item) = a.id == b.id\n            override fun areContentsTheSame(a: Item, b: Item) = a == b\n        }\n    }\n}",
+    "follow_up": "How would you debug whether the slowdown is in binding, layout, or image loading?"
+   },
+   {
+    "question": "How do you structure an Android app so that UI, business logic, and data access stay separated?",
+    "answer": "A common approach is to keep UI in Activities, Fragments, or Compose screens, put state and UI decisions in ViewModels, and keep network or database work in repositories. The UI should observe state and send user actions, not reach directly into data sources. This makes code easier to test and reduces coupling between framework code and business rules. The trade-off is more layers, but the app becomes easier to change and debug as it grows.",
+    "real_world": "Without separation, a screen often ends up with networking, parsing, and rendering all in one class. That makes it hard to reuse logic or test a bug without starting the app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What belongs in a repository, and what should stay in the ViewModel?"
+   },
+   {
+    "question": "What is the best way to handle errors from network requests in an Android app?",
+    "answer": "Treat errors as part of the UI state rather than as uncaught exceptions. The ViewModel should convert failures into predictable states like loading, success, empty, or error, and the UI should render those states consistently. Differentiate between recoverable failures, like no network, and programmer bugs or invalid data that should fail loudly during development. The trade-off is extra modeling work up front, but much better behavior in production.",
+    "real_world": "If an API times out, users should see a retry state instead of a blank screen or a crash. Teams often discover that they need distinct handling for validation errors, auth failures, and server outages.",
+    "code_lang": "kotlin",
+    "code": "sealed class UiState {\n    data object Loading : UiState()\n    data class Error(val message: String) : UiState()\n    data class Data(val items: List<Item>) : UiState()\n}",
+    "follow_up": "How would you show an error state without losing the user’s current partially entered input?"
+   },
+   {
+    "question": "How do you handle runtime permission denial cleanly in an Android app without breaking the user flow?",
+    "answer": "Treat denial as a normal state, not an exceptional one. Show a rationale only when it helps explain why the permission matters, then let the user continue with limited functionality or a fallback path if possible. If the feature cannot work without the permission, disable just that feature and explain what is missing rather than blocking the whole screen. Also handle the case where the user selects “don’t ask again” by guiding them to app settings.",
+    "real_world": "This comes up in camera, location, and notification flows. Apps that hard-fail on denial often look broken and get bad reviews, even though the product could still provide value without the permission.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the UI if the feature has a partial fallback when permission is denied?"
+   },
+   {
+    "question": "When would you use SavedStateHandle instead of a ViewModel property or onSaveInstanceState?",
+    "answer": "Use SavedStateHandle for small UI state that should survive process death and configuration changes, like selected tab, query text, or an ID needed to reload data. A plain ViewModel property survives rotations but not process death, while onSaveInstanceState is better for small, framework-managed state but becomes awkward for more structured state. SavedStateHandle gives you a simple key-value store tied to the ViewModel and is often the cleanest choice for screen state that can be reconstructed.",
+    "real_world": "This matters when Android kills your process in the background and the user returns later. Without saved state, the screen may reopen with empty fields or lose the item they were editing.",
+    "code_lang": "kotlin",
+    "code": "class MyVm(private val state: SavedStateHandle) : ViewModel() {\n    var query: String\n        get() = state[\"query\"] ?: \"\"\n        set(value) { state[\"query\"] = value }\n}",
+    "follow_up": "What kinds of data would you avoid putting into SavedStateHandle?"
+   },
+   {
+    "question": "What is the difference between a suspend function and returning a Flow from a repository method?",
+    "answer": "A suspend function represents one asynchronous result, while a Flow represents a stream of values over time. Use suspend when you need a single load or write operation, and use Flow when the data can update, be observed, or be combined with other streams. Flow also makes backpressure and cancellation part of the model, which is useful for continuous data but adds complexity. The trade-off is simplicity versus reactivity.",
+    "real_world": "This shows up when deciding whether a screen should reload once or keep observing a database or network source. Returning Flow for a one-shot call often makes the API harder to use than necessary.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you convert a Flow to a cached state for the UI instead of collecting it directly?"
+   },
+   {
+    "question": "How do you think about single-source-of-truth in an Android app, and what breaks when you violate it?",
+    "answer": "Single-source-of-truth means one layer owns the canonical state, and other layers observe or derive from it. In practice, that often means the database or repository is authoritative, while the UI keeps only transient presentation state. If you duplicate mutable state in multiple places, you get stale UI, race conditions, and bugs where one screen updates and another does not. The main trade-off is a little extra architecture for much better consistency and debuggability.",
+    "real_world": "Teams often hit this when the same list is cached in memory, stored in a database, and also edited in the ViewModel. Users then see deleted items reappear or outdated values flash on screen.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you reconcile optimistic UI updates with a single source of truth?"
+   },
+   {
+    "question": "How would you debug an Android app that is leaking memory after navigating between screens many times?",
+    "answer": "Start by identifying what object is growing and what is retaining it: Activities, Fragments, Views, bitmaps, or callbacks. Then look for long-lived references from singletons, static fields, adapters, listeners, or coroutines that outlive the screen. LeakCanary or heap dumps help confirm the chain of references, but the real fix is usually to remove the reference, clear listeners, or scope work to the lifecycle. The key is to distinguish a leak from temporary memory pressure.",
+    "real_world": "This is common when a Fragment keeps a View reference after onDestroyView or when a callback captures an Activity in a singleton. The app may seem fine in short tests but crash after repeated navigation in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the most common sources of leaks in Fragment-based apps?"
+   },
+   {
+    "question": "What are the trade-offs between using Room and keeping data only in memory for an Android app?",
+    "answer": "In-memory data is simpler and faster for temporary state, but it disappears when the process dies and cannot support offline use. Room adds persistence, queryability, and better recovery, but it requires schema design, migrations, and more careful threading. For anything the user expects to survive app restarts or be shared across screens, Room is usually worth it. For ephemeral UI state or short-lived caches, memory is enough.",
+    "real_world": "This matters for drafts, cached feeds, and offline-first apps. Teams often start in-memory and later discover users lose work when the app is killed in the background.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you handle Room schema changes without breaking existing installs?"
+   },
+   {
+    "question": "How do you choose between SharedPreferences and DataStore for app settings?",
+    "answer": "DataStore is the better default for new code because it is asynchronous and avoids the UI-thread issues and consistency problems that can happen with SharedPreferences. Use it for small pieces of app settings or user preferences, not large or relational data. SharedPreferences can still be acceptable in legacy code or for simple, already-working cases, but it is easier to misuse. The trade-off is migration effort versus better correctness and threading behavior.",
+    "real_world": "Settings screens often read preferences during startup, and blocking calls can hurt launch time. Corrupted or partially written preference data can also cause odd bugs that are hard to reproduce.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you migrate existing SharedPreferences data to DataStore safely?"
+   },
+   {
+    "question": "What happens if you launch network work directly in an Activity instead of a ViewModel or repository layer?",
+    "answer": "The work becomes tightly coupled to the screen lifecycle, so it can be cancelled unexpectedly on rotation or continue longer than intended if you manage it badly. You also make testing harder because the UI class now owns business and data logic. Keeping the call in a ViewModel or repository lets you preserve state across configuration changes and reuse the logic from multiple entry points. The main trade-off is a little indirection for much better lifecycle safety.",
+    "real_world": "A common bug is a request restarting on every rotation and causing duplicate submissions or duplicate analytics events. Another is the Activity leaking because a callback holds onto it after it is destroyed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent duplicate API calls when the same screen is recreated?"
+   },
+   {
+    "question": "What is the practical difference between using DiffUtil and calling notifyDataSetChanged in a RecyclerView adapter?",
+    "answer": "DiffUtil calculates what actually changed, so RecyclerView can animate and rebind only affected rows. notifyDataSetChanged tells it everything changed, which is simpler but usually causes more work, worse animations, and more visual jank. DiffUtil is worth it when lists update frequently or are large enough that full refreshes become noticeable. The trade-off is a bit more code and careful item identity handling.",
+    "real_world": "This matters in feeds, chat lists, and search results where items are updated incrementally. Using full refreshes there often causes flicker and scroll position issues that users notice immediately.",
+    "code_lang": "kotlin",
+    "code": "val diff = object : DiffUtil.ItemCallback<Item>() {\n    override fun areItemsTheSame(a: Item, b: Item) = a.id == b.id\n    override fun areContentsTheSame(a: Item, b: Item) = a == b\n}",
+    "follow_up": "What bugs happen if areItemsTheSame is implemented incorrectly?"
+   },
+   {
+    "question": "How do you decide whether to use an interface, callback, or coroutine flow for communication between layers?",
+    "answer": "Use the simplest contract that matches the interaction. A callback is fine for a one-off event, an interface is useful when you want a stable dependency boundary, and Flow is better when the consumer needs to observe ongoing state changes. In Android, the choice often depends on lifecycle and cancellation: streams fit repeated updates, while callbacks can be easier for single results. Avoid overengineering the contract if a plain suspend function or callback is enough.",
+    "real_world": "This comes up when wiring a screen to a controller, adapter, or custom view. Picking the wrong abstraction often makes the code either too rigid or too hard to test.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test each of those communication styles?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does the Android main thread and Looper actually work, and what causes an ANR in practice?",
+    "answer": "Each app process typically has a main thread running a Looper that pulls messages and runnables from a MessageQueue and dispatches them serially. UI input, layout, draw, lifecycle callbacks, and many framework events all run there, so any long CPU work, blocking I/O, lock contention, or binder call that stalls the queue can freeze the app. An ANR happens when the system decides the app is not responding to input or lifecycle deadlines, not just when you do network on the main thread. The fix is to move work off the main thread, reduce lock scope, and measure queue stalls rather than guessing.",
+    "real_world": "Teams often chase ANRs as 'slow rendering' when the real cause is a synchronous disk read, a database migration, or waiting on a background thread holding a lock needed by the UI thread.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you investigate whether an ANR came from binder contention, a lock inversion, or expensive work on the main thread?"
+   },
+   {
+    "question": "What really happens under the hood with Binder IPC on Android, and what are the performance and failure trade-offs?",
+    "answer": "Binder is Android’s primary IPC mechanism: calls are marshalled into Parcels, cross process boundaries through the kernel driver, and execute on a thread pool in the target process. It is fast for IPC, but still much slower than in-process calls, and large payloads or chatty request patterns quickly become expensive. Calls can block, callers can die, services can be killed, and transaction size is limited, so you should send lightweight data, avoid bitmap-sized payloads, and design for timeouts or retries where appropriate. Treat every binder call like a potentially blocking remote call, even if it feels local in code.",
+    "real_world": "A common production issue is passing too much data through intents or AIDL, which works in testing and then crashes or janks in production when payload size grows.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you had to expose a large list of media items from one process to another, how would you avoid binder transaction and latency problems?"
+   },
+   {
+    "question": "How would you reason about rendering performance on Android, from measure and layout through drawing to the GPU?",
+    "answer": "A frame has to finish its UI thread work and rendering pipeline work within the display budget, so expensive measure/layout passes, overdraw, bitmap uploads, and unnecessary recomposition or invalidation can all cause jank. I start by identifying whether the bottleneck is CPU on the UI thread, RenderThread/GPU work, or synchronization between them. Then I reduce hierarchy depth, avoid repeated layout passes, cache expensive calculations, keep item views stable, and shrink overdraw or large texture uploads. The key is to profile with frame metrics and traces instead of assuming the problem is in one layer.",
+    "real_world": "In production, a screen can look simple but still jank because an image-heavy feed is uploading textures during fast scroll while the UI thread is also rebinding too much text.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools would you use to tell apart UI-thread jank from GPU overdraw or shader-related jank?"
+   },
+   {
+    "question": "How does Room handle concurrency and threading, and what failure modes do you watch for under load?",
+    "answer": "Room verifies that you do not access the database on the main thread by default and routes query and transaction work through executors or coroutine dispatchers, while SQLite itself allows limited concurrency with one writer at a time. Under load, the real issues are long transactions, write contention, large result sets materialized into memory, and invalidation-triggered re-queries causing extra churn. I keep transactions short, page large datasets, make indexes explicit, and ensure reactive queries do not trigger unnecessary full-table scans. The trade-off is consistency and simplicity versus throughput; SQLite is excellent on-device, but it is not a high-concurrency server database.",
+    "real_world": "A common incident is a startup freeze after a schema migration plus eager warm-up queries, where one long transaction blocks other work and the app feels hung.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when WAL mode is involved, and why can reads still appear slow even if writes are serialized separately?"
+   },
+   {
+    "question": "What are the hard parts of coroutine cancellation on Android, especially around lifecycle and cleanup?",
+    "answer": "Cancellation in coroutines is cooperative, so suspend points and code that checks cancellation will stop, but blocking calls and broad exception handling can accidentally ignore it. A common bug is catching Exception and swallowing CancellationException, which keeps work running after the screen is gone. Cleanup should go in finally blocks or structured APIs, and long CPU loops should check isActive or yield periodically. The architecture goal is that UI-scoped work stops when the UI stops caring, while durable work is moved to a scope designed to survive.",
+    "real_world": "Teams see duplicate uploads, stale toasts, or wasted battery because a request launched for one screen continues after navigation and updates a state holder that is no longer relevant.",
+    "code_lang": "kotlin",
+    "code": "viewModelScope.launch {\n  try {\n    repository.sync()\n  } catch (e: CancellationException) {\n    throw e\n  } catch (e: Exception) {\n    _uiState.value = UiState.Error\n  }\n}",
+    "follow_up": "How would you integrate a callback-based SDK that blocks and does not cooperate with coroutine cancellation?"
+   },
+   {
+    "question": "How do you make app startup faster, and how do you decide what to initialize eagerly versus lazily?",
+    "answer": "Startup time is usually dominated by process creation, class loading, dependency graph creation, ContentProvider initialization, disk I/O, and work done before first draw. I measure cold, warm, and hot startup separately, then move non-critical initialization off the critical path, defer SDK setup until first use when safe, and avoid synchronous reads on the main thread. The trade-off is latency now versus latency later: lazy init improves startup but can shift cost to the first feature use, so the decision should follow user journeys and error budgets. I also watch memory because aggressive eager caches can improve warm paths while hurting cold start and low-RAM devices.",
+    "real_world": "A frequent production regression is adding analytics, remote config, and database warm-up in Application, turning a previously fast launch into a noticeably blank screen.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if a third-party SDK insists on Application-time synchronous initialization?"
+   },
+   {
+    "question": "How would you explain process death on Android and design the app so it recovers correctly instead of just surviving rotation?",
+    "answer": "Process death means the whole app process is gone, so in-memory singletons, coroutine scopes, caches, and pending work vanish; later the user may return through a recreated activity with only persisted state and saved instance state available. The right design persists durable state in a database or other storage, keeps navigation arguments and small UI restoration state separately, and makes screen models reconstructable from those sources. Any side effect that must complete needs a durable scheduler or idempotent retry path, not a plain in-memory job. Rotation is a much easier case than process death because the process usually survives.",
+    "real_world": "Apps often look fine in local testing but lose a checkout step, selected account, or upload progress after the process is reclaimed in the background on low-memory devices.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you distinguish what belongs in persistent storage, saved UI state, and something that should simply be recomputed?"
+   },
+   {
+    "question": "What are the biggest edge cases with deep links and Android task/back-stack behavior?",
+    "answer": "Deep links can create surprising task stacks depending on launch mode, intent flags, whether the app already has a task, and whether the entry point should behave as a leaf screen or the root of a flow. The main risks are duplicate activities, broken Up navigation, landing on a screen without required state, or back taking the user somewhere unrelated. I design deep links so destinations are reconstructable from arguments, avoid relying on implicit in-memory state, and define what back should do from every external entry point. This is one area where small manifest or navigation changes can have user-visible behavior changes immediately.",
+    "real_world": "A classic bug is opening a notification deep link into a detail screen, then pressing back and ending up in an old task from hours earlier or exiting when product expected a parent screen.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you intentionally use a synthetic back stack, and what trade-offs does it introduce?"
+   },
+   {
+    "question": "What are the practical trade-offs of using WorkManager for reliable background work, and where do teams misuse it?",
+    "answer": "WorkManager is good for deferrable, guaranteed work that should survive process death and system restarts, especially when constraints like charging or network matter. It is not for immediate user-visible work that must run right now, and it is not a precise scheduler because the OS can delay execution. The main trade-offs are reliability versus latency and throughput: you gain persistence and policy handling, but you give up exact timing and often need idempotency because work can retry. Teams misuse it by routing normal foreground request/response flows through it and then wondering why UX feels delayed.",
+    "real_world": "A common incident is duplicate server-side effects because a worker retries after partial success and the API was not designed to be idempotent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a sync worker and server API so retries are safe?"
+   },
+   {
+    "question": "What does baseline profiling change in an Android app, and how is it different from just turning on shrinking and optimization?",
+    "answer": "Baseline profiles help the runtime know which code paths are important so those paths can be compiled ahead of time or prioritized, reducing interpretation and JIT warm-up costs during startup and critical interactions. Shrinking and optimization reduce code size and can improve startup indirectly, but they do not solve the same runtime compilation problem. Baseline profiles are most valuable for startup, first navigation, and first-use flows, especially in larger apps with a lot of framework and library code. The trade-off is maintenance effort: profiles should reflect real user journeys or they become less useful over time.",
+    "real_world": "Teams often optimize APK size and still see slow first-run startup because the bottleneck is hot code not being compiled soon enough on user devices.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose which journeys to include in a profile, and how would you verify that it actually helped on real devices?"
+   },
+   {
+    "question": "How do you reason about memory pressure on Android beyond obvious leaks, and what usually gets apps killed in production?",
+    "answer": "A lot of production kills are from total process memory growth, not just classic unreachable leaks. Large bitmaps, image caches, WebViews, native allocations, cursor windows, and too many retained screen graphs can push the process into trim levels and eventually LMK kills. I watch PSS only as a rough signal and focus on object lifetime, cache bounds, bitmap sizing, and whether memory returns after navigation or backgrounding. The trade-off is between smoothness from caching and survivability under multitasking on low-RAM devices.",
+    "real_world": "A common incident is a feed app that scrolls fine in isolation but gets killed when users switch between camera, maps, and chat because each screen holds onto large image or map resources too long.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you investigate whether the growth is Java heap, graphics memory, or native allocations?"
+   },
+   {
+    "question": "When would you use a foreground service today, and what are the failure modes if you get it wrong?",
+    "answer": "I use a foreground service only for user-visible, ongoing work that must continue immediately, like active navigation, media playback, or a user-initiated upload with clear progress. If you start one for background work that should be deferred, you fight modern background limits, hurt battery, and can hit policy or platform restrictions. The implementation risk is timing and state: if the service isn't promoted correctly, or the work isn't actually user-visible, the system may stop it or the app may violate store policy. In many cases WorkManager or a bound component is the safer design.",
+    "real_world": "Teams often ship a foreground service for sync because it \"works on my phone,\" then see devices aggressively stop it or app review flag it because users don't understand why a permanent notification exists.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you choose a bound service instead of a foreground service?"
+   },
+   {
+    "question": "What actually happens when you overdraw the UI, and how do you decide whether it is worth fixing?",
+    "answer": "Overdraw means the GPU shades the same pixel multiple times before the final frame, usually from stacked backgrounds, full-screen containers, scrims, and offscreen content. It matters when the app is fill-rate bound or combined with expensive rendering, because those extra passes eat frame budget without changing the result. I fix high-area, always-on overdraw first and ignore tiny or rare cases that don't move frame time. The trade-off is readability of layout structure versus shaving GPU work.",
+    "real_world": "A common case is a screen with a window background, fragment background, card backgrounds, and loading skeleton layers all drawing under each other; it looks fine but drops frames on mid-range devices.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is overdraw different from unnecessary recomposition or relayout in Compose?"
+   },
+   {
+    "question": "How would you explain the difference between StateFlow, SharedFlow, and Channel for one-off events in Android, and where do teams get burned?",
+    "answer": "StateFlow is for current state with replay of the latest value, so it is a bad fit for one-time navigation or toast events because collectors after recreation may see stale events. SharedFlow can model events if you choose replay and buffering deliberately, but dropped emissions and duplicate handling across collectors are easy to get wrong. Channel gives point-to-point delivery semantics, but it's not state and can be lost if nobody is receiving depending on configuration. Teams get burned when they treat events as state or assume collection timing is reliable across lifecycle changes.",
+    "real_world": "The classic bug is navigating twice after rotation because a boolean or last event is re-emitted when the new screen collector starts.",
+    "code_lang": "kotlin",
+    "code": "private val _events = MutableSharedFlow<UiEvent>()\nval events = _events.asSharedFlow()\n\nsuspend fun onSaved() {\n    _events.emit(UiEvent.ShowSnackbar(\"Saved\"))\n}\n",
+    "follow_up": "If you had multiple collectors for analytics and UI, how would that change your choice?"
+   },
+   {
+    "question": "How do you think about SQLite and Room transaction costs at scale, especially for large syncs or high-frequency writes?",
+    "answer": "Each transaction has fsync and lock overhead, so many tiny writes are often much worse than batching related updates into a single transaction. Reads and writes also contend, and long transactions can stall other work or grow memory from pending invalidations and result sets. At scale I batch inserts and updates, prefer set-based SQL over row-by-row loops, and keep transactions short but meaningful. The trade-off is atomicity and simplicity versus throughput and UI responsiveness.",
+    "real_world": "A sync job that inserts 20,000 rows one by one may work in test but cause long stalls, battery drain, and visible jank when database invalidation keeps waking observers.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes if the sync must be resumable and crash-safe partway through?"
+   },
+   {
+    "question": "What are the real trade-offs between Parcelable, Serializable, and passing IDs only between Android components?",
+    "answer": "Parcelable is the Android-optimized choice for IPC and Bundles, but large object graphs still cost CPU, memory, and Binder transaction space. Serializable is usually simpler but slower and more allocation-heavy, so I avoid it on hot paths. Passing only stable IDs is often best because it reduces marshaling cost and stale-data bugs, then the destination reloads from the source of truth. The trade-off is latency and convenience versus process-safety and consistency.",
+    "real_world": "Teams sometimes pass full model trees between screens, then hit transaction size issues or show stale state after the database updates while the user is navigating.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of payloads are especially risky to put into a Bundle?"
+   },
+   {
+    "question": "How would you design an offline-first sync engine on Android so it handles retries, conflicts, and process death correctly?",
+    "answer": "I keep local storage as the immediate source of truth, model pending operations explicitly, and make server sync idempotent so retries are safe. Work should be chunked and checkpointed so a killed process can resume from durable state instead of repeating everything blindly. Conflicts need a defined policy per entity, not a generic last-write-wins everywhere, because some fields can merge and others cannot. The trade-off is more schema and state-machine complexity in exchange for correctness under flaky networks and app restarts.",
+    "real_world": "Without durable pending-state tracking, users create data offline, the app is killed during sync, and items either upload twice or disappear from the UI because memory-only queues were lost.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent duplicate uploads if the client retries after a timeout but the server may have already applied the change?"
+   },
+   {
+    "question": "What are the hard parts of using WebView in a production Android app?",
+    "answer": "WebView brings a separate rendering stack, its own memory footprint, storage, cookies, and security surface, so it behaves more like embedding a mini-browser than a normal view. The hard parts are lifecycle handling, process crashes, file and auth flows, JavaScript bridges, and avoiding unbounded memory growth when multiple WebViews are kept around. Performance can also be surprising because warmup helps startup but increases baseline memory. I isolate WebView usage, minimize bridge surface area, and plan for renderer death and state restoration.",
+    "real_world": "A common incident is a checkout or login flow failing only on some devices because cookies, redirects, or renderer crashes are handled differently than in a standard browser.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What security rules would you apply before exposing a JavaScript interface?"
+   },
+   {
+    "question": "How do you choose between app links, custom URI schemes, and in-app routing when deep-linking gets complex?",
+    "answer": "Verified app links are best for trusted web domains because they reduce disambiguation and prove ownership, while custom schemes are easier to set up but more collision-prone and less trustworthy. In-app routing should normalize all entry points into one parsed model so navigation logic is consistent whether the source is a notification, browser, widget, or internal click. The hard part is not just opening the right screen but validating auth, stale params, version skew, and back-stack expectations. The trade-off is integration speed versus security, reliability, and debuggability.",
+    "real_world": "Teams often add deep links per feature with ad hoc parsing, then discover inconsistent behavior: one path logs in then lands correctly, another drops users on the wrong tab or duplicates screens.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make deep links safe when the target screen requires fresh server state and the user may be logged out?"
+   },
+   {
+    "question": "What is your strategy for diagnosing and reducing jank that only shows up on lower-end Android devices?",
+    "answer": "I start with frame timing and traces, not guesswork, because on low-end devices the bottleneck may be CPU on layout, GPU on overdraw, I/O on image decode, or contention from background work. Then I attack the biggest contributors: expensive first composition or inflation, too much work on the main thread, oversized images, unnecessary animations, and list churn. I also test realistic thermal and storage conditions because slow devices often amplify issues hidden on flagship phones. The trade-off is feature richness versus predictable frame time under constrained hardware.",
+    "real_world": "A screen that is fine at 120 Hz on a flagship can become unusable on a budget device once image decode, DB observation, and navigation transitions all compete in the same frame.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you watch in CI or production to know whether a performance fix actually helped?"
+   }
+  ]
+ }
+}

@@ -1,0 +1,477 @@
+{
+ "slug": "express",
+ "name": "Express",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Express, and why would you use it instead of the built-in Node.js HTTP module?",
+    "answer": "Express is a minimal web framework for Node.js that gives you routing, middleware, and cleaner request/response handling. The built-in HTTP module works, but you have to build most of the common web-app plumbing yourself. Express is useful when you want to move faster with a simple, familiar structure for APIs and web servers.",
+    "real_world": "A team starts with a plain Node server and quickly ends up re-implementing routing, JSON parsing, and error handling. Switching to Express makes those patterns consistent across the app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problem does middleware solve in Express?"
+   },
+   {
+    "question": "What is middleware in Express?",
+    "answer": "Middleware is a function that runs during the request-response cycle and can read or modify req and res, end the response, or pass control to the next middleware. It is how Express composes behaviors like logging, authentication, body parsing, and error handling. The key idea is that middleware runs in order, so placement matters.",
+    "real_world": "If auth middleware is mounted after a route, that route can be reached without checks. Ordering mistakes like that are a common cause of security bugs.",
+    "code_lang": "javascript",
+    "code": "app.use((req, res, next) => {\n  console.log(req.method, req.path);\n  next();\n});",
+    "follow_up": "When would you not call next()?"
+   },
+   {
+    "question": "What is the difference between app.use() and app.get() in Express?",
+    "answer": "app.use() registers middleware for all HTTP methods, and it can match a path prefix. app.get() defines a handler only for GET requests to a specific route. Use app.use() for shared cross-cutting behavior and app.get() for an actual GET endpoint.",
+    "real_world": "A developer accidentally puts business logic in app.use('/users'), then sees it run for POST, PUT, and DELETE requests too. That can create surprising side effects or duplicate work.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does Express decide which handler runs first?"
+   },
+   {
+    "question": "How do you define a route with a path parameter in Express?",
+    "answer": "You use a colon in the route path, like /users/:id, and read the value from req.params. Path parameters are for identifying a resource in the URL. They are different from query parameters, which are usually used for filtering or options.",
+    "real_world": "An API for /orders/:id lets clients fetch one order by id, while /orders?status=pending can return a filtered list. Mixing those up can make endpoints confusing to use.",
+    "code_lang": "javascript",
+    "code": "app.get('/users/:id', (req, res) => {\n  res.send(req.params.id);\n});",
+    "follow_up": "When would you use req.query instead of req.params?"
+   },
+   {
+    "question": "What is req.body, and why is it often undefined in Express at first?",
+    "answer": "req.body contains parsed request data from POST, PUT, or PATCH requests. It is often undefined until you add body-parsing middleware such as express.json() for JSON requests. Without that middleware, Express does not automatically read and parse the body for you.",
+    "real_world": "A login route receives JSON from the frontend, but req.body is undefined in production because express.json() was never added. The fix is usually one line, but the symptom can look like a client bug.",
+    "code_lang": "javascript",
+    "code": "app.use(express.json());\napp.post('/login', (req, res) => {\n  res.json({ email: req.body.email });\n});",
+    "follow_up": "What happens if the client sends invalid JSON?"
+   },
+   {
+    "question": "What is the difference between res.send(), res.json(), and res.end()?",
+    "answer": "res.send() sends a response and can handle strings, buffers, and objects. res.json() sends JSON and sets the response content type appropriately. res.end() ends the response at the Node level and is usually used when you want the lowest-level control.",
+    "real_world": "Using res.send({ ok: true }) works in many cases, but res.json() makes the intent explicit and avoids ambiguity in how the response is formatted. That matters more as teams standardize API behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What headers does Express set automatically for res.json()?"
+   },
+   {
+    "question": "How do you handle errors in Express route handlers?",
+    "answer": "For synchronous code, you can throw an error and let Express handle it with error middleware. For asynchronous code, you should pass the error to next(err) or use a wrapper, because thrown errors inside a promise or callback may not be caught automatically. Error-handling middleware has four arguments: err, req, res, and next.",
+    "real_world": "An async database call fails, but the route never sends a response because the error is not forwarded. In production that looks like a hanging request and can tie up resources.",
+    "code_lang": "javascript",
+    "code": "app.get('/user', async (req, res, next) => {\n  try { res.json(await loadUser()); }\n  catch (err) { next(err); }\n});",
+    "follow_up": "What should an Express error-handling middleware look like?"
+   },
+   {
+    "question": "What does next() do in Express middleware?",
+    "answer": "next() passes control to the next matching middleware or route handler. If you do not call it, the request stops there unless you already sent a response. In error middleware, next(err) skips normal middleware and goes to the error handlers.",
+    "real_world": "A logging middleware forgets to call next(), and every request hangs. This is a common beginner bug because the code runs, but the chain never continues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is next('route') different from next()?"
+   },
+   {
+    "question": "How do route order and middleware order affect an Express app?",
+    "answer": "Express evaluates middleware and routes in the order they are defined. The first matching handler can end the request, so a broad route or middleware placed too early can shadow later ones. This makes ordering one of the most important parts of Express design.",
+    "real_world": "If you define app.get('/users/:id') before app.get('/users/me'), then a request to /users/me may be treated like an id route. Teams often hit this when adding a special-case path later.",
+    "code_lang": "javascript",
+    "code": "app.get('/users/:id', ...);\napp.get('/users/me', ...);",
+    "follow_up": "How do you avoid route shadowing in a larger app?"
+   },
+   {
+    "question": "What is app.listen() used for in Express?",
+    "answer": "app.listen() starts the HTTP server and makes the app accept connections on a given port. Before that call, your routes and middleware are only definitions in memory. In many apps, app.listen() is also where you log startup status or handle binding errors.",
+    "real_world": "A service deploys successfully but never becomes reachable because the server is never started. In a review, this is often just a missing app.listen() in the entry file.",
+    "code_lang": "javascript",
+    "code": "const app = express();\napp.get('/', (req, res) => res.send('ok'));\napp.listen(3000);",
+    "follow_up": "Why might you export the app without calling listen in the same file?"
+   },
+   {
+    "question": "How do you parse JSON request bodies in an Express app?",
+    "answer": "Use the JSON body-parsing middleware before your routes, so incoming `application/json` requests are read and attached to `req.body`. Without it, `req.body` is usually undefined for JSON payloads. This matters because most APIs send data in JSON, and parsing is a separate step from routing.",
+    "real_world": "A login or create-user endpoint may seem broken because every field is missing from `req.body`. Adding the JSON parser in the right place usually fixes it immediately.",
+    "code_lang": "javascript",
+    "code": "const express = require('express');\nconst app = express();\n\napp.use(express.json());\napp.post('/users', (req, res) => {\n  res.json({ name: req.body.name });\n});",
+    "follow_up": "How is parsing form data different from parsing JSON?"
+   },
+   {
+    "question": "How do you serve static files like images, CSS, or frontend bundles with Express?",
+    "answer": "Use Express static middleware to map a directory of files to public URLs. This is the standard way to serve assets such as images, stylesheets, or a built frontend bundle. It matters because you do not want to write a separate route for every file.",
+    "real_world": "A small app may serve its React build or uploaded images directly from the Express server. If the static folder is not configured correctly, assets return 404 even though they exist on disk.",
+    "code_lang": "javascript",
+    "code": "const express = require('express');\nconst app = express();\n\napp.use(express.static('public'));",
+    "follow_up": "What happens if a request matches both a static file and a route handler?"
+   },
+   {
+    "question": "What is the purpose of a router in Express?",
+    "answer": "A router lets you group related routes into a smaller module instead of putting everything on the main app object. It is useful for organizing code by feature, like users, orders, or auth. Routers also make it easier to mount a set of routes under a shared prefix.",
+    "real_world": "In a larger app, putting every endpoint in one file becomes hard to maintain. Splitting routes into routers makes ownership and testing much easier.",
+    "code_lang": "javascript",
+    "code": "const router = require('express').Router();\n\nrouter.get('/profile', (req, res) => res.send('profile'));\nrouter.post('/profile', (req, res) => res.send('saved'));\n\napp.use('/user', router);",
+    "follow_up": "How is `app.use('/prefix', router)` different from defining those routes directly on `app`?"
+   },
+   {
+    "question": "How do you send a 404 response in Express?",
+    "answer": "A common pattern is to put a catch-all middleware after all your routes and return a 404 there. Express will only reach it if no earlier route handled the request. This matters because otherwise unmatched requests can hang or return a misleading response.",
+    "real_world": "Users may request a typo in a URL and the API should clearly say the endpoint does not exist. Without a 404 handler, debugging missing routes is much harder.",
+    "code_lang": "javascript",
+    "code": "app.use((req, res) => {\n  res.status(404).json({ error: 'Not found' });\n});",
+    "follow_up": "How would you separate 404 handling from error handling?"
+   },
+   {
+    "question": "What is CORS, and when do you need to configure it in Express?",
+    "answer": "CORS is a browser security policy that controls which origins can make cross-site requests to your server. You need to configure it when your frontend and backend are on different origins and the browser blocks the request. On the server, you typically set the allowed origins and methods intentionally instead of opening everything by default.",
+    "real_world": "A frontend on `localhost:3000` calling an API on `localhost:4000` often fails in the browser even though the server is running. Configuring CORS is a common fix during local development and deployment.",
+    "code_lang": "javascript",
+    "code": "const cors = require('cors');\napp.use(cors({ origin: 'http://localhost:3000' }));",
+    "follow_up": "What is the difference between a browser CORS error and a real server-side error?"
+   },
+   {
+    "question": "What does `app.use(express.urlencoded({ extended: true }))` do?",
+    "answer": "It parses URL-encoded form submissions and fills `req.body` for requests like HTML form posts. This is different from JSON parsing and is commonly needed when handling forms sent from browsers. The `extended` option controls how nested data is handled, though the exact behavior depends on the parser implementation.",
+    "real_world": "A contact form may submit as `application/x-www-form-urlencoded`, and `req.body` will be empty unless this middleware is enabled. This is a common beginner issue when moving from JSON API examples to browser forms.",
+    "code_lang": "javascript",
+    "code": "app.use(express.urlencoded({ extended: true }));\n\napp.post('/contact', (req, res) => {\n  res.send(req.body.message);\n});",
+    "follow_up": "How do you know whether a request is sending JSON or form-encoded data?"
+   },
+   {
+    "question": "How do you get the request method and URL in an Express handler?",
+    "answer": "Use `req.method` for the HTTP method and `req.originalUrl` or `req.url` for the URL information. This is useful for logging, debugging, and writing generic middleware. `originalUrl` preserves the full path as the request came in, which is often what you want in logs.",
+    "real_world": "Teams often add request logging to trace slow or failing endpoints in production. Seeing the method and URL in logs makes it much easier to reproduce problems.",
+    "code_lang": "javascript",
+    "code": "app.use((req, res, next) => {\n  console.log(req.method, req.originalUrl);\n  next();\n});",
+    "follow_up": "What is the difference between `req.url` and `req.originalUrl`?"
+   },
+   {
+    "question": "What is `req.params` used for in Express, and what type are its values?",
+    "answer": "`req.params` holds values extracted from route parameters in the path, such as the `id` in `/users/:id`. The values come from the URL, so they are strings even when they represent numbers. If you need a number, you should convert and validate it yourself.",
+    "real_world": "A delete endpoint may receive `/users/10`, but using `10` as a string in database code can cause subtle bugs depending on the query layer. Validating route params early prevents bad requests from reaching business logic.",
+    "code_lang": "javascript",
+    "code": "app.get('/posts/:postId', (req, res) => {\n  const postId = Number(req.params.postId);\n  res.send(String(Number.isNaN(postId)));\n});",
+    "follow_up": "Where else in the request object can user input come from?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you structure a larger Express app so routes, middleware, and business logic stay maintainable?",
+    "answer": "A common pattern is to keep the Express layer thin: define routes in router modules, put request validation and auth in middleware, and move domain logic into services or controllers. That makes handlers easier to test and prevents one file from turning into a grab bag of transport, database, and formatting code. I also like a centralized error handler and a single place for shared app setup like logging and body parsing. The trade-off is a bit more indirection, but it pays off as the app grows.",
+    "real_world": "This matters when a small API grows from a few endpoints to dozens and every route starts duplicating database and validation code. Splitting concerns makes it much easier to add features without breaking unrelated handlers.",
+    "code_lang": "javascript",
+    "code": "const router = require('express').Router();\nconst userService = require('./userService');\n\nrouter.get('/:id', async (req, res, next) => {\n  try { res.json(await userService.getById(req.params.id)); }\n  catch (err) { next(err); }\n});\n\nmodule.exports = router;",
+    "follow_up": "How would you test one of those route handlers without starting the full server?"
+   },
+   {
+    "question": "When would you use `router.use()` versus mounting a router with `app.use('/prefix', router)`?",
+    "answer": "`app.use('/prefix', router)` mounts the whole router under a URL prefix, which is useful for grouping related endpoints like `/users` or `/admin`. `router.use()` is for adding middleware or sub-routers within that router, often to apply auth or shared preprocessing to only part of the route tree. The main trade-off is clarity versus flexibility: mounting at the app level is simple, while `router.use()` helps create layered route composition. Both are common, but I prefer prefix mounting for clear module boundaries.",
+    "real_world": "In real projects, teams often mount versioned APIs like `/api/v1` and then use `router.use()` inside to protect only certain subpaths. That avoids repeating the same auth middleware on every route.",
+    "code_lang": "javascript",
+    "code": "const api = require('express').Router();\nconst admin = require('express').Router();\n\nadmin.use(requireAuth);\nadmin.get('/stats', statsHandler);\n\napi.use('/admin', admin);\napp.use('/api/v1', api);",
+    "follow_up": "How do nested routers affect `req.baseUrl` and `req.path`?"
+   },
+   {
+    "question": "How do you implement centralized error handling in Express, and why is it better than handling every error inline?",
+    "answer": "Express recognizes error-handling middleware by its four parameters: `(err, req, res, next)`. A centralized handler lets you convert different failures into consistent HTTP responses, log them in one place, and avoid repeating `try/catch` logic in every route. Inline handling is fine for very local errors, but it becomes noisy and inconsistent at scale. The main trade-off is that you need to be disciplined about passing errors to `next()` or letting async wrappers do it.",
+    "real_world": "This is useful when production starts returning a mix of plain strings, stack traces, and different status codes for similar failures. A single error layer makes debugging and API behavior much more predictable.",
+    "code_lang": "javascript",
+    "code": "app.use((err, req, res, next) => {\n  const status = err.statusCode || 500;\n  res.status(status).json({ error: status === 500 ? 'Internal Server Error' : err.message });\n});",
+    "follow_up": "How do you handle async route errors so they reach that middleware reliably?"
+   },
+   {
+    "question": "What happens if an Express route handler sends a response and then later calls `next()` or tries to send again?",
+    "answer": "Once a response is sent, the request is effectively finished. If code later calls `next()` or tries to write another response, Express may attempt to continue the middleware chain or the runtime may throw an error like headers already sent. This usually shows up as flaky behavior or noisy logs when code paths are not mutually exclusive. The fix is to return immediately after sending a response and structure branches so only one path completes the request.",
+    "real_world": "This often appears after adding logging or a cleanup call below a `res.json()` and suddenly some requests produce duplicate responses or header errors. It can be hard to spot because it only happens on certain branches.",
+    "code_lang": "javascript",
+    "code": "app.get('/demo', (req, res, next) => {\n  if (!req.query.id) return res.status(400).send('missing id');\n  res.send('ok');\n  // do not call next() or res.send() here\n});",
+    "follow_up": "How would you prevent this kind of bug across many async handlers?"
+   },
+   {
+    "question": "How would you validate request input in an Express app, and where should that validation live?",
+    "answer": "Validation should happen as close to the boundary as possible, usually in middleware or a dedicated validation layer before business logic runs. That keeps controllers from assuming bad input is impossible and helps return consistent 400-level errors early. I’d validate types, required fields, ranges, and allowed values, then normalize the data if needed. The trade-off is more upfront code, but it prevents deeper errors and makes handlers simpler.",
+    "real_world": "This matters when malformed requests reach the database layer and cause cryptic failures or partial writes. Good validation turns those into clear client errors instead of production incidents.",
+    "code_lang": "javascript",
+    "code": "function validateUser(req, res, next) {\n  const { email } = req.body;\n  if (typeof email !== 'string' || !email.includes('@')) {\n    return res.status(400).json({ error: 'invalid email' });\n  }\n  next();\n}",
+    "follow_up": "When would you choose schema validation libraries over hand-written checks?"
+   },
+   {
+    "question": "What is the difference between synchronous and asynchronous middleware in Express, and why does it matter for performance?",
+    "answer": "Synchronous middleware runs on the event loop and should be quick; if it blocks on CPU-heavy work, it delays every other request. Asynchronous middleware typically waits on I/O like a database or external service and yields control while waiting. The key performance concern is not async versus sync by itself, but whether the middleware blocks the event loop. In practice, keep middleware lightweight and push expensive work off the request path when possible.",
+    "real_world": "A real issue is adding JSON schema compilation, image processing, or heavy crypto inside middleware and then seeing latency spike under load. The server may still be “up” but stops responding promptly.",
+    "code_lang": "javascript",
+    "code": "app.use((req, res, next) => {\n  // keep this fast; avoid CPU-heavy work here\n  req.requestId = crypto.randomUUID();\n  next();\n});",
+    "follow_up": "How would you detect that a middleware is blocking the event loop?"
+   },
+   {
+    "question": "How do you test Express routes without starting an actual network server?",
+    "answer": "A common approach is to export the Express app and test it with a request library like supertest, which can send requests directly to the app instance. That lets you verify status codes, headers, and JSON responses without opening a real port. It’s faster and more reliable than end-to-end tests for most route behavior. I’d reserve full server tests for a smaller set of integration checks around startup and deployment concerns.",
+    "real_world": "This is useful in CI, where starting many real servers slows the suite down and makes ports or timing flaky. Most teams get better coverage by testing handlers through the app object directly.",
+    "code_lang": "javascript",
+    "code": "const request = require('supertest');\nconst app = require('./app');\n\ntest('GET /health', async () => {\n  await request(app).get('/health').expect(200).expect('ok');\n});",
+    "follow_up": "What kinds of bugs still require end-to-end tests instead of route tests?"
+   },
+   {
+    "question": "When should you use a global middleware versus route-specific middleware?",
+    "answer": "Use global middleware for concerns that truly apply everywhere, such as request IDs, basic logging, body parsing, or common security headers. Use route-specific middleware for things like auth, rate limiting, file upload handling, or validations that only make sense for certain endpoints. The trade-off is simplicity versus precision: global middleware is easy to reason about, but overusing it can add unnecessary overhead to every request. Route-specific middleware keeps the hot path lean.",
+    "real_world": "For example, attaching file upload parsing globally can slow unrelated JSON endpoints and increase memory use. Applying it only to upload routes avoids that cost.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether authentication should be global or applied per route group?"
+   },
+   {
+    "question": "What does it mean to preserve the original error when you wrap errors in Express, and why is that important?",
+    "answer": "When you translate an internal error into a more user-friendly one, you should keep the original error attached so logs and debugging still show the root cause. Otherwise you lose context like the failing database query, stack trace, or upstream response. In Express, this usually means creating a higher-level error but storing the original error as a cause or property. The trade-off is a little extra plumbing, but it makes production debugging much easier.",
+    "real_world": "This comes up when an API returns a generic 500 and the team can’t tell whether it was a timeout, bad input, or a database constraint. Preserving the original error makes incident triage much faster.",
+    "code_lang": "javascript",
+    "code": "try {\n  await service.call();\n} catch (err) {\n  const wrapped = new Error('failed to create order');\n  wrapped.cause = err;\n  throw wrapped;\n}",
+    "follow_up": "How would you log these wrapped errors without exposing internal details to clients?"
+   },
+   {
+    "question": "How would you design an Express app to support versioned APIs without duplicating too much code?",
+    "answer": "I’d keep shared behavior in common middleware and services, then mount separate routers for each version, like `/api/v1` and `/api/v2`. The routers can differ where the contract changes, while sharing lower-level logic so business rules stay in one place. This avoids mixing compatibility concerns throughout the codebase. The trade-off is managing multiple public contracts at once, but it gives you room to evolve the API safely.",
+    "real_world": "This matters when mobile or third-party clients depend on older response shapes while new clients need changes. Versioned routers let you run both shapes side by side during migration.",
+    "code_lang": "javascript",
+    "code": "app.use('/api/v1', v1Router);\napp.use('/api/v2', v2Router);\n\n// shared service layer underneath both routers\n// userService.create(), userService.getById()",
+    "follow_up": "How would you decide when to deprecate an old API version?"
+   },
+   {
+    "question": "How do you use Express async route handlers safely so rejected promises do not get lost?",
+    "answer": "In Express 4, an async handler that throws or returns a rejected promise will not be caught by the default error flow unless you pass the error to `next()`. A common pattern is to wrap async handlers in a small helper that forwards rejections, or to use a library that does that for you. In Express 5, promise rejections from async handlers are handled more directly. The trade-off is between less boilerplate and making sure every async path reaches centralized error handling.",
+    "real_world": "This matters when a database call fails inside an async route and the request hangs instead of returning a 500. Teams often only notice it under load when certain failures stop being reported in logs.",
+    "code_lang": "javascript",
+    "code": "const asyncHandler = fn => (req, res, next) =>\n  Promise.resolve(fn(req, res, next)).catch(next);\n\napp.get('/users/:id', asyncHandler(async (req, res) => {\n  const user = await db.getUser(req.params.id);\n  res.json(user);\n}));",
+    "follow_up": "How would you test that an async route failure reaches your error middleware?"
+   },
+   {
+    "question": "What is the difference between `req.query`, `req.params`, and `req.body`, and when would you choose each one?",
+    "answer": "`req.params` is for path variables like `/users/123`, `req.query` is for optional filtering and paging like `?page=2`, and `req.body` is for structured input in POST or PUT requests. Use params for identifying a resource, query strings for modifiers, and body data for the actual payload you want to create or update. The key trade-off is readability and API semantics: putting everything in the body makes GET requests awkward, while overusing query strings can make complex writes unclear.",
+    "real_world": "This comes up when designing endpoints that need pagination and filtering without confusing clients. It also matters in debugging, because the same value may arrive in a different place depending on the route style.",
+    "code_lang": "javascript",
+    "code": "app.get('/users/:id', (req, res) => {\n  const id = req.params.id;\n  const page = req.query.page;\n  res.json({ id, page, body: req.body });\n});",
+    "follow_up": "What kinds of values do you usually allow in query strings versus request bodies?"
+   },
+   {
+    "question": "How do you set consistent response headers in Express, and when would you do it in middleware instead of in each route?",
+    "answer": "You can set headers with `res.set()` or `res.setHeader()`, and middleware is a good place for headers that should apply to many responses, like caching or request tracing. Route-level code is better for headers that depend on one endpoint’s content or behavior, such as file downloads or specific cache policies. Centralizing shared headers reduces duplication, but you should avoid setting headers globally if some routes need different rules. Be careful not to overwrite headers that another middleware already needs to control.",
+    "real_world": "This matters for things like correlation IDs, security headers, and caching headers in APIs behind load balancers. Without a shared approach, different routes often drift and become hard to reason about.",
+    "code_lang": "javascript",
+    "code": "app.use((req, res, next) => {\n  res.set('X-Request-Id', req.id);\n  res.set('Cache-Control', 'no-store');\n  next();\n});",
+    "follow_up": "When would you prefer to set cache headers per route rather than globally?"
+   },
+   {
+    "question": "How would you implement authentication and authorization in Express without mixing them into every handler?",
+    "answer": "Authentication is usually handled in middleware that verifies the token or session and attaches the user identity to the request. Authorization should be a separate check that verifies the user has permission for the specific resource or action, ideally as route-specific middleware or a reusable policy function. Keeping them separate makes the code easier to test and avoids duplicating security logic. The trade-off is a bit more abstraction, but it pays off when permissions change often.",
+    "real_world": "This is common in APIs where almost every endpoint needs a logged-in user, but only some actions are admin-only. Teams often centralize auth and then discover they still need clear per-route permission checks.",
+    "code_lang": "javascript",
+    "code": "function requireAuth(req, res, next) {\n  if (!req.user) return res.sendStatus(401);\n  next();\n}\n\nfunction requireAdmin(req, res, next) {\n  if (req.user.role !== 'admin') return res.sendStatus(403);\n  next();\n}",
+    "follow_up": "How would you structure these checks if permissions depend on the specific resource being accessed?"
+   },
+   {
+    "question": "What happens if you mount the same router under two different prefixes, and when is that useful?",
+    "answer": "The same router can be mounted multiple times, and the routes inside it are resolved relative to each mount point. That is useful when you want to share the same implementation for different API versions, tenants, or prefixes without duplicating the route definitions. The main risk is leaking assumptions about the base path into the router logic, so it should use relative paths and avoid hard-coding URLs. This pattern is cleaner than copying nearly identical routers.",
+    "real_world": "Teams often use this to expose the same read-only routes under `/v1` and `/internal` with different surrounding middleware. It can also help during migrations when old and new paths must coexist.",
+    "code_lang": "javascript",
+    "code": "const router = require('express').Router();\nrouter.get('/users', listUsers);\n\napp.use('/v1', router);\napp.use('/internal', router);",
+    "follow_up": "What problems can appear if middleware behavior differs between those mount points?"
+   },
+   {
+    "question": "How do you handle file uploads in Express, and what are the main trade-offs of storing files on disk versus streaming them elsewhere?",
+    "answer": "Express itself does not parse multipart uploads, so you typically use upload middleware that can read form-data and expose files to your handler. Writing uploads to local disk is simple, but it ties the app to the server filesystem and complicates scaling. Streaming directly to object storage or another service is usually better for large files and horizontally scaled deployments, though it is more complex to implement. The main concern is memory and reliability: avoid buffering large uploads in process memory.",
+    "real_world": "This matters when users upload profile images, CSVs, or attachments and a single large request can exhaust memory. It also affects deploys, because local disk uploads disappear with ephemeral containers.",
+    "code_lang": "javascript",
+    "code": "app.post('/upload', upload.single('file'), (req, res) => {\n  if (!req.file) return res.sendStatus(400);\n  res.json({ name: req.file.originalname });\n});",
+    "follow_up": "How would you enforce file size and type limits for uploads?"
+   },
+   {
+    "question": "How do you make an Express app more secure against common HTTP abuse and mistakes?",
+    "answer": "Start with strict input validation, least-privilege access checks, and safe defaults for cookies and headers. Add request size limits, rate limiting, and avoid leaking stack traces or internal details in production error responses. If you serve browser clients, make sure CORS is intentionally configured and session cookies use the right flags. Security in Express is mostly about combining small protections consistently rather than one big feature.",
+    "real_world": "In production, teams often discover abuse through slow POST requests, oversized bodies, or verbose error pages that expose internals. These issues are usually preventable with middleware and response discipline.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide which security protections belong in Express and which belong at a proxy or gateway?"
+   },
+   {
+    "question": "How can you measure and reduce latency in an Express request pipeline?",
+    "answer": "First identify where time is spent: middleware, downstream APIs, database calls, or serialization. Then remove unnecessary synchronous work, avoid blocking the event loop, and keep expensive operations out of global middleware. Caching, batching, and moving heavy work to background jobs can help when the request does not need the result immediately. The trade-off is complexity versus response time, so you should optimize the paths that are actually hot.",
+    "real_world": "This comes up when a route is slow only in production because logging, auth checks, and multiple network calls add up. It is also common to find one synchronous library call hurting every request in the process.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs would tell you the problem is event-loop blocking rather than slow I/O?"
+   },
+   {
+    "question": "What is a good way to unit test middleware behavior in Express?",
+    "answer": "Treat middleware as a function that receives `req`, `res`, and `next`, and test its observable behavior directly. For pure middleware, you can pass simple mock objects and assert that it sets fields, sends a response, or calls `next()` with or without an error. For middleware that depends on Express-specific response chaining, use lightweight request/response mocks or an integration test layer. The goal is to verify behavior without depending on a real server.",
+    "real_world": "This matters for auth, validation, and logging middleware, which can be tested much faster than full end-to-end routes. It helps catch regressions when shared middleware is used across many endpoints.",
+    "code_lang": "javascript",
+    "code": "const req = {};\nconst res = { statusCode: 200, sendStatus(c){ this.statusCode = c; } };\nlet called = false;\nrequireAuth(req, res, () => { called = true; });\nconsole.log(res.statusCode, called);",
+    "follow_up": "When would you still prefer an integration test over a unit test for middleware?"
+   },
+   {
+    "question": "How do you keep an Express project maintainable when different teams own different features?",
+    "answer": "Split the app by feature, not by technical layer alone, so each domain can own its routes, validation, service code, and tests together. Keep cross-cutting concerns like auth, logging, and error handling in shared middleware, but avoid putting business rules in generic helpers where they become hard to trace. Define clear boundaries for data access and request handling so one feature change does not ripple through the whole codebase. The trade-off is more structure up front, but it makes scaling the team easier.",
+    "real_world": "This matters once the app grows beyond a few endpoints and multiple engineers start touching the same files. Without clear boundaries, route files become dumping grounds and every change becomes risky.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you organize a feature folder so the route layer does not depend directly on database details?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does Express actually match routes under the hood, and what are the performance implications when you have a very large route table?",
+    "answer": "Express walks its middleware and route stack in registration order and checks each layer until one matches the path and method. That means matching is effectively linear in the number of layers on a hot path, so lots of broad `app.use()` calls or deeply shared middleware can add measurable overhead. Static and literal paths are cheap compared with patterns that require more path parsing, but the bigger issue is usually stack depth, not regex cost. The practical fix is to keep hot routes shallow, mount feature routers under narrow prefixes, and avoid global middleware that most requests do not need.",
+    "real_world": "Teams often see p99 latency rise after adding many cross-cutting middlewares globally; profiling shows time spent before business logic even starts. Splitting admin, webhook, and public APIs into separately mounted routers usually cuts unnecessary matching work.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you profile whether the time is being spent in route matching, body parsing, or downstream I/O?"
+   },
+   {
+    "question": "What changes in Express when you run behind a reverse proxy or load balancer, and what can go wrong if `trust proxy` is set incorrectly?",
+    "answer": "With `trust proxy` enabled, Express will use forwarded headers to derive client IP, protocol, and host-related values instead of the direct socket connection. If it is too permissive, a client can spoof headers and make your app think a request is HTTPS, came from a different IP, or should generate absolute URLs with the wrong host. If it is too strict or off when it should be on, rate limiting, secure cookie behavior, redirects, and audit logs can all break. The setting has to match your actual proxy chain, not just be turned on everywhere.",
+    "real_world": "A common production incident is secure-session cookies not being set because the app thinks requests are plain HTTP behind TLS termination. The opposite mistake causes IP-based abuse controls to trust attacker-supplied `X-Forwarded-For`.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which request properties in Express are affected by proxy trust, and how would you validate the config in staging?"
+   },
+   {
+    "question": "If your Express API gets a sudden spike of slow clients or large uploads, what failure modes do you worry about in Node’s single-threaded model?",
+    "answer": "The event loop is single-threaded for JavaScript, so slow reads, slow writes, and oversized bodies can tie up memory, sockets, and application-level concurrency even if CPU is low. If you buffer request bodies eagerly, many concurrent large uploads can cause memory pressure and garbage-collection pauses. Slow clients also consume file descriptors and keep middleware state alive longer, which can starve healthy traffic. In practice you need body size limits, request timeouts, backpressure-aware streaming, and a reverse proxy that can shed abusive connections earlier.",
+    "real_world": "This shows up during webhook floods or mobile clients on bad networks: throughput collapses even though the app code is simple. Teams often discover the bottleneck is buffered bodies and too many open sockets, not database latency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you stream a request to downstream storage safely instead of buffering it in memory first?"
+   },
+   {
+    "question": "How would you do graceful shutdown for an Express service so you do not drop requests during deploys or autoscaling events?",
+    "answer": "You stop accepting new connections, keep serving in-flight requests, and force-close anything that exceeds a deadline. In Node that usually means tracking the HTTP server instance, reacting to termination signals, closing the server, and coordinating with readiness checks so the load balancer stops sending traffic first. You also need to close downstream resources like database pools after requests drain, otherwise shutdown hangs. The trade-off is faster rollout versus giving long requests enough time to finish.",
+    "real_world": "Without graceful shutdown, rolling deploys produce random 502s and retried writes when connections are cut mid-request. It becomes very visible with long-polling, report generation, or large downloads.",
+    "code_lang": "javascript",
+    "code": "const server = app.listen(3000);\nprocess.on('SIGTERM', () => {\n  server.close(() => process.exit(0));\n  setTimeout(() => process.exit(1), 30000);\n});",
+    "follow_up": "How would you handle keep-alive connections and long-running requests during that drain period?"
+   },
+   {
+    "question": "What are the trade-offs between using Express’s built-in body parsers and handling raw request streams yourself?",
+    "answer": "Built-in parsers are convenient and safe for common JSON or form payloads, but they buffer and transform the body before your handler sees it. That is wrong for some cases: very large payloads, pass-through proxies, signature verification that depends on exact raw bytes, or streaming to external storage. Raw stream handling gives control over memory use and backpressure, but error handling and protocol edge cases become your responsibility. The decision is mostly about whether you need convenience or precise control over bytes and resource usage.",
+    "real_world": "Payment webhooks often require verifying a signature on the untouched body; parsing JSON first can invalidate the check. Media ingestion services usually stream directly to object storage to avoid holding large files in process memory.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When verifying signed webhooks, how would you preserve the raw body without breaking normal JSON handling elsewhere?"
+   },
+   {
+    "question": "What are the main caching strategies you would apply in an Express app, and where do ETags and Cache-Control help versus hurt?",
+    "answer": "For static or infrequently changing responses, strong cache headers can eliminate repeat work entirely at browsers and CDNs. ETags help when the response may be reused conditionally, but generating validators for large dynamic payloads still costs CPU and may not help if the content changes often. `Cache-Control` is more important because it decides whether caches can store or revalidate in the first place. For personalized or auth-scoped data, careless caching can leak user data, so you need vary rules or no-store semantics where appropriate.",
+    "real_world": "Teams sometimes enable caching globally and accidentally let shared proxies cache authenticated JSON. On the other side, setting no-cache everywhere leaves a lot of cheap wins on static metadata, feature flags, or public catalog responses.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design cache headers differently for public product data, authenticated profile data, and generated CSV exports?"
+   },
+   {
+    "question": "In Express, what do you need to understand about streaming responses, backpressure, and `res.write()` if you want to serve large payloads efficiently?",
+    "answer": "`res` is a writable stream, so writing faster than the socket can drain will buffer data in memory unless you respect backpressure. If `res.write()` returns false, the producer should pause until the `drain` event; using `stream.pipeline` is usually safer because it wires flow control and error propagation for you. Streaming avoids buffering huge payloads and can lower time-to-first-byte, but once headers or chunks are sent your ability to change status codes and recover cleanly is limited. You also need to handle client disconnects so upstream work is canceled.",
+    "real_world": "Large exports and media downloads often cause memory spikes when teams concatenate buffers before sending. Proper streaming keeps memory flat and prevents the app from doing expensive work after the client already went away.",
+    "code_lang": "javascript",
+    "code": "const { pipeline } = require('stream');\napp.get('/download', (req, res, next) => {\n  res.setHeader('Content-Type', 'application/octet-stream');\n  pipeline(createBigReadStream(), res, next);\n});",
+    "follow_up": "How would you detect that the client disconnected and stop an upstream database cursor or file read?"
+   },
+   {
+    "question": "How do Express 4 and Express 5 differ in async error behavior, and why does that matter during upgrades?",
+    "answer": "In Express 4, rejected promises from async handlers are not automatically forwarded unless you wrap them or patch the router behavior. Express 5 changes that so thrown errors and rejected promises in handlers are propagated to error middleware more naturally. That matters because teams often have a mix of wrapped and unwrapped handlers; upgrading can expose duplicate handling patterns or assumptions in tests. You need to audit async middleware conventions rather than just bump the version.",
+    "real_world": "A common bug in Express 4 is an async route throwing after an `await` and the request hanging or logging an unhandled rejection instead of returning a controlled 500. During migration, stale wrapper utilities can start double-reporting the same error.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What migration checks would you add to catch behavior changes in async routes before production?"
+   },
+   {
+    "question": "How would you prevent a memory leak in an Express app when adding request-scoped logging, tracing, or event listeners?",
+    "answer": "Request-scoped state should be attached only for the lifetime of the request and cleaned up automatically when the request finishes or aborts. Leaks usually come from storing `req` or `res` in long-lived maps, retaining large closures in logger context, or adding listeners to shared emitters without removing them. Use bounded metadata, prefer IDs over object references, and tie instrumentation to request completion events. The hard part is that leaks are often slow, only showing up under sustained traffic.",
+    "real_world": "Production leaks often appear after adding detailed audit logging or tracing baggage; heap snapshots show retained request objects and response buffers. The service looks healthy for hours, then restarts under memory pressure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you investigate whether the leak is from retained request objects versus unbounded caching elsewhere in the process?"
+   },
+   {
+    "question": "If you need to scale an Express service across CPU cores and many instances, when would you use Node clustering versus just running more single-process containers?",
+    "answer": "Clustering lets one host use multiple CPU cores by running multiple Node processes behind a shared listening socket, but it does not remove the need for stateless app design or external shared state. In containerized environments, many teams prefer one process per container and let the orchestrator handle replication because failure isolation, resource limits, and rollout behavior are simpler. Clustering can still be useful on bare metal or constrained platforms, but sticky session requirements and uneven per-worker load can complicate things. The main trade-off is operational simplicity versus squeezing more from one machine.",
+    "real_world": "Teams that keep in-memory sessions or rate-limit state discover quickly that adding workers or replicas changes behavior unless those concerns move to Redis or another shared store. Another common issue is one worker getting stuck on CPU-heavy work while others stay healthy, producing noisy latency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts of an Express application must become externalized before horizontal scaling is safe?"
+   },
+   {
+    "question": "How does Express build and walk the middleware stack for a request, and where does the overhead actually come from?",
+    "answer": "Express keeps an ordered stack of layers for app-level and router-level middleware and routes. For each request it walks that stack linearly, checking path and method matches and invoking handlers that match, so overhead grows with how much unrelated middleware a request must traverse. The expensive part is usually not the path check itself but extra parsing, logging, auth, and allocations done before you know the route will use them. A senior optimization is to scope expensive middleware narrowly and keep hot paths shallow.",
+    "real_world": "Teams often add global middleware over time and then wonder why a simple health check is slower than expected. In production, moving auth, body parsing, or heavy logging off the global path can cut p99 latency without touching business logic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you profile whether the time is being spent in Express dispatch itself versus your middleware?"
+   },
+   {
+    "question": "What happens in Express if a client disconnects in the middle of a request or response, and how should the server react?",
+    "answer": "The request and response streams can emit close or abort-related events when the peer goes away before completion. Express does not automatically cancel your database query, background promise, or upstream HTTP call, so your handler may keep doing useless work unless you wire cancellation through. You should treat disconnects as a signal to stop expensive downstream work, clean up listeners, and avoid writing again to the response. This matters most for long polls, streaming responses, and large uploads.",
+    "real_world": "A common incident is clients timing out at a gateway while the Express app keeps running expensive queries, which wastes capacity and amplifies overload. Teams often attach abort handling to propagate cancellation to fetch calls, queues, or DB drivers that support it.",
+    "code_lang": "javascript",
+    "code": "app.get('/report', async (req, res, next) => {\n  let gone = false\n  req.on('close', () => { gone = true })\n  const data = await buildReport()\n  if (gone) return\n  res.json(data)\n})",
+    "follow_up": "How would you propagate cancellation into downstream libraries that do not natively support AbortSignal?"
+   },
+   {
+    "question": "How would you implement request timeouts in an Express service, and what are the trade-offs between app-level and proxy-level timeouts?",
+    "answer": "You usually need timeouts at multiple layers: a reverse proxy to protect the edge and app-level deadlines so handlers stop work instead of running forever. Proxy timeouts are simpler and consistent, but they often only cut the client connection; they do not stop work already happening inside Express. App-level deadlines let you bound internal work and return controlled errors, but they require cancellation-aware code and careful cleanup. The wrong timeout can also break valid long-lived endpoints like streaming or uploads.",
+    "real_world": "A production smell is seeing 504s at the load balancer while CPU and database load stay high because handlers keep running after the client is gone. Mature teams define endpoint-specific budgets so a fast read path and a bulk export do not share the same timeout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts of a typical Express request path still keep running after an upstream proxy times out the client?"
+   },
+   {
+    "question": "When would you choose worker threads, child processes, or an external job system for heavy work in an Express app?",
+    "answer": "Use the main Express process for short I/O-bound request handling, not CPU-heavy tasks. Worker threads are good when you need CPU work in-process with lower communication overhead than separate processes, but they still share machine resources and add complexity around pooling and transfer. Child processes isolate crashes and can run different runtimes, but IPC is heavier. An external job system is usually better for long or retryable work because it decouples request latency from execution and survives restarts.",
+    "real_world": "If image processing or PDF generation runs in the request path, one hot route can stall the event loop and inflate latency for unrelated requests. Teams often move that work to workers or queues once they see p99 response times track CPU spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether a synchronous crypto or compression call is acceptable in the request path?"
+   },
+   {
+    "question": "How do `req.originalUrl`, `req.url`, `req.baseUrl`, and `req.path` differ once routers are mounted, and why does that matter?",
+    "answer": "`req.originalUrl` is the full incoming URL as received by Express, while `req.url` can be rewritten as the request passes through mounted middleware or routers. `req.baseUrl` is the mount path that matched so far, and `req.path` is the pathname portion of the current URL view. This matters for logging, auth rules, redirects, and sub-app behavior because using the wrong property can make you validate or log the rewritten path instead of what the client requested. Mounted routers are where this confusion usually appears.",
+    "real_world": "A real bug is rate limits or ACLs being applied to `req.url` inside a mounted router, which can collapse distinct endpoints into the same bucket or bypass a prefix-based policy. Logging `originalUrl` but routing on rewritten values helps incident debugging.",
+    "code_lang": "javascript",
+    "code": "app.use('/api', (req, res, next) => {\n  console.log(req.originalUrl, req.baseUrl, req.url, req.path)\n  next()\n})",
+    "follow_up": "How would these values look if a router is mounted at `/api` and handles `/users?id=1`?"
+   },
+   {
+    "question": "What are the trade-offs of using `mergeParams: true` on nested routers in Express?",
+    "answer": "`mergeParams: true` lets a child router access params defined on its parent mount path, which is convenient for nested resources. The trade-off is tighter coupling: child routers silently depend on parent context, param names can collide, and reuse under different mount structures gets harder. It can also hide where a value came from during debugging. I use it sparingly when the nesting is a real domain concept, not just URL shape.",
+    "real_world": "This shows up in multi-tenant APIs where a child router assumes `tenantId` exists because every current mount provides it. Later, someone reuses that router elsewhere and authorization or lookups fail in a non-obvious way.",
+    "code_lang": "javascript",
+    "code": "const child = require('express').Router({ mergeParams: true })\nchild.get('/users/:userId', (req, res) => {\n  res.json({ orgId: req.params.orgId, userId: req.params.userId })\n})\napp.use('/orgs/:orgId', child)",
+    "follow_up": "When would you prefer putting the parent resource into `res.locals` or a service layer instead of relying on merged params?"
+   },
+   {
+    "question": "How does `router.param()` actually behave, and what pitfalls does it introduce in larger Express apps?",
+    "answer": "`router.param()` registers param pre-processing for named route parameters, typically for validation or loading a resource before handlers run. It fires when a matching route with that parameter is selected, not for every request globally, and ordering across routers can get subtle in large apps. The pitfall is hidden work and hidden control flow: a route may trigger database access before the main handler logic is obvious, and duplicate param names across routers can confuse people. It also encourages mixing transport concerns with data loading if overused.",
+    "real_world": "Teams sometimes put entity loading in `router.param('id')` and later discover routes are doing extra queries they did not expect, especially after adding nested routers or broad route patterns. During incidents, that hidden query path is easy to miss in traces.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you choose explicit middleware over `router.param()` for loading a resource?"
+   },
+   {
+    "question": "How would you handle per-request context in Express without leaking data across concurrent requests?",
+    "answer": "You should not put request-specific state in module globals or mutable singletons because many requests interleave on the same event loop. Safer options are passing context explicitly, using `res.locals` for data within the request pipeline, or AsyncLocalStorage when you need context available deep in async call chains. The trade-off with AsyncLocalStorage is convenience versus runtime overhead and the need to verify all async boundaries preserve context. Whatever you choose, treat cleanup and tests for isolation as first-class.",
+    "real_world": "A classic production bug is one user's correlation ID or auth context appearing in logs for another request because a global variable was reused. This becomes more visible under load, where interleaving increases and debugging gets painful.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of libraries or async patterns are most likely to break request context propagation?"
+   },
+   {
+    "question": "How do you make an Express endpoint idempotent for retries, and what failure modes are you protecting against?",
+    "answer": "For non-idempotent operations like payments or order creation, accept a client-supplied idempotency key and persist the result keyed by operation identity. On retry, return the original outcome instead of executing the side effect again. This protects against network retries, proxy retries, client timeouts, and crashes after the side effect succeeded but before the response reached the client. The hard parts are defining the deduplication window, storing enough response metadata, and handling in-flight duplicates safely.",
+    "real_world": "Without idempotency, a mobile client retrying after a timeout can create duplicate charges or duplicate orders even though the first request actually succeeded. Mature APIs often combine a unique key, a transactional store, and endpoint-specific conflict rules.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent two identical requests with the same idempotency key from both executing concurrently?"
+   },
+   {
+    "question": "If you need to expose rate limiting in an Express API, where should it live and how do you avoid the common mistakes?",
+    "answer": "For broad protection, rate limiting is often best at the gateway or proxy because it is cheaper and can shed traffic before it reaches Node. Application-level limits still matter for tenant-aware rules, expensive endpoints, or cases where the app has the best identity information. Common mistakes are using per-process in-memory counters in a horizontally scaled service, keying by `req.ip` without understanding proxies, and choosing windows that create burstiness or unfairness. Token bucket or sliding-window approaches in shared storage are more predictable than naive fixed windows.",
+    "real_world": "A team may think it has a 100 requests per minute limit, but with 10 instances and local memory it effectively allows far more and behaves inconsistently. Another frequent incident is all users appearing to come from the load balancer IP because proxy settings were wrong.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you use as the rate-limit key for authenticated APIs used by both end users and server-to-server clients?"
+   }
+  ]
+ }
+}

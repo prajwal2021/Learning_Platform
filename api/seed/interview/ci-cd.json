@@ -1,0 +1,461 @@
+{
+ "slug": "ci-cd",
+ "name": "CI/CD (GitHub Actions, Jenkins, GitLab CI)",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is CI/CD, and what problem does it solve?",
+    "answer": "CI means continuously integrating code changes and running automated checks so bugs are found early. CD usually means continuously delivering or deploying those changes so releases are repeatable and less manual. The main benefit is faster feedback with less risk than big, infrequent releases.",
+    "real_world": "Teams use CI/CD to catch broken builds before code merges to main and to reduce manual deployment steps that cause mistakes. It is especially useful when multiple people are changing the same codebase every day.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between continuous delivery and continuous deployment?"
+   },
+   {
+    "question": "What is a pipeline in GitHub Actions, Jenkins, or GitLab CI?",
+    "answer": "A pipeline is the automated sequence of steps that runs when an event happens, like a push or pull request. It usually includes stages such as install dependencies, test, build, and deploy. Pipelines make the release process consistent and visible.",
+    "real_world": "A team might have one pipeline for pull requests that only tests code, and another for the main branch that also deploys to staging. This helps prevent broken code from reaching shared environments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a job and a step in a pipeline?"
+   },
+   {
+    "question": "What is the difference between a job and a step?",
+    "answer": "A step is one command or action inside a job. A job is a group of steps that runs on a runner, usually with its own isolated environment. If one step fails, the job usually stops unless the pipeline is configured otherwise.",
+    "real_world": "In GitHub Actions, a job might set up Node.js, install dependencies, run tests, and upload test results. Splitting work into jobs can also let parts of the pipeline run in parallel.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you split work into multiple jobs instead of one job?"
+   },
+   {
+    "question": "Why do CI systems use runners or agents?",
+    "answer": "Runners or agents are the machines that actually execute the pipeline instructions. The CI server schedules work, but the runner does the checkout, build, test, and deploy commands. This separation lets you use shared runners or your own self-hosted machines.",
+    "real_world": "A company may use hosted runners for most builds but self-hosted runners for jobs that need access to internal networks or special build tools. Choosing the wrong runner can cause slow builds or security issues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the trade-off between hosted runners and self-hosted runners?"
+   },
+   {
+    "question": "What is a trigger in CI/CD?",
+    "answer": "A trigger is the event that starts a pipeline, such as a push, pull request, tag, or manual button click. Triggers let you run the right checks at the right time instead of on every possible change. Good trigger design saves compute and avoids noisy pipelines.",
+    "real_world": "A pull request trigger is often used to run tests before merging, while a tag trigger is used to build release artifacts. Without clear triggers, teams either miss checks or run expensive jobs too often.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you configure a pipeline to run tests on pull requests but deploy only on main?"
+   },
+   {
+    "question": "What is an artifact in CI/CD?",
+    "answer": "An artifact is a file produced by the pipeline that you want to keep or pass to another job, such as a compiled binary, test report, or packaged app. Artifacts help separate build once from deploy many times. They also make it easier to inspect what was actually built.",
+    "real_world": "If a build job creates a zip file and a later deploy job uses that exact zip, you know the deployed version matches the tested version. Without artifacts, teams often rebuild during deploy and risk shipping a different output.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between an artifact and a cache?"
+   },
+   {
+    "question": "What is caching in CI, and how is it different from artifacts?",
+    "answer": "Caching stores dependencies or intermediate files so later runs can reuse them and start faster. Artifacts are outputs you intentionally pass along or download later; caches are mainly for speed. A cache can be safely lost and rebuilt, but an artifact is part of the pipeline result.",
+    "real_world": "Common caches include npm packages, Maven dependencies, or Docker layers. If caching is set up badly, builds can become flaky because old dependencies are reused when they should not be.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of files are safe to cache, and which ones should not be cached?"
+   },
+   {
+    "question": "What does a YAML file do in GitHub Actions or GitLab CI?",
+    "answer": "YAML is the configuration format used to describe the pipeline structure, jobs, steps, and conditions. It is indentation-sensitive, so small formatting mistakes can break the config. In these systems, YAML is the blueprint for automation.",
+    "real_world": "A missing space or wrong indentation can make a job disappear or cause the entire pipeline to fail to parse. Junior engineers often spend time debugging YAML formatting rather than the build itself.",
+    "code_lang": "yaml",
+    "code": "name: CI\non: [push]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo \"hello\"",
+    "follow_up": "What are some common YAML mistakes in CI configuration?"
+   },
+   {
+    "question": "What is the purpose of environment variables and secrets in CI/CD?",
+    "answer": "Environment variables let you pass configuration into jobs without hardcoding values in the pipeline. Secrets are sensitive values like API keys or passwords that the CI system stores securely and masks in logs. They keep credentials out of source control and make pipelines easier to reuse across environments.",
+    "real_world": "A deployment job often needs a token to push to a registry or access a cloud provider. If that token is written directly into the repo, it can be leaked through logs, branches, or forks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How should you handle secrets for pull requests from forks?"
+   },
+   {
+    "question": "Why do pipelines sometimes run tests in a separate stage before deployment?",
+    "answer": "Running tests first catches failures before you spend time building or deploying. It also creates a clear quality gate so broken code cannot reach production. Separating stages makes the pipeline easier to understand and troubleshoot.",
+    "real_world": "If unit tests fail in the test stage, the deploy stage never runs, which prevents shipping a known bad change. This is a common setup for teams that want quick feedback on every commit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a pipeline fail fast while still collecting useful test output?"
+   },
+   {
+    "question": "What is a pipeline runner, and what does it actually do during a build?",
+    "answer": "A runner is the machine or service that picks up a job and executes its commands. It checks out the code, runs the script steps, and reports the result back to the CI system. The key idea is that the CI server schedules work, but the runner does the actual work.",
+    "real_world": "If runners are overloaded or unavailable, jobs sit queued even though the pipeline config is correct. Teams often scale runners separately from the CI server to avoid build bottlenecks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the trade-offs between using shared runners and self-hosted runners?"
+   },
+   {
+    "question": "What does it mean for a CI job to run in a clean workspace?",
+    "answer": "It means the job starts without relying on files left over from a previous run. Each run should fetch what it needs from version control, dependencies, or artifacts instead of depending on local state. This matters because hidden state causes flaky pipelines and makes failures hard to reproduce.",
+    "real_world": "A common bug is a job passing on a reused runner because an old build output is still on disk. The same job then fails on a fresh runner in production CI.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do artifacts and caches interact with a clean workspace?"
+   },
+   {
+    "question": "What is a manual approval or manual gate in a pipeline?",
+    "answer": "It is a pause in the pipeline where a person must approve before the next step runs. Teams use it for higher-risk actions like production deployment or database migrations. The trade-off is slower delivery, but it adds control where automation alone is not enough.",
+    "real_world": "A release manager may review test results and change notes before approving a deployment to production. This can prevent a bad build from going live just because the pipeline was green earlier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When should a team avoid relying on manual approval?"
+   },
+   {
+    "question": "What does branch-based CI mean?",
+    "answer": "Branch-based CI means pipelines run differently depending on which branch is updated. For example, feature branches may only run tests, while the main branch may also package or deploy. This matters because you usually want lighter checks for everyday development and stricter controls for release branches.",
+    "real_world": "A team might run full deployment steps only on the main branch to avoid accidentally publishing from a feature branch. That keeps release behavior tied to the branch that represents shipped code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent a pull request from deploying by mistake?"
+   },
+   {
+    "question": "What is a merge request or pull request pipeline?",
+    "answer": "It is a pipeline that runs for proposed code changes before they are merged. The goal is to validate the change in isolation so reviewers know whether the branch is safe to accept. This is one of the main ways CI protects the main branch from broken code.",
+    "real_world": "Teams use PR pipelines to run tests and linting on every change request. If the pipeline fails, the merge is blocked until the issue is fixed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What checks belong in a pull request pipeline versus a post-merge pipeline?"
+   },
+   {
+    "question": "What is the most common beginner mistake when writing a CI/CD config file?",
+    "answer": "The most common mistake is assuming the job has the same filesystem, installed tools, or shell state as your laptop or a previous job. Each job usually starts fresh, so anything needed must be installed or fetched explicitly. Another common mistake is putting secrets or environment-specific values directly into the config instead of using secure variables.",
+    "real_world": "A junior engineer may run a script locally that works because dependencies are already installed, then see it fail in CI because the runner is clean. Fixing the job usually means making every dependency step explicit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you make a pipeline step reproducible from scratch?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How would you decide whether to put a test in the CI pipeline or run it later in a nightly job?",
+    "answer": "Put fast, deterministic tests in CI so every change gets immediate feedback, and move slow, flaky, or high-cost tests to scheduled runs. The trade-off is coverage versus pipeline latency: if CI gets too slow, developers stop trusting or waiting for it. A good split usually keeps unit tests and a small set of integration checks in CI, with larger end-to-end or performance suites running later.",
+    "real_world": "Teams often discover their PR pipeline takes 30+ minutes because it runs a full browser suite on every push. Moving the long tests to nightly and keeping a focused smoke set in CI usually restores fast feedback without losing coverage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you choose which tests are safe to mark as flaky or move out of the blocking path?"
+   },
+   {
+    "question": "If one job in a pipeline fails but the rest would still be useful, how should you design the pipeline around that?",
+    "answer": "Split independent concerns into separate jobs so failure in one area does not hide problems in another. For example, lint, unit tests, and build validation can run in parallel, while deployment depends on all required checks passing. The key trade-off is preserving signal without making the pipeline so permissive that broken code still gets deployed.",
+    "real_world": "In monorepos, a frontend lint failure should not prevent backend tests from running if they are unrelated. Teams often use this to shorten feedback and avoid rerunning expensive jobs that were never affected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you intentionally make jobs depend on each other instead of running them in parallel?"
+   },
+   {
+    "question": "What is the practical difference between a failed job and a failed pipeline in CI tools?",
+    "answer": "A failed job is one unit of work that exited unsuccessfully; a failed pipeline is the overall run marked unsuccessful because one or more required jobs failed. Some tools let non-critical jobs fail without failing the whole pipeline, which is useful for optional checks like experimental jobs or reports. The important distinction is whether the failure blocks merge or deployment.",
+    "real_world": "This matters when a security scan is informative but not yet blocking. Teams often let it fail without failing the entire pipeline until they are ready to enforce the result.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you configure a non-blocking job without hiding real failures?"
+   },
+   {
+    "question": "How do you debug a CI job that passes locally but fails on the runner?",
+    "answer": "First compare the runtime environment: language version, installed tools, OS, working directory, and environment variables. Then look for assumptions about state, such as uncommitted files, hidden local dependencies, or cached data that does not exist on a clean runner. Reproducing the job in a container or using the same runner image is often the fastest way to isolate the difference.",
+    "real_world": "A common failure is a test that depends on a file present on a developer laptop but missing in CI. Another is a script that works on macOS locally but fails on Linux because of path or shell differences.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What clues in the job log help you distinguish an environment issue from a real code bug?"
+   },
+   {
+    "question": "When would you use a matrix build, and what problem does it solve?",
+    "answer": "Use a matrix build when you need to test the same code against multiple versions, operating systems, or dependency combinations. It catches compatibility issues early and avoids duplicating nearly identical job definitions. The trade-off is higher compute cost and more output to interpret, so the matrix should focus on combinations that actually matter.",
+    "real_world": "A library maintainer may test against several supported runtime versions in parallel to avoid shipping a release that only works on the newest one. This is especially useful before publishing packages or cutting a release branch.",
+    "code_lang": "yaml",
+    "code": "strategy:\n  matrix:\n    os: [ubuntu-latest, windows-latest]\n    node: [18, 20]\nruns-on: ${{ matrix.os }}\nsteps:\n  - uses: actions/setup-node@v4\n    with:\n      node-version: ${{ matrix.node }}",
+    "follow_up": "How do you keep a matrix from exploding into too many expensive combinations?"
+   },
+   {
+    "question": "How should you handle secrets in a CI pipeline when different environments need different credentials?",
+    "answer": "Use the smallest scope possible: separate secrets by environment, project, or branch protection rules instead of one shared credential set. Secrets should be injected at runtime, never committed, and never printed in logs. A useful pattern is to give CI only the permissions needed for that job, so a compromised pipeline cannot access everything.",
+    "real_world": "Deployment jobs often need production credentials, but test jobs should not see them at all. Teams reduce blast radius by using environment-specific secrets and requiring approval before those secrets become available.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the downside of sharing one secret across all pipelines and environments?"
+   },
+   {
+    "question": "What is the difference between a build cache and a dependency lockfile, and why do you need both?",
+    "answer": "A lockfile records the exact dependency versions you intend to install; a cache stores downloaded or generated data so future jobs can reuse it. The lockfile gives reproducibility, while the cache improves speed. You need both because caching without a lockfile can make builds faster but inconsistent, and a lockfile without caching can make builds reliable but slow.",
+    "real_world": "A team may pin package versions in a lockfile so every runner resolves the same graph, then cache the package manager directory to avoid downloading the same packages on every run. Without the lockfile, two CI runs can silently build different dependency trees.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What cache invalidation strategy would you use when dependencies change?"
+   },
+   {
+    "question": "How do you keep a deployment stage safe when multiple branches or pipelines are running at the same time?",
+    "answer": "Use concurrency control or deployment serialization so only one deployment to a given environment runs at once. You also want to deploy an immutable build artifact rather than rebuilding at deploy time, so the thing you tested is exactly the thing you release. This prevents race conditions where a newer pipeline overwrites an older one or different commits get mixed together.",
+    "real_world": "Without serialization, two merges to main can start two production deploys and the second one may finish first, leaving the environment in an unexpected state. This also helps when a rollback is needed, because you know which artifact is currently live.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design rollback if deploys are serialized but releases are frequent?"
+   },
+   {
+    "question": "What are the trade-offs between using shared runners and dedicated runners?",
+    "answer": "Shared runners are cheaper and easier to operate, but you have less control over performance, installed software, and isolation. Dedicated runners give you predictable environments and can reach private resources, but they require maintenance and capacity planning. The right choice depends on whether your main pain is cost and simplicity or control and compliance.",
+    "real_world": "A team building on-prem software often needs dedicated runners inside a private network to reach internal services. Another team may prefer shared runners because they only need standard builds and want minimal operational overhead.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you split runners by project, environment, or trust level?"
+   },
+   {
+    "question": "How do you safely allow a pipeline to deploy only from protected branches or tags?",
+    "answer": "Tie deployment permissions to protected refs and require the pipeline to prove the build came from the approved branch or tag. In practice, that means the deploy job should only be reachable from vetted sources and should not accept arbitrary inputs from feature branches. This reduces the chance that an unreviewed change can reach production.",
+    "real_world": "Release pipelines often deploy only from signed tags or a protected main branch. That prevents a developer from accidentally pushing a feature branch that triggers a production release path.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What extra checks would you add before allowing a tag-based deployment?"
+   },
+   {
+    "question": "How do you structure a pipeline so that linting, tests, and deployment are separated in a way that stays maintainable as the project grows?",
+    "answer": "Split the pipeline by concern: fast feedback first, then slower or riskier work later. Put linting and unit tests early, keep deployment in a clearly isolated stage, and reuse shared setup through templates or reusable workflows instead of copy-pasting. The trade-off is more files and abstraction up front, but it reduces duplication and makes failures easier to localize.",
+    "real_world": "A team starts with one giant pipeline and every change becomes hard to reason about. Splitting it later helps them add a security scan or a second deploy target without rewriting everything.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose to reuse a shared pipeline template versus keeping one repo-specific pipeline file?"
+   },
+   {
+    "question": "What’s the practical difference between using a pipeline trigger from a push versus from a merge request or pull request?",
+    "answer": "Push pipelines validate what landed on a branch, while merge request or pull request pipelines validate the proposed change before it is merged. MR/PR pipelines are usually better for code review because they can block bad changes earlier, but push pipelines still matter for branch-specific checks and post-merge verification. Many teams use both, but they need to avoid duplicating expensive jobs unnecessarily.",
+    "real_world": "If you only run tests after merge, broken changes can sit in review for hours and still fail the main branch later. If you only run push pipelines, reviewers may miss integration issues until it is too late.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you avoid running the same expensive test suite twice on both push and merge request events?"
+   },
+   {
+    "question": "How do you decide whether a step should fail fast or allow later steps to continue even if it fails?",
+    "answer": "Fail fast for checks that prove the change is unsafe, like compilation, unit tests, or critical security gates. Allow continuation when later steps produce useful diagnostics or independent results, such as collecting test reports or running unrelated platform builds. The main trade-off is earlier feedback versus richer information from the same run.",
+    "real_world": "In a flaky integration suite, stopping on the first failure can hide whether the breakage is one test or a broader environment issue. Letting report collection continue often makes debugging much faster.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of checks would you mark as required versus informational only?"
+   },
+   {
+    "question": "What’s the difference between using a matrix and running the same job multiple times with different config files?",
+    "answer": "A matrix is a concise way to fan out one job definition across multiple combinations of versions, platforms, or parameters. It keeps the pipeline DRY and makes it easier to see coverage, while separate jobs or files give more control when each variant needs different setup or conditions. Use a matrix when the work is mostly the same; split jobs when the behavior diverges significantly.",
+    "real_world": "A project needs to test Node versions on Linux and macOS. A matrix keeps the config short and makes it obvious which combinations failed.",
+    "code_lang": "yaml",
+    "code": "jobs:\n  test:\n    strategy:\n      matrix:\n        os: [ubuntu-latest, macos-latest]\n        node: [18, 20]\n    runs-on: ${{ matrix.os }}\n    steps:\n      - uses: actions/setup-node@v4\n        with:\n          node-version: ${{ matrix.node }}",
+    "follow_up": "When would a matrix become too large, and what would you do instead?"
+   },
+   {
+    "question": "How do you handle flaky tests in CI without hiding real regressions?",
+    "answer": "First, measure and isolate the flake instead of just rerunning everything. Keep the test visible in CI, but separate known flaky tests from required gates until they are fixed, and track failure rate so they do not become permanent noise. Blind retries can reduce noise short term, but they also hide genuine instability and waste runner time.",
+    "real_world": "A team sees random failures only on one integration test. Marking it flaky and alerting on it separately keeps mainline green while they fix the root cause.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is it acceptable to retry a failed job automatically, and when is it not?"
+   },
+   {
+    "question": "What’s the difference between building once and reusing the same artifact in later stages versus rebuilding in every stage?",
+    "answer": "Building once and promoting the same artifact is more reproducible and safer because the thing you test is the thing you deploy. Rebuilding in later stages can hide non-determinism and introduce drift if dependencies or environment state change between stages. Rebuilds are simpler in small projects, but promotion is the stronger pattern for release pipelines.",
+    "real_world": "A service passes tests in CI but a later deploy job rebuilds a slightly different binary and introduces a production bug. Promoting a single artifact would have exposed that mismatch earlier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metadata would you attach to an artifact so you can trace it back to the commit and build job?"
+   },
+   {
+    "question": "How do you secure a deployment job that needs cloud credentials without exposing those credentials to earlier jobs?",
+    "answer": "Give the deploy job its own scoped credentials and keep them unavailable to build or test jobs. Use environment-level protection, short-lived credentials if possible, and narrow permissions so the job can only do what deployment needs. The key trade-off is convenience versus blast radius: broad credentials are easier to wire up but much riskier.",
+    "real_world": "A compromised test dependency or a malicious pull request should not be able to reach production secrets. Separating deployment credentials reduces the damage if an earlier job is exploited.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design credentials differently for staging versus production?"
+   },
+   {
+    "question": "Why might a pipeline pass on a developer machine but still fail in CI because of dependencies or environment setup?",
+    "answer": "Local machines often have hidden state: cached tools, extra files, different OS packages, or environment variables that the CI runner does not have. CI exposes those assumptions because it starts from a cleaner baseline, so failures often come from missing setup, version mismatches, or reliance on undeclared dependencies. The fix is to make the build reproducible and explicit about its inputs.",
+    "real_world": "A Python project imports a package that happens to be installed globally on one engineer’s laptop. CI fails because the package was never declared in the project dependencies.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the first three things you check when a build only fails in CI?"
+   },
+   {
+    "question": "How do you control pipeline concurrency so two deployments or two release jobs do not step on each other?",
+    "answer": "Use mutual exclusion around the part that changes shared state, usually the deploy step or a specific environment. That can mean a lock, a serialized environment, or a pipeline rule that cancels older runs in favor of the newest one, depending on the tool and risk. The goal is to prevent race conditions without slowing down unrelated test work.",
+    "real_world": "Two commits merge close together and both try to deploy to the same staging environment. Without concurrency control, the later deployment can be overwritten by the earlier one finishing late.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you cancel older pipelines, and when would you let them finish?"
+   },
+   {
+    "question": "What’s a good way to debug a pipeline that is very slow, and where do you usually look first?",
+    "answer": "Start by measuring which stage or job actually dominates the total time instead of guessing. Common bottlenecks are dependency installation, oversized test suites, serial jobs that could run in parallel, and repeated setup work that could be cached or moved into an image. The trade-off is that optimizing one hot spot can make the config more complex, so focus on the biggest win first.",
+    "real_world": "A release pipeline that used to take ten minutes grows to forty after a few months. Profiling the job durations shows that dependency installation and a slow end-to-end suite are the real culprits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes would you make first if the pipeline time doubled after a new test suite was added?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How do GitHub Actions, Jenkins, and GitLab CI actually schedule work onto runners or agents under high load, and what bottlenecks do you watch first?",
+    "answer": "The control plane queues jobs, matches them to runners by labels or tags, and the runner pulls or is assigned work depending on the platform and setup. Under load, the first bottlenecks are usually executor capacity, image pull time, workspace provisioning, and any central service like a Jenkins controller or a shared cache store. In Jenkins, the controller can become a scaling limit if too much pipeline logic or log streaming happens there; in GitHub Actions and GitLab, the hosted control plane is managed, but your self-hosted runners and network still bottleneck. I look at queue wait time separately from execution time so I know whether I need more runners, faster startup, or less work per job.",
+    "real_world": "A common incident is \"CI is slow\" when tests still take 8 minutes but queue time silently grew from 30 seconds to 20 minutes after a team enabled pipelines on every branch. Another is autoscaled runners that look healthy, but cold-start and image pull latency dominate each job.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If queue time is the issue, how would you choose between larger runners, more runners, and reducing pipeline fan-out?"
+   },
+   {
+    "question": "What failure modes do you see with self-hosted runners or agents, and how do you design around them?",
+    "answer": "The big ones are stuck runners, partial cleanup between jobs, lost network access during uploads, clock drift, and runners that are technically online but unable to start containers or mount workspaces. I treat runners as disposable where possible, use health checks beyond \"process is up,\" and make jobs idempotent so retries do not corrupt state. For persistent runners, I add aggressive workspace cleanup and periodic reimaging because contamination and disk pressure accumulate over time. You also need to assume logs or artifacts may fail to upload after the work succeeded, which creates confusing false negatives.",
+    "real_world": "Teams often discover a self-hosted runner kept a previous checkout, Docker layer, or cloud login, so a deploy \"worked\" only on one runner. Another production issue is jobs timing out because ephemeral runners were created, but security groups blocked package registry or artifact storage access.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect and quarantine a bad runner before it causes widespread flaky failures?"
+   },
+   {
+    "question": "How would you optimize a large monorepo pipeline so you don’t rebuild and retest everything on every change?",
+    "answer": "I start with change detection and dependency graphing so jobs run only for affected services, libraries, or deployment targets. Then I split the pipeline into stable build units with reusable outputs, because selective execution is only safe if shared dependencies and generated code are modeled correctly. The trade-off is complexity: path filters are cheap but can miss transitive impact, while a real build graph is more accurate but harder to maintain. For senior-scale systems, I care more about false negatives than false positives, so I keep a fallback full build path.",
+    "real_world": "In a monorepo with dozens of services, naive CI can turn a 5-minute validation into a 90-minute queue-and-test storm. A bad path filter can also skip a shared library consumer and let a breaking change merge.",
+    "code_lang": "bash",
+    "code": "changed=$(git diff --name-only origin/main...HEAD)\nif echo \"$changed\" | grep -q '^services/payments/'; then\n  echo \"run_payments=true\" >> $GITHUB_OUTPUT\nfi\nif echo \"$changed\" | grep -q '^libs/auth/'; then\n  echo \"run_auth_consumers=true\" >> $GITHUB_OUTPUT\nfi",
+    "follow_up": "How do you handle cross-cutting changes like base images, shared build scripts, or protobuf schemas?"
+   },
+   {
+    "question": "What are the hard parts of making deployments idempotent in CI/CD, and why does it matter?",
+    "answer": "Idempotency means retries or duplicate triggers leave the target in the same correct state instead of creating drift or partial updates. The hard parts are external side effects: database migrations, version tagging, notifications, and cloud resources that may succeed partially before the job dies. I separate read-checks from mutations, use deploy records or locks where needed, and make versioned artifacts immutable so a retry redeploys the same thing. This matters because CI systems will retry on runner loss, timeout, or manual rerun, and non-idempotent deploys turn recovery into an outage amplifier.",
+    "real_world": "A classic incident is a deploy job that times out after pushing an image but before recording success, then rerun publishes a second tag or applies the same migration twice. Another is a rollback job that assumes state never changed between attempts and deletes the wrong release.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle database migrations differently from stateless application rollout?"
+   },
+   {
+    "question": "What’s your approach to pipeline observability and debugging when failures are intermittent or distributed across many jobs?",
+    "answer": "I want correlation across pipeline, job, runner, and deployment events, not just raw logs. That means structured timestamps, immutable job IDs, runner metadata, and external telemetry for artifact store latency, registry errors, and queue delay so I can distinguish test flakes from platform issues. I also keep logs and test reports separate from terminal output because searchable reports make retries and comparisons much easier. For intermittent issues, trend data is more valuable than a single failed log.",
+    "real_world": "Without observability, teams misclassify infra failures as flaky tests and waste weeks suppressing alerts. In one common pattern, many unrelated jobs start failing because a package registry slows down, but the symptom only shows up as random install timeouts across repositories.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What specific signals would you put on a CI platform dashboard for an engineering organization?"
+   },
+   {
+    "question": "How do you think about consistency and reproducibility in CI builds, especially when using containers and remote dependencies?",
+    "answer": "Reproducibility comes from pinning the meaningful inputs: source revision, dependency versions, base image digests, build tool versions, and sometimes environment configuration. Containers help, but they are not enough if you still pull unpinned packages, fetch mutable actions or plugins, or depend on external services with changing state. I try to make the same commit produce the same artifact, and I treat network resolution of mutable dependencies as a source of nondeterminism. The trade-off is update friction, so you need an explicit refresh process for pinned dependencies.",
+    "real_world": "A team may think Docker solved reproducibility, then a base image tag moves or an action version changes behavior and yesterday’s green commit fails today. This becomes painful during incident rollback when rebuilding an old commit no longer produces the artifact you previously shipped.",
+    "code_lang": "yaml",
+    "code": "container:\n  image: node@sha256:...  # pin digest, not just a tag\nsteps:\n  - uses: actions/checkout@v4\n  - run: npm ci\n",
+    "follow_up": "What inputs would you hash or record if you needed to prove exactly how a release artifact was built?"
+   },
+   {
+    "question": "How would you design CI/CD for very large test suites where total compute is high but wall-clock time still needs to stay low?",
+    "answer": "You shard aggressively, but only after making test setup deterministic and balancing shards by historical runtime instead of test count. Then I control fan-out with cost and queue constraints, because 500 parallel jobs can reduce wall-clock time while making total spend, artifact traffic, and scheduler pressure much worse. I also separate fast signal from exhaustive validation: smoke and contract tests gate merges quickly, with broader suites running in parallel or at later promotion points. The key metric is time to trustworthy feedback, not just total minutes consumed.",
+    "real_world": "At scale, teams often cut a 2-hour suite to 15 minutes by sharding, then hit a different bottleneck when every shard downloads the same dependencies and saturates the registry or shared cache. Poorly balanced shards also leave half the fleet idle while one long shard determines the final result.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you rebalance shards over time without constantly editing the pipeline by hand?"
+   },
+   {
+    "question": "What’s the difference between orchestrating CI with lots of pipeline logic versus pushing more logic into build scripts or tooling, and where do people get burned?",
+    "answer": "Pipeline config is good for orchestration concerns like dependencies, fan-out, permissions, and environment selection, while build scripts should own project-specific build and test behavior. If too much logic lives in the CI DSL, it becomes hard to test locally, hard to version across repos, and tightly coupled to one platform. If too much is hidden in scripts, the pipeline loses transparency and policy controls become weak. People get burned when business logic is duplicated across YAML, shell, and Jenkins shared libraries, and nobody knows which layer is authoritative.",
+    "real_world": "A migration from Jenkins to GitHub Actions or GitLab CI becomes expensive when core release behavior is embedded in platform-specific pipeline code. The opposite failure is opaque shell scripts that bypass expected checks, so reviewers think policy exists when it really does not.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure shared pipeline behavior across dozens of repositories without creating a central bottleneck?"
+   },
+   {
+    "question": "How do you handle supply chain risk in CI/CD, including third-party actions, plugins, containers, and package registries?",
+    "answer": "I minimize trust by pinning versions as tightly as practical, restricting which actions or plugins are allowed, and preferring short-lived credentials with least privilege. Then I separate build and deploy trust boundaries, because the build environment often has broad network access while deployment has production access. Provenance, signatures, and isolated runners for sensitive jobs help, but the basics are dependency control, immutable artifacts, and reviewable changes to pipeline dependencies. The main trade-off is security versus maintenance overhead when updates are more controlled.",
+    "real_world": "A real failure mode is a compromised package, action, or plugin executing in CI with access to source, tokens, and cloud credentials. Another is a shared runner pulling from an untrusted fork context and exposing secrets through a misconfigured workflow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What controls would you add specifically for pull requests from forks or external contributors?"
+   },
+   {
+    "question": "What are the trade-offs between immutable release artifacts and rebuilding at deploy time, and when would you reject one approach?",
+    "answer": "Immutable artifacts make promotion safer because staging and production receive the exact same build output, which improves auditability and rollback confidence. Rebuilding at deploy time can be simpler for some workflows, but it reintroduces drift from mutable dependencies, changing toolchains, or environment-specific behavior. I reject rebuild-at-deploy for regulated systems, incident-sensitive services, or anything where reproducibility matters more than convenience. The main downside of immutable artifacts is storage, artifact lifecycle management, and the need to parameterize runtime config instead of baking in environment details.",
+    "real_world": "Teams hit painful incidents when a hotfix passed in staging, then production rebuilt from the same commit against newer dependencies and behaved differently. Immutable promotion avoids that class of surprise, especially across multi-stage approvals.",
+    "code_lang": "bash",
+    "code": "docker build -t app:${GIT_SHA} .\ndocker push app:${GIT_SHA}\n# later, deploy exactly that image digest/tag\nkubectl set image deploy/app app=app:${GIT_SHA}",
+    "follow_up": "How would you manage environment-specific configuration without breaking artifact immutability?"
+   },
+   {
+    "question": "How do you prevent duplicate or wasted pipeline runs when a branch gets several quick pushes while earlier pipelines are still running?",
+    "answer": "You need cancellation and deduplication at the workflow level, not just faster jobs. The usual pattern is to group runs by branch or merge request and cancel in-progress non-deploy pipelines when a newer commit arrives, while keeping protected release jobs exempt. That cuts queue pressure and wasted compute, but you have to be careful with jobs that publish artifacts or mutate shared state because cancellation can leave partial outputs. I also separate validation pipelines, which are safe to cancel, from release pipelines, which should usually run to a controlled end state.",
+    "real_world": "On busy repos, a burst of five pushes can multiply runner usage and queue times for everyone else. Teams often discover that half their CI bill and most developer wait time comes from obsolete pipelines still running.",
+    "code_lang": "yaml",
+    "code": "concurrency:\n  group: ci-${{ github.ref }}\n  cancel-in-progress: true\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: make test",
+    "follow_up": "What jobs would you explicitly avoid canceling even if a newer commit arrives?"
+   },
+   {
+    "question": "How do you design artifact promotion across environments so the thing you tested is actually the thing you deploy?",
+    "answer": "I build once, give the artifact a stable immutable identifier like a commit SHA or content digest, and promote that exact artifact through staging and production. That avoids drift from environment-specific rebuilds, moving package versions, or different base images. The trade-off is you need artifact storage, provenance metadata, and deployment tooling that can consume promoted artifacts instead of rebuilding from source. If configuration must vary by environment, keep it external to the artifact.",
+    "real_world": "A common production incident is staging passing and production failing because production rebuilt against a newer dependency or base image. Promotion with immutable identifiers removes that class of mismatch.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle database migration code that ships with the artifact but must execute differently per environment?"
+   },
+   {
+    "question": "What are the main bottlenecks in Jenkins at scale, and how would you recognize whether the controller is your problem versus the agents?",
+    "answer": "At scale, Jenkins often bottlenecks first on the controller: queue processing, job orchestration, plugin overhead, credentials access, and I/O for logs and build metadata. Agents usually show up as long queue wait with idle controller health, while controller issues show rising UI latency, slow queue dispatch, stuck executors, garbage collection pressure, or many builds blocked on lightweight tasks. The architecture matters because Jenkins centralizes more state and plugin execution on the controller than GitHub Actions or GitLab’s managed control plane. I watch queue time, executor utilization, controller CPU and heap, and remoting disconnects before changing pipeline code.",
+    "real_world": "Teams sometimes add more agents when builds are slow, but the real issue is a saturated controller serializing scheduling and metadata writes. That makes the whole farm unstable even though worker capacity looks available.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What Jenkins design changes would you make first if queue time is high but agents are frequently idle?"
+   },
+   {
+    "question": "How do you make deployment rollback safe in CI/CD when the pipeline itself may be partially failed or retried?",
+    "answer": "Rollback has to be a first-class operation with explicit state, not just rerunning an old job. I keep release metadata that records what version is currently deployed, what migration state changed, and whether the deploy passed health checks, then rollback uses that known-good target. The hard part is side effects that are not naturally reversible, especially database schema changes and one-way external integrations. Retries should be idempotent and detect current state before acting, otherwise a failed deploy plus retry can turn one bad release into two conflicting changes.",
+    "real_world": "A classic outage is a deploy that updated app servers but failed midway through migrations; the pipeline says failed, but the environment is already half changed. Without explicit release state, rollback guesses wrong and extends downtime.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your rollback strategy differ between blue-green deployments and in-place rolling deployments?"
+   },
+   {
+    "question": "What happens when CI pipelines use Docker-in-Docker or sibling Docker sockets, and what are the trade-offs?",
+    "answer": "Docker-in-Docker gives a nested daemon inside the job container, which improves isolation from the host but adds startup overhead, storage churn, and more complex caching. Mounting the host Docker socket is faster and shares image cache well, but it effectively gives the job broad control of the host and other containers, so it is a much larger security boundary violation. The right choice depends on whether you optimize for throughput on trusted runners or stronger isolation on multi-tenant infrastructure. In both cases, image layer caching behavior and cleanup policy strongly affect performance and disk pressure.",
+    "real_world": "Build farms often slow down because every DinD job pulls and rebuilds layers into isolated ephemeral storage. The opposite mistake is exposing the host socket on shared runners and letting one compromised job control the machine.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you speed up container image builds on ephemeral runners without opening the host Docker socket?"
+   },
+   {
+    "question": "How do you handle pipeline dependencies between repositories without creating fragile cross-repo coupling?",
+    "answer": "I treat upstream outputs as versioned inputs, not as implicit latest state. That usually means publishing a package, container image, schema bundle, or contract artifact with a version, then downstream pipelines consume a declared version and optionally run compatibility checks. Directly triggering downstream repos on every upstream commit sounds convenient but creates cascading failures, hard-to-debug races, and unclear ownership when one repo breaks another. Cross-repo orchestration should be explicit, sparse, and observable.",
+    "real_world": "In microservice fleets, a single shared library change can trigger dozens of downstream pipelines and overwhelm runners while producing mostly noise. Versioned contracts let teams adopt changes deliberately instead of firefighting chain reactions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose contract tests over full downstream integration pipelines?"
+   },
+   {
+    "question": "What’s your approach to making CI logs and test output usable at scale instead of just dumping raw console output?",
+    "answer": "Raw logs do not scale once jobs fan out into hundreds of shards. I standardize structured test output, collect timing and failure metadata per suite, and surface summaries, flaky signatures, and links to artifacts like screenshots or core dumps. The point is to make triage O(1) for common failures instead of forcing engineers to scroll through megabytes of text. I also cap noisy logs and preserve the last relevant context around a failure so storage and UI performance do not degrade.",
+    "real_world": "Large pipelines often fail in under a minute but take twenty minutes to diagnose because useful signals are buried in interleaved console text. Good summaries cut mean time to recovery much more than another small speedup in execution.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What data would you keep to identify a flaky test versus a real regression trend?"
+   },
+   {
+    "question": "How do you reason about timeout settings and hung-job detection in CI systems?",
+    "answer": "Timeouts should be based on failure mode and recovery cost, not a single global number. I use shorter step-level timeouts for network calls or external services, longer job-level limits for expected compute, and heartbeat or no-output detection where supported because hangs often come from deadlocked tests, blocked prompts, or stalled artifact uploads. Too-short timeouts create false failures and retried load; too-long timeouts waste scarce executors and hide incidents. I set them from observed percentiles with margin, then revisit after major workload changes.",
+    "real_world": "One hung integration test can occupy an executor for hours and back up the queue for the whole organization. The opposite problem is aggressive timeouts that fail healthy but slow jobs during dependency or cloud provider incidents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which kinds of CI steps do you give the tightest timeouts to, and which do you leave more room for?"
+   },
+   {
+    "question": "How would you secure untrusted pull request builds, especially when contributors are external and the pipeline normally has access to secrets or deployment paths?",
+    "answer": "I split trusted and untrusted execution paths. Untrusted PRs run with minimal permissions, no sensitive secrets, no write-capable tokens, and ideally on isolated runners or sandboxes; anything that comments back, updates statuses, or deploys happens in a separate trusted context after validation. The key risk is that build scripts are code from the PR itself, so any secret, Docker socket, or cloud credential visible to that job should be treated as compromised. You also need to watch artifact poisoning and cache poisoning, not just secret exfiltration.",
+    "real_world": "A common breach path is a forked PR that modifies the build to print environment variables or to upload a poisoned artifact reused by later trusted jobs. The pipeline looked normal, but the trust boundary was wrong.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent an untrusted job from poisoning caches or artifacts that a trusted job later consumes?"
+   },
+   {
+    "question": "When would you choose event-driven deployment from CI versus pull-based deployment by an agent in the target environment?",
+    "answer": "Push from CI is simpler and gives fast feedback, but it requires CI to hold enough authority and network reachability to change target environments. Pull-based deployment, like an agent or controller inside the cluster reconciling desired state, reduces exposed credentials and often gives better auditability and drift correction, but adds another control plane and eventual consistency. I prefer pull-based for high-security or many-cluster environments, and push-based for simpler systems where deployment latency and operational overhead matter more. The trade-off is central convenience versus stronger separation of duties and runtime reconciliation.",
+    "real_world": "Many teams move from direct CI-to-cluster deploys after an incident where a compromised runner or leaked token had broad production access. In multi-region platforms, pull-based systems also handle temporary CI outages better because the environment keeps reconciling desired state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your incident response differ if production deploy authority lives in CI versus inside the cluster controller?"
+   }
+  ]
+ }
+}

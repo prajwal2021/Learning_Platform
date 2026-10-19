@@ -1,0 +1,485 @@
+{
+ "slug": "rabbitmq",
+ "name": "RabbitMQ and message queues",
+ "category": "Data and AI",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is RabbitMQ, and when would you use it instead of calling a service directly?",
+    "answer": "RabbitMQ is a message broker that lets one part of a system send messages to another part asynchronously. You use it when you want to decouple services, smooth out traffic spikes, or make work happen in the background instead of blocking the user request. It helps when the sender and receiver should not both need to be online at the same time. It is not a database or a long-term event store; it is for moving work reliably between components.",
+    "real_world": "A web app might accept an order immediately and push email, billing, and inventory updates to background workers through RabbitMQ. If one worker is slow, the user request still finishes quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a queue and an exchange in RabbitMQ?"
+   },
+   {
+    "question": "What is the difference between a producer, a queue, and a consumer?",
+    "answer": "A producer creates and sends a message, a queue stores it, and a consumer reads and processes it. In RabbitMQ, producers usually publish to an exchange, which routes messages into one or more queues. Consumers subscribe to queues and handle messages one at a time or in parallel depending on configuration. The key idea is that producers and consumers do not talk to each other directly.",
+    "real_world": "This separation is common when one API service generates jobs and several worker processes handle them later. It lets you scale the workers without changing the producer.",
+    "code_lang": "python",
+    "code": "channel.basic_publish(exchange='orders', routing_key='new', body=b'order-123')\n\ndef handle(ch, method, properties, body):\n    print(body)\n    ch.basic_ack(delivery_tag=method.delivery_tag)\n\nchannel.basic_consume(queue='order_queue', on_message_callback=handle)\nchannel.start_consuming()",
+    "follow_up": "Why would you use an exchange instead of publishing straight to a queue?"
+   },
+   {
+    "question": "What is an exchange in RabbitMQ?",
+    "answer": "An exchange receives messages from producers and decides which queue or queues should get them. Routing depends on the exchange type and binding rules, not on the consumer. The common idea is that exchanges separate message publication from message delivery, which makes routing more flexible. If you publish to the wrong exchange or with the wrong routing key, the message may not reach any queue.",
+    "real_world": "Teams use exchanges when multiple services need different subsets of the same events. For example, one event can go to analytics, notifications, and audit queues with different routing rules.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main exchange types, and when would you use each one?"
+   },
+   {
+    "question": "What does acknowledgements mean in RabbitMQ, and why do they matter?",
+    "answer": "An acknowledgement tells RabbitMQ that a consumer finished processing a message successfully. If the consumer crashes before acking, RabbitMQ can requeue the message and deliver it again. This matters because without acknowledgements, messages can be lost if a worker dies after receiving them. The trade-off is that consumers must be written to tolerate duplicate delivery, because redelivery can happen.",
+    "real_world": "A payment worker might read a message, charge a card, and then crash before acking. The same message may be delivered again, so the payment logic must avoid double charging.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you make a consumer safe if it can receive the same message more than once?"
+   },
+   {
+    "question": "What is the prefetch setting used for?",
+    "answer": "Prefetch limits how many unacknowledged messages a consumer can receive at once. It helps prevent one consumer from being flooded with too much work while others sit idle. This is important for fair distribution and for keeping memory usage under control. A low prefetch usually improves fairness; a high prefetch can improve throughput but may cause uneven processing.",
+    "real_world": "In a queue with mixed fast and slow jobs, a worker with too many unacked messages can become a bottleneck. Prefetch helps spread work across workers more evenly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose a prefetch value for slow jobs versus fast jobs?"
+   },
+   {
+    "question": "What happens if a consumer throws an error while processing a message?",
+    "answer": "If the consumer errors before acknowledging the message, RabbitMQ will usually redeliver it later, depending on how the consumer and queue are configured. If the application catches the error and still acks, the message is considered handled and will be lost from the queue. That is why error handling and acking must be designed together. Often failed messages are retried or sent to a dead-letter queue instead of being dropped silently.",
+    "real_world": "A JSON parsing bug in a consumer can cause the same bad message to fail repeatedly and block the queue. Teams usually add validation and a dead-letter path to avoid endless retries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a dead-letter queue, and when would you use one?"
+   },
+   {
+    "question": "What is a dead-letter queue?",
+    "answer": "A dead-letter queue is a queue that receives messages that could not be processed normally. Messages may be sent there after too many retries, rejection, expiration, or other broker-defined reasons. It gives you a place to inspect bad messages without blocking the main queue. The key value is isolating poison messages from healthy traffic.",
+    "real_world": "If a single malformed payload keeps failing, it can prevent useful messages from being processed. Sending it to a dead-letter queue lets the team debug it later without stopping the pipeline.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a retry flow so that temporary failures and bad messages are handled differently?"
+   },
+   {
+    "question": "What is the difference between at-most-once, at-least-once, and exactly-once delivery?",
+    "answer": "At-most-once means a message may be lost but will not be delivered more than once. At-least-once means a message will be delivered one or more times, which is what RabbitMQ commonly aims for with acknowledgements. Exactly-once is the hardest and usually requires extra application logic beyond the broker. In practice, most systems design consumers to be idempotent so duplicate delivery does not cause bad side effects.",
+    "real_world": "Order processing often uses at-least-once delivery because losing a payment event is worse than seeing it twice. The consumer then checks whether the order was already handled before applying the change again.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does it mean for a consumer to be idempotent?"
+   },
+   {
+    "question": "How would you make a RabbitMQ consumer idempotent?",
+    "answer": "You make the consumer safe to run more than once for the same message. A common approach is to include a unique message or business key and record that it has already been processed before doing side effects. If the same message arrives again, the consumer sees it as a duplicate and skips the work. This is important because retries, network issues, and broker redelivery can all cause duplicates.",
+    "real_world": "A notification worker may receive the same event twice after a timeout. By storing processed event IDs, the worker avoids sending duplicate emails.",
+    "code_lang": "python",
+    "code": "if already_processed(message_id):\n    return\nprocess_order(order_id)\nmark_processed(message_id)",
+    "follow_up": "What are some common reasons a message might be delivered more than once?"
+   },
+   {
+    "question": "What is the difference between a persistent message and a transient message in RabbitMQ?",
+    "answer": "A persistent message is marked to survive broker restarts when it is also stored in a durable queue. A transient message is not intended to be kept if RabbitMQ goes down. Persistence reduces data loss risk, but it is not free because writing to disk adds overhead. You still need consumer acknowledgements to avoid losing messages in flight.",
+    "real_world": "This matters for orders, payments, or jobs that cannot disappear during a broker restart. Teams often assume 'persistent' alone means 'safe', but both the message and the queue setup matter.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does it mean for a queue itself to be durable?"
+   },
+   {
+    "question": "What does it mean to declare a queue as durable, and how is that different from making messages persistent?",
+    "answer": "A durable queue is recreated after RabbitMQ restarts. Persistent messages are stored so they can be recovered if they are sitting in a durable queue when the broker stops. A durable queue with transient messages can still lose those messages after a restart. Both settings are important, but they solve different parts of the durability problem.",
+    "real_world": "A common production bug is restarting RabbitMQ during maintenance and discovering the queue names came back but the jobs inside did not. That usually means the queue was durable but the published messages were not persistent, or they had already been acknowledged.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If a queue is durable, does that guarantee messages will survive a crash?"
+   },
+   {
+    "question": "What is the difference between a fanout, direct, and topic exchange?",
+    "answer": "A fanout exchange sends every message to all bound queues. A direct exchange routes messages to queues whose binding key exactly matches the routing key. A topic exchange uses pattern matching, so it can route by prefixes or wildcards in the routing key. The choice depends on whether you want broadcast, exact routing, or flexible filtering.",
+    "real_world": "This matters when one service publishes events and multiple downstream services need different subsets. For example, billing may want all payment events while notifications only wants a few event types.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a topic exchange over a direct exchange?"
+   },
+   {
+    "question": "What is a binding in RabbitMQ?",
+    "answer": "A binding is the link between an exchange and a queue. It tells RabbitMQ which messages from the exchange should be routed to that queue, usually by matching a routing key or pattern. Without a binding, an exchange has nowhere to send the message. Bindings are how you shape message flow without changing producers.",
+    "real_world": "Teams often add a new queue for a new consumer and forget to create the binding, so messages appear to be published successfully but never arrive. Checking bindings is one of the first debugging steps in RabbitMQ routing issues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens to a message if no queue matches the exchange routing?"
+   },
+   {
+    "question": "What happens when a message cannot be routed to any queue?",
+    "answer": "If no binding matches, the message is normally dropped by the exchange. Publishers can request the message to be returned or detect unroutable messages depending on how the publish is done, but the default outcome is that nothing consumes it. This is why exchange and binding setup must be correct before relying on a queue. Unroutable messages are a common source of silent data loss.",
+    "real_world": "A service may publish 'user.created' events, but if the queue is bound to 'user.create' by mistake, the messages disappear. This often shows up as 'the producer works, but consumers see nothing'.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you protect against losing unroutable messages?"
+   },
+   {
+    "question": "What is the purpose of a virtual host in RabbitMQ?",
+    "answer": "A virtual host, or vhost, is a logical namespace inside RabbitMQ. It lets you separate queues, exchanges, bindings, and permissions for different applications or environments on the same broker. This prevents naming collisions and limits access cleanly. A vhost is not the same as a network host; it is an isolation boundary within RabbitMQ.",
+    "real_world": "A company may use one RabbitMQ cluster for dev, staging, and production but keep each environment in a separate vhost. That helps avoid accidental cross-environment traffic and makes permissions easier to manage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do permissions interact with a vhost?"
+   },
+   {
+    "question": "What is the difference between publishing a message and consuming a message?",
+    "answer": "Publishing is when a producer sends a message to an exchange. Consuming is when a consumer receives a message from a queue and processes it. The exchange does routing, the queue stores, and the consumer acts on the data. Keeping these roles separate makes the system easier to scale and debug.",
+    "real_world": "New developers sometimes look for a queue on the producer side and wonder where the message went. Understanding publish versus consume helps them trace the path from application code to the broker and then to the worker.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does RabbitMQ use exchanges instead of letting producers write directly to queues?"
+   },
+   {
+    "question": "What is a 'competing consumers' setup?",
+    "answer": "Competing consumers means multiple consumers listen to the same queue, and each message is handled by only one of them. This is a common way to scale work horizontally. RabbitMQ distributes messages across the consumers as they become available. It improves throughput, but each message still needs to be safe to process more than once in case of failures.",
+    "real_world": "This pattern is common for background job workers, like image processing or sending emails. If traffic rises, you can add more workers without changing the producer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does this differ from broadcasting the same message to multiple services?"
+   },
+   {
+    "question": "What is the difference between a queue and a stream in messaging terms?",
+    "answer": "A traditional queue is mainly for work distribution: a message is typically removed once it is acknowledged. A stream is more like an append-only log that can be replayed by multiple consumers from different offsets. In RabbitMQ, basic queue usage is for task delivery, not long-term event replay. For basic junior-level work, think of queues as 'deliver and process' rather than 'store and reread forever'.",
+    "real_world": "A team may start with a queue for background jobs, then later realize they need to replay historical events for analytics. At that point, a queue may be the wrong abstraction and a log-based design may fit better.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would replaying old messages be useful?"
+   },
+   {
+    "question": "How do you acknowledge messages manually in a consumer, and why might you choose manual acknowledgements?",
+    "answer": "With manual acknowledgements, the consumer tells RabbitMQ when processing is finished instead of auto-acknowledging immediately. That way, if the consumer crashes before it finishes, RabbitMQ can requeue the message. This is the safer choice for work that must not be lost. The trade-off is a bit more code and the need to ack only after successful processing.",
+    "real_world": "This is important for tasks like charging a card or writing to a database. If you ack too early and the process dies afterward, RabbitMQ thinks the job is done even though the work failed.",
+    "code_lang": "python",
+    "code": "def callback(ch, method, properties, body):\n    process(body)\n    ch.basic_ack(delivery_tag=method.delivery_tag)\n\nchannel.basic_consume('jobs', callback, auto_ack=False)",
+    "follow_up": "What can go wrong if you acknowledge before the work is actually complete?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do publisher confirms differ from consumer acknowledgements, and why would you use confirms in a production system?",
+    "answer": "Publisher confirms tell the producer that RabbitMQ accepted the message for the broker side; consumer acknowledgements tell RabbitMQ that a consumer finished processing it. Confirms help you detect publish-path failures, such as the broker being unavailable or a message not reaching the queue after publish. They do not guarantee the message was processed by a downstream consumer, so they solve a different problem from consumer acks. In production, you use both when you need end-to-end reliability.",
+    "real_world": "A payment service may need to know a charge event was durably accepted by the broker before returning success to the API caller. Without confirms, a network glitch after publish can make the producer think the message was sent when it was not.",
+    "code_lang": "python",
+    "code": "channel.confirm_delivery()\nok = channel.basic_publish(exchange='events', routing_key='pay', body=b'{}')\nif not ok:\n    raise RuntimeError('publish not confirmed')",
+    "follow_up": "What failure cases do publisher confirms catch that return values or exceptions alone may miss?"
+   },
+   {
+    "question": "When would you choose a work queue pattern over a publish-subscribe pattern in RabbitMQ?",
+    "answer": "Use a work queue when each message should be handled by one worker and you want to spread load across consumers. Use publish-subscribe when the same event needs to reach multiple independent consumers, such as analytics, notifications, and audit logging. The trade-off is between throughput and fan-out: work queues reduce duplicated processing, while pub-sub increases flexibility but can multiply load. Choosing the wrong pattern often creates either missing work or accidental duplicate work.",
+    "real_world": "A thumbnail generation service is a work queue: one image job should be processed by only one worker. A user-created event stream is usually pub-sub because several systems need the same event.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do queue bindings change the behavior compared with separate queues per consumer group?"
+   },
+   {
+    "question": "What is message TTL in RabbitMQ, and how would you use it safely?",
+    "answer": "Message TTL is a time limit after which a message expires if it is not consumed. It is useful for stale jobs, delayed retries, or discarding notifications that no longer matter. The key risk is losing work silently if you set TTL too aggressively or assume expiration means processing happened. In practice, you should pair TTL with dead-lettering or monitoring so expired messages are visible.",
+    "real_world": "A price-update notification may be useless after a few minutes, so TTL prevents old updates from piling up. Teams also use TTL on retry queues to implement backoff before a message returns to the main queue.",
+    "code_lang": "yaml",
+    "code": "# queue arguments example\nx-message-ttl: 60000\nx-dead-letter-exchange: retry.dlx",
+    "follow_up": "What is the difference between per-message TTL and queue-level TTL in practice?"
+   },
+   {
+    "question": "How do you handle retries in RabbitMQ without creating an infinite redelivery loop?",
+    "answer": "A common pattern is to send failed messages to a retry queue with a delay, then dead-letter them back to the original queue after the delay. You need a retry limit or a poison-message path, because otherwise a permanently bad message will cycle forever. The important trade-off is between fast recovery from temporary failures and avoiding wasted capacity on messages that will never succeed. Good implementations also record the attempt count in headers or message metadata.",
+    "real_world": "A downstream payment gateway might fail for a few minutes, so retrying later makes sense. But a malformed payload should eventually go to a quarantine queue for manual inspection.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to retry, dead-letter, or drop a failed message?"
+   },
+   {
+    "question": "What causes queue buildup in RabbitMQ, and how would you debug it?",
+    "answer": "Queue buildup usually means consumers are slower than producers, consumers are stuck, or messages are being retried too often. I would check queue depth, consumer count, ack rate, redelivery rate, and whether the workload changed recently. Prefetch, slow downstream dependencies, or too much per-message work are common causes. The fix might be more consumers, smaller messages, batching, or splitting the workload into separate queues.",
+    "real_world": "A team may see memory growth because messages accumulate during a traffic spike and the workers cannot catch up. Often the actual bottleneck is a database call or an external API, not RabbitMQ itself.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you alert on to catch buildup before it becomes an outage?"
+   },
+   {
+    "question": "How do message ordering guarantees work in RabbitMQ, and when can ordering break?",
+    "answer": "RabbitMQ preserves order within a single queue in the order messages are enqueued, but end-to-end processing order is easy to break. Multiple consumers, requeues, retries, and dead-letter round trips can all change the order in which work completes. If strict ordering matters, you usually need one consumer per ordered partition or some application-level sequencing. The trade-off is lower parallelism in exchange for predictable order.",
+    "real_world": "An account ledger may need transactions applied in sequence for each account, but not across all accounts. Teams often shard by account ID so each shard preserves order while still allowing parallelism.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design for ordering if only some keys need strict sequence?"
+   },
+   {
+    "question": "What are RabbitMQ exchanges and queues doing internally when a message is routed?",
+    "answer": "The producer publishes to an exchange, the exchange evaluates bindings, and the matched queue or queues receive a copy of the message. The queue stores the message until a consumer takes it and acknowledges it. This separation lets routing rules change without changing producers. It also means troubleshooting often starts by checking exchange type, routing key, and bindings rather than the consumer code.",
+    "real_world": "When a team adds a new consumer and it gets no messages, the issue is often a missing binding, not a broken worker. Understanding routing prevents long debugging sessions where everyone looks at the wrong layer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If a message reaches multiple queues, what are the delivery and processing implications?"
+   },
+   {
+    "question": "When would you use manual queue declaration in code versus creating queues and bindings through infrastructure code or the UI?",
+    "answer": "For production systems, queue and binding definitions are usually better managed as infrastructure code because they are part of deployable configuration. Declaring them in application startup can be fine for simple services, but it can also hide drift and make permissions or versioning harder to reason about. The main trade-off is convenience versus control and repeatability. In mature teams, the broker topology is treated like infrastructure, not ad hoc runtime state.",
+    "real_world": "A service may work in staging but fail in production because the queue exists there with different arguments. Infrastructure-managed declarations reduce those surprises during deploys and incident response.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should happen if the application tries to declare a queue that already exists with different settings?"
+   },
+   {
+    "question": "How would you test a RabbitMQ-based service without relying on a live broker in every test?",
+    "answer": "Unit tests should isolate your message handling logic from RabbitMQ by testing the handler as a normal function or class. Then add a smaller number of integration tests against a real broker to verify declarations, routing, serialization, and acknowledgements. Mocking RabbitMQ everywhere can miss protocol and topology issues, while only using integration tests makes the suite slow and brittle. The balance is fast logic tests plus targeted broker tests.",
+    "real_world": "A team may discover in staging that a queue argument or routing key was wrong even though all unit tests passed. Integration tests catch that kind of wiring problem before deployment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you include in an integration test for a message consumer?"
+   },
+   {
+    "question": "How do you version message schemas safely when different consumers may be deployed at different times?",
+    "answer": "You need backward and forward compatibility so old and new consumers can coexist during rollout. The safest rule is to add fields rather than rename or remove them, and to treat unknown fields as ignorable when possible. Breaking schema changes require coordination, dual writing, or a migration period where both formats are accepted. Messaging systems often fail during deploys because the producer changes before every consumer has been updated.",
+    "real_world": "If one service publishes JSON and another team deploys later, a renamed field can break production even though both services were individually tested. Careful schema evolution avoids forcing all services to deploy at once.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle a breaking schema change if you cannot coordinate a full-system release?"
+   },
+   {
+    "question": "How do quorum queues differ from classic queues, and when would you pick one over the other?",
+    "answer": "Quorum queues are replicated and use a consensus protocol to keep data safe across nodes, so they trade some throughput and latency for stronger durability. Classic queues are simpler and can be faster in some cases, but they do not provide the same replication guarantees. In practice, quorum queues are usually the better choice for important work queues where losing messages or a node is unacceptable. Classic queues can still make sense for lighter workloads or where you need a feature that only classic queues support in your environment.",
+    "real_world": "This matters when a broker node dies during peak traffic: a classic queue may lose in-flight work depending on configuration, while a quorum queue is designed to survive node failure. Teams often switch to quorum queues after a production incident where orders or jobs disappeared.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What operational trade-offs do quorum queues introduce compared with classic queues?"
+   },
+   {
+    "question": "How do you choose an exchange type when you need one message to go to multiple consumers but with different filtering rules?",
+    "answer": "If each consumer needs a different subset of the messages, a topic exchange is usually the best fit because bindings can match routing patterns. Fanout is simpler if every consumer should receive every message, while direct works when you have a small set of exact routing keys. The key trade-off is flexibility versus simplicity: topic exchanges are powerful, but too many patterns can become hard to reason about. I’d choose the simplest exchange that matches the routing needs.",
+    "real_world": "A logging or eventing pipeline often starts with fanout, then later needs topic-style filtering for specific tenants or event types. Teams sometimes discover too late that direct exchanges force them to create many routing keys and bindings that are hard to maintain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design routing keys to keep topic bindings maintainable over time?"
+   },
+   {
+    "question": "What happens if a consumer processes a message successfully but crashes before sending the acknowledgement?",
+    "answer": "The broker will eventually treat the message as unacknowledged and redeliver it to the same or another consumer. That means the work may run twice, even though the first attempt actually succeeded. This is why consumers need to be idempotent or use deduplication for side effects like database writes or external API calls. Manual acknowledgement should happen only after the durable side effect is complete.",
+    "real_world": "This shows up when a service updates a database and then dies before acking; on restart, the same event is processed again and can double-charge a customer or create duplicate rows. The bug often appears only under crashes, deploys, or network interruptions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design idempotency around a downstream database write?"
+   },
+   {
+    "question": "How would you handle poison messages that always fail for business reasons rather than transient errors?",
+    "answer": "I would separate transient failures from permanent ones and send permanent failures to a dead-letter path after a small, controlled number of retries. The consumer should detect validation or business-rule failures and stop retrying them endlessly. That prevents the queue from being clogged by messages that can never succeed and keeps healthy messages moving. It also gives you a place to inspect bad payloads and alert on upstream data quality issues.",
+    "real_world": "A common production issue is a malformed event or unsupported enum value that keeps failing every time it is retried. Without a poison-message strategy, one bad message can waste consumer capacity and create backlog for everything else.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish a transient dependency failure from a permanent message validation failure?"
+   },
+   {
+    "question": "What are the practical differences between manual acknowledgements and automatic acknowledgements in a consumer?",
+    "answer": "With automatic acknowledgements, the broker considers the message handled as soon as it is delivered, so failures after delivery can lose work. Manual acknowledgements let the consumer decide when processing is complete, which is safer for side effects but requires more code and careful error handling. Manual ack is the usual choice for anything that writes to a database or calls another service. Auto-ack is only reasonable when losing messages is acceptable or the handler is purely best-effort.",
+    "real_world": "People sometimes enable auto-ack to make a consumer look simpler, then discover they are dropping messages whenever the process crashes mid-handler. In production, that often turns into silent data loss rather than an obvious broker error.",
+    "code_lang": "python",
+    "code": "def handle(message, channel):\n    try:\n        process(message)\n        channel.basic_ack(delivery_tag=message.delivery_tag)\n    except Exception:\n        channel.basic_nack(delivery_tag=message.delivery_tag, requeue=True)",
+    "follow_up": "When would you requeue a failed message, and when would you reject it instead?"
+   },
+   {
+    "question": "How do publisher confirms help you debug message loss between a service and RabbitMQ?",
+    "answer": "Publisher confirms tell the publisher that the broker accepted the message, so they close a gap that acknowledgements on the consumer side do not cover. If a message disappears before any consumer sees it, confirms help you determine whether the problem is at publish time, routing time, or consumption time. They are not the same as end-to-end success, but they are important for detecting broker-side acceptance issues. In production, confirms are a key signal for retrying publishes safely.",
+    "real_world": "If a deployment causes publishing to fail intermittently, confirms let you separate “the app never got it into RabbitMQ” from “the consumer is slow or broken.” That distinction saves a lot of time during incident response.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if a confirm is delayed or never arrives?"
+   },
+   {
+    "question": "What causes consumers to fall behind even when the broker is healthy, and how do you troubleshoot it?",
+    "answer": "Backlog can come from slow handler logic, downstream service latency, too low a consumer count, too much prefetch, or messages that take very different amounts of time to process. I would first check queue depth, consumer utilization, redelivery rate, and processing time distribution. Then I’d look for hotspots like a blocking database call, serialization overhead, or one message type dominating the queue. The fix is usually to improve handler throughput, scale consumers, or split workloads by type.",
+    "real_world": "A broker can look fine while the application is the real bottleneck, especially when a single consumer does expensive I/O per message. Teams often chase RabbitMQ settings first and only later find the real problem in the handler or database.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to scale out consumers or split the queue into multiple work streams?"
+   },
+   {
+    "question": "When would you use one queue per tenant or per job type instead of a shared queue?",
+    "answer": "Separate queues make sense when tenants or job types have different throughput, priority, retention, or failure behavior. A shared queue is simpler and can be more efficient, but noisy neighbors can starve important work and make debugging harder. Per-tenant queues improve isolation at the cost of more broker objects and more operational overhead. I’d use shared queues by default and split only when isolation or operational control becomes important.",
+    "real_world": "Multi-tenant systems often start with one queue and later need per-tenant throttling after one large tenant overwhelms the system. Separate queues can also help when one job type is slow and you do not want it to delay fast jobs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you route messages to those queues without making the producer logic messy?"
+   },
+   {
+    "question": "How can you safely shut down a consumer without losing in-flight messages?",
+    "answer": "The consumer should stop taking new work, finish or cancel in-flight processing, and only then close the channel or connection. If a shutdown happens while a message is being processed, the unacked message should be requeued by the broker and picked up later. The main risk is acknowledging too early or killing the process before the side effect is complete. Graceful shutdown is especially important during deploys and autoscaling events.",
+    "real_world": "During rolling deploys, a process that exits immediately can cause a burst of redeliveries and duplicate side effects. Teams usually notice this as a spike in retries right after deployment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if your handler can take longer than your service’s normal shutdown window?"
+   },
+   {
+    "question": "How would you test retry and redelivery behavior in a RabbitMQ-based service?",
+    "answer": "I would use an integration test against a real broker or a containerized broker for the messaging behavior, because mocks usually miss redelivery and broker semantics. The test should verify that a failure leads to the expected nack, requeue, dead-lettering, or retry path, and that a second delivery is handled correctly. For pure business logic, unit tests can cover the handler without RabbitMQ. The important part is to test the protocol behavior somewhere real, not only the application code.",
+    "real_world": "Many teams have unit tests that pass while the real system loops messages forever because the retry path or dead-letter configuration was wrong. A small integration suite catches those broker-specific issues before production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you assert in an integration test to prove a message was retried exactly the way you expected?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "If a publisher marks a message as mandatory and also uses publisher confirms, what failure modes are still left, and how would you reason about the safety of the publish path?",
+    "answer": "Mandatory and confirms cover different gaps: mandatory tells you whether the broker could route the message, and confirms tell you whether the broker accepted responsibility for it. They do not give end-to-end delivery to a consumer, and they do not remove duplicate risk if the publisher retries after a timeout or lost confirm. The safe mental model is broker-accepted at-least-once from publisher to queue, then separate at-least-once from queue to consumer. If you need stronger guarantees, you add idempotent publish logic, an outbox, and traceable message IDs.",
+    "real_world": "A common incident is a publisher timing out waiting for confirms during a network hiccup, retrying, and later discovering both copies were accepted. Teams usually detect this only after downstream side effects duplicate.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the publisher so a lost TCP connection during publish does not create silent data loss or unbounded duplicates?"
+   },
+   {
+    "question": "How does RabbitMQ flow control actually show up in production, and what would you check first if publishers suddenly become slow but CPU is low?",
+    "answer": "The broker can throttle publishers when memory, disk, or internal queue pressure crosses thresholds, so slow publishing is often backpressure rather than raw CPU saturation. I would check memory alarms, disk free alarms, socket backpressure, queue depth, rates, and whether queues are paging messages to disk. Low CPU with high latency often means the node is IO-bound or protecting itself. The fix is usually reducing backlog, tuning message sizes and rates, or adding capacity, not scaling consumers blindly.",
+    "real_world": "This shows up as application threads blocking on publish while hosts look mostly idle. In incident reviews, the real cause is often a disk alarm from a backlog spike or large persistent messages forcing heavy fsync and paging.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What architectural changes would you make if bursty publishers repeatedly trigger broker backpressure?"
+   },
+   {
+    "question": "What are lazy queues, and what trade-offs do they introduce compared with keeping messages hot in memory?",
+    "answer": "Lazy behavior means the broker prefers storing queued messages on disk sooner instead of keeping as much backlog as possible in RAM. That reduces memory pressure and can make large backlogs survivable, but read latency usually increases and catch-up throughput may be lower because consumption becomes more disk-heavy. It is a good fit for queues that absorb spikes or hold messages for a while, not for low-latency hot paths. You are trading tail latency for stability under backlog.",
+    "real_world": "Teams often enable this for batch or retry queues after memory alarms caused cluster-wide pressure. The surprise is that once consumers recover, drain time can be much longer than with memory-resident queues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to split a hot queue and a backlog-tolerant queue instead of changing the queue mode?"
+   },
+   {
+    "question": "What is the single-active-consumer feature, and when is it better than relying on one consumer instance with failover?",
+    "answer": "Single-active-consumer lets multiple consumers attach, but the broker delivers to only one active consumer at a time and fails over to another if it disappears. It is useful when you need queue-managed failover while preserving a single processing lane, such as when ordering or exclusive access matters. Compared with running one instance yourself, it reduces external leader-election complexity, but throughput is capped to one active consumer for that queue. It does not remove duplicate delivery around failover, so handlers still need idempotency.",
+    "real_world": "This is used for workflows like account statement generation where parallel consumers would violate ordering or lock contention constraints. Without it, teams often build fragile lease systems outside the broker.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does single-active-consumer interact with ordering if the active consumer had unacked messages when it died?"
+   },
+   {
+    "question": "How do connection-level channels affect throughput and failure isolation, and what are the practical channel-management mistakes you see in mature systems?",
+    "answer": "Channels are lightweight compared with TCP connections, but they are not free and they are stateful, so creating one per message is expensive and can crush throughput. A common pattern is one long-lived connection per process and a small number of channels separated by role, because a channel-level protocol error closes that channel, not the whole connection. Another mistake is sharing a channel unsafely across many concurrent publisher threads without a client library that serializes access correctly. Good designs pool or dedicate channels and recreate them cleanly on failure.",
+    "real_world": "I've seen services hit connection churn, handshake overhead, and broker limits because every worker opened its own connection and channel. The reverse problem is one shared channel becoming a contention point and stalling all publishers during confirm waits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you deliberately use multiple TCP connections from one service instead of just multiple channels?"
+   },
+   {
+    "question": "What changes when messages are large, and why do experienced teams often keep payloads out of RabbitMQ?",
+    "answer": "Large messages hurt almost every part of the path: network transfer, broker memory, disk IO, replication, paging, and consumer deserialization. A queue with many multi-megabyte messages reaches resource limits and flow control far earlier than the same queue carrying small envelopes. The usual pattern is to publish a small message with metadata and a pointer to object storage, then make the consumer fetch the payload. That shifts some complexity to external storage but keeps the broker optimized for coordination rather than bulk transport.",
+    "real_world": "Production incidents with RabbitMQ often involve a new feature embedding images or model artifacts directly in messages, followed by disk alarms and publish latency spikes. Moving blobs to S3 or equivalent usually stabilizes the system quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What new failure modes do you introduce when a message contains a pointer to external storage instead of the payload itself?"
+   },
+   {
+    "question": "How would you use consumer priorities, and what subtle starvation or fairness problems can they create?",
+    "answer": "Consumer priorities let the broker prefer one consumer over another on the same queue, which can be useful for canaries, urgent workers, or giving local consumers precedence. The trade-off is fairness: lower-priority consumers may receive little or no work while higher-priority consumers stay available, so scaling assumptions can quietly break. This also interacts with prefetch, because a high-priority consumer can reserve many messages and starve the rest even if it processes slowly. I use it sparingly and only with explicit observability on per-consumer delivery rates.",
+    "real_world": "A team may deploy a 'fast lane' consumer for premium traffic on a shared queue, then later discover standard workers are nearly idle because the priority consumer hoards deliveries. The symptom looks like uneven load rather than a routing problem.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need differentiated service levels, what alternatives are safer than consumer priorities on one shared queue?"
+   },
+   {
+    "question": "What are mirrored queue split-brain and failover edge cases people used to get burned by, and how does that influence migration strategy today?",
+    "answer": "Older mirrored classic queues could fail over in ways that were operationally tricky, especially around partitions, synchronization state, and pauses during leader changes. The practical lesson is that HA behavior is part of queue semantics, not just infrastructure, so teams should test node loss, partition recovery, and promotion events under load. Many migrations moved to newer replicated queue types because the failure model is clearer, but migration still requires checking throughput, storage, and client behavior changes. I would treat queue type changes as architecture changes, not config flips.",
+    "real_world": "A classic incident was a node loss during peak traffic causing queue unavailability or long catch-up times, even though 'mirroring' sounded fully redundant. Teams that never ran failover drills were surprised by duplicate processing and latency spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you benchmark and de-risk a migration of a critical queue from classic mirroring to a replicated alternative?"
+   },
+   {
+    "question": "If you had to maximize publish throughput on RabbitMQ, what knobs and trade-offs would you look at first?",
+    "answer": "First I would separate transient from durable requirements, because persistence and replication usually dominate cost. Then I would look at batching and asynchronous publisher confirms, message size, number of concurrent channels or connections, routing complexity, and whether one hot queue is the bottleneck. Throughput usually improves by reducing per-message round trips and fsync pressure, but every optimization trades away latency, ordering simplicity, or failure visibility. The right target is sustainable throughput under confirms and realistic durability, not peak fire-and-forget numbers.",
+    "real_world": "Benchmark numbers often look great until confirms and durable routing are enabled, then drop sharply. Teams that capacity-plan on the wrong mode underprovision and discover the gap only in production load tests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a throughput benchmark so it reflects production behavior instead of a misleading best case?"
+   },
+   {
+    "question": "What does the redelivered flag actually tell you, and what are its limits if you are trying to detect duplicates or retries?",
+    "answer": "The redelivered flag only indicates that RabbitMQ believes this delivery may have been seen before; it is a hint, not a proof of uniqueness or retry count. A message can be a duplicate without that flag helping you, and business-level retries through republishing may produce a fresh message without preserving broker delivery history. That means you cannot build correctness around the flag alone. Use stable message identifiers and application-side deduplication or retry metadata if duplicates matter.",
+    "real_world": "Teams sometimes branch logic on redelivered=true to skip expensive work, then later learn duplicates also arrive with false after reconnects, republishes, or producer retries. That creates subtle data corruption because the check was never a reliable contract.",
+    "code_lang": "python",
+    "code": "def handle(msg):\n    key = msg.headers[\"event_id\"]\n    if already_done(key):\n        ack(msg)\n        return\n    process(msg.body)\n    mark_done(key)\n    ack(msg)\n",
+    "follow_up": "Where would you store deduplication state, and how would you keep it from becoming a bottleneck?"
+   },
+   {
+    "question": "How does RabbitMQ use memory and disk under load, and what usually happens before a node starts rejecting or slowing traffic?",
+    "answer": "RabbitMQ tries to keep hot queue metadata and message state in memory, but durable messages and backlog can push significant work to disk. As memory rises toward the configured high watermark, the broker applies memory alarms and blocks publishers rather than risking the node being killed by the OS. Before that, you often see growing disk I/O, longer queue sync times, and latency spikes from paging. The key trade-off is throughput versus safety: large in-memory backlogs are fast until they suddenly are not.",
+    "real_world": "A common incident is 'CPU is fine but publish latency exploded' because the node hit a memory alarm and publishers were blocked while consumers were too slow to drain backlog.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish a memory alarm from disk bottlenecks or consumer slowness during an incident?"
+   },
+   {
+    "question": "What is the practical difference between classic queue mirroring and quorum replication from a write path and consistency perspective?",
+    "answer": "Classic mirroring replicated queue state in a way that could be fast but had more failure edge cases, especially during netsplits and leader changes. Quorum queues use a Raft-style replicated log, so writes are tied to a majority and leadership is explicit, which improves failure semantics but usually increases write amplification and latency. In practice, quorum trades some peak throughput for more predictable recovery and fewer surprising data-loss scenarios. The important architectural decision is whether you want maximum speed or stronger operational correctness under node failure.",
+    "real_world": "Teams migrating old mirrored queues often accept lower raw throughput because previous failovers caused duplicate delivery storms or missing messages after partitions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What workload patterns make quorum queues a poor fit despite their safer replication model?"
+   },
+   {
+    "question": "If a RabbitMQ cluster is partitioned or loses nodes, what failures do clients actually observe and how should applications behave?",
+    "answer": "Clients usually do not observe 'the cluster' abstractly; they see TCP disconnects, blocked publishers, leader unavailability for some queues, or topology operations failing. Depending on queue type and where leaders live, some queues may continue while others stall until leadership is reestablished. Applications should treat publish and consume paths as retryable but not idempotent by default, because reconnecting can create duplicates or reorder work. The safe pattern is bounded retries, idempotent handlers, and clear alerts on broker reachability versus application exceptions.",
+    "real_world": "During a partial outage, one service may continue consuming from some queues while another cannot publish because its target queue leader was on the failed node.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design client reconnect logic so it recovers quickly without causing a thundering herd?"
+   },
+   {
+    "question": "What are the performance and correctness implications of using one queue with many consumers versus sharding work across multiple queues?",
+    "answer": "One queue is simple and gives automatic load balancing, but it centralizes hot metadata and limits how much parallelism you can get while preserving any ordering constraints. Multiple queues let you spread leaders, isolate noisy tenants or hot keys, and scale consumers more predictably, but routing and rebalancing become your problem. Sharding also changes failure modes: one overloaded shard can lag badly while others are healthy. The trade-off is operational simplicity versus control over hotspots and isolation.",
+    "real_world": "A single hot customer can dominate a shared queue; partitioning by tenant or key often fixes tail latency without increasing total compute.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose a sharding key if you need both even load and per-entity ordering?"
+   },
+   {
+    "question": "How do consumer cancellations and topology changes show up at runtime, and why do mature consumers handle them explicitly?",
+    "answer": "A consumer can be canceled by the broker if the queue is deleted, permissions change, a failover happens, or features like exclusive ownership are lost. If the client ignores cancel notifications, it may look healthy while it is no longer receiving work. Mature consumers subscribe to shutdown and cancel callbacks, recreate topology only when appropriate, and expose readiness based on active consumption rather than just process liveness. That avoids silent stalls where a deployment is 'up' but doing nothing.",
+    "real_world": "This matters in rolling infrastructure changes: consumers can survive process-wise but lose their subscriptions, so traffic drains to zero without obvious errors.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between handling a channel shutdown and a consumer cancel in your recovery logic?"
+   },
+   {
+    "question": "When would you use the consistent-hash exchange plugin or application-level partitioning, and what are the trade-offs?",
+    "answer": "A consistent-hash exchange is useful when you want messages with the same key to land on the same queue without every producer implementing routing logic. It simplifies publisher code and can preserve per-key processing locality, but it adds operational dependency on plugin support and can still create uneven shards if key distribution is skewed. Application-level partitioning gives you more control over shard count changes and migration strategy, at the cost of more code and coordination. The main trade-off is broker-managed simplicity versus application-managed flexibility.",
+    "real_world": "Teams processing account or device events often hash by entity so a single consumer sees each entity's events in order while throughput scales across partitions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens operationally when you need to increase the number of partitions without breaking key ordering too badly?"
+   },
+   {
+    "question": "What are the risks of using exclusive or auto-delete queues in production systems?",
+    "answer": "Exclusive queues are tied to one connection, and auto-delete queues disappear when the last consumer or binding condition is gone, depending on how they were declared. That is useful for temporary RPC replies or ephemeral subscriptions, but it is dangerous for anything that must survive reconnects, rolling deploys, or brief network blips. A small client outage can accidentally destroy topology and lose queued work if the queue was not meant to be ephemeral. The rule is to use them only when the queue lifecycle should truly follow a short-lived client session.",
+    "real_world": "A frequent mistake is using auto-delete for a service queue; a deployment briefly disconnects all consumers and the queue vanishes along with pending messages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement request-reply without creating a fragile per-request exclusive queue pattern?"
+   },
+   {
+    "question": "Can you explain what transactional channels do in RabbitMQ and why most high-throughput systems avoid them?",
+    "answer": "AMQP transactions let you group publishes or acknowledgements on a channel into commit or rollback boundaries, but they add substantial round trips and serialization overhead. They also do not give you distributed transaction semantics with your database, so they rarely solve the end-to-end consistency problem people actually have. In practice, publisher confirms are usually preferred because they provide durability feedback with much better throughput characteristics. Transactions are mostly for narrow cases where channel-scoped atomicity is worth the cost.",
+    "real_world": "A team sometimes turns on transactions hoping to stop duplicate side effects, then discovers throughput drops sharply and duplicates still exist across service boundaries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you cannot use distributed transactions, how do you make database updates and message publishing consistent enough?"
+   },
+   {
+    "question": "What is the difference between a queue leader being overloaded and consumers being underprovisioned, and how can you tell which one is the bottleneck?",
+    "answer": "If consumers are underprovisioned, queue depth and message age grow while the broker itself may remain relatively healthy; adding consumer capacity or reducing per-message work helps. If the queue leader is overloaded, you often see high scheduler usage on one node, queue-specific latency, replication lag for replicated queues, or publish delays even before consumers saturate. The distinction matters because scaling consumers will not fix a hot leader or bad queue placement. You need to look at per-queue rates, per-node resource skew, and whether backlog is localized to particular queues or nodes.",
+    "real_world": "In production, people often add more pods and see no improvement because the real hotspot is a single queue leader on one busy broker node.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What deployment or topology changes can reduce a persistent hot-leader problem?"
+   },
+   {
+    "question": "Show me a safe pattern for batching publisher confirms without turning every publish into a synchronous round trip.",
+    "answer": "The usual pattern is to publish many messages on one channel, track sequence numbers, and handle confirms asynchronously so one ack can mark a whole range as accepted. That preserves throughput because the publisher pipeline stays full, while still letting you detect nacks or missing confirms and retry from your own outbox or buffer. The risk is memory growth and duplicate publishes if your tracking logic is sloppy, so you need bounded in-flight windows. Per-message wait-for-confirm is simpler but often too slow at scale.",
+    "real_world": "High-volume publishers commonly move from blocking confirms to async batches because latency collapses once every message waits for its own durable round trip.",
+    "code_lang": "python",
+    "code": "pending = {}\nseq = channel.get_next_publish_seq_no()\npending[seq] = msg_id\nchannel.basic_publish(exchange, key, body)\n\ndef on_confirm(seq_no, multiple, nack=False):\n    keys = [k for k in pending if k <= seq_no] if multiple else [seq_no]\n    for k in keys:\n        msg = pending.pop(k, None)\n        if nack and msg:\n            retry(msg)\n",
+    "follow_up": "How would you recover safely if the connection drops and you do not know which in-flight publishes reached the broker?"
+   }
+  ]
+ }
+}

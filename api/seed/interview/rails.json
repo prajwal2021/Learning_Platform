@@ -1,0 +1,469 @@
+{
+ "slug": "rails",
+ "name": "Ruby on Rails",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Ruby on Rails, and what problem does it solve?",
+    "answer": "Ruby on Rails is a web application framework for building database-backed applications in Ruby. It gives you conventions for routing, controllers, models, views, and database access so you can build common CRUD apps quickly. The main benefit is less boilerplate and a consistent project structure, which makes teams faster and codebases easier to navigate.",
+    "real_world": "A startup might use Rails to build an admin dashboard or marketplace quickly because most of the standard web plumbing is already built in. This is especially useful when the team needs to ship features fast instead of assembling many separate libraries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does Rails mean by 'convention over configuration'?"
+   },
+   {
+    "question": "What is the difference between a model, a view, and a controller in Rails?",
+    "answer": "A model represents the application's data and business logic, usually backed by a database table. A controller handles incoming requests, talks to models, and decides what response to send. A view is the template that renders HTML or another presentation format for the user.",
+    "real_world": "If a page is showing the wrong data, the bug could be in the controller selecting the wrong records or in the view rendering them incorrectly. Keeping these responsibilities separate makes it easier to debug and test changes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you put validation logic, and why?"
+   },
+   {
+    "question": "What does a Rails route do?",
+    "answer": "A route maps an incoming HTTP request path and method to a controller action. It is the entry point that tells Rails which code should handle something like GET /users or POST /login. Routes are important because they define the public API of a web app and make request handling predictable.",
+    "real_world": "When a 404 appears for a page that should exist, the first place to check is often the routes file. Teams also use routes to keep URLs clean and consistent across the app.",
+    "code_lang": "ruby",
+    "code": "Rails.application.routes.draw do\n  get '/about', to: 'pages#about'\n  resources :users\nend",
+    "follow_up": "What does resources :users generate?"
+   },
+   {
+    "question": "What are Rails migrations used for?",
+    "answer": "Migrations are versioned instructions for changing the database schema over time. They let a team add tables, add columns, rename fields, and create indexes in a repeatable way. They matter because everyone can apply the same schema changes in development, test, and production instead of editing the database manually.",
+    "real_world": "When a new feature needs a database column, the team writes a migration so the change can be reviewed and deployed safely. This avoids inconsistent databases across different environments.",
+    "code_lang": "ruby",
+    "code": "class AddBioToUsers < ActiveRecord::Migration[7.1]\n  def change\n    add_column :users, :bio, :text\n  end\nend",
+    "follow_up": "What is the difference between change, up, and down in a migration?"
+   },
+   {
+    "question": "What is Active Record in Rails?",
+    "answer": "Active Record is Rails' ORM, which means it maps Ruby objects to database rows. It lets you create, read, update, and delete records with Ruby methods instead of writing raw SQL for most common operations. It is useful because it speeds development, but you still need to understand SQL and query behavior for performance and correctness.",
+    "real_world": "A junior developer might use Active Record to fetch users and their posts without writing joins by hand. In larger apps, understanding how it translates to SQL helps avoid slow queries and too many database calls.",
+    "code_lang": "ruby",
+    "code": "user = User.create!(name: 'Ava')\nuser.update!(admin: true)\nUser.where(admin: true)",
+    "follow_up": "When would you choose raw SQL instead of Active Record methods?"
+   },
+   {
+    "question": "What is a Rails controller strong parameters, and why do you need them?",
+    "answer": "Strong parameters are a whitelist for incoming request data, usually in a private method like user_params. They prevent mass assignment of attributes that should not be set by the client, such as admin flags or internal fields. This is a security and correctness feature because you control exactly which fields can be written.",
+    "real_world": "Without strong parameters, a malicious user could submit extra fields in a form request and try to change protected attributes. Teams rely on this pattern to keep create and update actions safe.",
+    "code_lang": "ruby",
+    "code": "def user_params\n  params.require(:user).permit(:name, :email)\nend",
+    "follow_up": "What happens if you forget to permit a field?"
+   },
+   {
+    "question": "What is a Rails validation, and how is it different from a database constraint?",
+    "answer": "A validation is application-level logic that checks whether a model is acceptable before saving it. A database constraint is enforced by the database itself, so it protects data even if the application code is bypassed. Good apps often use both: validations for user-friendly errors and constraints for hard guarantees.",
+    "real_world": "A form might show a friendly message when an email is missing, but the database should still enforce uniqueness or non-null rules to protect against bad writes from scripts or bugs. This helps prevent corrupted data in production.",
+    "code_lang": "ruby",
+    "code": "class User < ApplicationRecord\n  validates :email, presence: true, uniqueness: true\nend",
+    "follow_up": "Why can validation alone be unsafe for uniqueness?"
+   },
+   {
+    "question": "What does belongs_to and has_many mean in Rails associations?",
+    "answer": "These are association declarations that describe how models relate to each other. belongs_to means this record references one parent record, and has_many means one record is related to many child records. They matter because they give you readable methods, automatic foreign key conventions, and easier querying across related data.",
+    "real_world": "A blog app might have a Post belonging to a User and a User having many Posts. This lets the team fetch related records naturally instead of manually managing IDs everywhere.",
+    "code_lang": "ruby",
+    "code": "class Post < ApplicationRecord\n  belongs_to :user\nend\n\nclass User < ApplicationRecord\n  has_many :posts\nend",
+    "follow_up": "What foreign key would you expect in the posts table?"
+   },
+   {
+    "question": "What is the Rails asset pipeline or public asset handling used for at a basic level?",
+    "answer": "Rails needs a way to serve static files like images, stylesheets, and JavaScript. At a basic level, these assets are referenced by the app and delivered to the browser so the UI can load correctly. The exact setup depends on the Rails version and frontend stack, but the idea is to manage client-side files in a standard Rails way.",
+    "real_world": "If a logo or stylesheet is missing in production, the issue is often that the asset path is wrong or the file was not included correctly. Teams need a predictable way to handle browser assets so pages render consistently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you include a stylesheet or image in a Rails view?"
+   },
+   {
+    "question": "What happens when you run a Rails generator, like for a model or controller?",
+    "answer": "A generator creates boilerplate files and sometimes updates related code, such as a migration, model, controller, or test files. It saves time and keeps Rails conventions consistent, but you still need to review and edit what it creates. Generators are helpful because they reduce repetitive setup and lower the chance of missing required pieces.",
+    "real_world": "A team uses generators to scaffold common CRUD pieces quickly, then trims the generated code to match the app’s real needs. This avoids hand-writing the same file structure over and over.",
+    "code_lang": "bash",
+    "code": "rails generate model Post title:string body:text\nrails generate controller Posts index show",
+    "follow_up": "What files would you expect a model generator to create?"
+   },
+   {
+    "question": "What is the purpose of `rails console`?",
+    "answer": "`rails console` opens an interactive Ruby session with your Rails app loaded, so you can inspect models, query the database, and test code quickly. It is useful for debugging and exploring behavior without writing a full test or temporary script. Because it runs against your app environment, you should be careful not to change data accidentally.",
+    "real_world": "Developers often use the console to reproduce a production bug with a specific record and inspect validations or associations. It is also common for support or operations work when checking data directly.",
+    "code_lang": "ruby",
+    "code": "user = User.find(1)\nuser.email\nuser.update!(name: \"Sam\")",
+    "follow_up": "How is `rails console` different from `rails runner`?"
+   },
+   {
+    "question": "What is an ERB template in Rails?",
+    "answer": "ERB is a template format that mixes Ruby code with HTML, so Rails can generate dynamic pages. It is commonly used in views to display data from controllers and models. The main idea is to keep presentation logic in the view while avoiding too much Ruby logic there.",
+    "real_world": "A product page may use ERB to loop over a list of comments or conditionally show a button based on whether the user is signed in. This is one of the most common ways Rails apps build HTML responses.",
+    "code_lang": "erb",
+    "code": "<h1><%= @post.title %></h1>\n<% if @post.published? %>\n  <p>Published</p>\n<% end %>",
+    "follow_up": "What is the difference between `<% %>` and `<%= %>` in ERB?"
+   },
+   {
+    "question": "What are RESTful routes in Rails?",
+    "answer": "RESTful routes are the standard set of routes that map CRUD actions to predictable HTTP verbs and URLs. In Rails, this usually means using `resources` to create routes like `index`, `show`, `new`, `create`, `edit`, `update`, and `destroy`. This matters because it keeps your app’s URLs and controller actions consistent and easier to understand.",
+    "real_world": "When a new engineer joins a Rails team, RESTful routing makes it easier to find where a page or form is handled because the naming pattern is familiar. It also reduces route clutter compared with manually defining every path.",
+    "code_lang": "ruby",
+    "code": "Rails.application.routes.draw do\n  resources :posts\nend",
+    "follow_up": "Why would you use a custom route instead of `resources`?"
+   },
+   {
+    "question": "What does `before_action` do in a Rails controller?",
+    "answer": "`before_action` runs a method before specified controller actions. It is commonly used for authentication, loading a record, or setting shared data. It keeps repeated setup code out of individual actions, but overusing it can make controller flow harder to follow.",
+    "real_world": "A controller may use `before_action :set_post` so `show`, `edit`, `update`, and `destroy` all load the same record consistently. This prevents duplicated lookup code and reduces mistakes.",
+    "code_lang": "ruby",
+    "code": "class PostsController < ApplicationController\n  before_action :set_post, only: [:show, :edit]\n\n  def show; end\nend",
+    "follow_up": "What is a common bug caused by putting too much logic in a `before_action`?"
+   },
+   {
+    "question": "What is the difference between `save` and `save!` in Active Record?",
+    "answer": "`save` returns `false` when validation fails, while `save!` raises an exception. The bang version is useful when failure should stop execution immediately and be handled as an error. The non-bang version is better when you want to branch on success or failure in the controller.",
+    "real_world": "A service object may use `save!` inside a transaction so that invalid data rolls back instead of silently continuing. In a controller form submit, `save` is often easier because you can re-render the form with errors.",
+    "code_lang": "ruby",
+    "code": "post = Post.new(title: \"\")\npost.save     # => false\npost.save!    # raises on validation failure",
+    "follow_up": "When would you prefer `update` over `update!`?"
+   },
+   {
+    "question": "What is the Rails flash used for?",
+    "answer": "The flash stores temporary messages that survive one redirect, such as notices or error messages. It is commonly used to tell the user that something was created, updated, or failed. Because it is short-lived, it is not meant for long-term state or large amounts of data.",
+    "real_world": "After a successful sign-in or form submission, apps often show a one-time confirmation message through the flash. Without it, the user may not know whether the action succeeded after being redirected.",
+    "code_lang": "ruby",
+    "code": "def create\n  @post = Post.create(post_params)\n  flash[:notice] = \"Post created\"\n  redirect_to @post\nend",
+    "follow_up": "What is the difference between `flash` and `flash.now`?"
+   },
+   {
+    "question": "What is a partial in Rails, and when would you use one?",
+    "answer": "A partial is a reusable view fragment, usually used to share repeated UI like forms, cards, or list items. It helps avoid duplicated markup and keeps templates smaller. Partials are especially useful when the same structure appears on multiple pages or when a collection of records is rendered the same way.",
+    "real_world": "A team may put a product tile in a partial and reuse it on search results, category pages, and the homepage. If the design changes, they update one file instead of many.",
+    "code_lang": "erb",
+    "code": "<%= render partial: \"post\", collection: @posts %>\n\n<!-- _post.html.erb -->\n<h2><%= post.title %></h2>",
+    "follow_up": "What is the difference between rendering a partial and using a layout?"
+   },
+   {
+    "question": "What are Rails helpers, and why use them?",
+    "answer": "Helpers are methods for view-related logic that do not belong directly in the template. They keep views cleaner by moving formatting, conditional display, or small reusable presentation logic into Ruby methods. This matters because views become easier to read and less repetitive.",
+    "real_world": "A helper might format dates, build CSS classes, or generate a label based on record state. Without helpers, those expressions tend to get copied across multiple templates.",
+    "code_lang": "ruby",
+    "code": "module PostsHelper\n  def status_label(post)\n    post.published? ? \"Published\" : \"Draft\"\n  end\nend",
+    "follow_up": "When should logic stay in the model instead of moving into a helper?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide between using a model callback and moving that logic into a service object or controller action?",
+    "answer": "Use a callback only for logic that is tightly coupled to the record’s lifecycle and truly should always happen on that event. If the behavior involves external side effects, multiple models, or conditional business flows, a service object is usually easier to test and reason about. Callbacks can hide work and make save operations harder to debug, especially when they trigger unexpected validation or performance issues.",
+    "real_world": "A team adds email sending in an `after_save` callback and later finds background jobs firing during data imports and tests. Moving the side effect into an explicit service or job makes the flow visible and safer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you still prefer a callback over a service object?"
+   },
+   {
+    "question": "How do you choose between `find_each` and `each` when processing a large number of records?",
+    "answer": "`each` loads the full relation into memory, which is fine for small result sets but risky for large ones. `find_each` batches records in chunks, so memory stays bounded and the job is less likely to crash or slow down the app. The trade-off is that batching changes ordering semantics, so you should not rely on a custom sort unless you handle it explicitly.",
+    "real_world": "A nightly maintenance task that used `each` starts timing out once the table reaches millions of rows. Switching to batched processing usually makes it stable without needing a bigger server.",
+    "code_lang": "ruby",
+    "code": "User.where(active: true).find_each(batch_size: 1000) do |user|\n  user.recalculate_stats!\nend",
+    "follow_up": "What constraints does `find_each` place on ordering and scope conditions?"
+   },
+   {
+    "question": "What happens if you call `update` on a model and the validations fail?",
+    "answer": "`update` returns `false` and leaves the model with its errors populated, so you can show feedback without raising an exception. The record is not saved, and any changes in memory remain on the instance until you overwrite or reload it. If you need the failure to surface immediately, `update!` raises an exception instead.",
+    "real_world": "This matters in form submissions where a silent `false` return can look like the controller worked when the database never changed. Teams often miss this when debugging why an edit page redisplays old data.",
+    "code_lang": "ruby",
+    "code": "user = User.find(1)\nif user.update(email: \"bad\")\n  puts \"saved\"\nelse\n  puts user.errors.full_messages\nend",
+    "follow_up": "How would you structure controller code to handle this cleanly?"
+   },
+   {
+    "question": "When would you use a database transaction in Rails, and what problem does it solve?",
+    "answer": "Use a transaction when multiple database changes must succeed or fail as one unit. It prevents partial writes, so if one insert or update fails, earlier changes are rolled back. Transactions are important for money movement, inventory changes, or any workflow where inconsistent intermediate state would be visible to other requests.",
+    "real_world": "An order should not be created if the payment record fails, and stock should not be decremented unless both operations succeed. A transaction keeps those steps consistent even if one query raises an error.",
+    "code_lang": "ruby",
+    "code": "ActiveRecord::Base.transaction do\n  order.save!\n  payment.save!\n  inventory.decrement!(:count)\nend",
+    "follow_up": "What kinds of operations can still break the illusion of atomicity even inside a transaction?"
+   },
+   {
+    "question": "What is the practical difference between `destroy` and `delete` on an Active Record model?",
+    "answer": "`destroy` runs callbacks and respects association cleanup rules, so it is the safer choice when business logic must run on removal. `delete` removes the row directly and skips callbacks, which can be faster but can leave related data or side effects untouched. The right choice depends on whether you need lifecycle behavior or just a raw database delete.",
+    "real_world": "If a user account deletion must revoke tokens, audit the event, and cascade cleanup, `destroy` is usually required. Using `delete` there can leave orphaned records or security gaps.",
+    "code_lang": "ruby",
+    "code": "user = User.find(1)\nuser.destroy   # runs callbacks\nuser.delete    # skips callbacks",
+    "follow_up": "How do dependent association options affect this choice?"
+   },
+   {
+    "question": "How do you debug a Rails app that is much slower in production than in development?",
+    "answer": "First compare query count, query time, and rendering time, because the bottleneck may be database, view, or external calls. Production often differs because of larger data volume, missing eager loading, cache behavior, or slower serialization. I would inspect logs, use tracing or profiling, and reproduce with production-like data before changing code. The key is to identify whether the slowdown is one expensive query, many small queries, or work done per request that should be cached or moved out of band.",
+    "real_world": "A dashboard feels fine with test data but times out once real customers exist. The fix is often not a Rails setting but an unoptimized query or an N+1 issue that only appears at scale.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools or metrics would you look at first?"
+   },
+   {
+    "question": "What is the difference between controller-level caching and fragment caching in Rails?",
+    "answer": "Controller-level caching stores the whole response for a request path, so it is simple but only works when the entire page can be reused safely. Fragment caching stores parts of a view, which is useful when most of the page is stable but some pieces vary by user or record. Fragment caching is usually more flexible, while full-page caching is faster when it applies.",
+    "real_world": "On a homepage with a list of posts, the header and post cards may be cached separately while the logged-in navigation changes per user. That gives a good speedup without serving the wrong content.",
+    "code_lang": "erb",
+    "code": "<% cache @post do %>\n  <%= render @post %>\n<% end %>",
+    "follow_up": "How do you avoid serving stale cached content after an update?"
+   },
+   {
+    "question": "Why would you use a background job in Rails instead of doing the work inside the request cycle?",
+    "answer": "Use a background job when the work is slow, retryable, or not needed before the response returns. This keeps request latency low and avoids timing out users while still allowing the task to complete reliably. The trade-off is eventual consistency: the result is not immediate, so the UI and error handling need to account for that.",
+    "real_world": "Sending emails, generating PDFs, syncing to an API, or processing images often belong in jobs. If done inline, these tasks can make a page feel broken even when the business logic is correct.",
+    "code_lang": "ruby",
+    "code": "class ReportJob < ApplicationJob\n  def perform(report_id)\n    ReportGenerator.call(report_id)\n  end\nend",
+    "follow_up": "What do you need to think about when a job might run more than once?"
+   },
+   {
+    "question": "What does it mean for a Rails test to be isolated, and how do you keep tests from depending on external state?",
+    "answer": "An isolated test verifies one unit of behavior without relying on a real network service, prior test order, or leftover database state. In Rails, that usually means using transactional tests or database cleaning, factories or fixtures with explicit setup, and mocking external services when appropriate. Good isolation makes failures easier to diagnose and prevents flaky test suites.",
+    "real_world": "A CI suite that passes locally but fails randomly often has hidden coupling, like a test depending on real time, a third-party API, or records created by another test. Cleaning that up makes the suite trustworthy again.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer a real integration test over mocking?"
+   },
+   {
+    "question": "How do you decide between a `has_many :through` association and a plain join table in Rails?",
+    "answer": "Use `has_many :through` when the join itself has behavior or data, like timestamps, status, or validations. A plain join table is fine when it only links two records and you never need to address the join as a first-class model. `has_many :through` gives you more flexibility and clearer domain modeling, but it adds an extra model and more code. The trade-off is simplicity versus expressiveness.",
+    "real_world": "A team adding memberships between users and projects often starts with a join table, then later needs roles and audit fields on the membership. At that point, moving to a `has_many :through` model avoids awkward hacks.",
+    "code_lang": "ruby",
+    "code": "class Membership < ApplicationRecord\n  belongs_to :user\n  belongs_to :project\n  validates :role, presence: true\nend\n\nclass User < ApplicationRecord\n  has_many :memberships\n  has_many :projects, through: :memberships\nend",
+    "follow_up": "When would you add `inverse_of` or `dependent:` to this setup?"
+   },
+   {
+    "question": "What happens if you call `includes` on an association and then filter on the associated table?",
+    "answer": "`includes` is usually for eager loading to avoid N+1 queries, but if you filter or order by the associated table Rails may switch to a join or issue a different query strategy. That can change the SQL shape and sometimes duplicate parent rows if you're not careful. If you need explicit join semantics, use `joins` or `left_outer_joins`; if you only want preloading, keep the filtering separate. The key is knowing whether you want loading optimization or relational filtering.",
+    "real_world": "This matters when a page listing orders also filters by customer name. A developer may add `includes(:customer)` expecting one query improvement, but the generated SQL can behave differently and hurt performance or correctness.",
+    "code_lang": "ruby",
+    "code": "Order.includes(:customer).where(customers: { active: true })\nOrder.joins(:customer).where(customers: { active: true })\nOrder.preload(:customer)",
+    "follow_up": "How would you verify which SQL Rails actually ran in each case?"
+   },
+   {
+    "question": "How do `render` and `redirect_to` differ in a controller, and when would you choose one over the other?",
+    "answer": "`render` returns a response from the current request without changing the URL, while `redirect_to` sends a new request to another URL. Use `render` when you want to show a template for the same action flow, and `redirect_to` after state-changing requests to avoid resubmission on refresh. Redirects are better for PRG patterns, but they cost an extra round trip. Rendering keeps context in memory but can make control flow less obvious if used carelessly.",
+    "real_world": "After a failed form submission, teams often render the form again so validation errors stay visible. After a successful create, they redirect to the show page so refreshing the browser does not resubmit the form.",
+    "code_lang": "ruby",
+    "code": "def create\n  @post = Post.new(post_params)\n  if @post.save\n    redirect_to @post\n  else\n    render :new, status: :unprocessable_entity\n  end\nend",
+    "follow_up": "What status code would you set on the rendered validation failure, and why?"
+   },
+   {
+    "question": "What is the difference between `pluck` and loading full Active Record objects, and when is `pluck` the better choice?",
+    "answer": "`pluck` reads specific columns directly from the database and returns plain Ruby values, so it avoids instantiating model objects and can be much faster. Use it for reporting, dropdowns, IDs, or any case where you only need raw data. If you need validations, associations, or callbacks, you need full objects instead. The trade-off is speed and lower memory use versus model behavior.",
+    "real_world": "A dashboard that only needs user emails and ids should not load thousands of full `User` records. Using `pluck` can cut memory usage and response time noticeably.",
+    "code_lang": "ruby",
+    "code": "User.where(active: true).pluck(:id, :email)\n# => [[1, \"a@example.com\"], [2, \"b@example.com\"]]",
+    "follow_up": "When would `select` be safer than `pluck`, even if it is a little slower?"
+   },
+   {
+    "question": "How do you handle an N+1 query problem in Rails, and how do you confirm you actually fixed it?",
+    "answer": "You fix N+1 queries by eager loading associations with `includes`, `preload`, or `eager_load`, depending on whether you also need joins. The goal is to load all needed associated records in a small number of queries instead of one per row. To confirm the fix, inspect the SQL log, use a query tracing tool, or watch the number of queries in the affected request. Be careful not to optimize blindly; sometimes eager loading pulls in too much data.",
+    "real_world": "A feed page loads fast locally but slows down with real data because each post fetches its author and comments individually. The issue often only shows up once there are enough rows to make the repeated queries expensive.",
+    "code_lang": "ruby",
+    "code": "posts = Post.includes(:author, :comments)\nposts.each do |post|\n  puts post.author.name\n  puts post.comments.size\nend",
+    "follow_up": "When would `includes` still produce an inefficient query, and how would you adjust it?"
+   },
+   {
+    "question": "What is the practical difference between `has_secure_password` and rolling your own password handling?",
+    "answer": "`has_secure_password` gives you a tested pattern for password hashing and authentication using a password digest column. It reduces the chance of storing plaintext passwords or making subtle security mistakes. Rolling your own is only justified when you have unusual authentication requirements, and even then you should understand the security implications carefully. The trade-off is simplicity and safety versus customization.",
+    "real_world": "Teams building login flows often need password reset, verification, and account lockout later. Starting with the built-in approach avoids bespoke crypto code that is hard to audit.",
+    "code_lang": "ruby",
+    "code": "class User < ApplicationRecord\n  has_secure_password\nend\n\nuser.authenticate(\"secret\")",
+    "follow_up": "How would you test authentication behavior without exposing passwords in fixtures?"
+   },
+   {
+    "question": "What happens in Rails if an exception is raised inside a transaction block?",
+    "answer": "If an exception escapes the transaction block, Rails rolls back the transaction and none of the database changes persist. That is useful when several writes must succeed or fail together. But rescuing the exception inside the block can accidentally let the transaction commit if execution continues normally. The key is to let failures abort the whole unit of work unless you deliberately want partial success.",
+    "real_world": "This matters when creating an order, its line items, and inventory reservations together. If inventory reservation fails halfway through, you want the order creation rolled back so you do not leave inconsistent records behind.",
+    "code_lang": "ruby",
+    "code": "ActiveRecord::Base.transaction do\n  order.save!\n  inventory.reserve!(order)\n  payment.charge!\nend",
+    "follow_up": "What kinds of errors should you rescue inside the block, and which should bubble out?"
+   },
+   {
+    "question": "How do you structure code when a controller action starts doing too much business logic?",
+    "answer": "Move orchestration out of the controller into a service object or form object when the action coordinates multiple domain steps, validations, or side effects. Keep the controller focused on HTTP concerns: params, authorization, and response formatting. Service objects help isolate business rules and make the flow easier to test, but they should not become a dumping ground for everything. The trade-off is cleaner controllers versus another abstraction to maintain.",
+    "real_world": "A checkout endpoint that validates a cart, charges a card, creates an order, and sends email becomes hard to reason about in the controller. Extracting that flow makes retries, tests, and error handling easier.",
+    "code_lang": "ruby",
+    "code": "class Checkout\n  def call(cart:, user:)\n    OrderCreator.new(cart, user).call\n  end\nend",
+    "follow_up": "How would you decide whether that object belongs in `app/services` or somewhere else?"
+   },
+   {
+    "question": "What are the trade-offs between `before_save`, `after_commit`, and calling logic explicitly from your app code?",
+    "answer": "`before_save` runs inside the save lifecycle, so it is good for preparing data but risky for side effects because the database write may still fail. `after_commit` is safer for side effects like emails or jobs because it only runs once the transaction is successfully committed. Explicit app code is often clearer when the logic is important to the business flow and should be obvious to readers. The trade-off is convenience versus control and predictability.",
+    "real_world": "Sending a confirmation email in `after_save` can produce emails for records that later roll back. Teams usually move that to `after_commit` or enqueue it after a successful save.",
+    "code_lang": "ruby",
+    "code": "class User < ApplicationRecord\n  after_commit :send_welcome_email, on: :create\nend",
+    "follow_up": "What problems can still happen even with `after_commit` when the email is sent through a job queue?"
+   },
+   {
+    "question": "How do you test a Rails controller or request path that depends on external services, like payments or HTTP APIs?",
+    "answer": "Stub or fake the external dependency and test your application’s behavior, not the third-party service itself. In request specs, verify the status, persisted data, and the job or service invocation rather than making a real network call. If the integration is important, keep a separate set of contract or integration tests against a controlled environment. The main goal is to keep tests fast, deterministic, and safe to run repeatedly.",
+    "real_world": "Payment and webhook tests often become flaky if they hit a live provider. Teams isolate those boundaries so CI does not fail because of network issues or rate limits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide between mocking the service object and using a higher-level test double?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain the difference between `includes`, `preload`, `eager_load`, and `joins` in Active Record, and how that choice affects SQL shape and memory use?",
+    "answer": "`joins` changes the SQL result set but does not preload associations, so it is good for filtering and can still leave you with N+1s when you read the association later. `preload` always does separate queries and avoids row explosion, which is often the safest choice when loading one-to-many relationships. `eager_load` forces a `LEFT OUTER JOIN`, which can help when you need conditions on the joined table but can duplicate parent rows and increase memory and sort cost. `includes` is adaptive: it may behave like preload or eager_load depending on how the relation is used, so I use it carefully when I want predictable SQL.",
+    "real_world": "A common production incident is a query that looked fine in staging but turns into a huge join in production, returning many duplicate rows because each parent has hundreds of children. That drives up response time, allocations, and sometimes causes pagination bugs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you load posts with comments efficiently if you need to render comments but also filter posts by an aggregate on comments?"
+   },
+   {
+    "question": "What are the real guarantees of `after_commit`, and what failure modes should you think about when using it to trigger side effects?",
+    "answer": "`after_commit` runs only after the database transaction commits, so it avoids sending emails or enqueueing work for records that later roll back. But it is not a distributed guarantee: if the process dies after commit and before the callback finishes, the data is committed and the side effect may never happen. That is why for critical workflows I prefer an outbox table or another durable handoff rather than relying only on in-process callbacks. It also matters which transaction commits if nested transactions or savepoints are involved.",
+    "real_world": "Teams often see \"order paid but email never sent\" or \"row exists but job was not queued\" after a deploy or pod restart. The root cause is treating `after_commit` as exactly-once delivery when it is only post-commit in the current process.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement an outbox pattern in Rails without introducing double sends?"
+   },
+   {
+    "question": "How do Rails transactions interact with isolation levels, and what kinds of race conditions still happen even if you wrap code in a transaction?",
+    "answer": "A transaction gives atomicity for the statements inside it, but it does not automatically prevent lost updates, write skew, or duplicate inserts unless the database isolation level and locking strategy address them. In Rails, wrapping `find` then `update` in a transaction is still vulnerable if two transactions read the same state and both proceed. You usually need a database uniqueness constraint, optimistic locking with `lock_version`, or explicit row locks like `FOR UPDATE` depending on the invariant. The right tool depends on whether you are protecting a single row, a uniqueness rule, or a cross-row business constraint.",
+    "real_world": "A classic incident is two workers both deciding a coupon is unused and redeeming it at the same time. The Rails code looks transactional, but without a constraint or lock the database still accepts both paths.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose optimistic locking over pessimistic locking in a Rails app?"
+   },
+   {
+    "question": "What does `lock!` or `with_lock` actually do in Rails, and what are the trade-offs of pessimistic locking under load?",
+    "answer": "`lock!` reloads the row with a database lock, and `with_lock` wraps that in a transaction so other transactions that need conflicting locks must wait. It is useful when correctness depends on serializing updates to a specific row, like decrementing inventory or transitioning a state machine. The trade-off is throughput and latency: lock contention can create queueing, deadlocks, and request timeouts if the critical section is large or does network I/O. I keep the locked section short and only around the minimum SQL needed to preserve the invariant.",
+    "real_world": "Under flash-sale traffic, one hot product row can become a bottleneck and cause a pile-up of blocked requests. You fix oversells, but if you lock too broadly you replace data corruption with latency incidents.",
+    "code_lang": "ruby",
+    "code": "order.with_lock do\n  raise \"already paid\" if order.paid?\n  order.update!(paid_at: Time.current)\n  PaymentLedger.create!(order: order, amount_cents: order.total_cents)\nend",
+    "follow_up": "How do you recognize and debug a deadlock coming from Rails code?"
+   },
+   {
+    "question": "How would you approach zero-downtime schema changes in Rails for a large table that is serving live traffic?",
+    "answer": "I treat schema changes as multi-step deploys: add new nullable columns or tables first, deploy code that writes both paths, backfill in batches, then switch reads, and only later enforce constraints or drop old columns. Operations that rewrite a large table or block writes are the main risk, so I avoid combining code and destructive DDL in one deploy. Index creation and backfills need special care because they can consume I/O and lock metadata depending on the database. The key is backwards- and forwards-compatible code across deploy boundaries.",
+    "real_world": "A migration that looks harmless in development can stall production writes for minutes on a table with tens of millions of rows. Good teams separate schema rollout, backfill, and cleanup so they can abort safely if load spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you backfill a derived column for 200 million rows without overwhelming the primary database?"
+   },
+   {
+    "question": "What are the trade-offs between Puma threads, multiple processes, and Ruby’s GVL when you scale a Rails app?",
+    "answer": "MRI Ruby has a GVL, so CPU-bound Ruby code does not run in parallel within one process, but threads still help overlap I/O like database calls, Redis, and HTTP requests. More Puma threads can increase throughput for I/O-heavy endpoints, but each thread needs memory, a database connection, and can amplify contention if the app is not thread-safe. More processes improve CPU parallelism and fault isolation, but they cost more memory because each process has its own heap. In practice you size workers, threads, and database pool together based on endpoint mix and real latency measurements.",
+    "real_world": "A common outage pattern is increasing Puma threads to improve throughput and then exhausting the Active Record connection pool, causing requests to hang waiting for a connection. The app server looked underutilized, but the database became the bottleneck.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What Rails or application code patterns are most likely to break when you turn on multi-threaded request handling?"
+   },
+   {
+    "question": "What actually causes Active Record connection pool exhaustion, and how do you diagnose and fix it in production?",
+    "answer": "Pool exhaustion happens when more threads or jobs want database connections than the pool can provide, or when code holds connections longer than expected. Long transactions, slow queries, leaked connections in threads, and mismatched pool size versus Puma or job concurrency are common causes. I first confirm wait time for a connection versus time spent executing SQL, then look for endpoints or workers with long DB sections and check concurrency settings. The fix might be query optimization, reducing thread counts, increasing pool size carefully, or ensuring custom threads check out and release connections correctly.",
+    "real_world": "In production this often shows up as timeouts even though CPU is low, because requests are queued waiting for a database connection rather than doing useful work. Background workers can also starve web traffic if they share the same database and have aggressive concurrency.",
+    "code_lang": "ruby",
+    "code": "Thread.new do\n  ActiveRecord::Base.connection_pool.with_connection do\n    User.where(active: true).limit(100).load\n  end\nend.join",
+    "follow_up": "How would you size the pool for web and job processes if both talk to the same primary database?"
+   },
+   {
+    "question": "When do you use `insert_all` or `upsert_all` instead of normal Active Record saves, and what do you give up by doing that?",
+    "answer": "I use bulk insert APIs when I need to write many rows efficiently and can operate at the SQL level, because they avoid per-record object instantiation and can reduce thousands of round trips to a small number of statements. The trade-off is that validations, callbacks, and some model-level behavior are bypassed, so correctness must come from database constraints and explicit preprocessing. `upsert_all` is useful for idempotent ingestion or sync jobs, but you need a well-defined conflict target and to think about whether updates should overwrite existing data. It is fast, but less expressive than full model lifecycle logic.",
+    "real_world": "For imports, analytics events, or sync pipelines, a row-by-row `save!` loop can turn a minutes-long batch into hours and create massive object churn. Bulk writes are often the difference between keeping up with traffic and falling behind.",
+    "code_lang": "ruby",
+    "code": "rows = events.map { |e| { external_id: e.id, kind: e.kind, created_at: Time.current, updated_at: Time.current } }\nEvent.upsert_all(rows, unique_by: :index_events_on_external_id)",
+    "follow_up": "How do you preserve idempotency and auditability when bulk upserting external data?"
+   },
+   {
+    "question": "How do you make Sidekiq or Active Job work safely with retries, duplicates, and jobs arriving out of order?",
+    "answer": "I assume jobs are at-least-once, not exactly-once, so handlers must be idempotent and able to run again after partial failure. That usually means storing a deduplication key, checking current state before acting, using database constraints, and making external calls with idempotency keys when the provider supports them. Ordering is not guaranteed across retries or multiple queues, so the job should validate that the record is still in a state where the action makes sense. Small, state-based jobs are usually safer than passing large snapshots of mutable data.",
+    "real_world": "A payment capture job may retry after a timeout even though the gateway already succeeded, or a 'ship order' job can run before 'mark paid' due to queue delays. Systems that assume exactly-once or in-order execution eventually double-charge customers or corrupt state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you redesign a job that currently takes a full serialized object payload and fails whenever the underlying record changes?"
+   },
+   {
+    "question": "How do you reason about cache invalidation in Rails, especially with fragment caching, Russian doll caching, and shared caches across deploys?",
+    "answer": "The main question is what makes the fragment stale and whether the cache key actually reflects that dependency. Rails fragment caching works well when keys include record versions, but nested caches only invalidate correctly if parent keys incorporate the relevant child changes or touch behavior is set deliberately. Shared caches across processes and deploys also mean you must think about key namespaces, serialization compatibility, and stampedes when hot keys expire together. I prefer explicit key design over assuming automatic invalidation will cover indirect dependencies.",
+    "real_world": "A common bug is shipping a new UI while old cached fragments are still served from Redis, causing mixed markup or stale counters until caches slowly roll over. Another is a child record update not invalidating the parent fragment, so production users see old data even though the database is correct.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do to prevent a cache stampede on a fragment that becomes hot right after expiration?"
+   },
+   {
+    "question": "What actually happens inside Rails when you call `Model.where(...).first`, and where does the time usually go on a hot endpoint?",
+    "answer": "That chain builds an `ActiveRecord::Relation` lazily; Rails composes Arel and only generates SQL when a terminal operation like `first` forces execution. The query time is often only part of the total cost: object instantiation, type casting, association loading, JSON serialization, and view rendering can dominate. On hot paths, reducing rows, columns, and instantiated objects usually matters more than micro-optimizing Ruby code. I look at SQL count, row count, allocations, and time spent after the query returns.",
+    "real_world": "A production endpoint can show a 20 ms database query but still take 300 ms because it instantiates thousands of records and serializers. Teams often fix the wrong layer until they profile allocations and query shape together.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prove whether the bottleneck is SQL execution, object materialization, or rendering?"
+   },
+   {
+    "question": "How do `size`, `count`, and `length` differ on an Active Record association, and why does that matter in production?",
+    "answer": "`count` asks the database unless Rails can answer from a counter cache or a loaded relation; `length` loads the records and counts the Ruby array; `size` chooses based on what is already loaded and may avoid extra work. The difference matters because `length` can accidentally load thousands of rows just to answer a count, while `count` can ignore already-loaded in-memory changes. `size` is usually the safest default when you do not need exact SQL semantics. On grouped or customized relations, I still verify the generated SQL because behavior depends on the relation.",
+    "real_world": "A dashboard loop that calls `association.length` can silently turn into huge memory churn and long response times. Swapping to `size` or a counter cache often removes both the query load and the object allocations.",
+    "code_lang": "ruby",
+    "code": "post = Post.includes(:comments).first\npost.comments.size   # uses loaded association\npost.comments.count  # issues COUNT query\npost.comments.length # counts loaded array, may load records",
+    "follow_up": "When would you add a counter cache instead of relying on `COUNT(*)`?"
+   },
+   {
+    "question": "What are the trade-offs of using STI in Rails, and when does it become a production problem?",
+    "answer": "Single Table Inheritance keeps shared behavior simple, but it couples multiple subtypes to one wide table, one set of indexes, and one migration path. It starts hurting when subclasses diverge heavily, validations become conditional spaghetti, or one subtype’s hot queries need indexes that are bad for others. It also wastes space with many nullable columns and can make data quality harder to enforce at the database level. I use STI when the data shape and lifecycle are genuinely similar; otherwise composition or separate tables is usually cleaner.",
+    "real_world": "Teams often begin with STI for `PaymentMethod` or `Event` and later discover one subtype accounts for most writes and needs different retention, indexes, or constraints. At that point a single table becomes an operational bottleneck as much as a design smell.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you had to migrate away from STI with minimal downtime, how would you stage it?"
+   },
+   {
+    "question": "How does Rails code reloading work in development, and what kinds of bugs show up because of it?",
+    "answer": "Rails uses Zeitwerk to autoload constants and, in development, unload and reload application code between requests when files change. That is convenient, but any long-lived object that captures class references or global state can become stale after reload. Common bugs include duplicate subscriptions, memoized class objects that no longer match reloaded code, and initializers that are not reload-safe. The fix is to keep reloadable code under autoload paths, put one-time setup in the right hooks, and avoid storing class state in places that outlive a reload.",
+    "real_world": "A classic dev-only incident is an event subscriber or middleware getting registered twice on every code change, causing duplicate side effects that never reproduce in production. Understanding the reloader prevents chasing ghosts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between code that should run on boot versus code that should run in a reloader hook?"
+   },
+   {
+    "question": "What is the practical difference between `default_scope` and a named scope, and why do senior teams tend to avoid `default_scope`?",
+    "answer": "A named scope is explicit at the call site; `default_scope` silently modifies every query unless you opt out. That hidden behavior leaks into associations, deletes, uniqueness checks, and background jobs, so it can cause records to disappear unexpectedly or make maintenance scripts operate on the wrong subset. It is especially risky for soft delete and multitenancy because one forgotten `unscoped` can either hide data or expose too much. I prefer explicit scopes and repository-like entry points when the filtering is business critical.",
+    "real_world": "Teams using `default_scope { where(deleted_at: nil) }` often get burned when a data fix script or uniqueness validation behaves differently than expected. Those incidents are hard to debug because the SQL looks reasonable only after you remember the hidden scope.",
+    "code_lang": "ruby",
+    "code": "class User < ApplicationRecord\n  default_scope { where(active: true) }\nend\n\nUser.all.to_sql\nUser.unscoped.where(id: 1).to_sql",
+    "follow_up": "If you need row-level tenant scoping everywhere, what would you use instead of `default_scope`?"
+   },
+   {
+    "question": "How do nested transactions and `requires_new` actually behave in Rails, and what surprises do people hit?",
+    "answer": "Most databases Rails targets do not support true nested transactions in the simple sense, so Rails emulates them with savepoints when possible. Without `requires_new`, an inner transaction usually just joins the outer one, which means an `ActiveRecord::Rollback` in the inner block does not necessarily abort the outer work the way people expect. With `requires_new`, Rails creates a savepoint so the inner block can roll back independently, but the outer transaction can still fail later. The surprise is thinking inner success is durable before the outer commit actually happens.",
+    "real_world": "A common production bug is charging a customer or enqueueing follow-up work based on an inner block that appeared to succeed, only for the outer transaction to roll back later. Savepoint semantics matter whenever side effects depend on partial success.",
+    "code_lang": "ruby",
+    "code": "ApplicationRecord.transaction do\n  Order.create!\n  ApplicationRecord.transaction(requires_new: true) do\n    PaymentAttempt.create!\n    raise ActiveRecord::Rollback\n  end\nend",
+    "follow_up": "How would you design side effects safely when savepoints are involved?"
+   },
+   {
+    "question": "What are the trade-offs between using UUIDs and integer primary keys in Rails at scale?",
+    "answer": "UUIDs are easier to generate across systems and avoid exposing row counts or predictable IDs, but they make indexes larger and usually reduce locality compared with sequential integers. That means more index memory, potentially more page splits, and slower joins or inserts on very large tables, depending on the database and UUID strategy. Integers are compact and fast, but they are harder to coordinate across systems and easier to enumerate externally. The right choice depends on whether distributed ID generation and external exposure matter more than index efficiency.",
+    "real_world": "On high-write tables, teams sometimes see storage and cache pressure jump after switching everything to UUIDs without reconsidering index size and access patterns. On the other hand, distributed systems often prefer UUIDs because they avoid central ID allocation and simplify merges.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you choose UUIDs, what other schema or indexing decisions would you revisit?"
+   },
+   {
+    "question": "What can go wrong with `find_or_create_by` under concurrency, and what is the safe pattern?",
+    "answer": "`find_or_create_by` is not enough by itself to guarantee uniqueness because two workers can both miss the find and race to insert. The real protection has to be a unique index in the database, with application code prepared to retry or handle the constraint violation. In some cases `create_or_find_by` is a better fit because it attempts the insert first, but the schema constraint is still the important part. The key idea is that application-level checks are advisory; the database must enforce uniqueness.",
+    "real_world": "This shows up in deduping webhooks, provisioning accounts, or creating daily aggregates when multiple app instances race. Without a unique index, incidents produce duplicate rows that are expensive to unwind later.",
+    "code_lang": "ruby",
+    "code": "add_index :subscriptions, [:user_id, :plan_id], unique: true\n\nbegin\n  Subscription.create_or_find_by!(user_id: u.id, plan_id: p.id)\nrescue ActiveRecord::RecordNotUnique\n  retry\nend",
+    "follow_up": "How would you make that retry loop safe so it does not spin forever under heavy contention?"
+   },
+   {
+    "question": "How do database replicas change the behavior of a Rails app, and what consistency bugs do you need to plan for?",
+    "answer": "Replicas improve read scale and isolate reporting load, but they are usually eventually consistent with the primary. That means a request can write on the primary and then read stale data from a replica, causing missing records, old counters, or failed read-after-write flows. You need a strategy for which reads must stick to primary, how to route requests after writes, and how to tolerate lag in non-critical paths. The trade-off is lower primary load versus more complexity in consistency-sensitive code.",
+    "real_world": "A user can submit a form, get redirected, and then not see the new object because the show page hit a lagging replica. Teams often discover this only in production because development rarely has replica lag.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which user flows would you force to read from primary, and which are safe on replicas?"
+   },
+   {
+    "question": "How would you handle a large backfill in Rails without taking down the app or overwhelming the database?",
+    "answer": "I avoid a single giant migration that instantiates models or updates every row in one transaction. The safer pattern is to deploy schema changes first, backfill in small id-ranged or time-ranged batches, keep transactions short, sleep or rate-limit between batches if needed, and make the job resumable and observable. I also avoid application model callbacks during backfills unless I explicitly need them, because they add unpredictable load and side effects. The key trade-off is speed versus blast radius; slower controlled progress usually wins in production.",
+    "real_world": "Naive backfills have caused lock contention, replica lag, and job queue pileups when they touched millions of rows too aggressively. Mature teams treat backfills like operational work: paced, measured, and easy to stop and resume.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics and kill switches would you add before starting a backfill on a billion-row table?"
+   }
+  ]
+ }
+}

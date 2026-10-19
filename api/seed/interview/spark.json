@@ -1,0 +1,461 @@
+{
+ "slug": "spark",
+ "name": "Apache Spark",
+ "category": "Data and AI",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Apache Spark, and what problem does it solve?",
+    "answer": "Apache Spark is a distributed data processing engine for large datasets. It lets you run computations across a cluster in parallel, so jobs that are too slow or too large for one machine can finish faster. People use it for batch processing, SQL analytics, streaming, machine learning, and graph processing. The main value is scaling data work while keeping one programming model.",
+    "real_world": "A team might use Spark to process daily clickstream logs that are hundreds of gigabytes, which would be too slow to analyze on a single server.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between batch processing and stream processing in Spark?"
+   },
+   {
+    "question": "What is the difference between an RDD, a DataFrame, and a Dataset?",
+    "answer": "An RDD is Spark’s low-level distributed collection API, giving you fine-grained control but less optimization. A DataFrame is a distributed table with named columns and is usually the preferred API because Spark can optimize it well. A Dataset exists in Scala and Java and adds compile-time type safety on top of DataFrames, but it is less commonly used in Python. For most work, DataFrames are the default choice.",
+    "real_world": "A data engineering team usually starts with DataFrames because they want simpler code and better performance from Spark’s optimizer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose an RDD instead of a DataFrame?"
+   },
+   {
+    "question": "What does lazy evaluation mean in Spark?",
+    "answer": "Lazy evaluation means Spark does not execute transformations immediately. Instead, it builds a plan of operations and only runs them when an action like count or write is called. This matters because Spark can optimize the whole plan before doing any work. It also means bugs or expensive logic may not show up until an action triggers execution.",
+    "real_world": "A developer might chain several transformations in a notebook and think everything succeeded, only to discover the real error when calling show or write.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a transformation and an action?"
+   },
+   {
+    "question": "What is the difference between a transformation and an action in Spark?",
+    "answer": "A transformation creates a new DataFrame or RDD from an existing one, like select, filter, or groupBy. An action actually triggers execution and returns a result or writes data, like count, collect, or save. Transformations are lazy; actions are the point where Spark computes the plan. Knowing this helps avoid surprise recomputation and large collect calls.",
+    "real_world": "Teams often accidentally use collect on a big dataset and bring too much data to the driver, causing memory failures.",
+    "code_lang": "python",
+    "code": "df2 = df.filter(df.age >= 18)\n# no work yet\nn = df2.count()   # triggers execution\nprint(n)",
+    "follow_up": "Why can calling collect be dangerous?"
+   },
+   {
+    "question": "What is a Spark job, stage, and task?",
+    "answer": "A job is created when an action is called. Spark splits the job into stages at shuffle boundaries, and each stage is broken into tasks that run on partitions in parallel. A task is the smallest unit of work executed on one partition of data. This hierarchy helps explain performance, parallelism, and where bottlenecks happen.",
+    "real_world": "If a job is slow, an engineer may inspect stages in Spark UI to see whether a shuffle or skewed partition is causing the delay.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What usually causes Spark to create a shuffle?"
+   },
+   {
+    "question": "What is a partition in Spark, and why does it matter?",
+    "answer": "A partition is a chunk of data that Spark processes as one unit in parallel. More partitions can increase parallelism, but too many small partitions add overhead, and too few large partitions can underuse the cluster. Partitioning affects performance, shuffle cost, and how much work each task does. Good partition sizes are important for efficient execution.",
+    "real_world": "A pipeline with one huge partition may run on only one core effectively, while a pipeline with thousands of tiny partitions may spend too much time on task scheduling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do repartition and coalesce differ?"
+   },
+   {
+    "question": "What is the difference between repartition and coalesce?",
+    "answer": "repartition reshuffles data and can increase or decrease the number of partitions. coalesce usually reduces the number of partitions with less shuffling, so it is cheaper when you only want fewer partitions. repartition is better when you want better distribution or need to increase parallelism. coalesce is often used before writing fewer output files.",
+    "real_world": "A team may coalesce before writing a daily report to avoid creating hundreds of tiny output files in storage.",
+    "code_lang": "python",
+    "code": "df_small = df.coalesce(10)\ndf_balanced = df.repartition(10)",
+    "follow_up": "When would repartition be necessary even if it costs more?"
+   },
+   {
+    "question": "What is a shuffle in Spark?",
+    "answer": "A shuffle is when Spark redistributes data across executors, usually because an operation needs data grouped by key, such as groupBy, join, or distinct. Shuffles are expensive because they involve network transfer, disk I/O, and sorting or merging. They often create stage boundaries. Reducing shuffles is one of the most important Spark performance skills.",
+    "real_world": "A join on a large table can become slow because both sides must move data around the cluster before matching keys.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How can you reduce shuffle cost in a Spark job?"
+   },
+   {
+    "question": "What is a broadcast join, and when would you use it?",
+    "answer": "A broadcast join sends a small table to every executor so Spark can join it locally with a larger table. It avoids a shuffle of the big table and is often much faster when one side is small enough to fit comfortably in memory. You should use it only when the smaller dataset is truly small, because broadcasting a large table can hurt memory and stability. It is a common optimization for dimension tables.",
+    "real_world": "In analytics, a large events table is often joined with a small country or product lookup table, which is a good broadcast join case.",
+    "code_lang": "python",
+    "code": "from pyspark.sql.functions import broadcast\nresult = facts.join(broadcast(dim), \"id\")",
+    "follow_up": "How would you know from Spark UI whether a broadcast join happened?"
+   },
+   {
+    "question": "What is the difference between cache and persist in Spark?",
+    "answer": "Both store a computed DataFrame or RDD for reuse, so Spark does not recompute it every time. cache is a convenience form of persist that uses the default storage level, while persist lets you choose a storage level depending on memory and disk trade-offs. They help when the same data is used multiple times in a pipeline. Caching the wrong data can waste memory and slow the cluster down.",
+    "real_world": "A notebook that repeatedly filters the same cleaned dataset may cache it to speed up interactive analysis.",
+    "code_lang": "python",
+    "code": "df_clean = df.filter(df.value.isNotNull()).cache()\ndf_clean.count()  # materialize cache",
+    "follow_up": "What can go wrong if you cache too many large DataFrames?"
+   },
+   {
+    "question": "Why is collect often a beginner mistake in Spark?",
+    "answer": "collect brings all rows to the driver process, so it defeats distributed processing. It is fine for very small result sets, but dangerous on large data because it can cause driver memory errors and slowdowns. If you only need to inspect a sample, use limit or show instead. If you need to write data, do it distributed with write rather than collecting first.",
+    "real_world": "A common production bug is a notebook that works on test data but crashes on full-scale data because collect returns millions of rows to the driver.",
+    "code_lang": "python",
+    "code": "# risky on large data\nrows = df.collect()\n# safer for inspection\ndf.limit(20).show()",
+    "follow_up": "What is the difference between show and collect?"
+   },
+   {
+    "question": "How do you create a DataFrame in Spark from a CSV file, and what are the common options you need to think about?",
+    "answer": "You usually use Spark’s reader API and then inspect or provide the schema. The main things to think about are header handling, delimiter, inferSchema versus an explicit schema, and how missing or malformed rows should be treated. For production code, an explicit schema is often safer because inference can be slow and inconsistent.",
+    "real_world": "A team loads daily partner files, and a header mismatch or bad type inference can silently shift columns or turn numeric fields into strings. That causes downstream joins and aggregations to fail or produce bad numbers.",
+    "code_lang": "python",
+    "code": "df = (spark.read\n      .option(\"header\", True)\n      .option(\"inferSchema\", True)\n      .csv(\"/data/events.csv\"))\ndf.printSchema()\ndf.show(5)",
+    "follow_up": "When would you choose an explicit schema instead of inferSchema?"
+   },
+   {
+    "question": "How do you filter rows in a Spark DataFrame, and what is the difference between using a column expression and a SQL string?",
+    "answer": "You can filter with a column expression or with a SQL-like string. Column expressions are safer because they are easier to refactor and avoid string parsing issues, while SQL strings can be convenient for simple ad hoc queries. In both cases, the result is a new DataFrame and no data is executed until an action runs.",
+    "real_world": "Teams often start with string filters in notebooks, then switch to column expressions in production code to reduce mistakes from typos or quoting problems.",
+    "code_lang": "python",
+    "code": "from pyspark.sql import functions as F\nactive = df.filter(F.col(\"status\") == \"active\")\nrecent = df.filter(\"event_date >= '2026-01-01'\")",
+    "follow_up": "How would you combine multiple filter conditions correctly?"
+   },
+   {
+    "question": "How do you join two DataFrames in Spark, and what are the common join types?",
+    "answer": "You use `join` with a join condition or key columns. The common join types are inner, left, right, and full outer, and the choice depends on whether you want to keep unmatched rows from one or both sides. A common beginner mistake is joining on the wrong columns or forgetting that duplicate key values can multiply rows.",
+    "real_world": "A customer table joined to orders may suddenly produce far more rows than expected if the customer key is not unique. That can inflate metrics and break downstream reports.",
+    "code_lang": "python",
+    "code": "joined = orders.join(customers, on=\"customer_id\", how=\"left\")\njoined.show()",
+    "follow_up": "What happens if both DataFrames have rows with the same join key multiple times?"
+   },
+   {
+    "question": "What does `groupBy` do in Spark, and how is it different from a window function?",
+    "answer": "`groupBy` collapses rows into one row per group when you aggregate, such as counting orders per customer. A window function keeps the original rows and computes metrics across a defined range or partition of rows. Use `groupBy` when you want a summary table, and use window functions when you need per-row context plus aggregated information.",
+    "real_world": "A fraud team may need both the total number of transactions per user and the details of each transaction. Window functions let them enrich each row without losing row-level detail.",
+    "code_lang": "python",
+    "code": "from pyspark.sql import functions as F\nsummary = df.groupBy(\"country\").agg(F.count(\"*\").alias(\"n\"))",
+    "follow_up": "Why would a window function be better than `groupBy` for some use cases?"
+   },
+   {
+    "question": "How do you handle null values in Spark DataFrames?",
+    "answer": "Spark gives you functions to fill, drop, or test nulls, and you can also use conditional logic to replace them. The right approach depends on whether the null means missing data, an error, or a real unknown value. A common mistake is treating nulls like ordinary values in comparisons without checking Spark’s null semantics.",
+    "real_world": "In customer data, a missing email might mean the record is incomplete, while a missing cancellation date may mean the subscription is still active. Choosing the wrong null handling can change business logic.",
+    "code_lang": "python",
+    "code": "from pyspark.sql import functions as F\nclean = df.fillna({\"country\": \"unknown\"})\nmissing = df.filter(F.col(\"email\").isNull())",
+    "follow_up": "How does Spark treat `null` in comparisons like `=`, `!=`, or `isNull()`?"
+   },
+   {
+    "question": "What does `distinct()` do in Spark, and when would you use it?",
+    "answer": "`distinct()` removes duplicate rows from a DataFrame. It is useful for deduplicating reference data, counting unique records, or cleaning inputs before joins. It can be expensive because Spark may need to shuffle data to compare rows across partitions.",
+    "real_world": "A pipeline loading clickstream data may receive duplicate events from retries. Deduplicating before aggregations avoids overstating metrics.",
+    "code_lang": "python",
+    "code": "unique_users = df.select(\"user_id\").distinct()\nunique_users.show()",
+    "follow_up": "How is `dropDuplicates()` different from `distinct()`?"
+   },
+   {
+    "question": "How do you write a DataFrame to storage in Spark, and what is the purpose of choosing a write mode?",
+    "answer": "You use the DataFrame writer to save data to formats like Parquet, CSV, or tables. The write mode controls what happens if the target already exists, such as failing, overwriting, appending, or ignoring. Choosing the wrong mode can accidentally delete data or create duplicate records, so it should match the pipeline’s update pattern.",
+    "real_world": "A nightly ETL job that should replace a snapshot usually needs overwrite, while an incremental event pipeline usually needs append. Using the wrong mode can corrupt the downstream dataset.",
+    "code_lang": "python",
+    "code": "df.write.mode(\"overwrite\").parquet(\"/tmp/output\")\n# or\n# df.write.mode(\"append\").parquet(\"/tmp/output\")",
+    "follow_up": "When would overwrite be dangerous in a production pipeline?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide whether to use Spark SQL, the DataFrame API, or a UDF in a real pipeline?",
+    "answer": "Use Spark SQL or built-in DataFrame functions first because Spark can optimize them with Catalyst and Tungsten. A UDF is usually the fallback when the logic is hard to express otherwise, but it often blocks optimization and can hurt performance. The trade-off is expressiveness versus execution efficiency and maintainability. In practice, keep most logic in built-in functions and isolate any UDFs to the smallest possible part of the pipeline.",
+    "real_world": "A team may start with UDFs for business rules and later find the job is slow and hard to debug. Rewriting the same logic with built-in expressions often reduces runtime and makes it easier to test.",
+    "code_lang": "python",
+    "code": "from pyspark.sql import functions as F\n\ndf = df.withColumn(\"clean_name\", F.lower(F.trim(F.col(\"name\"))))\n# Prefer this over a UDF when possible\n",
+    "follow_up": "When is a UDF acceptable, and how can you reduce its performance impact?"
+   },
+   {
+    "question": "What is a common cause of data skew in Spark, and how would you diagnose and fix it?",
+    "answer": "Data skew happens when a few keys or partitions get much more data than the others, so one or two tasks run much longer than the rest. You diagnose it by looking for straggler tasks, uneven shuffle read sizes, or one partition taking far more time. Common fixes include salting hot keys, filtering earlier, changing join strategy, or pre-aggregating data before the skewed shuffle. The right fix depends on whether the skew is in a join, aggregation, or source layout.",
+    "real_world": "A daily aggregation might finish in minutes on most days and suddenly run for an hour because one customer or date partition dominates the data. This often shows up as one executor still working long after the rest have finished.",
+    "code_lang": "python",
+    "code": "# Example idea: split a hot key with a salt\nfrom pyspark.sql import functions as F\n\ndf = df.withColumn(\"salt\", (F.rand() * 10).cast(\"int\"))\n# Later join/aggregate on (key, salt) instead of key alone\n",
+    "follow_up": "How would you tell whether the skew is caused by the data source or by the shuffle operation?"
+   },
+   {
+    "question": "What happens when you use `cache()` but the cached DataFrame does not fit in memory?",
+    "answer": "Spark stores cached partitions in memory when possible, but if there is not enough space it can evict partitions and recompute them later if needed. Depending on the storage level and pressure on the cluster, it may also spill some data to disk. The key point is that caching is an optimization, not a guarantee that all cached data will remain in RAM. You should cache only reused data and verify that the cache actually helps the workload.",
+    "real_world": "A team may cache a large intermediate DataFrame to speed up multiple downstream actions, but see inconsistent performance because the cache is constantly evicted. In that case, the repeated recomputation can be worse than not caching at all.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you check whether caching actually improved the job?"
+   },
+   {
+    "question": "Why can wide transformations be more expensive than narrow transformations in Spark?",
+    "answer": "Wide transformations require data from multiple partitions to be regrouped, so they usually trigger a shuffle. That means network I/O, disk I/O, and more coordination between executors, which makes them slower and more failure-prone than narrow transformations. Narrow transformations can be pipelined within the same partition without moving data around. In practice, the goal is not to avoid shuffles entirely, but to reduce unnecessary ones.",
+    "real_world": "A pipeline that chains filters and projections can run efficiently, but adding an extra join or group-by may suddenly make it much slower because the shuffle dominates runtime. Understanding this helps explain why one extra operation changes the whole job profile.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What techniques do you use to reduce the cost of a shuffle?"
+   },
+   {
+    "question": "How do you read and interpret a Spark UI when a job is running slowly?",
+    "answer": "I look at the SQL tab or job/stage detail pages to find where time is spent, then compare task duration, shuffle read/write, spill, and skew across tasks. If one stage has a few very slow tasks, that often points to skew or expensive input partitions. If many tasks are uniformly slow, it usually suggests a general bottleneck like too much shuffle, I/O, or a bad join strategy. The UI helps separate compute issues from data distribution problems.",
+    "real_world": "In production, a slow job is often blamed on Spark in general, but the UI usually shows a specific stage or task pattern causing the delay. That makes the fix much more targeted than guessing from code alone.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which Spark UI metrics are most useful for identifying shuffle bottlenecks?"
+   },
+   {
+    "question": "What is the difference between `dropDuplicates()` and `distinct()`, and when would you choose one over the other?",
+    "answer": "`distinct()` removes duplicate rows across all columns, while `dropDuplicates()` can deduplicate on a chosen subset of columns. If you need uniqueness on the full record, `distinct()` is simpler; if you care about business keys, `dropDuplicates()` is usually the right choice. The trade-off is that deduplicating on a subset may keep an arbitrary row among duplicates unless you add ordering logic afterward. In data pipelines, that detail matters a lot for deterministic results.",
+    "real_world": "A customer table may contain multiple events per user, and the team may want only one row per user for a downstream join. Using the wrong deduplication method can silently discard useful information or produce unstable outputs.",
+    "code_lang": "python",
+    "code": "df1 = df.distinct()\ndf2 = df.dropDuplicates([\"user_id\"])\n",
+    "follow_up": "If you need to keep the latest row per key, how would you do that deterministically?"
+   },
+   {
+    "question": "What is predicate pushdown, and why does it matter when reading data sources like Parquet?",
+    "answer": "Predicate pushdown means Spark pushes filter conditions down to the data source so the source can skip reading rows or row groups that cannot match. This matters because it reduces I/O and can dramatically cut scan time, especially on columnar formats like Parquet. It works best when filters are simple and the source supports it. If you wrap conditions in complex expressions, Spark may have to read more data than necessary.",
+    "real_world": "A reporting job that scans a large Parquet table can become much faster if filters on date or region are pushed down. Without pushdown, the cluster may waste time reading data that will be discarded immediately.",
+    "code_lang": "python",
+    "code": "df = spark.read.parquet(\"/data/events\")\nfiltered = df.filter((df.date >= \"2026-01-01\") & (df.region == \"us\"))\n",
+    "follow_up": "How would you verify that pushdown is actually happening?"
+   },
+   {
+    "question": "How do you make a Spark write idempotent in a real pipeline?",
+    "answer": "A write is idempotent if rerunning the job does not create duplicates or partial results. Common approaches include writing to a temporary path and atomically swapping it, partitioning by a run date and replacing only that partition, or using an overwrite mode carefully with stable input boundaries. The best choice depends on the storage system and failure model. The main idea is to make retries safe and avoid mixing old and new data.",
+    "real_world": "Scheduled jobs fail and rerun all the time, so a non-idempotent write can duplicate records or corrupt a table. This is especially painful in downstream dashboards and incremental processing.",
+    "code_lang": "python",
+    "code": "df.write.mode(\"overwrite\").partitionBy(\"dt\").parquet(\"/warehouse/events\")\n# Safer if dt is the exact slice being recomputed\n",
+    "follow_up": "How would your approach change if multiple jobs write to the same table?"
+   },
+   {
+    "question": "How do you test Spark transformations without relying on a full cluster?",
+    "answer": "You can unit test transformations by creating small in-memory DataFrames with known input and expected output, then comparing results after the transformation. The important part is to test business logic, edge cases, null handling, and schema changes, not Spark itself. For logic that depends on ordering or aggregation, make the assertions deterministic by sorting or comparing sets where appropriate. Good tests catch regressions before they become expensive cluster runs.",
+    "real_world": "Teams often ship Spark code that looks fine on sample data but breaks on nulls, empty input, or duplicate keys. Small deterministic tests catch these issues cheaply in CI.",
+    "code_lang": "python",
+    "code": "input_df = spark.createDataFrame([(1, \"A\"), (2, None)], [\"id\", \"cat\"])\nresult = my_transform(input_df)\nassert result.count() == 2\n",
+    "follow_up": "How do you test a transformation that uses joins or aggregations?"
+   },
+   {
+    "question": "How do you choose an appropriate number of partitions for a Spark job in practice?",
+    "answer": "You want enough partitions to keep all executors busy, but not so many that task scheduling overhead dominates. A common approach is to start from the cluster parallelism and then adjust based on input size, shuffle volume, and task duration. If tasks are very short, you likely have too many partitions; if some tasks run much longer than others, you may need more partitions or to fix skew. The goal is balanced work and manageable shuffle sizes.",
+    "real_world": "A nightly aggregation can run slowly because one huge partition keeps a single task busy while the rest of the cluster goes idle. Teams often tune partition counts after looking at Spark UI task times and shuffle sizes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether a job has too few or too many partitions from the Spark UI?"
+   },
+   {
+    "question": "How do you use window functions to compute things like running totals or ranks without collapsing rows?",
+    "answer": "Window functions let you calculate aggregations over a defined set of rows while keeping the original row-level output. You define a partition, an ordering, and sometimes a frame, then apply functions like `sum`, `row_number`, or `lag`. This is better than `groupBy` when you need both the original row and the derived metric. The main trade-off is that windowing can be expensive because Spark must sort within partitions.",
+    "real_world": "A product analytics team may need each event row plus a cumulative revenue value per user. A window function lets them keep event detail without joining an aggregated result back to the base table.",
+    "code_lang": "python",
+    "code": "from pyspark.sql import Window, functions as F\nw = Window.partitionBy('user_id').orderBy('event_time')\ndf = df.withColumn('running_total', F.sum('amount').over(w))",
+    "follow_up": "What can go wrong if the window ordering column is not unique or not well distributed?"
+   },
+   {
+    "question": "What happens if a Spark task fails partway through a stage, and how does Spark recover?",
+    "answer": "Spark reruns the failed task on another executor, because tasks are designed to be retryable and the input data is usually immutable. If the task failure is due to transient issues like executor loss or a network hiccup, the stage can often complete after retries. If the failure is caused by bad data or a deterministic bug in the code, retries usually fail again and the job stops. That distinction matters when debugging because repeated failures often indicate a data or code issue, not cluster instability.",
+    "real_world": "A pipeline may fail only on one partition because of a corrupt record or an unexpected null. The repeated retries in the UI are a strong signal that the problem is deterministic and tied to specific input data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you isolate whether the failure is caused by one bad record or by a broader cluster problem?"
+   },
+   {
+    "question": "How do you handle bad or malformed records when reading data in Spark?",
+    "answer": "The usual pattern is to choose a parsing strategy that either fails fast or captures bad rows for later inspection, depending on the pipeline’s tolerance for errors. In production, it is often better to quarantine malformed records than to silently drop them, because you need observability into data quality problems. You should also validate schema expectations early, especially for columns that drive joins or business logic. The trade-off is between robustness and strict correctness.",
+    "real_world": "A CSV feed from a partner may occasionally contain broken quoting or missing columns. Teams often route those rows to a dead-letter table so the main pipeline can continue while data quality is investigated.",
+    "code_lang": "python",
+    "code": "df = (spark.read\n      .option('header', 'true')\n      .option('mode', 'PERMISSIVE')\n      .csv('/data/input'))",
+    "follow_up": "How would you monitor whether malformed records are increasing over time?"
+   },
+   {
+    "question": "When should you use `explode`, and what performance or correctness risks does it introduce?",
+    "answer": "Use `explode` when a single row contains an array or map and you need one output row per element. It is a clean way to normalize nested data, but it can multiply row counts dramatically, which increases shuffle, storage, and join costs. You also need to preserve context carefully, because exploding before filtering can create far more rows than necessary. A good rule is to filter and project before exploding when possible.",
+    "real_world": "Clickstream events often contain arrays of product IDs or tags. Exploding them too early can turn a moderate dataset into a very large one and make downstream joins much more expensive.",
+    "code_lang": "python",
+    "code": "from pyspark.sql import functions as F\nout = (df\n       .select('user_id', F.explode('tags').alias('tag'))\n       .where(F.col('tag').isNotNull()))",
+    "follow_up": "How would you reduce the cost if only a small subset of array elements is needed?"
+   },
+   {
+    "question": "What is the difference between using `select` and `withColumn` in a Spark pipeline?",
+    "answer": "`select` builds a new DataFrame with only the columns you choose, while `withColumn` adds or replaces one column but keeps the rest. In practice, `select` is better when you want to trim unused columns early, which can reduce I/O and memory use. `withColumn` is convenient for stepwise derivations, but chaining many calls can make plans harder to read. The main trade-off is clarity versus minimizing the working set.",
+    "real_world": "A wide Parquet table with hundreds of columns can run much faster if the pipeline selects only the needed fields before joins or aggregations. Keeping extra columns around often increases shuffle size for no benefit.",
+    "code_lang": "python",
+    "code": "df2 = df.select('id', 'amount')\ndf3 = df.withColumn('amount_usd', F.col('amount') * F.col('fx_rate'))",
+    "follow_up": "How would you inspect whether Spark is actually pruning unused columns from a file source?"
+   },
+   {
+    "question": "How do you decide whether to use a UDF at all, and what are the main trade-offs compared with built-in functions?",
+    "answer": "Use built-in Spark functions whenever possible because Spark can optimize them, push parts of the computation down, and avoid Python or JVM serialization overhead. A UDF is appropriate when the logic is truly custom and cannot be expressed with the built-ins or SQL. The cost is that UDFs are usually a black box to the optimizer, which can hurt performance and make failures harder to debug. If you need a UDF, keep it small and isolate it to the narrowest part of the pipeline.",
+    "real_world": "A team may start with a Python UDF for validation logic and later replace it with column expressions after seeing the job become CPU-bound. This is a common performance win in pipelines that process millions of rows.",
+    "code_lang": "python",
+    "code": "# Prefer built-ins when possible\nclean = df.withColumn('email_domain', F.split('email', '@').getItem(1))",
+    "follow_up": "When would a pandas UDF be a better choice than a regular Python UDF?"
+   },
+   {
+    "question": "What are common reasons a Spark SQL query gets slower after a seemingly small change?",
+    "answer": "A small change can alter the physical plan in ways that increase shuffle, disable predicate pushdown, or force Spark to sort more data. Adding a column, changing a join condition, or wrapping filters in expressions can be enough to change how Spark optimizes the query. Another common cause is that the change increases the amount of data carried through the plan, even if the final result is similar. The key is to compare the query plans before and after, not just the SQL text.",
+    "real_world": "A report can become much slower after someone adds one derived column to a join because Spark can no longer broadcast the smaller table. The code change looks minor, but the execution strategy changes completely.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts of the physical plan would you look at first to spot the regression?"
+   },
+   {
+    "question": "How do you make Spark pipelines easier to debug and support in production?",
+    "answer": "A good approach is to break the pipeline into clear steps, persist only when reuse justifies it, and add metrics or counts at important boundaries. You should log input and output row counts, key null-rate checks, and schema expectations so regressions are visible early. It also helps to isolate expensive or fragile logic into small transformations that can be tested independently. The trade-off is a bit more structure in the code for much better operability.",
+    "real_world": "When a daily ETL job fails, teams need to know whether the issue is bad input, a join explosion, or a downstream write problem. Boundary metrics make it much faster to pinpoint the failing stage without rerunning the whole pipeline blindly.",
+    "code_lang": "python",
+    "code": "count_before = df.count()\n# transformation here\ncount_after = out.count()\nprint(count_before, count_after)",
+    "follow_up": "What lightweight data-quality checks would you add before a critical join or write?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does Catalyst actually optimize a Spark SQL query, and where do those optimizations stop helping?",
+    "answer": "Catalyst turns the parsed query into logical plans, applies rule-based rewrites, then picks a physical plan using statistics and cost-based choices where available. It helps most when expressions stay in Spark’s built-in operators, because Spark can reorder predicates, prune columns, fold constants, and generate efficient JVM code. Its benefits drop off when you hide logic inside UDFs, have missing or stale table statistics, or hit operations Spark cannot safely reorder. In practice, the plan can look valid but still be slow because cardinality estimates are wrong and the chosen join or aggregation strategy is poor.",
+    "real_world": "Teams often see a query regress after adding one custom function or a view layer because filter pushdown and join reordering stop applying. A fast way to verify is comparing `explain` output before and after the change.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of expressions prevent whole-stage code generation or other optimizer rules from applying?"
+   },
+   {
+    "question": "What is whole-stage code generation in Spark, and when can it hurt instead of help?",
+    "answer": "Whole-stage code generation fuses multiple physical operators into a single generated function so rows stay in CPU registers and object allocation drops. It usually improves CPU-bound queries, especially scans, filters, projections, and simple aggregations. It helps less when work is dominated by shuffle, I/O, Python boundaries, or complex expressions that make generated code huge or force fallback paths. Very large generated methods can increase compile overhead or miss JIT optimizations, so faster plans on paper are not always faster end to end.",
+    "real_world": "A pipeline doing simple column math over billions of rows may speed up a lot from codegen, while the same job with Python UDFs sees almost none of that benefit because execution crosses process boundaries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell from the physical plan whether whole-stage codegen is active?"
+   },
+   {
+    "question": "How does adaptive query execution change a plan at runtime, and what problems can it realistically fix?",
+    "answer": "Adaptive query execution waits until shuffle outputs are materialized, then uses actual partition sizes to rewrite parts of the physical plan. It can coalesce tiny shuffle partitions, split skewed partitions, and sometimes switch join strategies when one side is smaller than expected. That helps when compile-time statistics were inaccurate, which is common in data lakes. It cannot fix everything: if the source scan is already expensive, or a UDF blocks optimization, AQE mostly helps after the expensive part has already happened.",
+    "real_world": "A common production win is a query planned as a sort-merge join that becomes a broadcast join after filters reduce one side far more than expected. Another is reducing thousands of tiny post-shuffle tasks that spend more time scheduling than computing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the failure modes or surprises you watch for when AQE is enabled?"
+   },
+   {
+    "question": "Can you explain Spark’s memory model on the executors and why jobs fail with OOM even when there seems to be plenty of memory?",
+    "answer": "Executor memory is not one free pool; Spark separates execution memory for shuffles, joins, and sorts from storage memory for cached blocks, plus there is memory outside the JVM heap for overhead and native use. You can still hit OOM from skewed partitions, large per-task data structures, broadcast tables, Python worker processes, or off-heap and container limits even if average heap usage looks fine. The key is that memory pressure is local to a task and an executor, not averaged across the cluster. Spilling helps for some operators, but not for everything, and repeated spill can turn into a severe performance cliff.",
+    "real_world": "A job with one hot key can crash a single executor during aggregation while the cluster dashboard shows low average utilization. Another common incident is Python-heavy workloads being killed by the cluster manager because process overhead exceeds the container limit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish GC pressure, native-memory pressure, and skew as the main cause of executor OOMs?"
+   },
+   {
+    "question": "Why do small files hurt Spark so much, and what would you do about them in both reads and writes?",
+    "answer": "Small files create too many input splits, metadata operations, and tasks, so scheduler overhead and remote file-system listing dominate actual compute. They also reduce scan efficiency because each task does little useful work before paying startup and I/O costs. On writes, too many output files make downstream jobs slower and can overload table metadata systems. The fixes are to compact data, partition tables by access patterns rather than high-cardinality keys, and tune output partition counts so file sizes are reasonably large without creating giant skewed files.",
+    "real_world": "It is common to see a table with millions of tiny Parquet files where reading a day of data spends more time listing paths and starting tasks than scanning bytes. Teams often add a compaction job or rewrite ingestion to batch commits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you balance file size against parallelism when the same table serves both large batch reads and small selective queries?"
+   },
+   {
+    "question": "What actually happens in Structured Streaming stateful operations, and what are the main scaling limits?",
+    "answer": "Stateful operators like aggregations, stream-stream joins, and deduplication keep per-key state across micro-batches, usually backed by a state store on executors with checkpointed metadata for recovery. Throughput depends not just on input rate but on state size, key cardinality, watermark effectiveness, and how evenly keys are distributed. The main limits are memory and local disk for state, long recovery times from large checkpoints, and skew causing a few tasks to own most of the state. If watermarks are too conservative or absent, state can grow without bound even when each micro-batch looks healthy.",
+    "real_world": "A stream may run fine for weeks and then degrade as late data prevents old state from being evicted. Another common issue is one customer or device key dominating a stream-stream join and making one task the bottleneck every trigger.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do watermarks affect correctness, and what data are you explicitly choosing to drop when you set them?"
+   },
+   {
+    "question": "How do exactly-once claims in Structured Streaming really work, and where can duplicates still appear?",
+    "answer": "Spark’s guarantees depend on the source, sink, and whether the sink operation is transactional or idempotent. Checkpointing lets Spark track progress and replay from a known offset, so it can provide end-to-end exactly-once only when the sink can commit in a way aligned with that progress. Otherwise Spark often gives at-least-once delivery, meaning retries or driver restarts can write duplicates even if processing logic is deterministic. The practical design is to assume retries happen and make the sink idempotent or deduplicate with stable keys.",
+    "real_world": "Writing to a transactional table format can avoid duplicate visible commits after failure, while writing plain files or calling an external API usually cannot. Production incidents often show up after a restart where offsets are replayed but the side effect had already happened.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a sink to an external database so reprocessing a micro-batch does not corrupt results?"
+   },
+   {
+    "question": "When would you use mapPartitions instead of row-wise logic, and what are the risks?",
+    "answer": "`mapPartitions` is useful when setup cost is expensive per row, such as creating a parser, loading a model, or opening a connection once per partition. It can be much faster than per-row work because it amortizes initialization and can process data in batches. The risk is that you move responsibility for memory use, iterator handling, cleanup, and fault tolerance into custom code; a partition can become a giant unit of failure or leak resources on retries. It also bypasses many DataFrame-level optimizations, so you should use it only when built-in operators are not enough.",
+    "real_world": "Teams use `mapPartitions` to batch requests to a vectorizer or to reuse a compiled regex engine, but a careless implementation can hold an entire partition in memory and crash executors.",
+    "code_lang": "python",
+    "code": "def f(rows):\n    client = make_client()\n    try:\n        for batch in batched(rows, 500):\n            for out in client.transform(batch):\n                yield out\n    finally:\n        client.close()\n\nrdd2 = rdd.mapPartitions(f)",
+    "follow_up": "What changes when the code inside `mapPartitions` performs network I/O or talks to a rate-limited service?"
+   },
+   {
+    "question": "What are the practical trade-offs between using Kryo or Java serialization, and how does serialization overhead show up in Spark performance?",
+    "answer": "Serialization cost appears in shuffles, caching, broadcast variables, and task closure shipping, so it can be a major CPU and memory factor. Kryo is typically more compact and faster than default Java serialization for many object-heavy workloads, but it may require more care around class registration and compatibility depending on the codebase. For DataFrames backed by Spark’s internal binary format, object serialization matters less in the main execution path than it does for RDDs or custom objects. If your pipeline spends a lot of time serializing large nested objects, changing the data representation often helps more than just changing the serializer.",
+    "real_world": "RDD-heavy jobs with custom case classes or Java beans can spend a surprising share of stage time serializing during shuffle. Teams often see bigger wins by staying in DataFrame operations than by micro-tuning serializer settings alone.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect that serialization, rather than I/O or shuffle spill, is the dominant bottleneck?"
+   },
+   {
+    "question": "If an executor is lost during a large shuffle-heavy job, what happens under the hood, and why can one loss trigger a much bigger slowdown than expected?",
+    "answer": "If the lost executor held shuffle outputs or cached blocks that were not replicated elsewhere, downstream tasks may need those partitions recomputed from their lineage before they can continue. That can re-run a lot of upstream work, not just the failed task, especially after expensive wide stages. Executor loss also reduces cluster capacity, may invalidate local shuffle reads, and can amplify stragglers if the cluster is already tight on resources. So the visible slowdown is often the combination of recomputation, reduced parallelism, and extra network traffic.",
+    "real_world": "A spot-instance loss in the middle of a big join can turn a 20-minute job into an hour if many shuffle blocks must be regenerated. This is why teams are careful with executor churn during shuffle-intensive pipelines.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What architecture or configuration choices reduce the blast radius of executor loss in long-running Spark jobs?"
+   },
+   {
+    "question": "How does Spark choose a physical join strategy when you do not force one, and what can make it choose badly in production?",
+    "answer": "Spark picks among strategies like broadcast hash, sort-merge, shuffled hash, or nested-loop based on the logical plan, available statistics, join type, and configuration. Bad choices usually come from stale or missing table stats, highly skewed keys, or filters whose selectivity was not estimated well, so the planner underestimates one side or misses spill risk. AQE can correct some mistakes at runtime, but not all of them, especially if the expensive shuffle already happened. In practice, good stats and verifying the executed plan matter more than blindly adding hints.",
+    "real_world": "A common incident is a join that used to broadcast a filtered dimension table, then stops broadcasting after a schema or data change and suddenly turns into a multi-terabyte sort-merge shuffle.",
+    "code_lang": "sql",
+    "code": "EXPLAIN FORMATTED\nSELECT /*+ BROADCAST(dim) */ f.id, d.name\nFROM fact f\nJOIN dim d ON f.dim_id = d.id\nWHERE d.is_active = true;",
+    "follow_up": "What join hints would you trust in production, and when can they backfire?"
+   },
+   {
+    "question": "What is dynamic partition pruning, and why does it sometimes help a lot and sometimes seem to do nothing?",
+    "answer": "Dynamic partition pruning uses values from one side of a join, usually a filtered dimension table, to prune partitions of the other side at runtime before or during scan. It helps most when the fact table is physically partitioned on the join key and the filter is selective enough to remove many partitions. It does little when partitioning does not align with the join key, there are too many tiny partitions already, or the runtime overhead of pruning is similar to just scanning. It is a good example of an optimization that depends heavily on data layout, not just SQL shape.",
+    "real_world": "Teams often expect a star-schema join to get faster automatically, but if the large table is partitioned by date and joined on customer_id, dynamic partition pruning will not save much.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is dynamic partition pruning different from static partition pruning and from predicate pushdown?"
+   },
+   {
+    "question": "How do Parquet row groups, column chunks, and file sizing decisions affect Spark scan performance?",
+    "answer": "Spark reads Parquet in splits influenced by file boundaries and metadata, and Parquet can skip work efficiently only when row group statistics and column pruning align with the query. Files that are too small create scheduler and metadata overhead, while files that are too large can reduce parallelism and make skew harder to smooth out. Row groups that are reasonably sized help predicate skipping and sequential IO, but if they are tiny you get metadata overhead, and if they are huge you lose pruning granularity. The best settings depend on storage system, compression, and query patterns, so teams usually tune around target file sizes and validate with scan metrics.",
+    "real_world": "A lake with millions of tiny Parquet files can spend more time listing files and opening objects than actually decoding data, even before any shuffle begins.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics in Spark or the storage layer would you inspect to tell whether your bottleneck is scan throughput, metadata overhead, or lack of pruning?"
+   },
+   {
+    "question": "Why can a seemingly harmless Python UDF create a major performance cliff, even if the logic itself is simple?",
+    "answer": "A regular Python UDF crosses the JVM-Python boundary, serializes data out of Spark’s optimized execution path, and usually prevents Catalyst and codegen from optimizing through that expression. That means higher CPU cost, less vectorization, and often more memory pressure than an equivalent built-in expression. Pandas UDFs can reduce overhead with Arrow batching, but they still have batch serialization costs and different failure modes. The real cost is often not the logic itself but breaking Spark’s ability to optimize the whole pipeline.",
+    "real_world": "A one-line normalization UDF can turn a fast SQL pipeline into a CPU-bound job that scales poorly because every row now has to be marshaled into Python.",
+    "code_lang": "python",
+    "code": "from pyspark.sql import functions as F\n\ndf = df.withColumn(\"x2\", F.col(\"x\") * 2)   # optimized\n# slower path if avoidable:\n# df = df.withColumn(\"x2\", my_python_udf(\"x\"))",
+    "follow_up": "When would you choose a Pandas UDF anyway, and what would you benchmark before shipping it?"
+   },
+   {
+    "question": "What are the main differences between `foreachBatch` and continuous row-wise sink logic in Structured Streaming, and where do teams get burned?",
+    "answer": "`foreachBatch` gives you micro-batch boundaries and a regular DataFrame for each batch, which makes transactional writes, deduping, and reuse of batch logic much easier. Row-wise custom sink logic is harder to make idempotent, tends to have higher per-record overhead, and can hide backpressure or partial-write problems. The trade-off is that `foreachBatch` inherits micro-batch semantics, so latency is bounded by trigger and batch completion rather than true per-record processing. Teams get burned when they assume retries will not replay a batch or when their external system cannot handle repeated writes safely.",
+    "real_world": "A common incident is writing to an external database in `foreachBatch` without an idempotency key, then seeing duplicate upserts after driver restart or sink timeout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a `foreachBatch` sink to be safe under retries and partial failures?"
+   },
+   {
+    "question": "What does checkpointing really protect in Structured Streaming, and what does it not protect?",
+    "answer": "Checkpointing stores query progress, offsets, and state-store metadata so a restarted query can continue from the right source position and recover stateful operators. It does not automatically make external side effects atomic, and it does not save you from changing the query in incompatible ways, such as altering state schema or operator semantics without a migration plan. Losing the checkpoint often means either replaying from source or losing state, depending on source retention and sink design. So checkpoint durability is necessary for correctness, but not sufficient for end-to-end exactly-once behavior.",
+    "real_world": "If a Kafka-backed streaming job loses its checkpoint after source retention has moved on, you may not be able to reconstruct the exact missing state, even though the code itself is unchanged.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of code or schema changes are safe to deploy against an existing checkpoint, and which ones usually are not?"
+   },
+   {
+    "question": "How do speculative execution and task stragglers interact in Spark, and when can speculation make things worse instead of better?",
+    "answer": "Speculative execution launches duplicate copies of slow tasks when they look like stragglers relative to peers, hoping one finishes sooner. It helps with noisy hardware, transient GC pauses, or occasional network issues, but it does not fix deterministic skew where one partition simply has much more data. It can make things worse by increasing cluster load, duplicating pressure on remote storage, or causing extra contention on external systems used inside tasks. The key is distinguishing random slowness from data-driven slowness before turning it on aggressively.",
+    "real_world": "On object storage-heavy jobs, speculation can amplify request rates and throttling, so the cluster spends more time re-reading the same data instead of finishing the real bottleneck partition.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell from metrics whether a straggler is caused by skew, GC, remote IO, or a bad executor host?"
+   },
+   {
+    "question": "Why do accumulators and side effects inside transformations often lead to incorrect assumptions about correctness?",
+    "answer": "Spark may retry tasks, run speculative duplicates, or recompute partitions, so code inside transformations is not guaranteed to execute exactly once. Accumulators are useful for debugging and metrics, but they are not a safe way to drive business logic because retries can change the observed counts or timing. Side effects like writing to an external service from a map function are even riskier because duplicates are very plausible under failure. In Spark, correctness should come from deterministic dataflow and idempotent sinks, not from per-task side effects.",
+    "real_world": "Teams sometimes use an accumulator to count filtered records for an alert threshold, then discover the number spikes during retries and causes false pages.",
+    "code_lang": "python",
+    "code": "acc = spark.sparkContext.longAccumulator(\"bad\")\n\ndef f(x):\n    if x < 0:\n        acc.add(1)\n    return x\n\nspark.sparkContext.parallelize([1, -1]).map(f).count()",
+    "follow_up": "If you need reliable audit counts, where in a Spark pipeline would you compute and persist them instead?"
+   },
+   {
+    "question": "What are the trade-offs between using DataSource V1 and V2 connectors from a Spark user’s point of view?",
+    "answer": "DataSource V2 was designed to give connectors richer capabilities around pushdown, catalog integration, partitioning, and write semantics, with cleaner separation of scan and write behavior. In practice, V2 connectors can enable better pruning or reporting, but behavior still depends on the specific implementation, and feature parity with older V1 connectors is not always complete. For users, the main question is whether the connector exposes the optimizations and commit semantics your workload needs, not the API label by itself. Connector quality matters more than architecture names on a slide.",
+    "real_world": "Two tables both called 'Parquet' can behave differently in production if one path goes through a catalog-aware connector with better pushdown and the other through a simpler file source configuration.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What connector capabilities would you verify before trusting a source or sink for a critical production pipeline?"
+   },
+   {
+    "question": "How do output commit protocols and rename behavior affect the reliability and speed of Spark writes, especially on object storage?",
+    "answer": "Spark writes task outputs to temporary locations and then commits them, but the exact protocol matters a lot because rename-heavy commit patterns are cheap on some filesystems and expensive or non-atomic on many object stores. On object storage, commit strategies that depend on directory renames can be slow or fragile, and partial failures may leave orphan files or inconsistent listings if the sink is not designed carefully. That is why table formats and storage-specific committers matter for both performance and correctness. The write path is often the hidden source of slow jobs that otherwise compute fine.",
+    "real_world": "A batch job may finish all shuffles quickly but spend most of its runtime in commit because thousands of output files are being finalized inefficiently against cloud storage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do transactional table formats change the failure surface compared with writing plain files to a path?"
+   }
+  ]
+ }
+}

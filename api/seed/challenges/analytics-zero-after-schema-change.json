@@ -1,0 +1,284 @@
+{
+  "slug": "analytics-zero-after-schema-change",
+  "title": "Analytics counts drop to zero after a harmless schema change",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "analytics",
+    "kafka",
+    "schema-evolution",
+    "stream-processing",
+    "observability"
+  ],
+  "scenario": "Minutes after a producer release described as a harmless schema cleanup, customer analytics dashboards fall to near zero. Kafka broker ingress is still about 120,000 events per second, consumer lag is normal, and the stream processor is not crashing. No infrastructure alert fires because the topic volume and service health checks look unchanged.",
+  "goal": "Restore correct customer analytics and add protections so a future event-shape change cannot silently zero the dashboards.",
+  "concepts": [
+    {
+      "key": "kafka-topic",
+      "name": "Kafka topic",
+      "summary": "A Kafka topic is a durable stream of messages split into partitions. Producers write events to it, and consumers read events from it in order within each partition.",
+      "used_here": "The analytics events are still arriving at about 120,000 events per second, so the incident is not an obvious broker-ingest outage."
+    },
+    {
+      "key": "consumer-lag",
+      "name": "Consumer lag",
+      "summary": "Consumer lag is how far a consumer group is behind the latest messages in a stream. Low lag means the consumer is keeping up with incoming data.",
+      "used_here": "Lag is normal, which makes a slow or stuck processor less likely as the first explanation."
+    },
+    {
+      "key": "stream-processor",
+      "name": "Stream processor",
+      "summary": "A stream processor reads events continuously and transforms, filters, or aggregates them. It often feeds databases, dashboards, or other downstream systems.",
+      "used_here": "This processor reads analytics events and decides which ones are eligible for customer dashboards."
+    },
+    {
+      "key": "raw-event-sampling",
+      "name": "Raw event sampling",
+      "summary": "Raw event sampling means inspecting a small set of real messages as they were published. It helps distinguish transport problems from data-content problems.",
+      "used_here": "Sampling lets the team compare what is on the Kafka topic with what the processor thinks it received."
+    },
+    {
+      "key": "event-schema",
+      "name": "Event schema",
+      "summary": "An event schema describes the fields, names, and types an event is expected to contain. Producers and consumers rely on the same shape to interpret data correctly.",
+      "used_here": "The incident involves a change to the shape of analytics events during a producer release."
+    },
+    {
+      "key": "required-field",
+      "name": "Required field",
+      "summary": "A required field is data a consumer needs to do its job correctly. If it is absent, the consumer should fail loudly or handle it through an explicit compatibility path.",
+      "used_here": "Customer dashboards need a usable customer identifier to attribute events to the right customer."
+    },
+    {
+      "key": "backward-compatibility",
+      "name": "Backward compatibility",
+      "summary": "Backward compatibility means a newer producer or consumer can still work with older versions during a rollout. It matters because distributed services rarely change at exactly the same time.",
+      "used_here": "The producer and stream processor may run different versions while traffic is live."
+    },
+    {
+      "key": "canary-release",
+      "name": "Canary release",
+      "summary": "A canary release sends a small percentage of production traffic through a change before a full rollout. It reduces blast radius and gives time to watch real metrics.",
+      "used_here": "A canary can prove the analytics pipeline accepts the repaired event shape before all producer instances switch."
+    },
+    {
+      "key": "stream-replay",
+      "name": "Stream replay",
+      "summary": "Stream replay means reading older messages again and processing them another time. It is useful only if the processor now interprets those messages correctly.",
+      "used_here": "Replay is a possible recovery tool after the parsing behavior is fixed."
+    },
+    {
+      "key": "schema-registry",
+      "name": "Schema registry",
+      "summary": "A schema registry stores machine-readable event schemas and can check whether new schemas are compatible with existing ones. It makes schema rules enforceable by tooling instead of memory.",
+      "used_here": "It can be part of the release path for analytics event producers."
+    },
+    {
+      "key": "contract-tests",
+      "name": "Consumer contract tests",
+      "summary": "Consumer contract tests verify that a producer still satisfies the data expectations of its consumers. They catch mismatches before the producer change reaches production.",
+      "used_here": "They can represent what the analytics processor requires from published events."
+    },
+    {
+      "key": "semantic-metrics",
+      "name": "Semantic metrics",
+      "summary": "Semantic metrics measure whether data still has the meaning the business needs, not just whether services are alive. They often track valid records, dropped records, or important field coverage.",
+      "used_here": "They show whether analytics events are usable for customer dashboards even when Kafka volume stays steady."
+    },
+    {
+      "key": "baseline",
+      "name": "Baseline",
+      "summary": "A baseline is the normal value or range for a metric under healthy conditions. Comparing current data to the baseline helps detect abnormal behavior quickly.",
+      "used_here": "The team compares identifier coverage and accepted dashboard events against their usual rates."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the layer most likely to separate transport from content",
+      "question": "Kafka ingress is still about 120,000 events per second, consumer lag is normal, and the processor is healthy. Where should you look first to narrow the incident quickly?",
+      "concept_keys": [
+        "kafka-topic",
+        "consumer-lag",
+        "stream-processor",
+        "raw-event-sampling"
+      ],
+      "options": [
+        {
+          "text": "Compare a small sample of raw Kafka events with the processor’s parsed output for the same minute.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Open a broker incident because unchanged topic volume can still hide a Kafka partition failure.",
+          "correct": false,
+          "hint": "A partition issue would usually show uneven consumption, lag, or missing partitions. The given signals point more toward what the messages contain than whether Kafka stores them.",
+          "id": "b"
+        },
+        {
+          "text": "Restart the dashboard service and clear its cache to remove a stale presentation-layer result.",
+          "correct": false,
+          "hint": "The dashboards are the visible symptom, but the stream and processor changed shortly before the drop. Check whether correct data is reaching the dashboard path before changing the UI layer.",
+          "id": "c"
+        },
+        {
+          "text": "Increase the stream processor replica count to rule out a hidden throughput bottleneck in production.",
+          "correct": false,
+          "hint": "Normal lag means the processor is keeping up with the stream. More capacity does not explain why completed processing produces near-zero dashboard counts.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Raw sampling checks whether the stream still carries events with the fields the processor can use. Since ingress is still 120,000 events per second and lag is normal, scaling or restarting services is less likely to explain near-zero customer counts. The tempting dashboard-cache path may hide symptoms briefly, but it does not test whether the pipeline is producing usable analytics records."
+    },
+    {
+      "title": "Interpret the sample comparison",
+      "question": "You inspect 20 raw events from the release window and the processor’s parsed records for those same events. The raw payloads contain a populated user_id field, while the parsed records have userId set to null; the processor marks those records anonymous and customer dashboards exclude anonymous records. What is the best diagnosis?",
+      "concept_keys": [
+        "event-schema",
+        "required-field",
+        "stream-processor"
+      ],
+      "options": [
+        {
+          "text": "The producer and processor now disagree on the customer identifier field, and the processor silently accepts the missing required value.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Kafka is losing only the subset of records that belong to known customers before the processor reads them.",
+          "correct": false,
+          "hint": "The raw events are present in Kafka and contain an identifier-like value. The mismatch appears when the processor interprets the payload.",
+          "id": "b"
+        },
+        {
+          "text": "The dashboard query is filtering to the wrong customer segment after the schema cleanup release.",
+          "correct": false,
+          "hint": "The parsed records are already marked anonymous before the dashboard query runs. A dashboard filter cannot create null parsed fields upstream.",
+          "id": "c"
+        },
+        {
+          "text": "The consumer group offset skipped the release-window messages that contained customer identifiers.",
+          "correct": false,
+          "hint": "You compared raw events with parsed records for the same events. That means the processor did read them; the issue is how it interpreted them.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The evidence shows the field exists in the raw event but under a name the processor does not read. Because the processor treats the missing required value as anonymous instead of failing or rejecting the event, the data is silently dropped from customer dashboards. Kafka loss is a tempting explanation for zero counts, but the same events are present and consumed."
+    },
+    {
+      "title": "Restore analytics without a fragile coordinated deploy",
+      "question": "You need the safest immediate production change to restore customer dashboards while instances roll gradually. Which action should you take first?",
+      "concept_keys": [
+        "backward-compatibility",
+        "canary-release",
+        "stream-processor",
+        "stream-replay"
+      ],
+      "options": [
+        {
+          "text": "Hotfix the producer to populate both userId and user_id from the same source value, canary it, then ramp if parsed customer counts recover.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Include anonymous events in customer dashboards temporarily so the visible counts return close to normal.",
+          "correct": false,
+          "hint": "That would mix unattributed events into customer-specific dashboards. Restoring a number is not enough if the records are assigned to the wrong customers.",
+          "id": "b"
+        },
+        {
+          "text": "Rewind the consumer group to before the release and replay the stream before changing producer output.",
+          "correct": false,
+          "hint": "Reprocessing the same payloads through the same parser repeats the same anonymous classification. Replay helps after the interpretation problem is fixed.",
+          "id": "c"
+        },
+        {
+          "text": "Deploy the processor to read only user_id, then ask the producer team to stop sending the old field after rollout completes.",
+          "correct": false,
+          "hint": "Rollouts overlap, old events can still be in the stream, and other consumers may still depend on the old shape. A one-sided switch can move the outage rather than remove it.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Emitting both field names makes the event usable by the current processor and by any readers already expecting the new name. A canary limits risk and lets you watch real parsed counts before ramping. The tempting processor-only change is risky because distributed producer and consumer rollouts are not simultaneous, and it can break older in-flight events or other consumers."
+    },
+    {
+      "title": "Prevent the same class of release from shipping",
+      "question": "After dashboards recover, you want a release-time guard that blocks this failure mode before production. Which guard is strongest?",
+      "concept_keys": [
+        "event-schema",
+        "required-field",
+        "schema-registry",
+        "contract-tests",
+        "backward-compatibility"
+      ],
+      "options": [
+        {
+          "text": "Alert on Kafka broker ingress and consumer lag during producer deploys so schema issues are caught faster.",
+          "correct": false,
+          "hint": "Those signals stayed healthy during this incident. A prevention mechanism has to validate the event contract, not only transport health.",
+          "id": "a"
+        },
+        {
+          "text": "Store the event format in a team wiki and require the producer owner to update the page before schema cleanup releases.",
+          "correct": false,
+          "hint": "Documentation helps humans coordinate, but it does not stop an incompatible payload from being published at 120,000 events per second.",
+          "id": "b"
+        },
+        {
+          "text": "Add a schema compatibility check or consumer contract test in CI that fails a producer change when it removes or renames a required identifier without a compatible path.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Require a Slack approval from the analytics team for every producer deploy that mentions schema cleanup.",
+          "correct": false,
+          "hint": "Manual review can miss details and does not exercise the actual event payload. A guard should be automatic and tied to the data shape consumers require.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A machine-enforced schema or consumer contract turns the processor’s required fields into a release gate. It can fail the producer build before a field rename reaches production unless a compatible migration is provided. Wiki updates and Slack approvals are useful context, but they are not reliable production controls for a high-volume stream."
+    },
+    {
+      "title": "Confirm the fix and alert on the right failure signal",
+      "question": "The producer canary has emitted both fields for 10 minutes. What should you use to decide whether to ramp fully and to catch this class of incident next time?",
+      "concept_keys": [
+        "semantic-metrics",
+        "baseline",
+        "kafka-topic",
+        "required-field"
+      ],
+      "options": [
+        {
+          "text": "Verify Kafka ingress remains near 120,000 events per second and alert if broker bytes fall below the normal range.",
+          "correct": false,
+          "hint": "Transport volume was unchanged throughout the incident. This signal is necessary for broker health, but it did not distinguish valid customer events from unusable ones.",
+          "id": "a"
+        },
+        {
+          "text": "Verify the parsed non-null customer identifier rate and dashboard-accepted event rate return to baseline, and alert on drops or spikes in anonymous classifications.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Verify the dashboard page loads successfully and alert if the frontend returns more than 1% HTTP 500 responses.",
+          "correct": false,
+          "hint": "A healthy page can still show wrong data. The alert needs to watch the meaning of processed events, not only whether the UI responds.",
+          "id": "c"
+        },
+        {
+          "text": "Verify processor CPU and memory are stable and alert if either crosses the autoscaling threshold.",
+          "correct": false,
+          "hint": "Resource health can show overload, but this outage was caused by valid-looking processing of semantically unusable records. Stable CPU can coexist with zero dashboard counts.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The canary should be judged by whether events again contain usable customer identifiers after parsing and whether they reach customer dashboards at the normal rate. An alert on non-null identifier coverage or anonymous-drop ratio would have fired even while Kafka stayed at 120,000 events per second. Broker and frontend health checks remain useful, but they miss this semantic failure."
+    }
+  ],
+  "takeaway": "For event streams, unchanged volume does not mean unchanged meaning. Treat required fields as contracts, make schema evolution compatible during rolling deploys, and alert on semantic counters such as identifier coverage and dropped customer events.",
+  "review_issues": []
+}

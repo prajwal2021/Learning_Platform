@@ -1,0 +1,437 @@
+{
+ "slug": "testing",
+ "name": "Software testing and QA",
+ "category": "Computer science",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a unit test and an integration test?",
+    "answer": "A unit test checks one small piece of code in isolation, like a function or method, often with dependencies mocked or stubbed. An integration test checks how multiple parts work together, such as a service talking to a database or API. Unit tests are usually faster and easier to debug, while integration tests catch wiring and contract problems that unit tests can miss.",
+    "real_world": "A checkout function might pass unit tests but fail when it writes to the real payment or database layer. Integration tests catch those failures before release.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a mock in a unit test, and when would you avoid one?"
+   },
+   {
+    "question": "What is the purpose of a test case?",
+    "answer": "A test case is a specific set of inputs, steps, and expected results used to verify behavior. It makes testing repeatable and tells you exactly what should happen for a given scenario. Good test cases cover normal behavior, edge cases, and error conditions.",
+    "real_world": "Teams use test cases to make regression testing predictable after a bug fix or feature change. They also help new engineers understand what the system is supposed to do.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a test case good instead of overly broad or vague?"
+   },
+   {
+    "question": "What is the difference between a bug and a defect?",
+    "answer": "In practice, the words are often used interchangeably, but both refer to a flaw in the software. A bug is commonly used in informal discussion, while defect can sound more formal in QA processes. What matters is that the software behaves differently from the expected result.",
+    "real_world": "A tester might log a defect when a button crashes the app, and developers may call the same issue a bug during debugging. Clear reporting matters more than the label.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you write a good bug report for that issue?"
+   },
+   {
+    "question": "Why do teams write automated tests instead of relying only on manual testing?",
+    "answer": "Automated tests are faster to repeat, easier to run often, and less likely to miss the same regression twice. They are especially useful for code that changes frequently or has many edge cases. Manual testing is still valuable for exploratory work, usability, and cases that are hard to automate.",
+    "real_world": "Before each release, a CI pipeline can run hundreds of automated tests in minutes. That catches breakages early without needing someone to click through the whole app by hand.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of tests are still better done manually?"
+   },
+   {
+    "question": "What does a test assertion do?",
+    "answer": "An assertion checks that the actual result matches the expected result. If the condition is false, the test fails. Assertions are the core of automated testing because they turn a check into a pass or fail outcome.",
+    "real_world": "A test might compute a total price and assert that it equals the expected amount. If a tax calculation changes unexpectedly, the test fails immediately.",
+    "code_lang": "python",
+    "code": "def test_add():\n    result = 2 + 3\n    assert result == 5",
+    "follow_up": "What is the difference between asserting on one value versus asserting on a whole object?"
+   },
+   {
+    "question": "What is a mock, and why would you use one?",
+    "answer": "A mock is a test double that stands in for a real dependency, such as an API client or database. You use it to isolate the code under test, control the dependency’s behavior, and avoid slow or unreliable external systems. The trade-off is that tests can become too tied to implementation details if you overuse mocks.",
+    "real_world": "If a service sends emails, tests often mock the mail provider so they do not send real messages. That keeps tests fast and prevents accidental production notifications.",
+    "code_lang": "python",
+    "code": "from unittest.mock import Mock\nmailer = Mock()\nmailer.send.return_value = True\nassert mailer.send('hi') is True",
+    "follow_up": "When can mocking hide real integration problems?"
+   },
+   {
+    "question": "What is a regression test?",
+    "answer": "A regression test checks that a bug fix or new change did not break existing behavior. It protects against old problems coming back when the code changes later. Regression tests are often added to the automated suite after a defect is found.",
+    "real_world": "After fixing a login crash, a team adds a test so the same null input bug does not return in the next refactor. This saves repeated production incidents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a regression test different from a normal functional test?"
+   },
+   {
+    "question": "What is edge-case testing?",
+    "answer": "Edge-case testing checks unusual but valid inputs or boundary conditions, like empty strings, zero, very large values, or missing optional data. These cases often reveal hidden assumptions in the code. Testing them matters because production data is rarely perfectly clean.",
+    "real_world": "A form that works with normal names may fail on empty input or very long text fields. Edge-case tests catch those failures before users do.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are some common boundaries you would test for a numeric input?"
+   },
+   {
+    "question": "What is the difference between positive testing and negative testing?",
+    "answer": "Positive testing verifies that the system works with valid inputs and expected conditions. Negative testing verifies that it handles invalid inputs or bad conditions correctly, usually by rejecting them or showing an error. Both are needed because software must work and fail safely.",
+    "real_world": "A signup form should accept a valid email address, but it should also reject an invalid one with a clear message. Negative tests check that rejection path.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should a good error message include for a failed validation test?"
+   },
+   {
+    "question": "What is test coverage, and why is it not the same as test quality?",
+    "answer": "Test coverage measures how much code is exercised by tests, often as a percentage of lines or branches. High coverage does not guarantee good tests, because tests can still miss important behavior or assert the wrong thing. Quality depends on whether the tests meaningfully validate requirements and catch real failures.",
+    "real_world": "A team may have 95% coverage but still miss a bug in a rarely used payment path because the tests only executed code without checking the right outcomes. Coverage is a signal, not proof of correctness.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is one example of a test that increases coverage but adds little value?"
+   },
+   {
+    "question": "Why should tests be independent from each other?",
+    "answer": "Tests should not depend on the order they run or on data created by other tests. Independence makes failures easier to diagnose and lets test runners execute tests in any order or in parallel. If one test changes shared state, another test may fail for the wrong reason. Independent tests are more reliable and less fragile.",
+    "real_world": "A suite may pass on one machine and fail on another because one test deletes records that a later test expects. That kind of hidden dependency makes CI results hard to trust.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How can shared databases or global variables break test independence?"
+   },
+   {
+    "question": "What is the difference between a test runner and a testing framework?",
+    "answer": "A testing framework provides the structure for writing tests, such as assertions, setup, and test organization. A test runner discovers tests and executes them, then reports the results. Some tools do both, which is why the terms are often mixed together. The distinction matters when choosing tools or debugging how tests are executed.",
+    "real_world": "A team may write tests in one framework but use a separate CI step to run them and collect reports. Knowing which part is failing helps you tell whether the problem is in the test code or in the execution environment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What features would you expect from a good test runner?"
+   },
+   {
+    "question": "What is a boundary value in testing?",
+    "answer": "A boundary value is an input at the edge of an allowed range, like the minimum, maximum, or just outside it. Bugs often happen at boundaries because code handles special cases differently there. Testing boundaries helps catch off-by-one and validation mistakes. It is one of the easiest ways to find errors with a small number of tests.",
+    "real_world": "If a password field requires 8 to 64 characters, you should test 7, 8, 64, and 65 characters. This often reveals validation logic that accepts too much or rejects valid input.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What boundary values would you choose for an age field that allows 18 to 120?"
+   },
+   {
+    "question": "What is setup and teardown in testing?",
+    "answer": "Setup creates the state a test needs before it runs, and teardown cleans up after it finishes. This may include opening and closing resources, creating temporary data, or resetting configuration. Good setup/teardown keeps tests isolated and prevents resource leaks. If setup is too complex, it can make tests hard to understand, so it should stay as small as possible.",
+    "real_world": "A test that opens a database connection or temporary file should close it afterward so later tests do not fail or exhaust resources. In CI, missing teardown can leave behind data and make later runs unstable.",
+    "code_lang": "python",
+    "code": "def setup_function():\n    global temp\n    temp = []\n\ndef teardown_function():\n    temp.clear()\n",
+    "follow_up": "What problems can happen if teardown does not run?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide whether a flaky test is a test problem or a product bug?",
+    "answer": "A flaky test fails intermittently without a code change, so the first step is to look for nondeterminism in the test setup, timing, shared state, or external dependencies. If the failure reproduces reliably outside the test, it is more likely a product bug; if it disappears with retries or under debugging, the test is usually too brittle. The practical fix is to remove timing assumptions, isolate state, and make the test deterministic before trusting its signal again.",
+    "real_world": "Flaky tests waste time because developers stop trusting the suite and start ignoring failures. In CI, they can also block merges for hours while the real issue is just test instability.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the most common causes of test flakiness in CI?"
+   },
+   {
+    "question": "When would you prefer a fake over a mock in a test suite?",
+    "answer": "Use a fake when you want a lightweight implementation of a dependency that behaves like the real thing in a limited way, such as an in-memory repository or stub mail service. Use a mock when the main thing you need to verify is interaction, like whether a collaborator was called with specific arguments. Fakes usually make tests easier to read and less brittle, while mocks can over-specify implementation details if used too broadly.",
+    "real_world": "Teams often use an in-memory database fake for service tests to keep them fast and deterministic. But if the production code depends on transaction behavior or SQL-specific queries, that fake can hide real integration issues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide between a fake and a real dependency in an integration test?"
+   },
+   {
+    "question": "How do you test code that depends on time or dates without making the tests brittle?",
+    "answer": "You should avoid using the real system clock directly in most tests because it makes outcomes depend on when the test runs. A common approach is to inject a clock or time provider and control it in tests, or to freeze time through test utilities where appropriate. This keeps assertions focused on business rules, like expiration or scheduling, instead of on wall-clock timing.",
+    "real_world": "This matters in billing, token expiration, and scheduled jobs, where off-by-one-day bugs often only show up around midnight, month-end, or daylight saving changes. Teams that hardcode current time into tests often get failures they cannot reproduce locally.",
+    "code_lang": "python",
+    "code": "def is_expired(now, expires_at):\n    return now >= expires_at\n\n# test\nassert is_expired(10, 10) is True\nassert is_expired(9, 10) is False",
+    "follow_up": "What problems can still happen even if you inject a clock?"
+   },
+   {
+    "question": "What trade-offs do you make when choosing between test isolation and testing the whole workflow end to end?",
+    "answer": "Isolation makes tests faster, easier to debug, and less likely to fail for unrelated reasons. End-to-end tests give higher confidence that the full stack works together, but they are slower and more fragile because many components can fail. In practice, teams usually keep most tests isolated and use a smaller number of end-to-end tests for critical paths and integration risks.",
+    "real_world": "A checkout flow might have many isolated tests for pricing, shipping, and validation, plus a few full-flow tests that go through the UI and payment integration. If the suite leans too hard on end-to-end tests, failures become expensive to triage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide which user flows deserve end-to-end coverage?"
+   },
+   {
+    "question": "How would you design tests for code that makes network calls to an external API?",
+    "answer": "You usually want to separate your code’s logic from the network boundary and test them differently. Unit tests can verify request building, response parsing, and error handling with controlled responses, while a smaller number of integration tests can hit a sandbox or contract test endpoint. The key trade-off is realism versus speed and reliability, since real network tests are slower and can fail for reasons unrelated to your code.",
+    "real_world": "Payment and shipping integrations often fail because of auth changes, rate limits, or vendor outages, not because the business logic is wrong. Good tests catch your handling of these failures without making the whole suite depend on a live third-party service.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should you assert in a test for an HTTP client besides the returned data?"
+   },
+   {
+    "question": "What is a contract test, and how is it different from an integration test?",
+    "answer": "A contract test checks that two systems agree on the shape and meaning of the data exchanged between them. It is narrower than a full integration test because it focuses on the interface contract, not on end-to-end behavior across multiple real components. Contract tests are useful when services evolve independently and you want to catch breaking API changes before deployment.",
+    "real_world": "In a microservices setup, one service may publish an event that several consumers rely on. Contract tests help catch a payload change before it breaks downstream consumers in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would a contract test not be enough to protect against integration failures?"
+   },
+   {
+    "question": "How do you avoid brittle tests when checking generated output like JSON or HTML?",
+    "answer": "Brittle tests often compare the entire string, which fails when harmless formatting or field ordering changes. A better approach is to parse the output and assert only on the meaningful fields or structure, or compare against a normalized representation. That keeps the test focused on behavior rather than incidental formatting.",
+    "real_world": "This comes up in API testing when a response object gains a new field or reorders keys. Teams that assert exact text often break tests for changes that do not affect clients.",
+    "code_lang": "javascript",
+    "code": "const body = JSON.parse(responseText);\nexpect(body.user.id).toBe(42);\nexpect(body.user.active).toBe(true);",
+    "follow_up": "When is a snapshot test useful, and when is it a bad fit?"
+   },
+   {
+    "question": "What makes a good bug regression test after a production incident?",
+    "answer": "A good regression test reproduces the exact failure mode that caused the incident and fails for the same reason the bug happened. It should be small, deterministic, and placed as close as possible to the layer where the defect occurred so it is fast and stable. The goal is not to test everything around the bug, but to create a lasting guardrail so the same issue cannot reappear unnoticed.",
+    "real_world": "After a payment rounding error or duplicate order bug, teams often add a focused regression test that exercises the bad input or state transition. That test becomes part of the permanent safety net for future refactors.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you keep regression tests from turning into a large, slow collection of one-off cases?"
+   },
+   {
+    "question": "How do you know if a test suite is too slow, and what would you do about it?",
+    "answer": "A suite is too slow when developers start avoiding it, running only part of it, or ignoring feedback because the turnaround time is disruptive. Common fixes include moving slow checks to a smaller set of targeted tests, reducing setup cost, parallelizing safely, and removing redundant cases. The trade-off is always between coverage and feedback speed, so you want the fastest suite that still catches the failures that matter.",
+    "real_world": "In CI, long-running tests can stretch a simple code review into a multi-hour wait, which slows releases and encourages risky shortcuts. Local developer workflows suffer too when the only feedback loop takes several minutes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of tests are usually worth keeping even if they are slower?"
+   },
+   {
+    "question": "How do you decide what belongs in a smoke test suite versus a full regression suite?",
+    "answer": "A smoke suite should answer, “Is the build basically usable?” so it stays small, fast, and focused on the highest-value paths. Regression tests are broader and protect against known failures and likely breakpoints across features. In practice, I keep smoke tests around critical startup, login, and one core business flow, then let regression cover deeper permutations and edge cases. The trade-off is speed and signal versus completeness.",
+    "real_world": "This matters in CI after every merge: a slow smoke suite delays feedback, while a weak one lets obviously broken builds reach deeper test stages or staging. Teams often use it as the gate before running the longer pipeline.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose the exact smoke tests for a payment flow?"
+   },
+   {
+    "question": "When a test fails only in CI and not locally, how would you debug it?",
+    "answer": "I’d first look for environment differences: timing, parallelism, locale, timezone, filesystem, network, and dependency versions. Then I’d reproduce the CI conditions as closely as possible and inspect logs, seed data, and any hidden ordering dependencies. If the failure is timing-related, I’d reduce randomness and wait conditions rather than adding arbitrary sleeps. The goal is to identify whether the test is non-deterministic or the production code assumes something the CI environment does not guarantee.",
+    "real_world": "This comes up constantly when a suite passes on a developer laptop but fails on a shared runner. Left unresolved, it erodes trust in the pipeline and causes people to ignore real failures.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What clues tell you the issue is test order dependency rather than an application bug?"
+   },
+   {
+    "question": "What is a parameterized test, and when is it better than writing separate tests?",
+    "answer": "A parameterized test runs the same logic against multiple inputs and expected outputs. It’s useful when the behavior is the same but the data varies, because it reduces duplication and makes gaps in cases easier to spot. Separate tests are better when each case needs distinct setup, assertions, or failure messages. The trade-off is readability versus reuse: too many parameters can hide intent, but well-chosen cases keep the suite compact.",
+    "real_world": "Teams use this for validation rules, parsing, and business logic with many input combinations. It helps prevent “we tested one example, so we assumed the rest were fine.”",
+    "code_lang": "python",
+    "code": "@pytest.mark.parametrize(\n    \"value,expected\",\n    [(1, True), (2, True), (3, False)]\n)\ndef test_is_even(value, expected):\n    assert is_even(value) == expected",
+    "follow_up": "When would you avoid parameterizing a test even if the inputs look similar?"
+   },
+   {
+    "question": "What is test data management, and why can bad test data make a suite unreliable?",
+    "answer": "Test data management is how you create, isolate, reset, and version the data your tests depend on. Bad data management causes tests to pass for the wrong reasons, fail because of leftovers from other tests, or become impossible to reproduce. Good practice is to keep fixtures minimal, deterministic, and scoped to the test or test run. In shared environments, cleanup and uniqueness matter because data collisions can create false failures.",
+    "real_world": "This is a common problem in integration suites that hit a real database. One test leaves behind state and another test suddenly fails only on the full run, not when executed alone.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure fixtures to keep database tests isolated without making them too slow?"
+   },
+   {
+    "question": "What is a test pyramid, and what trade-offs does it imply for a real project?",
+    "answer": "The test pyramid says you should have many fast unit tests, fewer integration tests, and even fewer end-to-end tests. It reflects the trade-off that lower-level tests are cheaper and more diagnostic, while higher-level tests are slower but validate wiring and workflow. In a real project, you usually don’t follow it rigidly; you balance it based on risk, architecture, and failure cost. If your service is integration-heavy, you may need more contract and integration tests than the classic pyramid suggests.",
+    "real_world": "A team shipping a backend API often finds that most bugs are caught in unit and service-level tests, while a small number of end-to-end tests protect the most critical user journeys. This keeps feedback fast without losing confidence in the system.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would a healthy balance look like for a monolith versus a microservices system?"
+   },
+   {
+    "question": "How do you test code that uses randomness without making the tests meaningless?",
+    "answer": "The key is to separate the random source from the behavior you want to verify. In tests, you either inject a deterministic seed or replace the random generator with controlled values so the behavior is reproducible. You still want to verify invariants across many cases, but not by depending on uncontrolled chance. The trade-off is realism versus repeatability; tests should prove the logic, not the quality of the random number generator.",
+    "real_world": "This matters in recommendation sampling, shuffling, backoff, and simulation code. If randomness is left uncontrolled, failures are hard to reproduce and developers stop trusting the test suite.",
+    "code_lang": "javascript",
+    "code": "function pick(items, rand = Math.random) {\n  return items[Math.floor(rand() * items.length)];\n}\n\n// test with rand=0.0 to make selection deterministic\nexpect(pick(['a', 'b'], () => 0)).toBe('a');",
+    "follow_up": "When would you use property-based testing for randomized behavior?"
+   },
+   {
+    "question": "What is property-based testing, and what kind of bugs does it find that example-based tests often miss?",
+    "answer": "Property-based testing checks general properties over many generated inputs instead of a small set of hand-picked examples. It is especially good at finding edge cases, invalid assumptions, and interactions you didn’t think to write explicitly. For example, you might test that sorting preserves elements and produces an ordered result, rather than checking one specific list. The trade-off is that failures can be less obvious to interpret, so you need good shrinking and clear properties.",
+    "real_world": "This is useful for parsers, serializers, validators, and algorithms where input space is large. It often catches issues that only appear with unusual combinations of values, lengths, or types.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a good property, and what makes a property too weak?"
+   },
+   {
+    "question": "How do you test asynchronous code or race conditions without adding arbitrary sleeps?",
+    "answer": "You want to control the synchronization points instead of waiting blindly. That means using hooks, fakes, or test schedulers to advance work deterministically and to observe when tasks start and finish. Arbitrary sleeps make tests slower and still flaky because they assume timing instead of causality. The hard part is designing the code so concurrency boundaries are injectable and observable in tests.",
+    "real_world": "This comes up in retries, background jobs, and UI state updates. A sleep-based test may pass on a fast machine and fail under load or in CI, hiding real concurrency bugs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test that two requests do not both update the same record incorrectly?"
+   },
+   {
+    "question": "What is the difference between a stub and a spy, and when would you use each?",
+    "answer": "A stub provides canned behavior so the code under test can run without the real dependency. A spy also records how it was used, so you can assert on interactions after the fact. I’d use a stub when I only care about outputs or state, and a spy when the interaction itself is part of the behavior. The trade-off is that interaction-based tests can become brittle if they assert too much internal detail.",
+    "real_world": "This matters when verifying that a service sent one email, published one event, or called a dependency with the right inputs. Spies are useful, but overusing them can lock tests to implementation rather than behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When does verifying interactions become an anti-pattern?"
+   },
+   {
+    "question": "How do you decide whether to fix a failing test or change the product code when the test exposes unexpected behavior?",
+    "answer": "I’d compare the test to the intended behavior, not just the current implementation. If the test reflects the correct requirement and the product is wrong, the code should change; if the test encodes an incorrect assumption, the test should change. When the expectation is unclear, I’d check product specs, bug reports, and user impact before deciding. The important part is not treating test failures as automatically meaning the test is wrong.",
+    "real_world": "This happens when a refactor changes behavior in a subtle way and the suite catches it. The failure forces the team to decide whether they broke a contract or uncovered outdated test expectations.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you document that decision so the same confusion does not recur in the future?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Mutation testing sounds appealing, but when is it actually worth using and what are its limits?",
+    "answer": "Mutation testing measures whether tests can detect small code changes that preserve compilation but alter behavior. It is useful for critical logic where line or branch coverage looks good but assertions may be weak. The cost is high because it runs many variants of the suite, so teams usually scope it to core modules or run it periodically instead of on every commit. It also produces equivalent mutants that no test can kill, so the signal needs human interpretation.",
+    "real_world": "Teams often discover that a heavily covered pricing or authorization module still allows mutants to survive because tests only check happy-path outputs. Running mutation testing nightly on a few high-risk packages gives much better ROI than enabling it across the entire monorepo.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose which modules to target first for mutation testing?"
+   },
+   {
+    "question": "How would you test exactly-once or idempotent behavior in a distributed system when the underlying infrastructure is only at-least-once?",
+    "answer": "I would define the observable guarantee first, usually that repeated delivery does not create repeated side effects, then test duplicate delivery, retries after partial failure, and out-of-order events. The test needs a controllable fault point between processing and acknowledgement so you can force redelivery. Assertions should be on durable state and external side effects, not just return values. In practice, idempotency keys, dedup tables, or compare-and-swap updates are what make these tests pass.",
+    "real_world": "A payment or order service can charge twice if the consumer crashes after writing state but before acking the message. Good QA here recreates broker redelivery and process restarts, not just normal retries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure points would you inject to distinguish duplicate processing from lost processing?"
+   },
+   {
+    "question": "What does branch coverage miss, and when do you care about condition or MC/DC coverage instead?",
+    "answer": "Branch coverage tells you whether each decision took true and false paths, but it can still miss bugs where multiple boolean terms interact. Condition coverage checks individual terms, and MC/DC goes further by showing each condition can independently affect the decision outcome. That matters in dense logic like safety rules, permissions, or pricing where short-circuiting and combined predicates hide defects. The trade-off is much higher test design effort and more complex maintenance.",
+    "real_world": "A permissions gate like `isAdmin || (isOwner && isActive)` can hit both branch outcomes while never proving that `isOwner` or `isActive` independently matter. In regulated or safety-critical systems, teams often need stronger evidence than branch coverage alone.",
+    "code_lang": "javascript",
+    "code": "function allow(u) {\n  return u.isAdmin || (u.isOwner && u.isActive)\n}\n\n// Branch coverage can hit true and false overall\n// without isolating each boolean's effect.",
+    "follow_up": "Can you give a concrete predicate where 100% branch coverage still misses a bug?"
+   },
+   {
+    "question": "How would you make a large parallel test suite deterministic when tests share a database or filesystem?",
+    "answer": "I try to eliminate shared mutable state first: isolated schemas or databases per worker, unique temp directories, and generated resource names. If full isolation is too expensive, use transactional rollbacks or snapshots, but be careful because background jobs and separate connections can escape the transaction. Determinism also depends on controlling clocks, random seeds, locale, and test execution order. Parallel speedups disappear quickly if cleanup is unreliable or workers contend on a single bottleneck.",
+    "real_world": "A suite may pass serially but fail under 16 CI workers because tests reuse the same user email, temp path, or sequence values. The failures look random until you map them to shared resources and worker scheduling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of database behavior make transaction-per-test isolation unreliable?"
+   },
+   {
+    "question": "How do you test a migration safely when it changes both schema and application behavior on a live system?",
+    "answer": "I treat schema changes as compatibility exercises across versions: old code with new schema, new code with old schema if applicable, and rolling deployment states in between. Tests should cover backfills, read/write behavior during dual-format periods, performance of the migration query, and rollback limits if the change is irreversible. For large tables, correctness is not enough; you need to verify lock behavior, batch size, and replication impact. The safest migrations are expand-and-contract, with observability around drift while both formats exist.",
+    "real_world": "A migration that rewrites millions of rows can pass locally yet stall production by locking hot tables or saturating replicas. Teams often catch this only if they test on production-like volume and deployment sequencing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you verify before declaring a backfill complete and removing support for the old format?"
+   },
+   {
+    "question": "What is the value of metamorphic testing, and when would you use it instead of checking exact expected outputs?",
+    "answer": "Metamorphic testing is useful when exact outputs are hard to know, but relationships between outputs should hold under controlled input transformations. Instead of asserting one answer, you assert invariants like sorting being permutation-invariant, a parser being stable under harmless whitespace changes, or a compression-decompression round trip preserving data. It finds bugs in systems with huge input spaces or no practical oracle. The risk is choosing weak relations that pass even when behavior is wrong.",
+    "real_world": "Search ranking, optimization, and ML-heavy systems often lack a simple expected-output oracle for every input. Teams still catch regressions by asserting relationships such as monotonicity, symmetry, or round-trip consistency.",
+    "code_lang": "python",
+    "code": "def test_sort_permutation_invariant():\n    xs = [3, 1, 2, 1]\n    ys = [1, 3, 1, 2]\n    assert sorted(xs) == sorted(ys)\n",
+    "follow_up": "What makes a metamorphic relation strong enough to be worth maintaining?"
+   },
+   {
+    "question": "How would you test timeout, retry, and circuit-breaker behavior without turning the suite into a slow timing-dependent mess?",
+    "answer": "Use a controllable clock and a deterministic transport or dependency stub that can block, fail, or recover on demand. The key is to assert state transitions and retry counts rather than wall-clock durations, except in a few end-to-end checks. I also test jittered backoff by verifying bounds or monotonic increase, not exact sleep values. For circuit breakers, cover opening thresholds, half-open probes, and recovery under concurrency because races there are common.",
+    "real_world": "Production incidents often come from retries amplifying an outage or from breakers never closing after recovery. If tests use real sleeps, they become both slow and flaky, so teams inject schedulers or clocks to simulate minutes in milliseconds.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What race conditions do you expect when many callers hit a half-open circuit breaker at once?"
+   },
+   {
+    "question": "A lot of teams chase high pass rates, but how would you measure the actual effectiveness of a mature test suite?",
+    "answer": "I would look at defect escape rate, time to detect regressions, flaky failure rate, change failure rate, and how often tests block safe refactors versus catch real bugs. Another strong signal is historical fault detection: when bugs were introduced, which layer caught them, and how long after commit. Coverage is still a diagnostic, but effectiveness is about signal-to-noise and risk reduction per minute of feedback. The best metrics are segmented by suite type and criticality, not rolled into one vanity number.",
+    "real_world": "A suite with 99.9% green runs can still be poor if it misses schema compatibility bugs and frequently cries wolf on UI timing. Teams improve faster when they measure escaped incidents and flaky reruns rather than only total tests executed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you instrument CI to distinguish useful failures from flaky or redundant ones?"
+   },
+   {
+    "question": "How do you test event-driven systems for ordering guarantees and eventual consistency without making the assertions too loose?",
+    "answer": "Start by documenting the real guarantee: total order, per-key order, or no order guarantee with eventual convergence. Tests should then drive reordering, duplication, and delay, and assert the final state plus any monotonic invariants during convergence. Avoid assertions like 'updated within 2 seconds' unless the SLA is the requirement; use polling with a clear terminal condition or observable checkpoints. If correctness depends on sequence numbers or version checks, test stale-event rejection explicitly.",
+    "real_world": "A profile service that consumes updates may process an older event after a newer one and silently roll data back. This only appears under partition or broker replay, so ordered happy-path tests miss it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If the system only guarantees per-key ordering, what tests would you avoid because they assert a stronger property than production provides?"
+   },
+   {
+    "question": "What are the main pitfalls of snapshot or golden-file testing, and how do you keep it useful at scale?",
+    "answer": "Snapshot tests are good for broad structural regressions, but they decay when snapshots are large, unstable, or updated blindly. I keep them focused, normalize nondeterministic fields, and prefer semantic assertions for critical behavior instead of treating the entire output as truth. Reviewability matters: small snapshots grouped by intent are much better than megabyte diffs that nobody reads. For golden files, version them carefully and regenerate through explicit tooling so changes are intentional.",
+    "real_world": "Teams often end up with thousands of UI or API snapshots that always get bulk-approved, turning failures into noise. The useful setups are the ones where a changed snapshot is rare, small, and clearly tied to a user-visible contract.",
+    "code_lang": "typescript",
+    "code": "expect(renderUser(user)).toMatchInlineSnapshot(`\n<div>\n  <span>Ada</span>\n</div>\n`)\n",
+    "follow_up": "When would you replace a snapshot test with a smaller set of explicit assertions?"
+   },
+   {
+    "question": "How would you test a concurrent component for linearizability or other correctness guarantees, not just that it seems to work under load?",
+    "answer": "I’d separate performance testing from correctness testing. For correctness, I’d generate concurrent histories, record invocation and completion times, then check whether the observed results can be explained by a valid sequential history for the object’s spec; that is the core of linearizability testing. Stress alone rarely finds the interesting interleavings, so I’d combine schedule perturbation, repeated runs, and model-based checking of histories. The trade-off is cost: these checks can become expensive as the number of operations grows, so they’re usually targeted at critical primitives like queues, locks, and caches.",
+    "real_world": "A lock-free queue can pass millions of ops per second in benchmarks and still lose or duplicate items under one rare interleaving. Teams often run linearizability checks in nightly builds on reduced workloads to catch those bugs before they become impossible-to-reproduce production incidents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of concurrent bugs can linearizability testing miss?"
+   },
+   {
+    "question": "Can you explain the role of test oracles, and what you do when there isn’t a simple expected output to assert against?",
+    "answer": "A test oracle is the mechanism that decides whether the result is correct. When there’s no exact expected value, I use weaker but meaningful oracles: invariants, reference implementations, differential testing against another system, metamorphic relations, or domain constraints like monotonicity or conservation. The key is to choose an oracle that is cheaper to trust than the system under test. Weak oracles can still miss bugs, so I prefer layering several of them rather than pretending we have exact assertions when we don’t.",
+    "real_world": "This matters for compilers, search ranking, optimization engines, and ML-adjacent systems where exact outputs are hard to pin down. Differential tests often catch real regressions when a refactor changes behavior that no one had a precise expected file for.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test a parser or serializer when the input space is huge and malformed inputs matter?"
+   },
+   {
+    "question": "What is differential testing, and when is it more effective than writing expected-value tests?",
+    "answer": "Differential testing runs the same inputs through multiple implementations and flags disagreements. It works well when you have a trusted old version, an independent implementation, or a reference library, and the input space is too large to hand-author expected outputs. It’s especially strong at finding edge cases because the generator can explore many weird inputs cheaply. The main risk is shared bugs or spec ambiguities, so disagreements still need triage against the intended behavior.",
+    "real_world": "Teams use this during rewrites, database engine upgrades, and protocol parser changes. A new implementation may match happy-path examples but diverge on rare Unicode, overflow, or ordering cases that differential tests expose quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What do you do if both implementations disagree but the specification is ambiguous?"
+   },
+   {
+    "question": "How do you test feature flags safely, especially when combinations of flags explode and old flags tend to linger?",
+    "answer": "I test at three levels: the flag evaluation logic itself, a small set of representative combinations for risky interactions, and production safety checks like canary metrics or shadow traffic. Exhaustively testing all combinations usually does not scale, so I classify flags by interaction risk and lifecycle, then pairwise or risk-based selection covers most defects. I also treat flag removal as a required follow-up, because stale flags double the state space and keep dead paths alive in tests. The important trade-off is between combinatorial coverage and suite size.",
+    "real_world": "Long-lived flags often cause outages when one path stops receiving realistic test coverage. A team may ship safely behind a canary, but six months later an old emergency flag is toggled and activates code no one has exercised since the original rollout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure CI so flag-related tests stay useful without making every PR prohibitively slow?"
+   },
+   {
+    "question": "How would you test a cache, and what bugs do teams usually miss beyond simple hit and miss cases?",
+    "answer": "I’d test semantic correctness first: cache hits return equivalent data, invalidation works, TTL boundaries behave as intended, and error cases do not poison the cache unless that is explicit. Then I’d test concurrency issues like duplicate fills, stale reads during refresh, and stampedes when many requests miss at once. Performance matters too, so I’d measure hit ratio and backend load under realistic key distributions, not just uniform random access. The common miss is treating the cache as a pure optimization when it actually changes consistency, failure, and load-shedding behavior.",
+    "real_world": "A cache bug often shows up as a database melt-down rather than a wrong unit-test assertion. For example, if single-flight fill is broken, one expired hot key can trigger thousands of concurrent backend requests and take down a dependency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you simulate cache stampede conditions in a repeatable test?"
+   },
+   {
+    "question": "When testing systems that emit logs, metrics, or traces, what do you assert, and what do you avoid asserting?",
+    "answer": "I assert observability contracts, not incidental formatting. That means checking stable fields like event type, severity, metric name, labels that drive alerts, or whether a trace spans a critical boundary, while avoiding brittle assertions on timestamps, ordering across threads, or full rendered log lines. For metrics, I care that the right counters, histograms, or error dimensions are emitted under the right conditions. The trade-off is keeping tests resilient to harmless instrumentation changes while still protecting dashboards, alerting, and forensic value.",
+    "real_world": "A refactor that renames a metric label or drops an error tag can silently break alerts even though the product still works. Good tests catch observability regressions that otherwise only show up during an incident when the team realizes the dashboard went dark.",
+    "code_lang": "python",
+    "code": "def test_emits_error_metric(metrics, service):\n    service.handle_bad_request()\n    samples = metrics.get(\"http_requests_total\")\n    assert any(\n        s.labels[\"status\"] == \"400\" and s.labels[\"route\"] == \"/items\"\n        for s in samples\n    )",
+    "follow_up": "How would you test high-cardinality label mistakes before they hit production costs?"
+   },
+   {
+    "question": "What is delta debugging, and how can it help when you have a failure that only happens with a huge input or a long sequence of actions?",
+    "answer": "Delta debugging systematically minimizes a failing input or action sequence while preserving the failure. Instead of guessing which part matters, you repeatedly remove chunks and keep the smallest reproducer that still triggers the bug. That is powerful for parser crashes, state-machine failures, and flaky workflows because it turns an unmanageable case into something an engineer can reason about. The trade-off is that the reducer needs a reliable enough pass/fail signal, so it is harder when the bug is highly nondeterministic.",
+    "real_world": "Teams use reducers for compiler crashes, browser bugs, and large API workflows. A production request payload of megabytes may reduce to a tiny malformed field combination that immediately reveals the parser assumption that broke.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you adapt reduction when the failure is flaky rather than deterministic?"
+   },
+   {
+    "question": "How do you approach test selection and impact analysis in a monorepo so CI stays fast without missing regressions?",
+    "answer": "I start with dependency-aware selection: map changed files to the tests that transitively depend on them, then layer in always-run suites for critical paths and a fallback for uncertain mappings. Static analysis is fast but can miss runtime dependencies; dynamic coverage-based mapping is more precise but expensive to maintain and easy to stale if instrumentation drifts. For safety, I watch false-negative rates by occasionally running broader suites and comparing. The hard part is accepting that selective testing is a risk-management system, not a proof of safety.",
+    "real_world": "In large monorepos, running everything on every change can turn feedback into hours, so developers stop paying attention. But overly aggressive skipping can let a shared library change break distant services that the dependency graph failed to capture.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would tell you your test impact analysis is missing too many relevant tests?"
+   },
+   {
+    "question": "What is the difference between stress, load, spike, and soak testing, and what distinct failure modes is each trying to expose?",
+    "answer": "Load testing checks expected traffic levels and whether latency, throughput, and resource use stay within target. Stress testing pushes beyond capacity to see how the system fails and recovers; spike testing looks at sudden changes in traffic or concurrency; soak testing runs for a long time to find leaks, fragmentation, counter rollover, or degradation over time. They are complementary because many systems behave well at steady-state load but fail during warm-up, backlog growth, or long-running resource exhaustion. A mature QA strategy uses the smallest test that can expose the class of failure you care about.",
+    "real_world": "A service may pass a one-hour load test and still fail after 18 hours because of a file descriptor leak, or collapse during a five-second traffic surge because autoscaling lags. Those are different operational risks and require different test shapes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design pass and fail criteria for these tests so they reflect user impact rather than just infrastructure metrics?"
+   },
+   {
+    "question": "How would you test a rate limiter, especially around fairness, clock behavior, and distributed deployments?",
+    "answer": "I’d test the core algorithm with a controllable clock, focusing on boundary behavior at window edges, burst allowance, refill behavior, and whether rejected requests become accepted when they should. Then I’d test fairness and correctness under concurrency, because shared counters can overshoot or starve tenants depending on contention and partitioning. In distributed setups, I’d explicitly test skew, replica lag, and what consistency model the limiter provides, since exact global limits are often traded for availability and latency. The key is to assert the contract the business actually needs, not an idealized perfect quota.",
+    "real_world": "Rate limiters frequently fail at boundaries: users get double the intended allowance at fixed-window edges, or legitimate traffic is blocked because clocks drift across nodes. In multi-tenant systems, fairness bugs can turn one noisy customer into an outage for others.",
+    "code_lang": "python",
+    "code": "clock.set(0)\nassert allow(\"u\") is True\nassert allow(\"u\") is True\nassert allow(\"u\") is False\nclock.set(60)\nassert allow(\"u\") is True",
+    "follow_up": "What changes in your test strategy if the limiter uses token bucket versus fixed window or sliding window?"
+   }
+  ]
+ }
+}

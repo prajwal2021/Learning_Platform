@@ -1,0 +1,477 @@
+{
+ "slug": "airflow",
+ "name": "Apache Airflow and data pipelines",
+ "category": "Data and AI",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Apache Airflow used for in a data pipeline?",
+    "answer": "Airflow is used to define, schedule, and monitor workflows made of tasks with dependencies. It is not the compute engine itself; it orchestrates work like running SQL, moving files, or triggering jobs in other systems. You use it when a pipeline has steps that need ordering, retries, scheduling, and visibility.",
+    "real_world": "A team uses Airflow to run a daily ingestion job, then transform the data, then load a warehouse table. If the extract step fails, Airflow can retry it and prevent downstream tasks from running.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between orchestration and execution in Airflow?"
+   },
+   {
+    "question": "What is a DAG in Airflow?",
+    "answer": "A DAG is a Directed Acyclic Graph: the definition of a workflow and the dependencies between its tasks. “Directed” means the order matters, and “acyclic” means you cannot create a loop in the task dependencies. In Airflow, a DAG file describes the pipeline structure, schedule, and task relationships.",
+    "real_world": "If a pipeline needs to run extract before transform before load, those dependencies are encoded in the DAG. A cycle in the task graph would make the workflow impossible to schedule correctly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you define task dependencies in a DAG?"
+   },
+   {
+    "question": "What is the difference between a DAG and a task?",
+    "answer": "A DAG is the whole workflow definition, while a task is one step inside that workflow. The DAG controls when and how the tasks run together, and each task usually represents one unit of work such as a Python function, SQL statement, or shell command. A single DAG can contain many tasks with dependency rules between them.",
+    "real_world": "In a daily ETL pipeline, one DAG may contain tasks for extracting from an API, cleaning data, loading a warehouse, and sending a success alert. When one task fails, Airflow shows exactly which step needs attention.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are operators and how do they relate to tasks?"
+   },
+   {
+    "question": "What is an operator in Airflow?",
+    "answer": "An operator is a template for a task that tells Airflow what kind of work to do. For example, there are operators for running Python code, Bash commands, or SQL statements. When you put an operator in a DAG, Airflow creates a task instance from it for each run.",
+    "real_world": "A junior engineer might use a Bash operator to call a script or a Python operator to run transformation code. Choosing the right operator makes the pipeline easier to read and maintain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use a Python operator versus a Bash operator?"
+   },
+   {
+    "question": "What does it mean for a DAG to be scheduled?",
+    "answer": "Scheduling means Airflow decides when a DAG should create new runs based on its timetable. This can be time-based, like every day, or manually triggered. Scheduling does not mean the tasks are always running; it means Airflow creates and tracks the workflow run at the right time.",
+    "real_world": "A sales report pipeline may need to run every morning after the warehouse has received the previous day’s data. If the schedule is wrong, reports can be late or include incomplete data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a scheduled DAG run and a manually triggered run?"
+   },
+   {
+    "question": "What is task dependency in Airflow, and how do you set it?",
+    "answer": "Task dependency is the order in which tasks should run. You set it by linking tasks so one must finish before another starts. This matters because downstream tasks should not run until upstream work is successful and complete.",
+    "real_world": "A load task should not write to the warehouse before the extract task finishes. If dependencies are missing, Airflow may run steps in the wrong order and produce bad data.",
+    "code_lang": "python",
+    "code": "from airflow.operators.empty import EmptyOperator\n\nstart = EmptyOperator(task_id=\"start\")\nend = EmptyOperator(task_id=\"end\")\nstart >> end\n",
+    "follow_up": "What happens if an upstream task fails?"
+   },
+   {
+    "question": "What is the Airflow metadata database used for?",
+    "answer": "The metadata database stores Airflow’s state: DAG runs, task instances, schedules, connections, variables, and execution history. Airflow uses it to know what has run, what is running, and what failed. It is central to Airflow’s operation, so if it is unhealthy, scheduling and tracking can break.",
+    "real_world": "If the metadata database is unavailable, the scheduler may stop creating new runs and the web UI may not show fresh task state. Teams often monitor this database as part of Airflow reliability.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kind of information would you store in Variables versus Connections?"
+   },
+   {
+    "question": "What is a common beginner mistake when writing Airflow DAGs?",
+    "answer": "A common mistake is putting heavy work directly in the DAG file instead of inside tasks. The DAG file should define the workflow quickly; if it does expensive computation at parse time, the scheduler can slow down or fail. Another common mistake is not separating code that defines the pipeline from code that does the actual data processing.",
+    "real_world": "If a DAG imports a large dataset or makes an API call at import time, Airflow may repeatedly re-parse a slow file and miss schedules. This often shows up as a DAG that appears intermittently in the UI or causes scheduler lag.",
+    "code_lang": "python",
+    "code": "# Bad: runs when Airflow parses the DAG file\nrows = expensive_query()\n\n# Good: run inside a task\ndef load_data():\n    expensive_query()\n",
+    "follow_up": "How would you structure code so the DAG file stays lightweight?"
+   },
+   {
+    "question": "What is a task instance in Airflow, and how is it different from a task?",
+    "answer": "A task is the code definition in the DAG, while a task instance is one конкретe run of that task at a specific execution date and with a specific state. This matters because the same task can have many instances over time, each tracked separately as success, failed, running, or queued. When you debug Airflow, you usually investigate task instances, not just the task definition.",
+    "real_world": "A daily ETL job may have one task definition, but each day’s run creates a new task instance. If yesterday failed, you can rerun or inspect only that instance without changing the DAG code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does Airflow decide whether a task instance can run?"
+   },
+   {
+    "question": "What is an Airflow connection, and why would you use one?",
+    "answer": "A connection stores connection details for an external system, like a database, S3, or a REST API, so you do not hardcode credentials in DAG code. It makes DAGs easier to move between environments and reduces security risk. Operators and hooks often read connection information by connection ID.",
+    "real_world": "A team might use one Postgres connection in development and a different one in production, while keeping the DAG code identical. If credentials change, they update Airflow config instead of editing many DAGs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a connection different from an Airflow variable?"
+   },
+   {
+    "question": "What is an Airflow hook?",
+    "answer": "A hook is a Python interface for connecting to an external service and doing low-level operations like opening a database connection or listing files in storage. Operators often use hooks internally, while DAG authors may use hooks directly for custom logic. They help keep integration code reusable and consistent.",
+    "real_world": "If you need to query Snowflake or upload a file to S3 from a Python task, a hook gives you the connection handling and client setup. That avoids repeating authentication code in every task.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a hook over an operator?"
+   },
+   {
+    "question": "What is the difference between an Airflow variable and a connection?",
+    "answer": "A variable is for general configuration values, like a target schema name or feature flag, while a connection is for credentials and endpoint details for external systems. Variables are not meant to replace secure credential storage. Use variables for non-secret runtime configuration and connections for service access.",
+    "real_world": "A pipeline may read a variable to choose which table to load, but use a connection to authenticate to the warehouse. Mixing the two makes pipelines harder to secure and maintain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer a variable versus hardcoding a value in the DAG?"
+   },
+   {
+    "question": "What does it mean for a task to be idempotent in Airflow, and why is that important?",
+    "answer": "An idempotent task can run more than once with the same input and produce the same final result without creating duplicates or corruption. This matters because Airflow retries failed tasks, and humans also rerun tasks during incident response. Idempotent design is one of the easiest ways to make pipelines reliable.",
+    "real_world": "A load task that overwrites a partition is safer than one that blindly appends rows, because a retry will not double-count data. Non-idempotent tasks often cause duplicate records after retries or manual reruns.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a database load task idempotent?"
+   },
+   {
+    "question": "What are retries in Airflow, and why do they matter?",
+    "answer": "Retries tell Airflow to automatically run a failed task again a limited number of times before marking it failed. They are useful for transient problems like temporary network issues or upstream service hiccups. The trade-off is that retries can hide flaky code, so repeated failures still need investigation.",
+    "real_world": "A task that calls an API may fail once because of a timeout and succeed on the next attempt. Without retries, a minor outage could break the whole pipeline unnecessarily.",
+    "code_lang": "python",
+    "code": "from airflow import DAG\nfrom airflow.operators.empty import EmptyOperator\nfrom datetime import datetime, timedelta\n\ndag = DAG(\"example\", start_date=datetime(2024,1,1),\n          schedule=None, catchup=False,\n          default_args={\"retries\": 3, \"retry_delay\": timedelta(minutes=5)})\nstart = EmptyOperator(task_id=\"start\", dag=dag)",
+    "follow_up": "What is the difference between retrying a task and clearing a task instance?"
+   },
+   {
+    "question": "What is the difference between `start_date` and `schedule` in Airflow?",
+    "answer": "`start_date` tells Airflow when the DAG becomes eligible to start being scheduled, while `schedule` defines how often it should run. The scheduler uses both, along with catchup settings, to decide which runs to create. A common mistake is expecting `start_date` alone to make a DAG run repeatedly.",
+    "real_world": "If a DAG has a valid schedule but a future `start_date`, no runs will be created yet. Teams often get confused when a DAG looks correct but never starts because the start date is in the wrong timezone or in the future.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if the start date is in the future or changes on every parse?"
+   },
+   {
+    "question": "What does `catchup` do in Airflow?",
+    "answer": "`catchup` controls whether Airflow creates runs for past schedule intervals that were missed while the DAG was paused or newly created. If catchup is enabled, Airflow may backfill a lot of historical runs. If it is disabled, Airflow only creates new runs going forward, which is often simpler for operational pipelines.",
+    "real_world": "A new daily DAG with catchup enabled can suddenly create hundreds of old runs and overload the system. For many reporting jobs, teams disable catchup so the pipeline only processes the latest period.",
+    "code_lang": "python",
+    "code": "from airflow import DAG\nfrom datetime import datetime\n\ndag = DAG(\n    \"daily_report\",\n    start_date=datetime(2024, 1, 1),\n    schedule=\"@daily\",\n    catchup=False,\n)",
+    "follow_up": "When would you want catchup enabled?"
+   },
+   {
+    "question": "What is backfilling in Airflow?",
+    "answer": "Backfilling means running a DAG for past execution dates to process historical data. It is useful when you add a new pipeline or fix a bug and need to regenerate old outputs. The risk is that backfills can be expensive and may duplicate data if the tasks are not designed to be rerun safely.",
+    "real_world": "After fixing a transformation bug, a team may backfill the last month so downstream dashboards are corrected. If the load step is not idempotent, that backfill can create duplicate records instead of repairing them.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is backfilling different from catchup?"
+   },
+   {
+    "question": "What is a sensor in Airflow, and when would you use one?",
+    "answer": "A sensor is a special task that waits for a condition, such as a file appearing, a partition being available, or an upstream workflow finishing. You use sensors when a pipeline depends on an external event rather than just time. The trade-off is that sensors can tie up worker resources if they are not configured carefully.",
+    "real_world": "A file ingestion DAG might wait for a vendor drop file before starting the load. Without a sensor, the job would either fail early or need custom polling logic in the DAG.",
+    "code_lang": "python",
+    "code": "from airflow.sensors.filesystem import FileSensor\n\nwait_for_file = FileSensor(\n    task_id=\"wait_for_file\",\n    filepath=\"/data/incoming/report.csv\",\n    poke_interval=60,\n    timeout=3600,\n)",
+    "follow_up": "What is the risk of using a sensor that checks very frequently?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide when to use a sensor versus a regular task that checks for upstream data readiness?",
+    "answer": "Use a sensor when the DAG should wait for an external condition before continuing, especially if Airflow needs to model that wait explicitly. If the wait can be avoided, a regular task that checks availability and exits quickly is usually cheaper and easier to reason about. Sensors can hold worker resources unless you use a deferrable or reschedule-style approach, so they are not ideal for long waits. The trade-off is between clear orchestration semantics and resource usage.",
+    "real_world": "A file may arrive late in object storage, and a naive polling task can tie up a worker for hours. Teams often switch to a sensor or event-driven trigger to avoid wasting capacity.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a sensor task risky in a busy Airflow cluster?"
+   },
+   {
+    "question": "What is the difference between using XComs and passing data through external storage in Airflow?",
+    "answer": "XComs are for small pieces of metadata between tasks, not for bulk data transfer. For larger payloads, put the data in object storage, a warehouse, or a database, and pass only a reference through Airflow. This keeps the metadata database small and avoids serialization and performance issues. The main trade-off is convenience versus scalability.",
+    "real_world": "A team sometimes uses XCom to pass a file path or partition key, but not the file contents. Pushing large JSON blobs into XCom can slow the scheduler and make debugging harder.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the operational problems if someone stores a large dataset in XCom?"
+   },
+   {
+    "question": "How do task retries interact with idempotency, and what can go wrong if a task is not safe to run twice?",
+    "answer": "Retries assume the task can be run again without causing duplicate side effects. If a task writes rows, sends messages, or creates files non-idempotently, a retry can double-count data or create conflicting outputs. The fix is usually to make writes atomic, deduplicate by logical run key, or use overwrite semantics for the target partition. Retries improve resilience only when the task’s side effects are controlled.",
+    "real_world": "A failed load job may insert the same batch twice after a transient network error. In practice, teams add deduplication keys or load into a staging table first.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a load task so that a retry does not duplicate records?"
+   },
+   {
+    "question": "When would you use TaskFlow-style Python tasks instead of classic operators, and what trade-offs come with that choice?",
+    "answer": "TaskFlow is a good fit when your workflow is Python-heavy and you want clear function-based task definitions and easier passing of small values. Classic operators are often better when you need a mature built-in operator, a very explicit configuration style, or non-Python execution semantics. TaskFlow can feel cleaner, but it still should not be used as a way to move large data between tasks. The trade-off is readability and developer ergonomics versus operator-specific flexibility.",
+    "real_world": "A data team may use TaskFlow for light transformation and branching logic, but still use warehouse or Spark operators for heavy processing. This keeps orchestration code simpler without forcing everything into Python functions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the limitations of using Python tasks for production data processing?"
+   },
+   {
+    "question": "How do you think about scheduling a DAG with cron versus triggering it from another system or event?",
+    "answer": "Cron works well for time-based pipelines where the business logic is tied to a schedule window, like daily partitions. Event or externally triggered runs are better when the upstream system controls readiness, such as a file landing or an API callback. Scheduled DAGs are easier to reason about for data completeness, while event-driven runs can reduce latency. The main trade-off is predictability versus responsiveness.",
+    "real_world": "A warehouse load often runs on a fixed schedule because downstream reporting expects one partition per day. A near-real-time pipeline may trigger on file arrival to avoid waiting for the next cron tick.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can happen if you mix event-driven triggers with a scheduled DAG?"
+   },
+   {
+    "question": "What is a dynamic task mapping, and when is it better than generating tasks in a loop at DAG parse time?",
+    "answer": "Dynamic task mapping creates tasks at runtime based on actual upstream output, which is useful when the number of units to process is not known until execution. Generating tasks in a loop during parsing creates a fixed DAG structure and can make the scheduler work harder if the list is large or changes often. Dynamic mapping keeps the DAG definition stable and avoids parse-time explosion. The trade-off is runtime flexibility versus slightly more complexity in understanding task instances.",
+    "real_world": "If one day has 10 partitions and another has 1,000, dynamic mapping lets the workflow scale with the input. Teams use it for per-file validation, per-table syncs, or per-customer jobs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of downstream tasks become harder to manage when many mapped tasks are created?"
+   },
+   {
+    "question": "How would you debug a DAG that is stuck in the scheduled or queued state but never starts running?",
+    "answer": "First check whether the scheduler is healthy and whether the DAG is actually being parsed without errors. Then look for resource limits such as unavailable workers, pool saturation, concurrency limits, or dependency states that prevent scheduling. It is also important to inspect whether the task is waiting on a sensor or a downstream dependency rather than being truly stuck. The key is to separate parsing, scheduling, queuing, and execution failures.",
+    "real_world": "In production, a DAG may appear broken when the real issue is a saturated pool or a worker deployment outage. On-call often starts by checking scheduler logs and task state counts before touching the code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What Airflow settings or limits commonly prevent tasks from being scheduled?"
+   },
+   {
+    "question": "What is the purpose of pools in Airflow, and when would you use one instead of increasing worker count?",
+    "answer": "Pools limit how many tasks can run concurrently for a shared bottleneck, such as a database, API, or external cluster. They protect downstream systems from overload and let you reserve capacity for more important work. Increasing workers only increases parallelism, which can make the bottleneck worse if the external system cannot handle it. Pools are a traffic-shaping tool, not just a scaling knob.",
+    "real_world": "A team calling a third-party API may need to cap concurrency to avoid rate limits. Another common use is limiting expensive warehouse jobs so they do not saturate compute during business hours.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose between a pool and task-level concurrency settings?"
+   },
+   {
+    "question": "How do you test an Airflow DAG without relying on the full scheduler and production environment?",
+    "answer": "A good test strategy checks that the DAG parses, that task dependencies are correct, and that custom Python logic behaves as expected with unit tests. You can also run individual tasks locally or in a test environment with mocked connections and isolated inputs. This catches import errors, bad templating, and logic bugs before deployment. The trade-off is that unit tests do not fully replace an end-to-end environment test.",
+    "real_world": "Teams usually run DAG parse tests in CI because broken imports can prevent the scheduler from loading a workflow at all. They also test business logic separately so failures are easier to diagnose.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should you mock in an Airflow unit test, and what should you leave real?"
+   },
+   {
+    "question": "How do you handle a pipeline where one task is much slower than the rest and becomes the bottleneck?",
+    "answer": "First confirm whether the slow step is CPU-bound, I/O-bound, or blocked on an external system. Then decide whether to parallelize it, split the input into smaller partitions, move the work to a more suitable engine, or increase concurrency carefully. Airflow should orchestrate the work, but it is often the wrong place to do heavy processing itself. The key trade-off is simpler orchestration versus better throughput and cost control.",
+    "real_world": "A Python task processing a large file may become the critical path for every run. Teams often move that step to Spark or warehouse SQL and keep Airflow focused on coordination and retries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you keep the slow logic in Airflow instead of moving it to another system?"
+   },
+   {
+    "question": "How do Airflow task execution and the scheduler interact, and why can a task be queued but not actually start right away?",
+    "answer": "The scheduler decides when a task is eligible to run, but the executor and available worker capacity decide when it actually starts. A task can be queued because dependencies are met, yet still wait for a free worker, pool slot, or concurrency limit. In practice, you debug both the DAG logic and the runtime limits, because the scheduler alone does not guarantee immediate execution.",
+    "real_world": "This often shows up when a team adds many backfills or a large mapped task fan-out and the UI shows lots of queued tasks. The fix may be in pools or concurrency settings, not in the DAG code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What limits in Airflow can prevent a queued task from starting?"
+   },
+   {
+    "question": "What’s the difference between `depends_on_past` and normal task dependencies, and when would you avoid using it?",
+    "answer": "Normal dependencies control ordering within a single DAG run, while `depends_on_past` requires the same task to succeed in the previous run before the current run can run. It is useful for strictly sequential processing, but it can create a chain reaction where one failure blocks all later runs. I would avoid it unless the business logic truly requires run-to-run continuity, because it reduces resiliency and complicates backfills.",
+    "real_world": "Teams sometimes add it to prevent double-processing daily partitions, then discover one failed day stops the entire pipeline from recovering automatically. It is safer when the task writes partitioned, idempotent outputs and can be rerun independently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you achieve the same protection without blocking all future runs?"
+   },
+   {
+    "question": "How do you structure a DAG so it is easy to maintain as it grows from a few tasks to dozens or hundreds?",
+    "answer": "I keep parsing logic lightweight, separate reusable task construction into functions, and avoid burying configuration deep inside task code. I also prefer clear task naming, small cohesive subgraphs, and shared defaults for retries, queues, and resources. The trade-off is between abstraction and readability: too much indirection makes debugging harder, but copy-paste DAGs become unmaintainable quickly.",
+    "real_world": "This matters when multiple teams own parts of the same pipeline and a minor change affects many downstream tasks. A clean structure makes code review and incident response much faster.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you factor repeated logic into a custom operator or helper instead of plain Python?"
+   },
+   {
+    "question": "What are the main trade-offs between using Bash operators, Python tasks, and custom operators in Airflow?",
+    "answer": "Bash is simple for shell-native jobs, Python is flexible for orchestration logic, and custom operators are best when you need reusable behavior across many DAGs. Bash tasks are easy to read but brittle for complex quoting or environment handling, while Python tasks can hide long-running business logic inside the scheduler-adjacent codebase if you are not careful. Custom operators give structure and reuse, but they add development and testing overhead.",
+    "real_world": "A team often starts with Bash commands for ETL scripts, then moves to a custom operator when the same file-transfer pattern appears in ten DAGs. That reduces duplication and makes logging and error handling consistent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you choose a custom operator over a TaskFlow Python function?"
+   },
+   {
+    "question": "How do you make an Airflow pipeline observable enough to debug failures quickly in production?",
+    "answer": "I make sure each task logs what input it processed, what output it produced, and any external IDs needed to trace the work. I also add metrics or alerts for task failures, long runtimes, and missing data, and I keep the task boundaries aligned with meaningful business steps. Good observability matters because Airflow only orchestrates; without context, a failed task is just a stack trace.",
+    "real_world": "When a downstream data warehouse table is wrong, logs and metadata should let you answer which partition failed, which source file was used, and whether the issue is retry-related or data-related. Without that, incident response becomes guesswork.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What log or metric would you add first if a task sometimes hangs without failing?"
+   },
+   {
+    "question": "What causes an Airflow task to fail even though the underlying script seems correct when run locally?",
+    "answer": "Common causes are missing runtime dependencies, different environment variables, bad connection credentials, permissions, and assumptions about the working directory or local files. Airflow tasks run in the worker environment, not your laptop, so anything relying on local state often breaks. I would compare the exact command, image, and secrets used in Airflow with the local setup, then reproduce the task in the same runtime if possible.",
+    "real_world": "This shows up a lot after containerizing a DAG or moving it from development to production. A script that reads a local CSV may work locally but fail in Airflow because the file is not mounted in the worker container.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you isolate whether the failure is in Airflow orchestration or in the code the task runs?"
+   },
+   {
+    "question": "How do you handle dependencies between DAGs without creating a brittle cross-DAG chain?",
+    "answer": "I prefer event-driven or dataset-based coordination when the platform supports it, because it decouples pipelines better than polling or manually triggering downstream DAGs. If I must use cross-DAG dependencies, I keep them minimal and explicit, because tight coupling makes retries and backfills much harder. The main trade-off is simplicity versus robustness: direct triggers are easy to understand, but they can create operational coupling between teams.",
+    "real_world": "This matters when one ingestion DAG feeds several downstream marts. A downstream consumer should not depend on the exact timing of the upstream DAG if it can instead react to published data being available.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you still choose a direct trigger over an event-based approach?"
+   },
+   {
+    "question": "What is a good way to pass only the data you need between tasks, instead of overusing XComs?",
+    "answer": "I pass small control values through XComs, like IDs, status, or locations, and store actual payloads in external storage such as object storage or a database. XComs are meant for lightweight metadata, not large datasets, because that keeps the metadata store manageable and tasks less tightly coupled. The trade-off is that external storage adds another system to manage, but it is the right boundary for real data transfer.",
+    "real_world": "People often hit performance problems when they serialize large JSON blobs through XCom and the metadata database becomes a bottleneck. Using a file path or table partition reference is much safer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you version or validate the external artifact that a task passes to the next task?"
+   },
+   {
+    "question": "How would you reduce repeated work in a pipeline where many tasks need the same upstream lookup or extracted file?",
+    "answer": "I would extract the shared work into one task that produces a reusable artifact, then have downstream tasks consume that artifact rather than redo the lookup. If the same data is needed across many runs, I might also cache it outside the DAG boundary with clear expiration rules. This saves compute, but you need to be careful that the shared artifact is stable and isolated enough that one consumer does not corrupt it for others.",
+    "real_world": "This comes up when many downstream tasks all hit the same API or warehouse table for the same reference data. Centralizing that fetch can cut runtime and eliminate rate-limit issues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you keep that shared artifact from becoming a single point of failure?"
+   },
+   {
+    "question": "How do you decide whether a failure should be retried automatically or should fail fast in Airflow?",
+    "answer": "I retry transient failures like network timeouts, temporary service unavailability, or occasional resource contention, but I fail fast on deterministic bugs such as bad SQL or invalid input schema. Retries are useful only when a second attempt has a real chance of succeeding without changing the code. Too many retries can hide defects and delay alerting, so the retry policy should reflect the failure mode, not just optimism.",
+    "real_world": "A warehouse query may fail once because of a brief lock or cluster restart, but a malformed query should alert immediately. Treating both the same wastes time and can increase blast radius.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you use to distinguish transient failure from a permanent one?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you walk me through how the scheduler actually decides which task instances become runnable, and where it can bottleneck at scale?",
+    "answer": "The scheduler continuously parses DAGs, creates or updates DagRuns, evaluates dependency states, and then selects task instances that are schedulable under DAG-level, task-level, pool, and executor limits. At scale, the bottlenecks are usually DAG parsing cost, metadata database contention, and the scheduler loop spending too long scanning large numbers of task instances. Airflow is not just CPU-bound; a slow database or too many tiny tasks can dominate end-to-end latency. The practical trade-off is that higher parallelism only helps if the scheduler and database can keep up with state transitions.",
+    "real_world": "A common production incident is adding hundreds of dynamically generated tasks per run and then finding the scheduler falls minutes behind even though workers are mostly idle. Teams often discover the database is saturated by state updates and heartbeats rather than task execution itself.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you watch first to tell whether the scheduler, executor, or metadata database is the limiting factor?"
+   },
+   {
+    "question": "How do the CeleryExecutor and KubernetesExecutor differ in failure modes and scaling behavior, and how would you choose between them?",
+    "answer": "CeleryExecutor relies on a broker and a fleet of long-lived workers, so it scales well for steady throughput but introduces broker, worker, and queue-management failure modes. KubernetesExecutor launches each task as its own pod, which gives stronger isolation and simpler per-task resource control, but pod startup latency and Kubernetes API limits can become the bottleneck. Celery usually has lower startup overhead; Kubernetes usually gives cleaner multi-tenant isolation and less dependency drift on workers. The choice depends on whether you optimize for latency and throughput consistency or for isolation and operational simplicity per task.",
+    "real_world": "In practice, Celery setups often fail with stuck queued tasks because workers lost the broker connection or because prefetch behavior caused uneven load. Kubernetes-based deployments often hit pod scheduling delays during bursts, so tasks wait even though Airflow itself looks healthy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when you have many short-lived tasks versus fewer long-running tasks?"
+   },
+   {
+    "question": "What is DAG serialization in Airflow, why does it exist, and what kinds of issues does it prevent or create?",
+    "answer": "DAG serialization stores a JSON representation of DAGs in the metadata database so the webserver can read DAG structure without importing Python files directly. It exists to reduce webserver coupling to user code, improve UI responsiveness, and avoid executing arbitrary DAG code on every web request. The trade-off is that serialization can hide code changes until the scheduler refreshes them, and very large serialized DAGs increase database load and UI latency. It also reinforces the need to keep top-level DAG code deterministic and lightweight.",
+    "real_world": "Without serialization, large deployments often see webservers consume excessive CPU just importing thousands of DAG files. With serialization enabled, teams sometimes debug why the UI shows an older task graph and eventually trace it to delayed DAG parsing or serialization refresh.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of Python code at DAG import time tend to hurt serialization and scheduler performance the most?"
+   },
+   {
+    "question": "What are the practical concurrency controls in Airflow, and how do they interact when you are trying to protect shared systems?",
+    "answer": "Airflow concurrency is layered: there are global executor limits, DAG-level run and task limits, task-specific settings, and pools that cap access to shared resources. The scheduler will only queue a task if all relevant limits allow it, so a task can be ready logically but still blocked by one narrow constraint. Pools are usually the sharpest tool for protecting a warehouse, API, or cluster because they express shared capacity across DAGs. The trade-off is that too many overlapping controls make throughput hard to reason about and can create accidental starvation.",
+    "real_world": "A team might increase worker count expecting faster pipelines, but nothing improves because the warehouse-loading tasks are constrained by a small pool. The opposite also happens: removing pool limits can overwhelm a downstream database and turn a pipeline incident into a platform incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design pool and concurrency settings for a DAG that fans out into 500 partition loads against a warehouse with strict concurrency limits?"
+   },
+   {
+    "question": "How do deferrable operators change the way Airflow handles waiting, and what operational trade-offs do they introduce?",
+    "answer": "Deferrable operators move the waiting phase out of a worker slot and into the triggerer, so tasks that are mostly idle no longer tie up executor capacity. This is a big improvement over long-running poke sensors because you can support many more waiting tasks with fewer workers. The trade-off is that you now depend on the triggerer as a critical component, and not every operator or provider supports deferral equally. You also need to understand resume semantics so that the task picks up correctly when the external event arrives.",
+    "real_world": "This matters when thousands of tasks wait on files, jobs, or API callbacks for long periods. Teams often cut worker costs significantly by replacing classic sensors, but if the triggerer is undersized or unhealthy, a large fraction of the platform can stall at once.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you check if deferrable tasks stay deferred much longer than expected?"
+   },
+   {
+    "question": "What happens when a worker dies in the middle of a task, and how does Airflow recover without running the task forever or losing it?",
+    "answer": "Airflow relies on heartbeats and executor state to detect that a task is no longer making progress. If the worker process or host dies, the task instance can remain in running or queued-looking states until the scheduler reconciles it and marks it for retry or failure depending on configuration and executor feedback. Recovery is never perfect because the external side effects may already have happened, which is why idempotency and durable checkpoints matter more than Airflow state alone. The hard part is distinguishing a truly lost task from a slow but still healthy one.",
+    "real_world": "A common incident is a node restart during a warehouse load: Airflow retries the task, but the first attempt may already have partially written data. The scheduler can recover the orchestration state, but only pipeline design prevents duplicates or corruption.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a task so a retry after a worker crash can safely determine whether work already completed?"
+   },
+   {
+    "question": "How would you diagnose and reduce metadata database pressure in a busy Airflow deployment?",
+    "answer": "I would start by identifying whether the load comes from scheduler queries, heartbeats, excessive task state churn, logs, or large serialized DAGs. The usual fixes are reducing DAG parse cost, avoiding huge numbers of tiny tasks, tuning scheduler and worker concurrency to what the database can sustain, and making sure the database itself is sized and indexed appropriately for Airflow's access patterns. Airflow performance often degrades nonlinearly when the metadata database becomes the bottleneck because almost every component depends on it. You want fewer state transitions and fewer unnecessary polling loops, not just more application replicas.",
+    "real_world": "In production, this shows up as everything getting slower at once: UI lag, delayed scheduling, and tasks stuck queued. Teams sometimes add workers first, but that can increase database writes and make the incident worse.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What task or DAG design patterns create a lot of unnecessary metadata churn?"
+   },
+   {
+    "question": "How do you think about exactly-once versus at-least-once behavior in Airflow pipelines, and where do people get this wrong?",
+    "answer": "Airflow itself is best treated as at-least-once orchestration because retries, reschedules, scheduler failover, and worker failures can all cause a task to be attempted more than once. Exactly-once usually has to be implemented at the data layer with idempotent writes, deduplication keys, atomic swaps, or transactional boundaries in the destination system. People get this wrong when they assume a successful Airflow state transition means the side effect happened exactly once. The safe design is to make repeated orchestration harmless and make completion externally verifiable.",
+    "real_world": "This matters for billing, event ingestion, and slowly changing dimension loads where a duplicate run can create real business damage. Teams that rely only on Airflow task state often discover inconsistencies during recovery from partial failures or manual reruns.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of an idempotent warehouse load pattern and a non-idempotent one?"
+   },
+   {
+    "question": "What are the trade-offs of using many small tasks versus fewer coarse-grained tasks in Airflow?",
+    "answer": "Many small tasks improve visibility, retry granularity, and parallelism, but they also amplify scheduler overhead, metadata writes, queue latency, and cross-task coordination costs. Fewer coarse-grained tasks reduce orchestration overhead and often run faster overall, but they make retries more expensive and can hide which step actually failed. In Airflow, orchestration cost is not negligible, so breaking work into hundreds of sub-second tasks is usually a bad trade. I prefer task boundaries that match meaningful recovery points rather than every line of business logic.",
+    "real_world": "A pipeline can get slower after a refactor that made it 'more modular' because it now has thousands of very short tasks. The workers are fine, but the platform spends most of its time scheduling and updating state instead of doing useful work.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide the right task granularity for a partitioned daily ingestion job?"
+   },
+   {
+    "question": "What is the difference between `execution_timeout` and an SLA-style expectation, and how do you use them without causing noisy operations?",
+    "answer": "`execution_timeout` is a hard limit on how long a task attempt is allowed to run before Airflow treats it as failed. An SLA-style expectation is about how late a task or DAG is relative to a business deadline; it is an alerting concept, not the same as killing work. The trade-off is that hard timeouts protect capacity and detect hung work, while SLA-style alerts help you see degraded freshness without increasing failure churn. If you set either too aggressively, you create alert fatigue and retries that make incidents worse.",
+    "real_world": "A warehouse transform that sometimes takes 40 minutes and sometimes 90 needs different handling depending on whether the issue is a hung query or just a slow upstream day. Teams often improve on-call quality by separating freshness alerts from task-kill thresholds.",
+    "code_lang": "python",
+    "code": "with DAG(dag_id=\"example\") as dag:\n    PythonOperator(\n        task_id=\"transform\",\n        python_callable=run_transform,\n        execution_timeout=timedelta(minutes=60),\n    )",
+    "follow_up": "How would you set timeout and alert thresholds for a task with highly variable runtime but strict downstream delivery deadlines?"
+   },
+   {
+    "question": "How do you keep DAG parsing fast in a large Airflow deployment, and what usually causes parse-time blowups?",
+    "answer": "Most parse-time problems come from doing real work at import time: listing S3 keys, querying databases, loading huge config files, or generating thousands of tasks in Python loops. The scheduler repeatedly imports DAG files, so slow imports multiply across processors and can starve scheduling throughput. I keep top-level code deterministic and cheap, push I/O into tasks, and use dynamic mapping or precomputed config instead of building giant graphs during parse. The trade-off is that some validation moves later, so you need good CI checks to catch bad configs before deploy.",
+    "real_world": "A common incident is a new DAG file adding a network call at import time; suddenly every scheduler process blocks on that service and no new task instances get created. Teams usually notice as all DAGs look healthy in code review but scheduling latency jumps from seconds to minutes.",
+    "code_lang": "python",
+    "code": "from airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom datetime import datetime\n\ndef list_files():\n    return [\"a\", \"b\"]  # do I/O inside the task, not at import\n\nwith DAG(\"fast_parse\", start_date=datetime(2024, 1, 1), schedule=None):\n    PythonOperator(task_id=\"list_files\", python_callable=list_files)\n",
+    "follow_up": "What metrics or logs would you check to prove the scheduler is parse-bound rather than executor-bound?"
+   },
+   {
+    "question": "What are the trade-offs between LocalExecutor, CeleryExecutor, and KubernetesExecutor for a serious production data platform?",
+    "answer": "LocalExecutor is simple and fast to operate but ties scaling and isolation to the scheduler host, so it usually stops fitting once workloads or teams grow. CeleryExecutor gives stable horizontal worker pools and good throughput for many medium tasks, but you now operate a broker, deal with queue health, and handle workers that can drift in dependencies. KubernetesExecutor gives strong per-task isolation and elastic scaling, especially for heterogeneous runtimes, but pod startup latency and cluster-level quotas can hurt short tasks. The right choice depends on task duration, environment isolation needs, and how much control-plane complexity your team can absorb.",
+    "real_world": "Teams often regret KubernetesExecutor when most tasks run for 10–20 seconds, because pod startup dominates runtime. The opposite failure happens with Celery when conflicting Python dependencies or memory leaks on shared workers cause flaky, hard-to-reproduce task failures.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your answer change for GPU jobs or workloads with very bursty daily peaks?"
+   },
+   {
+    "question": "How would you run Airflow highly available without ending up with split-brain schedulers or duplicate work?",
+    "answer": "Airflow can run multiple schedulers for availability and throughput, but correctness depends on coordination through the metadata database, row-level locking, and executor semantics rather than ad hoc leader election in your app code. The critical part is making sure only one scheduler instance can claim specific runnable task instances at a time, and that the database is tuned well enough that lock contention does not become the bottleneck. You also need stateless scheduler/webserver nodes, shared DAG distribution or reliable DAG serialization, and executor settings that tolerate retries after process loss. HA helps only if the database is robust; if the metadata DB is unstable, adding schedulers usually amplifies problems.",
+    "real_world": "A real failure mode is two schedulers running against an underpowered database: both stay up, but lock waits explode and scheduling gets slower, not safer. Another is assuming HA at the Airflow layer while the single metadata database remains the real single point of failure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What database symptoms would tell you HA is limited by lock contention rather than CPU on the schedulers?"
+   },
+   {
+    "question": "How do you use trigger rules correctly in branching or partial-failure pipelines, and what mistakes cause surprising downstream behavior?",
+    "answer": "Trigger rules decide whether downstream tasks run based on upstream states, so the default is often wrong once you introduce branching, skips, or optional paths. A common mistake is leaving the default behavior on a join after a branch, which makes the join get skipped or blocked because one side never ran by design. I choose rules explicitly for joins, cleanup, and notifications, and I think in terms of success, failure, and skipped states separately. The trade-off is that permissive rules can hide real upstream problems, so they should be paired with clear alerting.",
+    "real_world": "This matters in pipelines with conditional backfills or feature flags: one branch is intentionally skipped, but the publish step never runs because the join expected all upstreams to succeed. The opposite bug is a notification task that runs on every skip and creates false incidents.",
+    "code_lang": "python",
+    "code": "from airflow.operators.empty import EmptyOperator\n\nstart = EmptyOperator(task_id=\"start\")\na = EmptyOperator(task_id=\"a\")\nb = EmptyOperator(task_id=\"b\")\njoin = EmptyOperator(\n    task_id=\"join\",\n    trigger_rule=\"none_failed_min_one_success\",\n)\nstart >> [a, b] >> join\n",
+    "follow_up": "How would you design a cleanup task that must run after failures but should not mask the original error?"
+   },
+   {
+    "question": "When does the Airflow webserver become a bottleneck, and how do DAG serialization and UI usage patterns affect it?",
+    "answer": "The webserver gets stressed when it has to load or render large DAGs, deserialize big serialized graphs, query high-cardinality task instance tables, or serve many users hitting graph and grid views repeatedly. DAG serialization helps by decoupling the webserver from importing arbitrary DAG code, which improves safety and consistency, but large serialized DAGs still cost storage and render time. I treat the UI as an operational tool, not a reporting system, and avoid giant DAGs that make every page load expensive. At scale, you watch page latency, webserver worker utilization, and expensive metadata DB queries caused by UI traffic.",
+    "real_world": "In some teams, an incident review drives everyone to refresh the grid view of a huge DAG every few seconds, and that extra read load worsens the metadata DB slowdown causing the incident. Another common issue is a generated DAG with thousands of tasks making the graph view practically unusable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If operators complain that the UI is slow but scheduling is fine, what specific optimizations would you try first?"
+   },
+   {
+    "question": "How would you handle secrets in Airflow so they are secure, auditable, and still practical for developers?",
+    "answer": "I prefer a secrets backend so credentials are fetched from a dedicated secret manager rather than stored directly in the metadata database or baked into DAG code. That reduces blast radius, improves rotation, and gives you centralized access control and audit logs. The trade-off is more moving parts and sometimes higher latency or failures during secret lookup, so you need caching strategy and clear fallbacks. I also separate connection metadata from secret material and avoid putting sensitive values in Variables or XComs because they leak more easily into logs and UI.",
+    "real_world": "A frequent production mistake is storing API tokens in Variables for convenience; they end up visible to too many users and can be copied from logs or exports. Rotation is also much safer with a backend because you can update one secret without redeploying DAG code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if the external secrets manager has a partial outage during task startup?"
+   },
+   {
+    "question": "What’s your approach to deploying Airflow DAGs safely across environments without breaking running pipelines?",
+    "answer": "I treat DAG deployment as code release plus scheduler-state compatibility. That means immutable artifacts when possible, CI that parses DAGs and runs targeted tests, staged rollout, and care when renaming DAGs or task IDs because those identifiers are tied to historical state in the metadata database. Backward compatibility matters: changing task structure can orphan cleared runs, confuse backfills, or make lineage and alerting inconsistent. The trade-off is slower iteration, but it avoids production surprises from 'simple' refactors.",
+    "real_world": "A classic incident is renaming a task_id during a hotfix and then discovering retries, clears, and historical dashboards no longer line up with the old runs. Another is deploying different DAG code to scheduler and workers, which causes tasks to execute logic that no longer matches the scheduler’s view.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which DAG code changes do you consider state-breaking enough to require a migration plan?"
+   },
+   {
+    "question": "How do you prevent Airflow from overwhelming downstream systems like warehouses, APIs, or Spark clusters during catchup or mass reruns?",
+    "answer": "I put explicit backpressure in Airflow instead of assuming the downstream system will protect itself. That means using pools, queue partitioning, per-DAG concurrency limits, and sometimes executor-level separation so a rerun cannot consume all worker slots. I also shape the workload at the pipeline level by batching partitions, limiting historical range per run, or pausing auto-catchup during incident recovery. The key trade-off is recovery speed versus blast radius: the fastest possible backfill is often the least safe for shared systems.",
+    "real_world": "This shows up when someone clears six months of hourly runs and accidentally sends thousands of warehouse jobs at once, saturating slots and delaying business-critical dashboards. Good teams predefine low-priority pools for backfills so live SLAs keep running.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design separate capacity lanes for fresh data versus historical reprocessing?"
+   },
+   {
+    "question": "How do you think about lineage and data-aware orchestration in Airflow without turning the scheduler into a metadata platform?",
+    "answer": "Airflow can emit dataset or lineage signals, but I use that for orchestration boundaries and observability rather than as the system of record for all data metadata. The benefit is simpler dependency management when consumers should run after a producer dataset changes, even across DAGs. The risk is over-modeling: if every table, partition, and file becomes a scheduling primitive, the graph gets noisy and operationally fragile. I keep the orchestration metadata coarse and let a dedicated catalog or lineage system own richer semantics.",
+    "real_world": "This matters when multiple teams publish tables that feed shared downstream DAGs; dataset-driven triggering can remove brittle manual wiring. It becomes a problem when a team tries to encode every partition-level event in Airflow and the operational burden outweighs the scheduling value.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of dependencies would you still avoid modeling as dataset triggers?"
+   },
+   {
+    "question": "If an Airflow environment becomes unstable during a large incident, what’s your playbook for triage and containment?",
+    "answer": "First I distinguish control-plane failure from workload failure: is the scheduler behind, the metadata DB overloaded, the executor unhealthy, or are tasks themselves failing? Then I reduce blast radius by pausing noisy DAGs, stopping broad retries or catchup, protecting critical pools, and preserving database health before trying to recover throughput. After that I inspect scheduler lag, queued versus running counts, worker heartbeats, and the heaviest database queries to find the actual choke point. The main mistake is treating every symptom as a worker-scaling problem when the bottleneck is often the metadata database or a bad DAG deployment.",
+    "real_world": "In real incidents, adding more workers can make things worse by increasing state churn and metadata writes while the scheduler and database are already saturated. Teams that recover fastest usually have predefined 'pause these DAGs first' lists and separate pools for critical pipelines.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which metrics would you put on an incident dashboard so responders can tell within five minutes whether the bottleneck is scheduler, executor, or database?"
+   }
+  ]
+ }
+}

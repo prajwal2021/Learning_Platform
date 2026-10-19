@@ -1,0 +1,477 @@
+{
+ "slug": "operating-systems",
+ "name": "Operating systems",
+ "category": "Computer science",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is an operating system, and what does it do for a computer?",
+    "answer": "An operating system is the software layer between applications and the hardware. It manages CPU time, memory, files, devices, and security so programs can run without handling the hardware directly. It also provides common services like process scheduling and networking. Without an OS, each application would need to know how to control every device itself.",
+    "real_world": "When a laptop freezes or runs out of memory, it is usually the OS managing resources poorly or being overloaded, not the app alone. Developers rely on the OS to give their programs access to files, network sockets, and input devices in a consistent way.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main resources an OS manages?"
+   },
+   {
+    "question": "What is a process, and how is it different from a program?",
+    "answer": "A program is the code stored on disk; a process is a running instance of that program. A process has its own memory space, state, and OS-assigned resources like open files and a process ID. The same program can run as multiple processes at once. This distinction matters because bugs, crashes, and memory usage are tracked per process, not just per program.",
+    "real_world": "A browser with many tabs may use multiple processes so one crashed tab does not take down the whole app. On servers, separate processes are often used to isolate work and improve reliability.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a thread, and how does it relate to a process?"
+   },
+   {
+    "question": "What is a thread, and why would you use more than one thread in a process?",
+    "answer": "A thread is an execution path within a process. Threads in the same process share memory and resources, which makes communication fast but also makes bugs like race conditions possible. You use multiple threads when you want work to happen concurrently, such as keeping a UI responsive while doing background work. The trade-off is easier sharing versus harder synchronization.",
+    "real_world": "A text editor may use one thread for the interface and another for saving files so typing does not freeze while disk I/O happens. In production, too many shared-memory threads can create intermittent bugs that are hard to reproduce.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a race condition?"
+   },
+   {
+    "question": "What is the difference between concurrency and parallelism?",
+    "answer": "Concurrency means multiple tasks are making progress in overlapping time; parallelism means multiple tasks are actually running at the same time. A single-core CPU can support concurrency by switching between tasks, but not true parallel execution. Parallelism usually requires multiple cores. This matters when choosing whether threads will speed up CPU-heavy work or just help with responsiveness.",
+    "real_world": "A web server can handle many requests concurrently even on one core by switching between them while some wait on network I/O. Rendering or data processing jobs may benefit more from parallelism if the machine has multiple cores.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would threads help, and when would they not?"
+   },
+   {
+    "question": "What is virtual memory, and why does the OS use it?",
+    "answer": "Virtual memory gives each process its own address space, separate from physical RAM. The OS and hardware map virtual addresses to real memory, which helps isolate processes and lets programs use memory as if they own a large contiguous block. It also allows paging, where inactive data can be moved out of RAM. The trade-off is that memory access can become slower if the system starts paging heavily.",
+    "real_world": "This is why one crashing application usually does not overwrite another app’s memory. In production, heavy swapping can cause a machine to become very slow even before it runs out of disk space.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is paging or swapping?"
+   },
+   {
+    "question": "What happens when a program asks the OS to read a file?",
+    "answer": "The program usually makes a system call into the kernel. The OS checks permissions, looks up the file, coordinates with the file system and storage driver, and then copies data into the program’s memory. If the data is cached, it may return quickly without hitting disk. The key idea is that the application does not talk to the disk directly; it asks the OS to do it safely.",
+    "real_world": "File reads can be fast in tests but slower in production if the OS cache is cold or the disk is busy. Permission errors also come from the OS, not from the file content itself.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a system call?"
+   },
+   {
+    "question": "What is the difference between kernel space and user space?",
+    "answer": "User space is where normal applications run, and kernel space is where the OS core runs with higher privilege. User programs cannot directly access hardware or kernel memory; they must ask the kernel through system calls. This separation improves stability and security because a broken app should not crash the whole machine. The trade-off is that crossing into the kernel has overhead.",
+    "real_world": "A bug in a photo editor should ideally only crash that app, not the entire computer. Device drivers and kernel bugs are more serious because they run with high privilege.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why are system calls needed instead of letting programs access hardware directly?"
+   },
+   {
+    "question": "What is a context switch?",
+    "answer": "A context switch happens when the OS stops running one process or thread and starts another. It saves the current execution state, such as registers and instruction pointer, and restores the next task’s state. This enables multitasking and responsiveness. The downside is that context switching has overhead, so excessive switching can reduce performance.",
+    "real_world": "If a system has too many runnable threads, it can spend a lot of time switching instead of doing useful work. In latency-sensitive services, reducing unnecessary thread switches can improve throughput and response times.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What causes the OS to switch from one task to another?"
+   },
+   {
+    "question": "What is a deadlock?",
+    "answer": "A deadlock is when two or more threads or processes wait forever because each holds a resource the others need. Commonly, one task holds lock A and waits for lock B, while another holds lock B and waits for lock A. Deadlocks matter because the program may not crash, but it stops making progress. You avoid them by using consistent lock ordering, timeouts, or fewer shared locks.",
+    "real_world": "Deadlocks often appear in servers that use multiple mutexes around shared caches or database connections. They can create mysterious hangs where CPU usage is low but requests never finish.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How can you prevent or detect deadlocks?"
+   },
+   {
+    "question": "What is a file system, and what problem does it solve?",
+    "answer": "A file system is the OS component that organizes data on storage into files and directories. It provides names, metadata, permissions, and a way to locate and retrieve data efficiently. Without a file system, applications would have to manage raw disk blocks themselves. Different file systems make different trade-offs in speed, reliability, and features.",
+    "real_world": "When a drive is nearly full or safely unmounted improperly, file system behavior determines whether data is preserved or corrupted. Backup and restore tools depend on file system structure and metadata to work correctly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a file and a directory?"
+   },
+   {
+    "question": "What is a system call, and why do programs need it?",
+    "answer": "A system call is the controlled way a user-space program asks the kernel to do privileged work, like reading a file, creating a process, or sending data to a device. Programs need it because direct access to hardware and protected resources is restricted. The trade-off is overhead: crossing into the kernel is slower than staying in user space, but it preserves safety and isolation.",
+    "real_world": "A web server uses system calls to open sockets, read request data, and write responses. Bugs often show up when a developer assumes a library call is “just regular code,” but it may fail because the underlying system call can return errors or block.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens when a system call blocks?"
+   },
+   {
+    "question": "What is a shell, and how is it different from the operating system?",
+    "answer": "A shell is a command interpreter that lets a user launch programs and manage the system from text commands. It is not the OS itself; it runs on top of the OS and uses system calls to do work. Common shells also support pipes, redirection, variables, and scripting, which makes them useful for automation.",
+    "real_world": "Engineers use shells to inspect logs, restart services, and combine tools in deployment scripts. A common beginner mistake is thinking the shell is the whole operating system, when it is only one interface to it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does it mean to pipe the output of one command into another?"
+   },
+   {
+    "question": "What is a command-line argument, and why would a program use one instead of hardcoding a value?",
+    "answer": "A command-line argument is a value passed to a program when it starts, such as a filename or mode flag. It lets the same program work on different inputs without changing the code. This is better than hardcoding because it makes tools reusable, scriptable, and easier to test.",
+    "real_world": "A backup tool might accept the directory to back up as an argument, so the same binary can be used for many machines. In practice, many production scripts depend on arguments for configuration during startup.",
+    "code_lang": "python",
+    "code": "import sys\nprint(sys.argv[1:])",
+    "follow_up": "How are command-line arguments different from environment variables?"
+   },
+   {
+    "question": "What is an environment variable, and when would you use one?",
+    "answer": "An environment variable is a named value inherited by a running process from its parent process. It is commonly used for configuration that should be available to many programs, such as paths, feature flags, or credentials in some deployment setups. Compared with command-line arguments, environment variables are better for shared process-wide settings, but they can be harder to discover and should not be used for secrets unless your environment handles them carefully.",
+    "real_world": "Teams often set `DATABASE_URL` or `PATH` in deployment environments so applications can start with the right configuration. A common issue is forgetting that child processes inherit these values, which can cause surprising behavior in scripts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the PATH environment variable used for?"
+   },
+   {
+    "question": "What is race condition, and why is it a problem even if each individual line of code is correct?",
+    "answer": "A race condition happens when the result depends on the timing or interleaving of concurrent operations. Each line can be correct on its own, but the combined outcome can still be wrong if two threads or processes access shared state without proper coordination. These bugs are hard to reproduce because they depend on scheduling.",
+    "real_world": "A ticketing system can oversell seats if two requests check availability at the same time and both decide a seat is free. These bugs often appear only under load, which makes them especially painful in production.",
+    "code_lang": "python",
+    "code": "# Not safe if shared by threads\nif balance >= amount:\n    balance -= amount",
+    "follow_up": "How would you make that balance update safe?"
+   },
+   {
+    "question": "What is swapping, and when can it hurt performance?",
+    "answer": "Swapping is moving memory pages or process memory content between RAM and disk to free physical memory. It helps keep the system running when memory is tight, but disk is much slower than RAM, so heavy swapping can make the whole machine sluggish. In extreme cases, the OS spends more time moving memory than running programs.",
+    "real_world": "On a laptop with too many apps open, the system may start swapping and feel frozen even though CPU usage is not high. In servers, sustained swapping is often a sign that memory provisioning is too low or a process has a leak.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does swapping relate to virtual memory?"
+   },
+   {
+    "question": "What does it mean for a process to be in a zombie state?",
+    "answer": "A zombie process has finished execution, but its parent has not yet collected its exit status. The process is no longer running, but it still has an entry in the process table until the parent waits on it. Zombies do not use CPU, but too many of them can indicate a bug in process management.",
+    "real_world": "This often happens in parent processes that spawn children and forget to reap them. In production, a buildup of zombies can be a sign that a service is not handling child process lifecycle correctly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is an orphan process?"
+   },
+   {
+    "question": "What is caching in an operating system, and why is it useful?",
+    "answer": "Caching is storing frequently used data in a faster place so it can be reused without fetching it again from a slower source. The OS uses caches for things like disk blocks and filesystem metadata to reduce I/O and improve performance. The trade-off is that cached data can become stale or consume memory that other programs need.",
+    "real_world": "Repeatedly reading the same files is much faster if the data is already in the page cache. A common misunderstanding is assuming a read came from disk every time, when it may have been served from memory instead.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between caching and buffering?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How does the OS decide which process gets CPU time next?",
+    "answer": "The scheduler chooses among runnable processes using a policy that balances responsiveness, throughput, and fairness. Interactive tasks are usually favored to keep the system feeling snappy, while CPU-bound tasks are given time slices so they do not monopolize the CPU. The exact algorithm depends on the OS, but the trade-off is always the same: optimize one metric and you can hurt another.",
+    "real_world": "This matters when a build server feels slow because a few CPU-heavy jobs starve everything else, or when a desktop becomes laggy under load. Teams often tune process priority or isolate workloads to keep critical services responsive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether a performance problem is caused by CPU scheduling or by I/O waits?"
+   },
+   {
+    "question": "What is the difference between a mutex and a semaphore?",
+    "answer": "A mutex is primarily used to protect shared data so only one thread enters a critical section at a time, while a semaphore is a counting mechanism that can represent multiple available permits. A mutex has ownership semantics, so the thread that locks it should unlock it; a semaphore is often used for signaling or limiting concurrency. The trade-off is that semaphores are more flexible, but mutexes are easier to reason about for mutual exclusion.",
+    "real_world": "This comes up when limiting how many worker threads may access a scarce resource like a connection pool or a hardware device. Using the wrong primitive can cause deadlocks, missed signals, or accidental overuse of the resource.",
+    "code_lang": "python",
+    "code": "import threading\nlock = threading.Lock()\ncount = 0\n\ndef inc():\n    global count\n    with lock:\n        count += 1",
+    "follow_up": "When would you choose a read-write lock instead of a mutex?"
+   },
+   {
+    "question": "What happens when a process runs out of memory?",
+    "answer": "If the process keeps allocating memory, the OS may first rely on virtual memory and paging to satisfy requests, but once physical and swap resources are under pressure, allocations can fail or the system may start reclaiming memory aggressively. In severe cases, the OS may terminate one or more processes to keep the machine usable. The important trade-off is that memory overcommit can improve utilization but makes failure modes less predictable.",
+    "real_world": "This shows up as sudden crashes, the OOM killer terminating a service, or a machine becoming unresponsive under load. In production, teams usually watch memory growth and set limits so one process cannot take down the host.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish a memory leak from normal caching or a burst of temporary allocations?"
+   },
+   {
+    "question": "How do file descriptors work, and why are they important?",
+    "answer": "A file descriptor is a small integer handle that refers to an open resource such as a file, socket, pipe, or terminal. The OS uses it so programs do not manage raw kernel objects directly, and the process can pass descriptors to libraries or child processes. The key issue is lifecycle: if you leak descriptors, you eventually hit per-process limits and fail to open new resources.",
+    "real_world": "Descriptor leaks are a common cause of production outages in long-running servers, especially when connections are opened but not closed on error paths. They also matter when chaining tools with pipes or redirecting logs.",
+    "code_lang": "bash",
+    "code": "lsof -p 1234\n# shows open file descriptors for process 1234\nulimit -n\n# shows the per-process descriptor limit",
+    "follow_up": "How would you debug a service that slowly stops accepting new connections?"
+   },
+   {
+    "question": "What is paging, and how is it different from segmentation?",
+    "answer": "Paging splits memory into fixed-size blocks, which makes allocation and swapping simpler and reduces external fragmentation. Segmentation divides memory by logical regions such as code, stack, or heap, which can match program structure but can fragment more easily. Modern systems rely mostly on paging, sometimes with segmentation-like concepts layered on top for protection or layout.",
+    "real_world": "This matters when reasoning about memory fragmentation, address translation overhead, or why a process can fail despite plenty of total free memory. It also helps explain why contiguous allocation is rarely required in modern systems.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can paging still lead to memory pressure even when there appears to be free memory?"
+   },
+   {
+    "question": "Why do read and write operations sometimes block, and how do non-blocking I/O approaches help?",
+    "answer": "A blocking operation waits until the resource is ready or the transfer completes, which is simple but can waste a thread if the program has many slow connections. Non-blocking I/O lets the program keep working and be notified when the resource is ready, which scales better for high concurrency. The trade-off is complexity: event loops and state machines are harder to write than straightforward blocking code.",
+    "real_world": "This is central in network servers, chat systems, and proxies where thousands of sockets may be open at once. A blocking design can work for a small tool but can collapse under load if every connection consumes a thread.",
+    "code_lang": "javascript",
+    "code": "const net = require('net');\nconst server = net.createServer(sock => {\n  sock.on('data', d => sock.write(d));\n});\nserver.listen(3000);",
+    "follow_up": "How would you decide between threads and an event loop for a new service?"
+   },
+   {
+    "question": "What does copy-on-write mean, and where do you see it used?",
+    "answer": "Copy-on-write lets multiple processes or data structures share the same underlying pages or objects until one of them tries to modify it. At that point, the system makes a private copy, which saves memory and speeds up operations like process creation. The trade-off is that writes become more expensive, especially if many shared pages are touched soon after the copy.",
+    "real_world": "Operating systems use this after a fork so the child and parent can share memory pages initially. Databases and immutable data structures also use the same idea to avoid copying large objects unnecessarily.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is copy-on-write less beneficial if the child process immediately writes to most of its memory?"
+   },
+   {
+    "question": "How do signals work, and what are common mistakes when handling them?",
+    "answer": "Signals are asynchronous notifications from the OS that tell a process an event occurred, such as termination request or a child process exiting. A program can usually handle, ignore, or default-handle some signals, but the handler must be careful because it can run at an awkward time. Common mistakes are doing too much work in the handler, assuming it is safe to call any function, or forgetting to reset state so the main loop notices the signal.",
+    "real_world": "This matters for graceful shutdowns, log rotation, and child process management in services and CLI tools. Bad signal handling often shows up as hung shutdowns or corrupted state during termination.",
+    "code_lang": "python",
+    "code": "import signal\nstop = False\n\ndef handler(signum, frame):\n    global stop\n    stop = True\n\nsignal.signal(signal.SIGTERM, handler)",
+    "follow_up": "How would you design a program to shut down cleanly when it receives SIGTERM?"
+   },
+   {
+    "question": "What is thrashing, and how can you recognize it in a system under load?",
+    "answer": "Thrashing happens when the OS spends most of its time paging memory in and out instead of doing useful work. It often appears when the working set of active memory is larger than available RAM, so processes constantly fault on pages they need again. You can recognize it through high disk activity, low CPU productivity, and severe latency even though the machine is not fully using CPU for real work.",
+    "real_world": "A common production symptom is a server that looks busy but makes little progress after a traffic spike or a memory-heavy deploy. Teams often fix it by reducing memory usage, adding RAM, or limiting concurrency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you check first to confirm thrashing rather than a slow disk or a CPU bottleneck?"
+   },
+   {
+    "question": "What is a process fork, and why is it useful in real systems?",
+    "answer": "Fork creates a new process by duplicating the calling process, so the child starts with the same memory image and file descriptors, then continues independently. It is useful because it gives you process isolation and a simple way to launch workers or execute another program after setup. The trade-off is overhead: process creation is heavier than spawning a thread, and you have to manage interprocess communication explicitly.",
+    "real_world": "This pattern is common in Unix servers, job runners, and shells that launch commands. It also matters when you want one process to supervise another and restart it if it exits.",
+    "code_lang": "bash",
+    "code": "python -c 'import os; pid=os.fork(); print(\"child\" if pid==0 else \"parent\")'",
+    "follow_up": "What is the difference between fork and exec?"
+   },
+   {
+    "question": "How does process scheduling affect latency and throughput, and how would you think about tuning for one versus the other?",
+    "answer": "Scheduling policy changes who runs next, which affects both responsiveness and total work completed. If you favor short time slices and interactive tasks, latency improves but you may pay more context-switch overhead; if you favor longer CPU bursts, throughput can improve but foreground tasks may feel sluggish. In practice, you tune based on the workload: user-facing services usually care about tail latency, batch jobs care more about throughput. The right choice is often a balance, not an extreme.",
+    "real_world": "A web server under load may still have enough CPU overall, but p95 latency jumps because long-running background jobs keep preempting request handlers. Teams often isolate batch work onto separate machines or lower its priority.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you watch to tell whether a scheduling change helped or hurt?"
+   },
+   {
+    "question": "What is the difference between a hard link and a symbolic link, and when would you choose one over the other?",
+    "answer": "A hard link is another directory entry pointing to the same underlying file data, while a symbolic link is a small file that stores a path to another file. Hard links keep working even if the original name is removed, but they usually cannot cross file systems or point to directories. Symbolic links are more flexible, but they can break if the target path changes. In scripts and deployments, symlinks are often better; for durable extra names for the same file, hard links can be safer.",
+    "real_world": "Release systems often use symlinks like `current -> release-2026-10-16` to switch versions atomically. Backup tools may prefer hard links to save space when storing repeated file contents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens to each link type if the original file is deleted?"
+   },
+   {
+    "question": "Why would an application use buffered I/O instead of unbuffered I/O, and what are the trade-offs?",
+    "answer": "Buffered I/O reduces system calls by accumulating data in memory before reading or writing the underlying file or socket. That usually improves performance a lot, especially for many small operations, but it can delay visibility of writes and make failure handling less immediate. Unbuffered I/O gives you tighter control over when data reaches the kernel or device, but often at a higher cost. In practice, buffering is the default unless you need exact timing or very low-level control.",
+    "real_world": "Log files may look empty during a crash because data is still sitting in user-space buffers. On the other hand, batch jobs that process millions of lines can be much faster with buffering enabled.",
+    "code_lang": "python",
+    "code": "with open('out.txt', 'w', buffering=8192) as f:\n    f.write('hello')\n    f.write(' world')\n    f.flush()",
+    "follow_up": "How do you know whether a write is still in a user-space buffer versus actually on disk?"
+   },
+   {
+    "question": "What is memory-mapped I/O, and why might it be faster or simpler than calling read and write repeatedly?",
+    "answer": "Memory mapping lets a process access a file or device region through normal loads and stores instead of explicit read and write calls. That can reduce copying and syscall overhead, and it can make random access simpler because the data looks like memory. The trade-off is that page faults, flushing, and error handling become less explicit, so debugging can be trickier. It is useful when you want efficient file access patterns or shared data structures.",
+    "real_world": "Databases and search engines often memory-map large index files so they can let the kernel manage paging. A bug in access patterns can still cause major stalls when the working set does not fit in RAM.",
+    "code_lang": "python",
+    "code": "import mmap\nwith open('data.bin', 'rb') as f:\n    mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)\n    print(mm[:4])\n    mm.close()",
+    "follow_up": "What are the downsides of mapping a very large file?"
+   },
+   {
+    "question": "How do pipes work between processes, and what is the difference between a pipe and a socket?",
+    "answer": "A pipe is a kernel-managed byte stream, usually used for one-way communication between related processes. It is simple and efficient for local data flow, like connecting one command’s output to another’s input. A socket is more general: it can communicate between unrelated processes, across machines, and in different connection modes. Pipes are best for short, local producer-consumer chains; sockets are better when you need flexibility or network reach.",
+    "real_world": "Build pipelines like `grep | sort | uniq` rely on pipes to stream data without temporary files. In service code, teams switch to sockets once separate processes or hosts need to exchange requests and responses.",
+    "code_lang": "bash",
+    "code": "producer | consumer\n# e.g.\ncat access.log | awk '{print $1}' | sort | uniq -c",
+    "follow_up": "What limits the amount of data a pipe can hold at once?"
+   },
+   {
+    "question": "What happens during process creation on a modern OS, and why is `fork` followed by `exec` such a common pattern?",
+    "answer": "Process creation usually starts by copying enough state to make a new process, then replacing its program image with a different executable. The `fork` plus `exec` pattern is common because `fork` gives you a child with inherited file descriptors and environment, and `exec` swaps in the target program without creating a separate launcher protocol. That makes shells and supervisors simple. The trade-off is that the setup cost can be noticeable if you create lots of short-lived processes.",
+    "real_world": "Shells use this pattern to start commands while preserving redirection and pipelines. Supervisors and job runners rely on it to set up logging, permissions, or descriptors before launching the real worker.",
+    "code_lang": "c",
+    "code": "pid_t pid = fork();\nif (pid == 0) {\n    execl(\"/bin/ls\", \"ls\", \"-l\", (char *)0);\n    _exit(1);\n}\nwaitpid(pid, NULL, 0);",
+    "follow_up": "What state is inherited across `fork`, and what gets reset by `exec`?"
+   },
+   {
+    "question": "How do permissions and user identities control access to files and processes, and what is the practical difference between the owner, group, and other bits?",
+    "answer": "The OS checks the calling user’s identity and the file or process ownership metadata before allowing access. Owner permissions apply to the user who owns the object, group permissions apply to members of the object’s group, and other applies to everyone else. This lets teams share resources without making everything world-readable or world-writable. In real systems, mistakes here often cause either security holes or deployment failures because a service account cannot read what it needs.",
+    "real_world": "A service may run as a non-root user and fail only in production because a config file is readable by the developer account but not by the service account. Shared volumes and CI jobs often need careful group setup to avoid chmod-based fixes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use ACLs instead of only the standard permission bits?"
+   },
+   {
+    "question": "What is file-system journaling, and how does it help after an unexpected shutdown?",
+    "answer": "Journaling records intended metadata changes, and sometimes data-related intent, before applying the changes to the main file system structures. After a crash, the OS can replay or roll back the journal to recover a consistent state more quickly than scanning the whole disk. The trade-off is extra write overhead and complexity, but it greatly reduces corruption risk. It does not automatically protect you from every kind of data loss, especially if application data was not flushed yet.",
+    "real_world": "After a power failure, a journaling file system may mount cleanly while a non-journaled one needs a long repair pass. Teams still need application-level durability because a committed journal does not always mean the latest user data reached disk.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why might a database still need its own write-ahead log even on a journaled file system?"
+   },
+   {
+    "question": "How would you debug a server that is slow only under load: what OS-level signals would you look at first?",
+    "answer": "I would separate CPU saturation, memory pressure, and I/O wait before changing code. CPU-bound problems show high run queues or high per-core utilization, memory pressure shows paging or reclaim activity, and I/O-bound problems often appear as blocked threads and elevated wait times. That tells you whether the bottleneck is compute, memory, or storage/network. The main trade-off is that symptom location is not always the root cause, so you need a short, evidence-driven workflow.",
+    "real_world": "A service may look healthy at low traffic, then collapse when queueing effects compound under load. Teams often use top-level system metrics first so they do not optimize the wrong layer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you check if CPU usage is low but request latency is still high?"
+   },
+   {
+    "question": "How do timers and interrupts affect what the OS is doing, and why do they matter for responsiveness?",
+    "answer": "Interrupts let hardware or the kernel interrupt the current flow to handle urgent events, such as I/O completion or timer expirations. Timers are especially important because they let the OS preempt a running task and keep the system responsive even if one process never yields. Without them, a single task could monopolize the CPU. The trade-off is that interrupt handling adds overhead, but it is essential for fairness and timely device handling.",
+    "real_world": "If timer interrupts are delayed or disabled too long, interactive workloads can feel frozen even though the CPU is busy. Driver bugs that mishandle interrupts often show up as lost input, stalled network traffic, or weird latency spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What can go wrong if code disables interrupts for too long?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how a TLB works and what a TLB miss costs in practice?",
+    "answer": "The TLB is a small cache of virtual-to-physical page translations, so the CPU can avoid walking page tables on every memory access. On a miss, hardware or the kernel has to consult the page tables, which adds latency; if the walk itself misses in cache, the cost grows quickly. If the page is not present, the miss becomes a page fault and is orders of magnitude slower. This matters because memory-heavy code can become translation-bound even when the data itself fits in RAM.",
+    "real_world": "High-QPS services sometimes regress after a memory-layout change because larger working sets or poor locality increase TLB misses, raising tail latency without obvious CPU saturation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What techniques would you use to reduce TLB pressure in a latency-sensitive service?"
+   },
+   {
+    "question": "What is a major page fault versus a minor page fault, and why do you care about the difference?",
+    "answer": "A minor page fault happens when the page can be mapped without disk I/O, for example allocating a zero-filled page or mapping a page already in memory. A major page fault requires fetching data from storage, so it is far more expensive and can stall a thread for a long time. The distinction tells you whether latency comes from normal virtual-memory bookkeeping or from actual backing-store access. A rising major-fault rate usually points to memory pressure, cold starts, or a working set larger than available RAM.",
+    "real_world": "A service can look healthy in CPU graphs but still miss SLOs during deploys because new workers trigger many major faults while warming code and data pages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you reduce page-fault impact during startup of a large service?"
+   },
+   {
+    "question": "How does demand paging actually work when a process touches a page that has never been mapped into physical memory yet?",
+    "answer": "The CPU raises a page-fault exception because the page-table entry says the mapping is not currently present. The kernel inspects the faulting address, checks whether the access is valid for that VMA or region, allocates or locates a backing page, updates the page tables, and resumes execution. For anonymous memory it may hand out a zero-filled page; for file-backed memory it may read from the page cache or disk. If the access is invalid, the kernel delivers a fault signal or terminates the process.",
+    "real_world": "This is why memory allocation can look cheap until first touch: `mmap` or `malloc` may succeed quickly, but the real cost is paid later as pages are faulted in across many CPUs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can first-touch policy matter on NUMA machines?"
+   },
+   {
+    "question": "What causes priority inversion, and how would an operating system or application mitigate it?",
+    "answer": "Priority inversion happens when a high-priority thread is blocked on a lock held by a lower-priority thread, while medium-priority work keeps the lower-priority holder from running. The result is that the high-priority task waits much longer than its nominal priority suggests. Common mitigations are priority inheritance, priority ceiling protocols, or designing critical sections to be short and non-blocking. In user-space systems, avoiding lock contention on high-priority paths is often the most reliable fix.",
+    "real_world": "This shows up in real-time and low-latency systems where one misplaced lock in logging or memory allocation can create rare but severe latency spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the trade-offs between priority inheritance and just avoiding shared locks on critical paths?"
+   },
+   {
+    "question": "How does epoll or kqueue differ from select or poll under high connection counts?",
+    "answer": "`select` and `poll` require scanning sets of file descriptors on each wait, so the cost grows with the number of watched descriptors. `epoll` and `kqueue` let the kernel maintain the interest set and report only ready events, which scales better for large numbers of mostly idle connections. They also support edge-triggered or one-shot styles, which can reduce overhead but require careful draining of sockets to avoid missed work. The trade-off is more API complexity and more room for subtle bugs around readiness semantics.",
+    "real_world": "A chat or proxy service with 100k mostly idle sockets will often hit CPU limits with `poll`-style loops long before network bandwidth is the bottleneck.",
+    "code_lang": "c",
+    "code": "int ep = epoll_create1(0);\nepoll_ctl(ep, EPOLL_CTL_ADD, fd, &ev);\nfor (;;) {\n  int n = epoll_wait(ep, events, MAXE, -1);\n  for (int i = 0; i < n; i++) {\n    if (events[i].events & EPOLLIN) handle_read(events[i].data.fd);\n  }\n}",
+    "follow_up": "What bug do you commonly see when people switch from level-triggered to edge-triggered I/O?"
+   },
+   {
+    "question": "What is the difference between synchronous and asynchronous disk I/O at the OS level, and why is it easy to misuse direct I/O?",
+    "answer": "With synchronous I/O, the calling thread usually waits until the operation has completed enough for the API contract to be satisfied. With asynchronous I/O, submission and completion are decoupled, so a thread can continue while the kernel or device processes requests in parallel. Direct I/O bypasses much of the page cache, which can reduce double buffering and cache pollution, but it often has alignment constraints and removes the benefit of cached re-reads. It is easy to make performance worse if access patterns are not predictable or if request sizes are poorly chosen.",
+    "real_world": "Database teams may enable direct I/O to avoid fighting the page cache, while general-purpose services often get better results from buffered I/O because the cache absorbs bursts and repeated reads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would the page cache outperform direct I/O even for a data-intensive application?"
+   },
+   {
+    "question": "Can you walk me through how the kernel handles an interrupt on a multicore system, including where the latency comes from?",
+    "answer": "A device signals an interrupt, the CPU vectors into kernel interrupt-handling code, saves enough state, acknowledges the source, and runs a top-half handler with interrupts restricted. Time-consuming work is usually deferred to a lower-priority context like a softirq, tasklet, or kernel thread so the CPU can return quickly to other work. Latency comes from interrupt routing, disabled-interrupt sections, cache misses in handler code, lock contention, and cross-core coordination if the work wakes another CPU. Under load, interrupt storms or poor affinity can amplify tail latency significantly.",
+    "real_world": "NIC interrupts arriving on the same cores that run application threads can create jitter; teams often tune interrupt affinity or use polling modes to stabilize p99 latency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide between interrupt-driven networking and a polling approach?"
+   },
+   {
+    "question": "What is a NUMA architecture, and what changes in how the OS schedules threads and places memory?",
+    "answer": "In NUMA systems, memory access time depends on which CPU socket owns the memory, so local memory is faster than remote memory. The OS tries to schedule threads near the memory they use and may use first-touch or migration policies to improve locality. If threads bounce across sockets or share heavily contended data, remote accesses and cache-coherence traffic can dominate performance. The trade-off is that strict affinity can improve locality but reduce scheduler flexibility and load balancing.",
+    "real_world": "A service may scale well from 1 to 16 cores and then flatten or regress because workers start touching remote memory across sockets, increasing latency without obvious lock contention.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you diagnose whether a slowdown is caused by NUMA locality versus lock contention?"
+   },
+   {
+    "question": "What happens if multiple CPUs are updating shared memory without proper synchronization, even on hardware that has coherent caches?",
+    "answer": "Cache coherence only ensures that cores eventually agree on the value of a cache line; it does not make compound operations atomic or guarantee the ordering higher-level code expects. Without synchronization, you can get lost updates, torn observations of multi-step state, and reordering effects that are valid under the memory model but incorrect for your algorithm. Locks, atomics, and memory-ordering primitives are how software defines the required visibility and ordering. The hard part is that bugs may only appear on certain architectures or under heavy concurrency.",
+    "real_world": "Code that appears stable on x86 can fail after a port to ARM or after compiler optimizations change instruction ordering, exposing a latent memory-order bug.",
+    "code_lang": "csharp",
+    "code": "// Broken: x and y are shared\nx = 1;\nflag = 1;\n\nif (flag == 1)\n    Console.WriteLine(x); // may not behave as intended without synchronization",
+    "follow_up": "What guarantees do acquire and release operations give you compared with sequential consistency?"
+   },
+   {
+    "question": "How does the kernel avoid corruption when one thread is blocked in the kernel and another thread in the same process closes or reuses that file descriptor?",
+    "answer": "The kernel separates the small integer file descriptor in a process table from the underlying open file object, which is reference-counted. When a syscall starts, the kernel typically resolves the descriptor to the open file object and holds a reference, so the in-flight operation can safely continue even if another thread closes that descriptor number. A later `open` may reuse the integer value, but it points to a different object. The gotcha is application-level confusion: closing or reusing descriptors concurrently can still redirect future operations in surprising ways.",
+    "real_world": "Teams hit rare production bugs when one thread closes a socket while another thread still assumes the descriptor number identifies the same connection; after reuse, logs and writes can end up on the wrong resource.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns do you use in multithreaded code to avoid descriptor reuse races?"
+   },
+   {
+    "question": "When a lock-free algorithm uses compare-and-swap, what memory ordering issues do you look for, and why can code that seems correct on x86 still fail on weaker architectures?",
+    "answer": "CAS only solves atomicity for one location; it does not automatically give the ordering needed for surrounding loads and stores. On x86, stronger ordering often hides bugs, but on ARM or POWER you can observe writes out of order unless the code uses the right acquire/release or stronger barriers. I look for publication bugs, stale reads of dependent state, and assumptions that a successful CAS makes all prior writes visible everywhere. The trade-off is correctness versus performance: stronger fences are safer but add latency and reduce scalability.",
+    "real_world": "A queue implementation can pass tests on developer laptops and then corrupt state or drop work in production on ARM-based servers because consumers observe the pointer update before the payload is fully visible.",
+    "code_lang": "cpp",
+    "code": "std::atomic<Node*> head;\n\nvoid push(Node* n) {\n  n->next = head.load(std::memory_order_relaxed);\n  while (!head.compare_exchange_weak(\n      n->next, n,\n      std::memory_order_release,\n      std::memory_order_relaxed)) {}\n}\n",
+    "follow_up": "How would you explain the ABA problem, and when do you need hazard pointers or epoch-based reclamation?"
+   },
+   {
+    "question": "What actually happens during a page-table shootdown, and why can it become a major scalability bottleneck on large multicore machines?",
+    "answer": "When the kernel changes mappings that other CPUs might have cached in their TLBs, it has to send inter-processor interrupts so those CPUs invalidate stale entries. That means coordination across cores, interrupt handling, and often waiting for acknowledgments, which can serialize otherwise local memory-management work. On systems with many cores, frequent unmaps, mprotect changes, or memory churn can spend surprising time in shootdowns instead of useful work. Batching invalidations or reducing mapping churn is often more effective than micro-optimizing the fault path.",
+    "real_world": "Teams see CPU time disappear into kernel overhead during allocator-heavy workloads or container churn, especially when many threads share an address space and the application constantly maps and unmaps memory.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What workload patterns or APIs tend to trigger excessive shootdowns?"
+   },
+   {
+    "question": "How does the kernel make `fsync` durable, and why is it still easy to lose recently written data even if your application called `write` successfully?",
+    "answer": "A successful `write` usually means the data reached the kernel page cache, not stable storage. `fsync` forces dirty data and the required metadata to the storage stack and asks the device to commit it, but exact durability depends on the filesystem, mount options, and whether the hardware honors flushes correctly. Ordering matters too: for crash-safe file replacement you often need to fsync the file and then the containing directory after rename. The trade-off is latency: durable writes can be orders of magnitude slower than cached ones.",
+    "real_world": "A service can acknowledge requests and still lose the last few seconds of updates after power loss because it only wrote data, or it renamed a file without syncing the parent directory.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the crash-safe sequence for atomically replacing a file with new contents?"
+   },
+   {
+    "question": "Can you explain how a modern filesystem or block layer schedules writes, and why writeback can create tail-latency problems for unrelated reads?",
+    "answer": "Dirty pages are usually written back asynchronously by kernel flusher threads, which cluster and reorder I/O to improve throughput. That helps devices do large sequential writes, but it can fill queues, consume bandwidth, and compete with foreground reads, especially if the device or controller has limited parallelism. The result is that a read that should be fast gets stuck behind background writeback or garbage-collection effects in the storage stack. Tuning dirty limits, I/O priorities, and queueing policy is often about protecting latency, not maximizing raw MB/s.",
+    "real_world": "A database doing periodic checkpoints can cause API p99 latency spikes because background flushes saturate the SSD, even though average CPU and memory usage look fine.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether tail latency is caused by page-cache writeback versus the application itself issuing too much synchronous I/O?"
+   },
+   {
+    "question": "What is the difference between edge-triggered and level-triggered readiness notification, and what bugs show up when people switch to edge-triggered mode for performance?",
+    "answer": "Level-triggered interfaces keep reporting readiness until you drain the condition, while edge-triggered ones usually notify only on transitions. Edge-triggered mode can reduce repeated wakeups, but the code must read or write until it would block and must handle partial progress correctly. If you only process one packet or one buffer per event, you can leave work unread and never get another notification. The trade-off is lower event overhead versus much stricter state-machine correctness.",
+    "real_world": "A high-throughput proxy can stall connections under load because it moved to edge-triggered epoll but forgot to drain sockets fully after each wakeup.",
+    "code_lang": "c",
+    "code": "for (;;) {\n  ssize_t n = read(fd, buf, sizeof(buf));\n  if (n > 0) handle(buf, n);\n  else if (n == -1 && errno == EAGAIN) break;\n  else { close(fd); break; }\n}\n",
+    "follow_up": "How do you design backpressure in an event loop so writable events do not spin the CPU?"
+   },
+   {
+    "question": "How do futexes actually reduce locking overhead, and what failure modes or performance pathologies do you watch for with them?",
+    "answer": "A futex lets uncontended lock operations stay entirely in user space using atomic instructions, and only falls back to the kernel when a thread has to sleep or be woken. That avoids a syscall on the fast path, which is why mutexes built on futexes are cheap when contention is low. The pathologies show up under contention: thundering herds, lock convoying, unfair wakeups, and priority interactions can dominate runtime. Correctness also depends on the user-space atomic protocol matching the kernel wait/wake conditions exactly.",
+    "real_world": "A service can benchmark well at low concurrency and then collapse at high core counts because a few hot locks spend most of their time in futex wait and wake paths.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is lock convoying, and how is it different from simple high contention?"
+   },
+   {
+    "question": "What does it mean for the kernel to overcommit memory, and how does that interact with the OOM killer and production reliability?",
+    "answer": "Overcommit means the kernel may allow virtual memory allocations that are not fully backed by physical memory or swap at allocation time, on the assumption that not everything will be used simultaneously. That improves utilization, but if many processes touch their promised memory at once, the system can hit real shortage and invoke the OOM killer or fail allocations. The hard part is that success of `malloc` or `mmap` does not guarantee future progress. The trade-off is higher density versus unpredictable failure modes under pressure.",
+    "real_world": "A fleet can run fine for weeks and then abruptly kill a critical process during a traffic spike because several services expand heaps at once and the host cannot honor all committed memory.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a memory-hungry service fail earlier and more predictably instead of getting killed later?"
+   },
+   {
+    "question": "How do CPU affinity and interrupt affinity interact, and when does pinning threads help versus hurt?",
+    "answer": "CPU affinity pins work to specific cores, which can improve cache locality and reduce migrations, but it also reduces the scheduler's flexibility. Interrupt affinity determines which cores handle device interrupts; if your application thread and NIC interrupts share a core, or if they are badly separated from the consuming threads, you can get either contention or extra cache misses and cross-core traffic. Pinning helps for predictable, hot paths with known topology, but it hurts when workloads are bursty or imbalanced. The right answer depends on cache locality, queueing model, and how many runnable threads you have per core.",
+    "real_world": "A packet-processing service can gain throughput by aligning NIC queues, interrupts, and worker threads, but the same pinning can increase tail latency when one queue gets hotter than the others.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would NUMA placement change your affinity strategy for a network service?"
+   },
+   {
+    "question": "Why do short-lived processes sometimes become a bottleneck at scale, even if each process does very little work?",
+    "answer": "The useful work may be tiny, but process startup still pays for fork or spawn mechanics, page-table setup, credential and namespace work, executable loading, relocations, and often cold page-cache or instruction-cache misses. At high rates, the overhead shows up as scheduler pressure, more kernel bookkeeping, and memory-management churn rather than raw CPU in the child. You also amplify tail latency because bursts create runnable-process storms. Reusing workers or switching to threads or async models is often about avoiding this control-plane overhead.",
+    "real_world": "Build systems, CGI-style services, and shell-heavy orchestration can saturate a host with process management long before they saturate cores with useful work.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What measurements would tell you that process creation overhead, not the child logic, is the limiting factor?"
+   },
+   {
+    "question": "How does `sendfile` or zero-copy I/O actually avoid work, and what are the cases where it does not help as much as people expect?",
+    "answer": "The win is mainly avoiding extra copies between kernel and user space and reducing syscalls, especially when data is already in the page cache and just needs to move from file-backed pages to a socket. It is not literally zero cost: the kernel still does bookkeeping, page pinning or reference management, protocol work, and often checksums. It helps less when TLS forces data through user-space transformations, when data must be modified per request, or when the bottleneck is storage or network latency rather than copy cost. The trade-off is efficiency versus flexibility.",
+    "real_world": "A static file server can see a large CPU drop with sendfile, while an API server serving compressed or encrypted dynamic responses sees little benefit because the bytes must still be touched and transformed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does kernel TLS or NIC offload change the zero-copy story?"
+   }
+  ]
+ }
+}

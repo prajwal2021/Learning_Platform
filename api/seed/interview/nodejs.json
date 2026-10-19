@@ -1,0 +1,469 @@
+{
+ "slug": "nodejs",
+ "name": "Node.js",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Node.js, and how is it different from a browser JavaScript runtime?",
+    "answer": "Node.js is a runtime that lets you run JavaScript outside the browser, mainly on servers and command-line tools. It includes APIs for files, networking, and processes that browsers do not expose directly. The biggest difference is that Node is built around non-blocking I/O, so it can handle many operations without tying up a thread per request. You use it for web servers, APIs, scripts, and tooling.",
+    "real_world": "A team uses Node.js to build an API that reads from a database and calls other services without blocking while waiting on network responses. The same JavaScript code would not have direct access to the filesystem in a browser.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does it mean that Node.js is single-threaded but still handles many requests well?"
+   },
+   {
+    "question": "What is the event loop in Node.js?",
+    "answer": "The event loop is the mechanism that lets Node.js keep running tasks while waiting for asynchronous work to finish. When you start an I/O operation, Node can continue doing other work and later runs your callback or resolves your promise when the operation completes. This matters because it prevents the process from blocking on slow disk or network operations. A common mistake is doing heavy CPU work in the main thread, which can delay the whole event loop.",
+    "real_world": "If one request does expensive JSON processing or image resizing on the main thread, all other requests can feel slow. Teams often move CPU-heavy work to worker threads or another service.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of work block the event loop?"
+   },
+   {
+    "question": "What is the difference between CommonJS and ES modules in Node.js?",
+    "answer": "CommonJS uses `require` and `module.exports`, while ES modules use `import` and `export`. CommonJS has been the traditional Node module system, and ES modules are the standard JavaScript module syntax. The main practical difference for beginners is syntax and how Node treats files, which can affect loading and interoperability. You should know both because you will see both in real codebases.",
+    "real_world": "Older Node projects often use CommonJS, while newer codebases and many packages use ES modules. Mixing them incorrectly can cause import/export errors that are confusing to debug.",
+    "code_lang": "javascript",
+    "code": "// CommonJS\nconst fs = require('fs');\nmodule.exports = { fs };",
+    "follow_up": "When would you choose `require` over `import`, or vice versa?"
+   },
+   {
+    "question": "What is `npm`, and what is `package.json` used for?",
+    "answer": "`npm` is Node’s package manager for installing and managing dependencies. `package.json` describes a project: its name, scripts, dependencies, and metadata. It matters because it lets other developers install the same packages and run the same commands consistently. A common beginner mistake is installing packages globally when they should be project dependencies.",
+    "real_world": "A production deployment often fails because a dependency was installed on one developer’s machine but not added to `package.json`. Teams rely on `package.json` so CI and servers can reproduce the environment.",
+    "code_lang": "json",
+    "code": "{\n  \"name\": \"my-app\",\n  \"scripts\": {\n    \"start\": \"node server.js\"\n  },\n  \"dependencies\": {\n    \"express\": \"^4.0.0\"\n  }\n}",
+    "follow_up": "What is the difference between dependencies and devDependencies?"
+   },
+   {
+    "question": "What is the difference between synchronous and asynchronous code in Node.js?",
+    "answer": "Synchronous code runs step by step and blocks until each operation finishes. Asynchronous code starts an operation and lets Node continue running other work while it waits for completion. In Node, asynchronous code is important for I/O like files, databases, and network calls because it keeps the server responsive. The trade-off is that async code can be harder to read if you do not handle ordering and errors carefully.",
+    "real_world": "A synchronous file read inside a request handler can slow every request during traffic spikes. Async APIs help keep latency stable under load.",
+    "code_lang": "javascript",
+    "code": "const fs = require('fs');\n\n// async\nfs.readFile('data.txt', 'utf8', (err, data) => {\n  if (err) throw err;\n  console.log(data);\n});",
+    "follow_up": "How do callbacks, promises, and async/await relate to each other?"
+   },
+   {
+    "question": "What is a callback in Node.js?",
+    "answer": "A callback is a function you pass to another function so it can be called later, usually when an async operation finishes. In Node, callbacks were the classic way to handle I/O results and errors. They are simple, but deeply nested callbacks can be hard to read and maintain. For beginners, a key rule is to always handle the error argument first when an API follows the Node callback style.",
+    "real_world": "You might see a file read API call its callback with either an error or the file contents. If the error path is ignored, the app can crash or produce bad data.",
+    "code_lang": "javascript",
+    "code": "fs.readFile('file.txt', 'utf8', (err, data) => {\n  if (err) {\n    console.error(err);\n    return;\n  }\n  console.log(data);\n});",
+    "follow_up": "Why are promises often preferred over callbacks?"
+   },
+   {
+    "question": "What does `async`/`await` do in Node.js?",
+    "answer": "`async` and `await` are syntax for writing asynchronous code that looks more like synchronous code. An `async` function always returns a promise, and `await` pauses that function until the promise settles. This improves readability and makes error handling with `try`/`catch` easier. The important thing to remember is that `await` does not block the whole process, only that function’s execution.",
+    "real_world": "A backend route that fetches user data from several services is often much easier to read with `await` than with nested `.then()` chains. That makes maintenance and debugging simpler for the team.",
+    "code_lang": "javascript",
+    "code": "async function loadUser() {\n  try {\n    const user = await getUser();\n    console.log(user);\n  } catch (err) {\n    console.error(err);\n  }\n}",
+    "follow_up": "What happens if you forget `await` before a promise?"
+   },
+   {
+    "question": "What is the `require` cache in Node.js?",
+    "answer": "When Node loads a module with `require`, it stores the result in a cache and reuses it on later requires. That means module initialization code usually runs once per process. This matters for performance and for understanding shared state: if a module exports a mutable object, changes can be seen by every file that imports it. A common mistake is assuming the module code re-runs every time.",
+    "real_world": "A database client is often created once in a module and reused across the app. If someone expects a fresh instance on every `require`, they can accidentally share state in unexpected ways.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you force Node to load a module again?"
+   },
+   {
+    "question": "What is the difference between `process.nextTick()`, `setImmediate()`, and `setTimeout()`?",
+    "answer": "They all schedule work later, but at different times in the event loop. `setTimeout()` runs after a timer delay, `setImmediate()` runs on a later event-loop phase, and `process.nextTick()` runs before the event loop continues to other work. The main beginner takeaway is that `nextTick` can run very early and, if overused, can starve other tasks. In most application code, `setImmediate` or a timer is safer when you just want to defer work.",
+    "real_world": "A library that uses `process.nextTick()` too aggressively can make the server feel stuck even though it is not technically blocked. That can show up as poor latency under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use each one in real code?"
+   },
+   {
+    "question": "What is middleware in an Express app?",
+    "answer": "Middleware is a function that runs during the request-response cycle and can read or modify the request, response, or stop the chain. In Express, middleware is commonly used for logging, authentication, body parsing, and error handling. It matters because it lets you separate cross-cutting concerns from route handlers. A common mistake is forgetting to call `next()` when the request should continue.",
+    "real_world": "An API may use middleware to check a user’s token before any protected route runs. If the middleware is wrong, every endpoint can become inaccessible or accidentally unprotected.",
+    "code_lang": "javascript",
+    "code": "app.use((req, res, next) => {\n  console.log(req.method, req.url);\n  next();\n});",
+    "follow_up": "What is the difference between regular middleware and error-handling middleware?"
+   },
+   {
+    "question": "How do you read from the filesystem in Node.js, and when would you use the synchronous version?",
+    "answer": "You can read files with the `fs` module using either callback-based, promise-based, or synchronous APIs. In server code, the asynchronous versions are usually preferred because they do not block the event loop. The synchronous versions are mainly useful at startup, in small scripts, or in tooling where blocking is acceptable.",
+    "real_world": "Using `readFileSync` inside a request handler can make an API feel slow under load because each request blocks while the file is being read. This often shows up first in logs as rising latency during traffic spikes.",
+    "code_lang": "javascript",
+    "code": "import { readFile } from 'node:fs/promises';\n\nconst text = await readFile('config.json', 'utf8');\nconsole.log(text);\n",
+    "follow_up": "What is the difference between `fs.promises.readFile` and `readFileSync`?"
+   },
+   {
+    "question": "How do you handle errors in Node.js code?",
+    "answer": "Errors are usually handled with `try`/`catch` for synchronous code and `.catch()` or `try`/`catch` with `await` for promises. In callback-based APIs, the common pattern is an error-first callback where the first argument is an error or `null`. Good error handling means checking failures early, logging useful context, and not letting the process continue in a broken state.",
+    "real_world": "A missed rejection handler can crash a process or hide a bug until production traffic hits the failing path. Teams often add centralized error logging so they can trace failures back to the request that caused them.",
+    "code_lang": "javascript",
+    "code": "try {\n  const data = JSON.parse(input);\n} catch (err) {\n  console.error('Invalid JSON', err.message);\n}\n",
+    "follow_up": "What is an unhandled promise rejection?"
+   },
+   {
+    "question": "What is the purpose of `module.exports` or `export default` in Node.js?",
+    "answer": "They define what a file makes available to other files. With CommonJS, `module.exports` controls the value returned by `require()`, and with ES modules, `export` controls what can be imported. This matters because it determines how you structure reusable code and what other modules can access.",
+    "real_world": "Without clear exports, teams end up with files that are hard to reuse and test. Exporting only the needed functions keeps module boundaries clean and reduces accidental coupling.",
+    "code_lang": "javascript",
+    "code": "function add(a, b) {\n  return a + b;\n}\n\nmodule.exports = { add };\n",
+    "follow_up": "What is the difference between exporting one value and exporting many values?"
+   },
+   {
+    "question": "What is the `path` module used for in Node.js?",
+    "answer": "The `path` module helps you work with file and directory paths in a way that is safe across operating systems. It can join path segments, get file names, extensions, and normalize separators. This avoids bugs from hardcoding `/` or manually concatenating strings.",
+    "real_world": "A common production bug is code that works on macOS or Linux but breaks on Windows because it assumes Unix-style paths. Using `path.join()` prevents that class of issue.",
+    "code_lang": "javascript",
+    "code": "import path from 'node:path';\n\nconst full = path.join('uploads', 'images', 'cat.png');\nconsole.log(full);\n",
+    "follow_up": "Why is `path.join()` better than string concatenation?"
+   },
+   {
+    "question": "How do environment variables work in Node.js, and why are they used?",
+    "answer": "Environment variables are key-value settings provided by the operating system and available in Node.js through `process.env`. They are commonly used for configuration like ports, database URLs, and secrets so you do not hardcode them in source code. The trade-off is that they are strings, so code often needs to parse or validate them.",
+    "real_world": "Teams use environment variables to run the same app in development, staging, and production with different settings. Missing validation can cause a service to start with an empty database URL and fail later in confusing ways.",
+    "code_lang": "javascript",
+    "code": "const port = Number(process.env.PORT || 3000);\nconsole.log(`Listening on ${port}`);\n",
+    "follow_up": "What should you do if a required environment variable is missing?"
+   },
+   {
+    "question": "How do you start an HTTP server in Node.js without Express?",
+    "answer": "You can use the built-in `http` module to create a server and handle requests directly. This is useful for simple services, learning how HTTP works, or when you want minimal dependencies. Express and similar frameworks add routing and middleware, but the core server API is enough for basic cases.",
+    "real_world": "A small internal service might not need a framework at all, especially if it only exposes one or two endpoints. Knowing the native API helps when debugging framework behavior or building tiny utilities.",
+    "code_lang": "javascript",
+    "code": "import http from 'node:http';\n\nconst server = http.createServer((req, res) => {\n  res.end('ok');\n});\nserver.listen(3000);\n",
+    "follow_up": "What are `req` and `res` in the server callback?"
+   },
+   {
+    "question": "What is the difference between `==` and `===` in JavaScript running on Node.js?",
+    "answer": "`===` checks both value and type, while `==` allows type coercion before comparing. In Node.js backend code, `===` is usually preferred because coercion can hide bugs and make conditions harder to predict. Using strict equality makes comparisons more explicit and safer.",
+    "real_world": "A request parameter like `'0'` may accidentally match `0` with loose equality and take the wrong branch. These bugs are subtle because they depend on JavaScript's conversion rules.",
+    "code_lang": "javascript",
+    "code": "console.log(0 == '0');   // true\nconsole.log(0 === '0');  // false\n",
+    "follow_up": "Can you give an example where loose equality can cause a bug?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How would you choose between using the Node.js built-in `http` module and a framework like Express for a new service?",
+    "answer": "Use the built-in `http` module when you need a very small surface area, tight control, or you are building a specialized server. Use Express when you want routing, middleware, and ecosystem support to move faster on typical APIs. The trade-off is simplicity and control versus speed of development and maintainability. In most product services, a framework reduces boilerplate and makes common patterns easier to standardize.",
+    "real_world": "A team might start with raw `http` for a webhook receiver, but switch to Express once the service grows to multiple routes, auth, and shared middleware. The framework makes it easier to keep request handling consistent across the codebase.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you avoid Express and choose a smaller framework or no framework at all?"
+   },
+   {
+    "question": "What happens if you do CPU-heavy work in a Node.js request handler?",
+    "answer": "CPU-heavy work blocks the event loop, so other requests cannot be processed until that work finishes. That increases latency for the whole server, not just the request doing the work. For expensive computation, you usually move the work to worker threads, a separate service, or a job queue. Node is best at I/O-bound workloads unless you design around the blocking part.",
+    "real_world": "This shows up when someone adds image processing or password hashing in the request path and the API suddenly becomes slow under load. A few expensive requests can make the entire service feel hung.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell from metrics or profiling that the event loop is being blocked?"
+   },
+   {
+    "question": "How do you handle concurrent I/O safely in Node.js without firing off unbounded parallel work?",
+    "answer": "You usually cap concurrency instead of launching every task at once. Unbounded parallelism can exhaust file descriptors, overwhelm downstream services, or create memory pressure from too many pending promises. A queue or a small concurrency limit keeps throughput stable and failure modes predictable. The right limit depends on the resource you are protecting, not just the number of CPU cores.",
+    "real_world": "A service that fetches data from many APIs can start timing out if it sends hundreds of requests at once. Limiting concurrency often improves both latency and reliability.",
+    "code_lang": "javascript",
+    "code": "async function runWithLimit(items, limit, worker) {\n  const results = [];\n  let i = 0;\n  const runners = Array.from({ length: limit }, async () => {\n    while (i < items.length) results.push(await worker(items[i++ ]));\n  });\n  await Promise.all(runners);\n  return results;\n}",
+    "follow_up": "What trade-offs do you consider when choosing the concurrency limit?"
+   },
+   {
+    "question": "How would you stream a large file download in Node.js instead of reading it all into memory first?",
+    "answer": "Use a readable stream and pipe it to the response so data flows in chunks. That keeps memory usage low and starts sending bytes to the client before the whole file is available. It also handles backpressure better than buffering everything in RAM. Streaming is the safer default for large or unbounded payloads.",
+    "real_world": "This matters when serving exports, logs, or media files. Reading the whole file first can crash the process or cause large GC pauses under load.",
+    "code_lang": "javascript",
+    "code": "import { createReadStream } from 'node:fs';\n\napp.get('/download', (req, res) => {\n  const stream = createReadStream('/tmp/big.zip');\n  stream.on('error', () => res.sendStatus(404));\n  stream.pipe(res);\n});",
+    "follow_up": "How would you handle client disconnects or stream errors in this setup?"
+   },
+   {
+    "question": "What is backpressure in Node.js streams, and why should you care about it?",
+    "answer": "Backpressure is the mechanism that slows a producer down when the consumer cannot keep up. Without it, a fast source can buffer too much data and use excessive memory. Node streams expose this through `pipe()` and the return value of `write()`, so you can avoid pushing data blindly. It matters whenever data rates are uneven, like network transfers or transforming large inputs.",
+    "real_world": "A log processor or proxy can look fine in testing, then start growing memory steadily in production because it keeps reading even when downstream is slow. Backpressure prevents that buildup.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do `pause()`/`resume()` or `pipeline()` relate to backpressure?"
+   },
+   {
+    "question": "When would you use `Promise.allSettled()` instead of `Promise.all()` in Node.js?",
+    "answer": "Use `Promise.all()` when all operations must succeed together and one failure should fail the whole batch. Use `Promise.allSettled()` when you want every result, including failures, so you can report partial success or retry only the failed items. The trade-off is simpler failure handling versus more complete visibility. In batch jobs and fan-out requests, `allSettled()` is often the better operational choice.",
+    "real_world": "For a notification service, some recipients may be unreachable while others succeed. You usually want to know which ones failed instead of losing the successful results too.",
+    "code_lang": "javascript",
+    "code": "const results = await Promise.allSettled(urls.map(fetch));\nfor (const r of results) {\n  if (r.status === 'fulfilled') console.log(r.value);\n  else console.error(r.reason);\n}",
+    "follow_up": "How would you combine `allSettled()` with retries for transient failures?"
+   },
+   {
+    "question": "How do you debug a memory leak in a Node.js service?",
+    "answer": "First confirm that memory keeps growing over time and does not return after garbage collection. Then look for patterns like unbounded caches, retained references, event listeners that are never removed, or queued work that never drains. Heap snapshots and allocation profiling help identify which objects are being retained. You want to separate true leaks from normal memory growth under load.",
+    "real_world": "A service may pass smoke tests but slowly grow until it gets killed by the container or OOM killer. The leak is often in a cache or a listener added per request.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you use to distinguish a leak from normal heap growth?"
+   },
+   {
+    "question": "What is the difference between `Buffer` and `string` in Node.js, and when does it matter?",
+    "answer": "A `Buffer` is raw binary data, while a string is decoded text. Use a `Buffer` when you are handling files, sockets, images, or any data whose encoding may not be text. Converting too early can corrupt binary data or add unnecessary overhead. The key trade-off is convenience for text versus correctness for bytes.",
+    "real_world": "This comes up when handling uploads or reading a protocol that is not plain text. Accidentally treating binary as UTF-8 can break files or signatures.",
+    "code_lang": "javascript",
+    "code": "const buf = Buffer.from([0x48, 0x69]);\nconsole.log(buf.toString('utf8')); // Hi\nconsole.log(Buffer.isBuffer(buf));",
+    "follow_up": "How do you choose an encoding when converting between `Buffer` and string?"
+   },
+   {
+    "question": "How would you structure configuration in a Node.js app so it is testable and safe across environments?",
+    "answer": "Read configuration once at startup, validate it, and pass it into the parts of the app that need it. Avoid reading `process.env` everywhere because that makes testing and refactoring harder. A small config module or factory function keeps the app explicit and easier to mock. Validation matters because missing or malformed values should fail fast instead of causing obscure runtime errors.",
+    "real_world": "Teams often deploy the same service to dev, staging, and prod with different URLs and credentials. Centralized config prevents a missing variable from turning into a late-night production incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test code that depends on configuration without touching real environment variables?"
+   },
+   {
+    "question": "How do you test Node.js code that depends on time, randomness, or the filesystem?",
+    "answer": "You isolate the dependency and replace it with a fake, stub, or mock in tests. That makes tests deterministic and faster than using the real clock, random generator, or disk. For filesystem-heavy code, integration tests can still be useful, but most logic should be testable without I/O. The goal is to verify behavior, not to reproduce the whole environment in every test.",
+    "real_world": "Without isolation, time-based tests can become flaky and file tests can fail on CI because of path or permission differences. Mocking the boundary keeps the test suite stable.",
+    "code_lang": "javascript",
+    "code": "function makeId(now = Date.now, random = Math.random) {\n  return `${now()}-${Math.floor(random() * 1000)}`;\n}\n\n// test can pass fake now/random here",
+    "follow_up": "When would you prefer an integration test over a mocked unit test in Node.js?"
+   },
+   {
+    "question": "How do you decide between using the built-in `fs` callbacks, `fs.promises`, and streaming APIs in Node.js?",
+    "answer": "Use `fs.promises` for most one-shot file operations because it is easier to compose with `async`/`await`. Use callback APIs mainly for older code or when a library expects them. Use streams when the file is large or when you want to process data incrementally, because loading everything into memory can hurt latency and memory use. The trade-off is simplicity versus control and memory efficiency.",
+    "real_world": "This comes up when a service reads uploads, logs, or exports. A team that uses `readFile` on large files may see memory spikes and slowdowns under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use `pipeline()` instead of manually wiring stream events?"
+   },
+   {
+    "question": "What happens if an `async` handler throws an error after it has already sent part of the HTTP response?",
+    "answer": "At that point the response is partly committed, so you cannot cleanly replace it with a different status code and body. In practice, the connection may be closed or the client may receive a truncated response. This is why you should validate and fail early, before writing response data, and keep stream/error handling close to the point where data is emitted. For streaming endpoints, errors need explicit handling on the stream pipeline.",
+    "real_world": "This shows up in download or proxy endpoints where a downstream error happens after headers are sent. Without careful handling, clients get broken responses and retries become hard to diagnose.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure error handling differently for a normal JSON endpoint versus a streaming endpoint?"
+   },
+   {
+    "question": "How do you prevent accidental mutation of shared objects when multiple requests use the same module state?",
+    "answer": "Avoid storing request-specific data in module-level variables, because Node shares that state across requests in the same process. Prefer creating a new object per request or injecting dependencies into handlers. If you need shared configuration, keep it immutable and separate from per-request state. This reduces bugs where one request overwrites data for another.",
+    "real_world": "A common production bug is a cached `currentUser` or tenant object in module scope that leaks between requests. These issues are hard to reproduce locally but show up under concurrency.",
+    "code_lang": "javascript",
+    "code": "let currentUser;\nfunction handler(req, res) {\n  currentUser = req.user;\n  setTimeout(() => res.end(currentUser.name), 10);\n}\n",
+    "follow_up": "How would you redesign that example so the handler stays stateless?"
+   },
+   {
+    "question": "What is the difference between `Promise.all()` and processing a batch with a concurrency limit?",
+    "answer": "`Promise.all()` starts everything at once and fails fast on the first rejection. A concurrency limit keeps only a fixed number of operations in flight, which protects external services, databases, and your own process from overload. The trade-off is throughput versus stability; unbounded parallelism can be faster in small tests but worse in production. Limits are usually the safer default for network and disk work.",
+    "real_world": "This matters when calling many downstream APIs or writing many files. Without a limit, a service can cause its own timeouts or trigger rate limits in dependencies.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement a simple concurrency limiter in Node.js?"
+   },
+   {
+    "question": "Why can `JSON.stringify()` be a performance problem in a Node.js API, and what do you do about it?",
+    "answer": "Serializing large objects is CPU work, so it can block the event loop and increase latency for other requests. It also creates large intermediate strings that use memory. To reduce the impact, send smaller payloads, avoid returning unnecessary fields, paginate large responses, and consider streaming if the response is naturally incremental. The key trade-off is convenience versus response cost.",
+    "real_world": "Teams often notice this after adding a large debug payload or returning huge nested objects from an endpoint. CPU time in serialization can become a visible bottleneck even when the database is fast.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you measure whether serialization or database access is the bigger bottleneck?"
+   },
+   {
+    "question": "What is backpressure in a Node.js `Writable` stream, and what should your code do when `write()` returns `false`?",
+    "answer": "Backpressure means the consumer is temporarily overloaded and asks the producer to slow down. When `write()` returns `false`, you should stop writing until the stream emits `drain`. Ignoring that signal can grow memory usage because data buffers up faster than it can be flushed. Backpressure is one of the main reasons streams scale better than manual buffering.",
+    "real_world": "This matters in file copies, HTTP proxying, and log pipelines. A service that ignores backpressure may look fine in small tests but run out of memory under sustained traffic.",
+    "code_lang": "javascript",
+    "code": "if (!dest.write(chunk)) {\n  src.pause();\n  dest.once('drain', () => src.resume());\n}\n",
+    "follow_up": "When would you prefer `pipeline()` over managing `pause()` and `resume()` yourself?"
+   },
+   {
+    "question": "How do you handle graceful shutdown in a Node.js service?",
+    "answer": "Stop accepting new work, finish in-flight requests, and close external resources such as database connections and servers. Also set a timeout so shutdown cannot hang forever if something is stuck. This matters because abrupt exits can drop requests, lose logs, or corrupt work in progress. A graceful shutdown path is essential for deploys and autoscaling.",
+    "real_world": "In production, containers are often given a short window to exit after a deploy or scale-down. If the process ignores the termination signal, requests can be terminated mid-flight.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What resources in your service need explicit closing, and in what order?"
+   },
+   {
+    "question": "When would you use worker threads in Node.js instead of another process or just staying single-threaded?",
+    "answer": "Use worker threads for CPU-heavy tasks that still need to run inside the same Node.js application, especially when you want to share memory efficiently or avoid the overhead of a separate service. Use a separate process when isolation is more important than low overhead. If the work is mostly I/O, you usually do not need either. The decision is mainly about blocking, isolation, and operational complexity.",
+    "real_world": "Examples include image processing, compression, and data parsing. Putting that work on the main thread can increase latency for every request in the service.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide between a worker thread and offloading the job to a queue-backed worker service?"
+   },
+   {
+    "question": "How do you test an HTTP endpoint in Node.js without coupling the test too tightly to Express or the routing framework?",
+    "answer": "Test the endpoint through the public HTTP interface and keep business logic in separate functions or services that can be unit tested independently. This gives you confidence that routing, serialization, and error handling work together. Avoid mocking the framework itself unless you are testing framework-specific behavior. The main trade-off is slower tests versus better coverage of real behavior.",
+    "real_world": "Teams often over-mock route handlers and miss bugs in headers, status codes, or async error handling. End-to-end request tests catch those integration issues earlier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you mock in a controller test, and what would you leave real?"
+   },
+   {
+    "question": "What are common causes of high memory use in a Node.js service, and how would you investigate them?",
+    "answer": "Common causes include buffering large responses, keeping references to big objects, unbounded caches, and storing per-request data globally. I would first look at heap growth over time, then take heap snapshots or allocation profiles to see what objects remain reachable. If memory grows only under load, I would also check for stream buffering and unfinished async work. The goal is to distinguish real leaks from normal temporary spikes.",
+    "real_world": "A service may pass basic tests but fail after hours in production because a cache never evicts entries or a queue keeps accumulating work. Memory issues often appear gradually, not as immediate crashes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would tell you the problem is a leak versus normal garbage-collection behavior?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain what actually runs in libuv’s thread pool, how its size affects performance, and what can go wrong if you tune it badly?",
+    "answer": "The libuv pool is for certain blocking native operations, not for JavaScript itself. Typical users are filesystem calls, some DNS lookups, crypto operations like PBKDF2 or scrypt, and some compression work. If the pool is too small, unrelated requests can queue behind slow jobs; if it is too large, you can increase context switching, memory use, and contention without improving throughput. I treat it as a queueing problem: measure pool saturation and latency, then tune only if those native tasks are a real bottleneck.",
+    "real_world": "A common incident is password hashing or large zip generation consuming the pool so file reads and DNS lookups slow down across the whole service. Teams often discover this only after seeing latency spikes on endpoints that do very little JavaScript.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prove thread-pool starvation is the cause of a latency incident in production?"
+   },
+   {
+    "question": "What is the difference between a Node.js cluster of processes and running a single process behind an external load balancer, and when would you choose one over the other?",
+    "answer": "Cluster lets one machine use multiple CPU cores by running multiple Node processes that can share a listening port, while an external load balancer distributes across independent service instances. Cluster can improve host utilization, but it adds process coordination, uneven memory growth, and trickier debugging because each worker has its own heap and state. I usually prefer horizontal scaling with separate processes or containers unless I specifically need to saturate a large box or keep deployment topology simple. The main trade-off is operational simplicity versus per-host efficiency.",
+    "real_world": "In production, teams often move away from cluster when sticky sessions, worker crashes, or uneven per-worker memory leaks make incidents hard to reason about. Separate instances behind a load balancer are easier to replace, autoscale, and observe.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of application state break when requests can land on different workers?"
+   },
+   {
+    "question": "How do `AsyncLocalStorage` and async context propagation work in Node.js, and where do they fail or surprise people?",
+    "answer": "`AsyncLocalStorage` attaches state to the current async execution chain so you can carry things like request IDs without threading them through every function. It works well across most built-in Promise and callback boundaries because Node tracks async resources, but it can break when libraries use unusual native integrations or when work is detached from the original context. It also has overhead, so I use it for tracing and auth context, not as a general state container. The key is to treat it as request-scoped metadata, not business data.",
+    "real_world": "This matters when logs from concurrent requests get interleaved and you need a correlation ID to reconstruct one failure path. It also shows up in auth bugs where background callbacks lose tenant context and write data under the wrong account.",
+    "code_lang": "javascript",
+    "code": "const { AsyncLocalStorage } = require('node:async_hooks');\nconst als = new AsyncLocalStorage();\n\nals.run({ reqId: 'r1' }, async () => {\n  await Promise.resolve();\n  console.log(als.getStore().reqId); // r1\n});",
+    "follow_up": "How would you detect a library that is breaking async context propagation?"
+   },
+   {
+    "question": "How does Node.js handle DNS resolution, and why can that choice affect latency and failure behavior?",
+    "answer": "Node can resolve names through OS facilities or through its own DNS APIs, and those paths have different caching, ordering, and failure characteristics. Some lookups use blocking system calls underneath and can consume the libuv thread pool, while DNS APIs using c-ares behave differently and expose more resolver options. That matters because DNS latency can become request latency, and resolver behavior can change IPv4 versus IPv6 connection order or retry patterns. In practice, I make resolution behavior explicit for critical clients and measure it separately from connect time.",
+    "real_world": "A real outage pattern is a slow or flaky corporate resolver causing thread-pool buildup, which then degrades unrelated filesystem or crypto work. Another is IPv6 being preferred unexpectedly, causing connection stalls until fallback happens.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you instrument to distinguish DNS slowness from TCP connect slowness?"
+   },
+   {
+    "question": "What are the failure modes around unhandled promise rejections in Node.js, and how do you treat them in a production service?",
+    "answer": "An unhandled rejection means a Promise failed and nothing observed it in time, which usually indicates a real bug or a broken control flow path. The exact process behavior has varied by Node version and runtime settings, so I don’t rely on defaults; I make the policy explicit and treat unhandled rejections as fatal in services. Once the app is in an unknown state, continuing can hide corruption or drop work silently. The safe pattern is to log enough context, emit telemetry, and restart cleanly under a supervisor.",
+    "real_world": "Teams get burned when background tasks reject, no request fails visibly, and the service keeps running while silently skipping jobs. Making these failures crash fast turns hidden data loss into an observable incident.",
+    "code_lang": "javascript",
+    "code": "process.on('unhandledRejection', (reason) => {\n  console.error('unhandled rejection', reason);\n  process.exitCode = 1;\n});",
+    "follow_up": "How is an unhandled rejection different from an `uncaughtException`, and would you recover from either?"
+   },
+   {
+    "question": "How do HTTP keep-alive and connection pooling work in Node.js clients, and what problems do you see when they are misconfigured?",
+    "answer": "Without connection reuse, every outbound request pays for a new TCP connection and often a new TLS handshake, which adds latency and burns file descriptors and ephemeral ports. Using an agent with keep-alive lets sockets be reused across requests, but pool size, idle timeouts, and upstream limits have to match traffic patterns. If the pool is too small you queue unnecessarily; if it is too large you can overload upstreams or accumulate stale sockets. The best setup is workload-specific and should be validated with latency, reuse rate, socket counts, and upstream error metrics.",
+    "real_world": "A frequent production issue is a high-QPS service opening a new connection per request and then hitting port exhaustion or very high TLS CPU. The opposite failure is long-lived idle sockets getting reset by the upstream, causing bursts of `ECONNRESET` on reuse.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you size the outbound connection pool for a service making calls to one dependency?"
+   },
+   {
+    "question": "What does stream `pipeline()` buy you over manually chaining `.pipe()` calls in Node.js?",
+    "answer": "`pipeline()` wires streams together with consistent error propagation, teardown, and completion semantics. With plain `.pipe()`, one stream failing does not always destroy the others correctly, and it is easy to leak file descriptors or leave sockets hanging. `pipeline()` also gives you a single callback or Promise to await, which makes cleanup paths much safer. I use manual piping only when I need very custom lifecycle control and I am handling all the edge cases deliberately.",
+    "real_world": "This matters in file upload or proxy services where one broken leg of the stream can otherwise leave temp files open or keep the client connection alive forever. Those leaks often appear only under partial failures and are hard to reproduce locally.",
+    "code_lang": "javascript",
+    "code": "const { pipeline } = require('node:stream/promises');\nconst fs = require('node:fs');\nconst zlib = require('node:zlib');\n\nawait pipeline(\n  fs.createReadStream('in.log'),\n  zlib.createGzip(),\n  fs.createWriteStream('out.gz')\n);",
+    "follow_up": "What happens if the destination errors after the source has already produced a lot of data?"
+   },
+   {
+    "question": "How would you diagnose event loop lag in a Node.js service, and what kinds of bugs usually cause it?",
+    "answer": "Event loop lag means the main thread is not getting back to the poll/check phases quickly, so timers, I/O callbacks, and requests are delayed. I would measure lag directly, correlate it with CPU usage, GC pauses, request latency, and active handles, then take CPU profiles during the bad window. Common causes are accidental synchronous work like regex catastrophes, huge JSON parsing or serialization, compression on the main thread, and tight loops over large data sets. The key is that low throughput and high latency can happen even when the process is not obviously crashed.",
+    "real_world": "A classic incident is one endpoint receiving an unusually large payload and spending hundreds of milliseconds parsing and validating it, which delays unrelated requests on the same process. Another is a pathological regex in input validation freezing the event loop under a crafted request.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell event loop lag apart from libuv thread-pool starvation?"
+   },
+   {
+    "question": "What are the trade-offs between spawning child processes with `fork` or `spawn` and using worker threads for isolation and throughput?",
+    "answer": "Child processes have separate memory spaces and failure domains, so a crash or leak is isolated, but IPC is heavier and memory overhead is higher. Worker threads share a process and can exchange data more efficiently, especially with transferables or shared memory, but misuse can introduce data races and one fatal native crash can still take down the process. I choose processes for stronger isolation or mixed runtimes, and workers for CPU-heavy tasks where lower communication cost matters. The real trade-off is isolation and operability versus efficiency.",
+    "real_world": "Image processing, document conversion, and user-supplied code execution often start in child processes because containment matters more than a bit of overhead. Compute-heavy analytics inside a trusted service are a better fit for worker threads when copy cost would dominate.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When does structured cloning between threads become a bottleneck, and how would you avoid it?"
+   },
+   {
+    "question": "How do you reason about V8 garbage collection in Node.js, and what coding patterns tend to cause GC-driven latency spikes?",
+    "answer": "GC cost is driven by allocation rate, object lifetimes, and heap size, not just by the final memory footprint. If a service allocates many short-lived objects per request, V8 can spend a lot of time in young-generation collection; if objects are retained and promoted, major collections become longer and more disruptive. Patterns like repeatedly building huge intermediate arrays, cloning large objects, buffering entire payloads, or caching without bounds often show up in profiles. The practical approach is to reduce allocation churn, stream where possible, and verify with heap snapshots and GC traces rather than guessing.",
+    "real_world": "Teams often see p99 latency climb before RSS looks alarming, because the issue is GC pause time from allocation churn rather than an obvious leak. A common fix is replacing whole-response buffering with incremental processing and tightening cache limits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or runtime signals would you watch to confirm GC is the main source of latency?"
+   },
+   {
+    "question": "If a Node.js service shows high CPU but low event loop lag, what does that suggest, and how would you investigate it?",
+    "answer": "That usually suggests CPU is being spent outside the main JavaScript thread, often in kernel work, TLS, compression, native addons, or libuv thread-pool tasks, rather than blocking the event loop directly. I’d compare process CPU, system CPU, event loop delay, and thread-level profiles, then capture a CPU profile or perf sample to see whether time is in JS, V8, OpenSSL, zlib, or syscalls. It matters because the fix could be very different: reduce crypto/compression work, tune pooling, or move hot paths, not just “optimize JavaScript.”",
+    "real_world": "A service terminating lots of HTTPS traffic can burn CPU in OpenSSL while request handlers look cheap in JS profiles. Teams often chase the wrong bottleneck until they correlate event loop metrics with native and system-level profiling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you put on a dashboard to distinguish JS saturation from native or kernel saturation?"
+   },
+   {
+    "question": "What actually happens when you call `server.listen(0)` in Node.js, and what are the edge cases in production?",
+    "answer": "Passing `0` asks the OS to choose an ephemeral port, and Node exposes the chosen port from `server.address()` after the server is listening. It’s useful in tests and for sidecar-style startup, but production edge cases include racey service registration, assumptions that the port is known before bind completes, and problems with firewalls or health checks expecting fixed ports. The important trade-off is convenience versus discoverability and operational simplicity.",
+    "real_world": "In test suites, `listen(0)` avoids port collisions across parallel runs. In production, it can break service discovery if the process binds successfully but registers too late or with stale metadata.",
+    "code_lang": "javascript",
+    "code": "const http = require('http');\nconst server = http.createServer((req, res) => res.end('ok'));\nserver.listen(0, () => {\n  const addr = server.address();\n  console.log(addr.port);\n});",
+    "follow_up": "How would you make dynamic port assignment safe when another process needs to discover the port?"
+   },
+   {
+    "question": "In Node.js, what are the trade-offs between using `Buffer.alloc()` and `Buffer.allocUnsafe()`?",
+    "answer": "`Buffer.alloc()` returns zero-filled memory, which is safer but does extra work proportional to the size. `Buffer.allocUnsafe()` is faster because it skips initialization, but the contents are unspecified until you overwrite every byte yourself. That matters for both correctness and security: reading before writing can leak stale process memory into application logic or responses. I only use the unsafe form in hot paths when the code immediately fills the entire buffer.",
+    "real_world": "A common incident is building a response into an unsafe buffer and accidentally sending uninitialized bytes because one branch wrote less data than expected. The bug may only appear under rare lengths or error paths.",
+    "code_lang": "javascript",
+    "code": "const buf = Buffer.allocUnsafe(8);\nbuf.fill(0);\nconsole.log(buf);",
+    "follow_up": "Why can small-buffer allocation behavior make unsafe buffer bugs intermittent rather than obvious?"
+   },
+   {
+    "question": "How do you reason about copy versus zero-copy behavior with `Buffer.slice()`, `subarray()`, and `Buffer.from()` in Node.js?",
+    "answer": "`slice()` and `subarray()` create views over the same underlying memory, so they are cheap but shared; mutating one affects the other. `Buffer.from(buffer)` makes a copy when given a buffer, which costs memory and CPU but gives isolation. This trade-off matters in parsers and network code where zero-copy improves throughput, but accidental aliasing can corrupt data across layers. I choose views for read-only or carefully bounded lifetimes, and copies when ownership is unclear.",
+    "real_world": "Protocol parsers often hold a tiny slice of a much larger receive buffer; if you keep that view around, you may accidentally retain the whole backing memory much longer than expected. That can look like a memory leak even though objects are still reachable.",
+    "code_lang": "javascript",
+    "code": "const a = Buffer.from('hello');\nconst b = a.slice(0, 2);\nb[0] = 0x48;\nconsole.log(a.toString()); // Hello",
+    "follow_up": "How can zero-copy buffer views increase memory retention even when the view itself is small?"
+   },
+   {
+    "question": "What can go wrong when using `AbortController` in Node.js for timeouts and cancellation, and how should service code handle it?",
+    "answer": "Cancellation in Node is cooperative, so aborting only works if the API actually supports a signal and cleans up correctly. Common failures are assuming abort stops all underlying work, leaking listeners, or treating timeouts as generic errors instead of a distinct class with different retry and logging behavior. Good service code propagates one signal through the whole operation, removes listeners on completion, and maps aborts and deadlines to explicit response semantics. Otherwise you can end up with “timed out” requests that still keep sockets, file handles, or downstream work alive.",
+    "real_world": "Teams often add per-request timeouts but forget to cancel the DB or HTTP client call underneath, so work continues after the client has gone away. Under load, those zombie operations amplify latency and pool exhaustion.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure cancellation so an inbound HTTP deadline cancels all downstream calls consistently?"
+   },
+   {
+    "question": "What are the operational differences between `exec`, `execFile`, `spawn`, and `fork` in Node.js, and which mistakes cause production incidents?",
+    "answer": "`spawn` streams stdin/stdout and is the right default for long-running or high-output commands. `exec` runs through a shell and buffers output in memory, so it is convenient but risky for untrusted input and large output; `execFile` avoids the shell and is safer when you know the executable. `fork` starts another Node process with an IPC channel, which is useful for Node-to-Node coordination but heavier than in-process concurrency. Production incidents usually come from shell injection, output buffering that blows memory, or forgetting to reap and time-limit child processes.",
+    "real_world": "A service that shells out to a CLI with `exec` can crash when verbose output exceeds the expected size or hang because the child waits on blocked pipes. Security reviews also flag `exec` quickly if any argument can be influenced externally.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer a worker thread over `fork` for a CPU-bound task that also needs strict resource isolation?"
+   },
+   {
+    "question": "How do `ref()` and `unref()` affect timers, sockets, or servers in Node.js, and when is using `unref()` the right move?",
+    "answer": "A referenced handle keeps the event loop alive; an unreferenced one does not, so the process may exit if nothing else is pending. `unref()` is useful for background housekeeping like cache cleanup or idle metrics flushes that should not delay shutdown, but it’s dangerous if the task is actually required for correctness. The trade-off is shutdown behavior versus reliability of best-effort work. You should use it only when losing that work on process exit is acceptable.",
+    "real_world": "A common bug is adding a periodic timer for telemetry and then wondering why short-lived scripts never exit. The opposite bug is unref’ing something important, like a delayed retry, and silently dropping work during deploys or autoscaling churn.",
+    "code_lang": "javascript",
+    "code": "const t = setInterval(() => {\n  console.log('tick');\n}, 1000);\nt.unref();",
+    "follow_up": "What other kinds of handles besides timers commonly keep a Node.js process from exiting?"
+   },
+   {
+    "question": "How would you explain head-of-line blocking in a Node.js service that uses HTTP/1.1, and what mitigations are actually effective?",
+    "answer": "With HTTP/1.1, requests on a single connection are constrained by ordering and connection limits, so a slow request can delay others sharing the same path or limited pool. In Node services this often shows up in outbound clients with too few sockets per origin or in proxies that multiplex poorly. Effective mitigations are better pool sizing, isolating traffic classes, reducing long-tail request times, and using protocols or topologies that reduce per-connection HOL effects. The key is not just adding concurrency blindly, because that can shift the bottleneck downstream.",
+    "real_world": "A service calling one dependency for both cheap reads and rare expensive reports can see p99 latency spikes on the cheap path because both share the same small keep-alive pool. Splitting pools or hosts often helps more than increasing timeouts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect whether p99 latency is coming from pool queueing versus the downstream service itself?"
+   },
+   {
+    "question": "What does it mean for a Node.js addon or native dependency to block the event loop, and how do you prove that’s the issue?",
+    "answer": "Native code can still run on the main thread, so “written in C++” does not mean non-blocking. If an addon exposes a synchronous API or does long work before yielding back to libuv, it blocks JavaScript just like expensive JS would. To prove it, I’d use a flame graph or inspector profile that shows time disappearing into native frames while event loop delay rises, and I’d correlate that with requests hitting the addon. Then the fix is to move that work off-thread, switch APIs, or isolate it in another process.",
+    "real_world": "Image processing, PDF rendering, and database drivers with mixed sync/native paths have caused outages where CPU looked moderate but latency exploded. Teams often assume the problem can’t be native because “Node is async,” which is exactly the trap.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs would distinguish a blocking native addon from thread-pool saturation?"
+   },
+   {
+    "question": "In a multi-tenant Node.js API, how would you prevent one tenant from causing unfairness or resource starvation for others inside the same process?",
+    "answer": "I’d treat fairness as an explicit scheduling problem, not something the event loop gives for free. Typical controls are per-tenant concurrency limits, bounded queues, timeouts, circuit breakers, and separate pools for expensive downstreams so one tenant cannot monopolize sockets, memory, or CPU-heavy work. If tenants have very different traffic shapes, isolation at the process or service level can be simpler than trying to perfectly share one process. The trade-off is utilization efficiency versus blast-radius reduction and predictability.",
+    "real_world": "Without quotas, one tenant can flood a shared queue with slow requests and drive up latency for everyone else even if total CPU is not maxed. Teams often discover this only after a noisy-neighbor incident during a customer import or backfill.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you add to verify that your fairness controls are working under load?"
+   }
+  ]
+ }
+}

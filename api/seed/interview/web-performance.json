@@ -1,0 +1,485 @@
+{
+ "slug": "web-performance",
+ "name": "Web performance",
+ "category": "Frontend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between `async` and `defer` on a script tag?",
+    "answer": "Both let the browser keep parsing HTML without blocking on the script download. `defer` scripts run after HTML parsing finishes, in document order, which is usually what you want for app code. `async` scripts run as soon as they finish downloading, so order is not guaranteed and they can interrupt parsing. Use `defer` for dependent scripts; use `async` for independent scripts like analytics.",
+    "real_world": "A common production bug is a page that breaks only in production because two scripts load in the wrong order. Teams often switch app bundles to `defer` to avoid render-blocking and preserve execution order.",
+    "code_lang": "html",
+    "code": "<script src=\"app.js\" defer></script>\n<script src=\"analytics.js\" async></script>",
+    "follow_up": "When would loading a script at the end of the body still be useful?"
+   },
+   {
+    "question": "What is render-blocking CSS, and why does it matter?",
+    "answer": "CSS is render-blocking because the browser usually waits for stylesheets before painting content, so it can avoid showing an unstyled page. Large or late-loaded CSS delays the first visible content even if the HTML has already arrived. This matters because users care about seeing something quickly, not just the network finishing. The usual fix is to keep critical CSS small and defer non-critical styles when appropriate.",
+    "real_world": "If a homepage has a big stylesheet and the hero section appears late, users may think the site is slow even though the HTML was delivered quickly. Performance work often starts by reducing unused CSS and splitting page-specific styles.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is CSS different from JavaScript in how it blocks rendering?"
+   },
+   {
+    "question": "What is lazy loading, and when would you use it?",
+    "answer": "Lazy loading means delaying the loading of a resource until it is likely needed, such as images below the fold. It reduces the initial page weight and speeds up the first load. It is useful for long pages, image galleries, and routes with lots of offscreen content. You should not lazy-load important above-the-fold content, because that can hurt the user experience.",
+    "real_world": "Product pages and feeds often contain dozens of images, but only the first few are visible initially. Lazy loading can cut bandwidth use and make the page feel much faster on mobile connections.",
+    "code_lang": "html",
+    "code": "<img src=\"hero.jpg\" alt=\"Hero\">\n<img src=\"below-fold.jpg\" alt=\"More content\" loading=\"lazy\">",
+    "follow_up": "What are the risks of lazy loading images that are near the top of the page?"
+   },
+   {
+    "question": "What is the browser cache, and how do you use it for performance?",
+    "answer": "The browser cache stores previously downloaded resources so the browser can reuse them instead of fetching them again. It improves repeat visits and can also speed up navigation between pages that use the same assets. To use it well, you want long-lived caching for versioned static files like JS and CSS, and shorter caching for content that changes often. The main trade-off is making sure users get fresh updates when the file actually changes.",
+    "real_world": "A team shipping weekly builds often fingerprints bundle filenames so the browser can cache them for a long time without serving stale code. Without that, every visit may re-download the same large assets.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why are cache-busting filenames often better than relying on short cache times?"
+   },
+   {
+    "question": "What does it mean to minimize HTTP requests, and does that always help?",
+    "answer": "Minimizing requests means reducing the number of separate files the browser has to fetch, such as by removing unused assets or combining small ones when it makes sense. Fewer requests can reduce overhead and speed up loading, especially on slower networks. But it does not always help, because huge combined files can delay the parts the user needs first. The better goal is usually to reduce critical requests, not just total requests.",
+    "real_world": "Older advice was to bundle everything into one file, but modern apps can hurt initial load if one giant bundle must download before anything is usable. Teams often split code by route so the first page only loads what it needs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would code splitting be better than bundling everything together?"
+   },
+   {
+    "question": "What is code splitting?",
+    "answer": "Code splitting is breaking a JavaScript bundle into smaller pieces so the browser only loads the code needed for the current page or route. It helps reduce initial download size and can improve startup time. This is especially useful for large apps where many features are not needed immediately. The trade-off is that you introduce more loading points, so you have to manage them carefully to avoid extra latency later.",
+    "real_world": "In a dashboard app, the billing page, reports page, and settings page may not need to load on startup. Splitting those features can make the app much faster to open.",
+    "code_lang": "javascript",
+    "code": "const SettingsPage = () => import('./SettingsPage');\n\nrouter.add({\n  path: '/settings',\n  component: SettingsPage,\n});",
+    "follow_up": "What is the downside of splitting code too aggressively?"
+   },
+   {
+    "question": "What is the critical rendering path?",
+    "answer": "The critical rendering path is the sequence of work the browser must do to turn HTML, CSS, and scripts into pixels on the screen. It includes fetching resources, parsing HTML, building the DOM and CSSOM, and generating the first renderable output. Understanding it helps you see why some resources delay the first paint more than others. The key idea is to make the path to first content as short as possible.",
+    "real_world": "When a page feels blank for several seconds, the problem is often not total download size but something in the critical path, such as a large stylesheet or blocking script. Performance debugging often starts by finding what the browser had to wait for before painting.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which resources usually hurt first paint the most?"
+   },
+   {
+    "question": "What is the difference between `DOMContentLoaded` and the `load` event?",
+    "answer": "`DOMContentLoaded` fires when the HTML has been parsed and the DOM is ready, but before images and other subresources necessarily finish loading. `load` fires later, when the page and its dependent resources are fully loaded. If you only need to manipulate the DOM, `DOMContentLoaded` is usually earlier and better. If you need images or fonts to be finished, `load` is the safer choice.",
+    "real_world": "A common mistake is attaching UI setup to `load` and making the page feel slower than necessary. Moving non-image-dependent code to `DOMContentLoaded` often improves responsiveness.",
+    "code_lang": "javascript",
+    "code": "document.addEventListener('DOMContentLoaded', () => {\n  console.log('DOM ready');\n});\n\nwindow.addEventListener('load', () => {\n  console.log('Everything loaded');\n});",
+    "follow_up": "What can go wrong if you run DOM code before the DOM is ready?"
+   },
+   {
+    "question": "What is a CDN, and why does it improve performance?",
+    "answer": "A CDN, or content delivery network, is a distributed set of servers that delivers assets from a location closer to the user. This lowers latency and can reduce load on your origin server. CDNs are especially useful for static assets like images, scripts, styles, and videos. They also improve reliability because traffic is spread across multiple nodes.",
+    "real_world": "A global ecommerce site may have users far from the main server region. Serving images and bundles from a CDN can make the site feel much faster worldwide.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kind of files are best suited for a CDN and which are not?"
+   },
+   {
+    "question": "What is the difference between images being resized with CSS and actually serving smaller image files?",
+    "answer": "CSS resizing changes how big an image appears on the page, but the browser may still download the full original file. Serving a smaller image file reduces bytes over the network and often improves load time much more. For performance, you want the file dimensions and compression to match the display size as closely as practical. The trade-off is keeping multiple sizes or responsive images to support different devices.",
+    "real_world": "A page may look fine but still be slow because it ships a huge 4000px photo displayed in a 400px card. Fixing image sizing is one of the fastest wins on content-heavy sites.",
+    "code_lang": "html",
+    "code": "<img\n  src=\"photo-800.jpg\"\n  srcset=\"photo-400.jpg 400w, photo-800.jpg 800w\"\n  sizes=\"(max-width: 600px) 400px, 800px\"\n  alt=\"Product photo\">",
+    "follow_up": "Why is `srcset` useful on mobile devices?"
+   },
+   {
+    "question": "What is the main difference between a large JavaScript bundle and a large image when it comes to page performance?",
+    "answer": "A large JavaScript bundle usually delays parsing, compilation, and execution, which can block interactivity and rendering. A large image mainly affects download time and memory, though it can also delay visual completion if it is above the fold. In practice, JS often hurts both load and responsiveness, while images mostly hurt bandwidth and paint timing.",
+    "real_world": "A page can look loaded but still feel frozen because the main bundle is still executing. On the other hand, a media-heavy landing page may be interactive quickly but take a long time to fully display images.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to optimize JavaScript first or images first?"
+   },
+   {
+    "question": "What is minification, and how is it different from compression?",
+    "answer": "Minification removes unnecessary characters from source files, like whitespace and comments, to reduce file size. Compression, usually gzip or Brotli, reduces the transmitted size of the file over the network. Minification happens before serving the file; compression happens during transfer, and they are often used together.",
+    "real_world": "Teams sometimes minify assets but forget to enable compression on the server, leaving a lot of easy network savings on the table. The reverse also happens: compression helps, but minification can still reduce parse and transfer costs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why might compression still help even after aggressive minification?"
+   },
+   {
+    "question": "What does it mean to defer loading non-critical resources, and what counts as non-critical?",
+    "answer": "It means delaying files that are not needed for the initial visible content or first interaction. Typical examples are below-the-fold images, non-essential widgets, analytics, and some third-party scripts. The trade-off is faster initial rendering and less competition for bandwidth, but delayed features may appear later.",
+    "real_world": "A news site may defer comment widgets and recommendation panels until after the article content is visible. This keeps the page feeling fast even if those extras are still useful later.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you avoid deferring something that the user needs right away?"
+   },
+   {
+    "question": "What is image compression, and what is the trade-off when you use it?",
+    "answer": "Image compression reduces file size by removing or approximating data. Lossless compression keeps the image identical, while lossy compression usually makes the file much smaller at the cost of some quality. The trade-off is smaller downloads versus possible artifacts, so you choose quality based on where the image appears and how important visual fidelity is.",
+    "real_world": "Product listing pages often use more aggressive compression because many thumbnails are shown at once. A marketing hero image may need gentler compression because quality is more noticeable there.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose WebP or AVIF over JPEG or PNG?"
+   },
+   {
+    "question": "What is the difference between a synchronous script and a script that is loaded in a non-blocking way?",
+    "answer": "A synchronous script is fetched and executed in order, and it can pause HTML parsing while it runs. A non-blocking approach lets the browser continue parsing or rendering while the script is being fetched, then executes it later. This matters because blocking scripts can delay first paint and user interaction.",
+    "real_world": "An inline third-party analytics script placed high in the document can slow down the whole page. Moving it to a non-blocking load often improves startup performance without removing the script.",
+    "code_lang": "html",
+    "code": "<script src=\"/app.js\"></script>\n<script src=\"/analytics.js\" async></script>",
+    "follow_up": "What kinds of scripts should never be loaded without thinking about execution order?"
+   },
+   {
+    "question": "What is a font swap or text flashing issue, and how does it affect performance?",
+    "answer": "It happens when text is shown with a fallback font first and then replaced by the web font after it loads. That can make the page look unstable and can shift layout if the fonts have different metrics. From a performance point of view, it is not just visual polish; it affects perceived speed and layout stability.",
+    "real_world": "A site may feel fast, but users notice headings jumping when the custom font finally arrives. Teams often tune font loading to reduce that shift on slow connections.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is one way to reduce layout shift caused by fonts?"
+   },
+   {
+    "question": "What is layout shift, and why do frontend teams care about it?",
+    "answer": "Layout shift is when visible elements move around unexpectedly while the page is loading or updating. It matters because it makes the page feel unstable and can cause users to click the wrong thing. Common causes are late-loading images, ads, fonts, and content inserted above existing elements.",
+    "real_world": "A button can move just as the user is about to tap it, causing a misclick or a frustrating experience. This is especially painful on mobile where the viewport is small.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the most common causes of layout shift in a real app?"
+   },
+   {
+    "question": "What does it mean to optimize for the first meaningful content the user sees?",
+    "answer": "It means prioritizing the resources needed for the initial visible area, so the page appears useful as early as possible. That usually involves the main text, hero image, and critical CSS, while delaying less important content. The key trade-off is focusing on perceived speed instead of trying to load everything at once.",
+    "real_world": "A dashboard may load the header and primary chart first, while side panels and filters appear afterward. Users care more about seeing the main data quickly than about every widget being ready immediately.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide what belongs in the initial visible area?"
+   },
+   {
+    "question": "Why can adding more third-party scripts hurt performance so much?",
+    "answer": "Third-party scripts often add extra network requests, main-thread work, and unpredictable behavior. They can also block rendering, delay input responsiveness, and make debugging harder because you do not control their code. Even if each script seems small, several of them together can have a big impact.",
+    "real_world": "Marketing pixels, chat widgets, and A/B testing tools can turn a fast page into a slow one. Teams often have to decide which third-party tools are worth the cost.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you measure before deciding to remove or keep a third-party script?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How would you debug a page that feels slow even though the bundle size looks reasonable?",
+    "answer": "I’d separate loading time from runtime cost. In DevTools I’d check the Performance panel for long tasks, excessive scripting, layout thrashing, and repeated work during startup, then correlate that with the network waterfall and CPU throttling. A “small” bundle can still be slow if it parses into expensive code, does too much work on startup, or triggers lots of DOM reads and writes. The fix is usually to reduce initial work, break up long tasks, and move non-urgent computation later.",
+    "real_world": "This comes up when a marketing page loads quickly over the network but still freezes on mid-range phones. Teams often find the issue is initialization code, not transfer size.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs in the Performance panel tell you the problem is scripting versus rendering?"
+   },
+   {
+    "question": "When would you use `requestIdleCallback` or a similar idle-time strategy, and what are the trade-offs?",
+    "answer": "Use idle-time work for tasks that are useful but not needed for the first interaction, like prefetching, analytics batching, or low-priority data preparation. The trade-off is that idle time is not guaranteed, especially on busy pages or slower devices, so the task may run later than you expect. You should also have a fallback for important work, because delaying too much can make a feature feel incomplete. It’s a scheduling tool, not a performance fix by itself.",
+    "real_world": "Teams use this to avoid competing with initial rendering and input handling. It helps when background work causes jank right after page load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether a task belongs in idle time or should be chunked and run sooner?"
+   },
+   {
+    "question": "What is a long task, and why are long tasks bad for user experience?",
+    "answer": "A long task is usually a chunk of main-thread work that runs long enough to block input, rendering, or other updates. They are bad because while the main thread is busy, clicks, typing, scrolling, and animations can feel delayed or frozen. Even if the page eventually works, the user experiences lag. The practical fix is to reduce the amount of synchronous work, split it into smaller pieces, or move it off the main thread when possible.",
+    "real_world": "This often shows up as a page that is technically loaded but feels unresponsive for a second or two. Product teams notice it when tapping a button does nothing right away.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you find the source of a long task in a real app?"
+   },
+   {
+    "question": "What is main-thread contention, and how do you reduce it in a frontend app?",
+    "answer": "Main-thread contention happens when too many tasks compete for the browser’s main thread, so rendering and input have to wait behind JavaScript or layout work. You reduce it by doing less work during startup, avoiding forced synchronous layout, chunking expensive computations, and moving heavy processing to Web Workers when feasible. It’s also important to avoid unnecessary re-renders and excessive DOM updates. The goal is not just faster code, but more time available for the browser to respond smoothly.",
+    "real_world": "This matters in apps with rich interactions, like dashboards or editors, where UI updates and business logic run at the same time. Without controlling contention, scrolling and typing become visibly sluggish.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would a Web Worker help, and when would it not?"
+   },
+   {
+    "question": "How do you know whether to memoize something on the frontend, and what can go wrong if you overuse memoization?",
+    "answer": "Memoize when a calculation is expensive, inputs repeat often, and the cached result is likely to be reused enough to pay for the bookkeeping. Overusing it can add complexity, memory use, and stale-data bugs, and in many cases the memoization check itself costs more than recomputing. In UI code, premature memoization can also hide performance problems elsewhere, like unnecessary renders or too much derived state. The right approach is to measure before and after, not assume caching is always a win.",
+    "real_world": "This comes up in React and similar frameworks when developers memoize every selector or component prop. Sometimes the app gets harder to maintain without a measurable speedup.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you measure to prove memoization is helping?"
+   },
+   {
+    "question": "What is the difference between throttling and debouncing, and when would you use each for performance?",
+    "answer": "Debouncing waits until the input stops changing before running a function, while throttling runs it at most once per interval. Debouncing is good for things like search suggestions or autosave where only the final value matters, and throttling is good for scroll or resize handlers where you want regular updates without overwhelming the main thread. Both are about controlling frequency, but they serve different UX goals. If used incorrectly, they can make the interface feel laggy or miss intermediate states.",
+    "real_world": "A resize listener that recalculates layout on every event can destroy frame rate. Teams often throttle these handlers to keep interaction smooth.",
+    "code_lang": "javascript",
+    "code": "function throttle(fn, wait) {\n  let last = 0;\n  return (...args) => {\n    const now = Date.now();\n    if (now - last >= wait) {\n      last = now;\n      fn(...args);\n    }\n  };\n}",
+    "follow_up": "How would you choose the interval for a throttled handler?"
+   },
+   {
+    "question": "Why can a lot of DOM nodes slow down a page, even if the JavaScript is small?",
+    "answer": "A large DOM increases the cost of style calculation, layout, and paint, and it can make updates more expensive because the browser has more nodes to consider. The JavaScript bundle size may look fine, but the rendering work can still be heavy. This is especially noticeable when repeated structures are deeply nested or when many nodes are being updated frequently. Reducing unnecessary wrappers, virtualizing long lists, and simplifying the tree can have a big impact.",
+    "real_world": "This happens in feeds, tables, and admin panels with many rows or nested components. The app may be fine on desktop but lag badly on low-end devices.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What techniques would you use to render long lists efficiently?"
+   },
+   {
+    "question": "What is forced synchronous layout, and how do you avoid it?",
+    "answer": "Forced synchronous layout happens when code reads layout information after making DOM changes that invalidate layout, so the browser has to flush style and layout immediately. That creates extra work and can turn a small update into a slow one, especially inside loops. To avoid it, batch reads before writes, separate measurement from mutation, and don’t repeatedly query layout properties after every DOM change. This pattern is often more important than micro-optimizing the individual DOM calls.",
+    "real_world": "A common bug is reading `offsetHeight` right after changing classes in a loop. The page works, but the update becomes much slower as the list grows.",
+    "code_lang": "javascript",
+    "code": "// Bad: repeated read after write\nitems.forEach(item => {\n  item.classList.add('active');\n  total += item.offsetHeight;\n});",
+    "follow_up": "How would you refactor code like this to avoid layout thrashing?"
+   },
+   {
+    "question": "How do source maps help with performance debugging, and what do they not solve?",
+    "answer": "Source maps let you connect minified production code back to the original source, which makes it easier to identify the real function or component causing a slow task. They do not make the app faster themselves, and they don’t replace profiling in production-like conditions. The main benefit is faster investigation and fewer blind spots when you’re reading stack traces or flame charts. If the code only behaves slowly in production builds, you still need to profile the production output.",
+    "real_world": "Teams often can’t make sense of a minified stack trace from a performance incident without source maps. They’re especially useful when a third-party monitoring tool reports a long task.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What’s the difference between using source maps for debugging and using them in production monitoring?"
+   },
+   {
+    "question": "How would you test frontend performance in a way that catches regressions before release?",
+    "answer": "I’d use a mix of automated metrics and repeatable browser runs, ideally in a controlled environment with realistic throttling. The key is to measure the same user journey over time and track a small set of metrics that reflect real experience, not just one synthetic number. You also need to make the test stable enough that normal variance doesn’t cause noise. Performance testing is most useful when it gates obvious regressions and gives a trend, not when it tries to perfectly predict every device.",
+    "real_world": "This matters in CI when a new feature accidentally slows down the home page or checkout flow. Teams often add a benchmark for a critical path so regressions are caught before merge.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if the test is flaky but still catches real regressions?"
+   },
+   {
+    "question": "How do you think about the trade-off between server-side rendering and client-side rendering for performance?",
+    "answer": "Server-side rendering usually improves the first view because HTML arrives with content already in it, so the user sees something sooner. Client-side rendering can feel slower initially because the browser has to download, parse, and run more JavaScript before showing the app, but it can simplify highly interactive pages once loaded. The trade-off is usually faster first paint versus more work on the server and more complexity around hydration and data fetching. In practice, teams often mix both depending on the route or component.",
+    "real_world": "This comes up on landing pages and product pages where SEO and first impression matter, but the same app may still use client rendering for the authenticated dashboard. A common failure mode is shipping SSR but still sending so much JavaScript that hydration becomes the new bottleneck.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is hydration, and why can it become a performance problem?"
+   },
+   {
+    "question": "What’s the difference between using skeleton screens and showing a spinner while content loads?",
+    "answer": "A spinner tells the user that something is loading, but it does not reduce perceived waiting very well because the page still feels empty. Skeleton screens reserve space and mimic the final layout, which usually makes the interface feel faster and reduces layout shifts when real content arrives. The trade-off is that skeletons take design and implementation effort, and if they are too elaborate they can become misleading or expensive to maintain. They help most when loading is expected and content structure is predictable.",
+    "real_world": "Teams use skeletons on feeds, dashboards, and cards where content arrives asynchronously but the page layout is known. Spinners are often fine for short operations, but they feel worse on slow networks or when the wait is noticeable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would a spinner still be better than a skeleton?"
+   },
+   {
+    "question": "How do you decide whether to load a third-party script synchronously, asynchronously, or not at all?",
+    "answer": "You start by asking whether the script is essential to the user flow on that page. If it is not critical, loading it later or not on certain routes is usually better because third-party code often affects parse time, main-thread work, and reliability. If it is required, prefer the least blocking integration that still preserves correctness, and isolate it so failures do not break your app. The main trade-off is business value versus performance and operational risk.",
+    "real_world": "Analytics, chat widgets, A/B testing, and ads are common examples where teams add scripts that look small but have a big cost. It is common to discover that a marketing script slows down checkout more than the app’s own code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you measure the real cost of a third-party script in production?"
+   },
+   {
+    "question": "What is resource prioritization in the browser, and why should frontend teams care about it?",
+    "answer": "Browsers do not fetch every resource equally; they decide what to request and process first based on type, discovery order, and hints from the page. That means two pages with the same files can feel different if one discovers critical resources earlier or gives the browser better clues about importance. Frontend teams care because good prioritization can improve the first render without reducing total bytes. The trade-off is that you want critical resources early, but too many things marked important can cancel the benefit.",
+    "real_world": "This matters when a page loads the right files but still feels slow because the browser discovers key CSS, fonts, or images too late. It is a common cause of poor LCP even when the network waterfall looks busy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What clues does the browser use to decide which resources are more important?"
+   },
+   {
+    "question": "How do you think about preloading compared with prefetching?",
+    "answer": "Preloading is for resources you know are needed soon on the current page, while prefetching is for resources that might be needed later. Preloading can improve the current render, but if you preload too much you compete with truly critical resources and slow the page down. Prefetching is lower priority and usually safer, but it only helps when the user actually navigates where you expected. The key trade-off is certainty versus speculation.",
+    "real_world": "Teams use preload for critical fonts, hero images, or above-the-fold CSS, and prefetch for the next route in a flow. Misusing preload is a common reason a page gets slower after an optimization pass.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What can go wrong if you preload resources that are not actually critical?"
+   },
+   {
+    "question": "Why can expensive JavaScript work after the page appears still hurt performance?",
+    "answer": "Because the page is not truly done just because pixels are on screen. Heavy work after paint can delay input handling, cause scrolling to stutter, and make interactions feel laggy even though the page looks loaded. This matters especially on lower-end devices where the main thread is shared by rendering, script execution, and user input. The trade-off is between doing work immediately versus spreading it out so the page stays responsive.",
+    "real_world": "A page may pass basic load metrics but still feel broken because an analytics initialization or data transformation runs right after paint. Users notice this as taps that do nothing or scrolling that hitches.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you find the piece of JavaScript causing the interaction lag?"
+   },
+   {
+    "question": "What is tree shaking, and what limits how effective it can be?",
+    "answer": "Tree shaking removes code that is not used, usually at build time, so the browser downloads and parses less JavaScript. It works best with modern module syntax and code that is statically analyzable; if a package has side effects or dynamic patterns, the bundler may need to keep more code. It reduces bundle size, but it does not automatically remove runtime cost from code that still gets executed. The trade-off is better shipping size versus build complexity and package compatibility.",
+    "real_world": "This matters when a team imports a large utility library and expects only the functions they use to be shipped. In practice, package structure often determines whether tree shaking saves much at all.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why might a library still be large even if you only import one function from it?"
+   },
+   {
+    "question": "How do you decide whether to virtualize a long list in the UI?",
+    "answer": "Virtualization makes sense when rendering all items would create too many DOM nodes or too much work for layout and paint. It improves scrolling performance by only keeping visible items in the DOM, but it adds complexity around measurement, keyboard navigation, accessibility, and dynamic row heights. If the list is small or rarely updates, virtualization can be unnecessary overhead. The trade-off is raw performance versus simplicity and full DOM availability.",
+    "real_world": "This is common in logs, search results, inboxes, and tables where thousands of rows can freeze the page. Teams often discover they need virtualization only after users report slow scrolling or a tab that becomes unresponsive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What accessibility issues can virtualization introduce?"
+   },
+   {
+    "question": "What is the difference between measuring page performance in lab tests and in real user monitoring?",
+    "answer": "Lab tests run in a controlled environment, so they are good for repeatable comparisons and catching regressions in CI. Real user monitoring reflects actual devices, networks, geography, and user behavior, so it shows how the app performs for real people. Both matter because lab results can miss field problems and field data can be too noisy to pinpoint the cause. The trade-off is control versus realism.",
+    "real_world": "A page may look fast on a developer laptop but perform poorly on mid-range phones in a mobile network. Teams use lab data to catch regressions and field data to see whether optimizations actually helped users.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which metrics would you track in real user monitoring for a frontend app?"
+   },
+   {
+    "question": "How would you approach fixing a page that has good metrics on first load but feels slow during navigation inside the app?",
+    "answer": "I would inspect client-side routing, data fetching, and rendering work during transitions rather than only the initial load. Often the issue is that route changes trigger large state updates, expensive re-renders, or sequential network requests that block the new view from appearing. I would profile the navigation, check which work is on the critical path, and then reduce what happens synchronously before showing the next screen. The key is to optimize the perceived transition, not just the entry page.",
+    "real_world": "This is common in SPAs where the homepage looks fine but navigating to a report or settings page feels sluggish. Users usually care more about these in-app transitions than the very first load after login.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you look for first in a performance profile of that navigation?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain the difference between transfer size, parsed size, and executed JavaScript cost, and why gzip alone is not enough?",
+    "answer": "Compressed transfer size only tells you network cost. After download, the browser still has to decompress, parse, compile, and execute the code, and those CPU costs can dominate on slower devices. A 50 KB reduction in executed code is often worth more than the same reduction in already-cached bytes because it improves startup and interaction time on every visit. That’s why performance work should track shipped bytes and main-thread CPU separately.",
+    "real_world": "Teams sometimes celebrate a smaller gzipped bundle while user interaction does not improve because the saved bytes came from comments or dead strings, not less work at parse and execute time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you measure parse and execution cost in production versus a local lab run?"
+   },
+   {
+    "question": "What actually happens in the browser when too many `IntersectionObserver`, resize, or mutation callbacks fire, and how do you keep observer-based code from becoming its own performance problem?",
+    "answer": "Observers avoid some polling and layout work, but their callbacks still run on the main thread and can arrive in bursts around scrolling, resizing, or DOM churn. If each callback does expensive DOM reads, state updates, or analytics work, you can create jank even though the API itself is efficient. The usual fix is to keep callbacks tiny, batch work, disconnect observers when not needed, and avoid observing large numbers of nodes unless you really need per-node behavior.",
+    "real_world": "Infinite-scroll pages often regress when every card gets its own visibility observer plus logging, causing scroll hitching on lower-end phones.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you replace many per-element observers with a single sentinel-based design?"
+   },
+   {
+    "question": "How do HTTP/2 or HTTP/3 change frontend asset-loading strategy compared with HTTP/1.1, and what optimizations became less useful or even harmful?",
+    "answer": "With multiplexing, the browser can make many concurrent requests on one connection, so aggressive bundling just to reduce request count is less compelling than it was under HTTP/1.1. Oversized bundles can now hurt more because they delay caching granularity and force users to download unrelated code. Domain sharding also tends to be less useful and can be harmful because it defeats connection reuse and adds extra handshakes. You still care about request overhead, but the trade-off shifted toward better cacheability and independent prioritization.",
+    "real_world": "A common migration issue is keeping one giant app bundle after moving behind HTTP/2, which makes small changes invalidate a huge cached asset across the whole app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you still bundle things together aggressively even on HTTP/2?"
+   },
+   {
+    "question": "If a page is image-heavy, how do you think about decoding and rasterization cost, not just file size?",
+    "answer": "A small compressed image can still be expensive once decoded because the browser expands it into pixels in memory, may resize it, and then rasterizes and composites it for display. Large dimensions, many images entering the viewport together, and animated effects can create CPU and memory pressure even when network transfer looks fine. So you optimize pixel count, decode timing, and rendering behavior, not only bytes on the wire. This is why serving correctly sized images matters twice: less transfer and less render work.",
+    "real_world": "Product grids often look fine in synthetic network tests but stutter badly on scroll because dozens of high-resolution thumbnails decode at once and blow up memory usage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you confirm that image decode or raster work is the bottleneck in Chrome DevTools?"
+   },
+   {
+    "question": "What is the Back-Forward Cache, and what kinds of frontend code accidentally disable it?",
+    "answer": "The Back-Forward Cache lets the browser restore a page almost instantly when the user navigates back or forward by keeping the page snapshot alive in memory. Certain patterns can make a page ineligible, especially code that assumes unload-time cleanup, holds problematic page lifecycle state, or relies on behaviors that are incompatible with freezing and restoring. From a frontend perspective, the key is to use modern page lifecycle events and make the app resilient to being paused and resumed. It can make history navigation feel dramatically faster than any re-render path.",
+    "real_world": "Teams sometimes chase SPA transition optimizations while ignoring that users frequently hit the back button; losing bfcache can turn a near-instant return into a full reload.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug why a specific page is not being restored from bfcache?"
+   },
+   {
+    "question": "How do you reason about hydration cost in a server-rendered app, and what are the main ways teams reduce it?",
+    "answer": "Hydration is not free just because HTML arrived early; the client still has to download code, rebuild component state, attach listeners, and reconcile the server markup. On complex pages, that CPU work can delay interaction or cause contention with user input. Teams reduce it by shipping less JavaScript, hydrating only interactive islands, delaying non-critical hydration, or rendering some components as static content. The trade-off is more architectural complexity and stricter boundaries between static and interactive UI.",
+    "real_world": "It’s common for SSR pages to score well on initial paint but still frustrate users because buttons and menus stay unresponsive until hydration finishes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure modes do you watch for when using partial or selective hydration?"
+   },
+   {
+    "question": "What’s the difference between moving work to a Web Worker and actually making the user experience faster?",
+    "answer": "A worker removes CPU work from the main thread, which can improve responsiveness, but it does not eliminate the work itself. You still pay for serialization, transfer, memory, and synchronization, and some tasks remain main-thread-bound because they touch the DOM. Workers help most for heavy computation, parsing, or transformation where the result can be passed back efficiently. If the bottleneck is layout, rendering, or many tiny back-and-forth messages, a worker may add complexity without meaningful gains.",
+    "real_world": "Teams sometimes move filtering or search indexing to a worker and improve input responsiveness, but then lose the benefit by posting huge object graphs on every keystroke.",
+    "code_lang": "javascript",
+    "code": "const worker = new Worker('worker.js');\nworker.postMessage({ items }); // can be expensive if items is huge\nworker.onmessage = ({ data }) => render(data);\n\n// Better when possible: send minimal data or transferable buffers",
+    "follow_up": "How would you decide whether message-passing overhead is too high for a given worker design?"
+   },
+   {
+    "question": "Why can service workers improve performance in one case and make it worse in another?",
+    "answer": "A service worker can cut repeat-visit latency, enable offline behavior, and hide flaky network conditions by serving cached responses quickly. But it also adds another layer to every controlled request, and poor cache strategies can return stale assets, create update races, or slow navigation with extra logic. The hard part is correctness under versioning and failure: you need clear cache invalidation, safe rollout behavior, and a plan for partial failures. Performance gains disappear quickly if users get broken mixes of old HTML and new JavaScript.",
+    "real_world": "A classic production incident is deploying a new app shell while the service worker still serves older chunks, causing white screens or endless reload loops for a subset of users.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you prevent the old-HTML new-JS mismatch problem during deploys?"
+   },
+   {
+    "question": "What happens when you overuse `will-change`, layer promotion, or heavy compositing tricks to 'optimize' animations?",
+    "answer": "Promoting elements to their own layers can help avoid repeated painting for some animations, but each layer consumes memory and increases compositor work. If you overdo it, you can trade one bottleneck for another: more GPU memory pressure, more uploads, and worse performance on lower-end devices. The right approach is to use layer promotion selectively for truly animated elements and verify the result with tooling rather than assuming GPU equals fast. Performance depends on the whole pipeline, not just compositing.",
+    "real_world": "A page with many animated cards may run worse after a blanket `will-change: transform` because dozens of layers get created and memory spikes during scrolling.",
+    "code_lang": "css",
+    "code": ".card {\n  will-change: transform;\n}\n/* Helpful only if cards actually animate soon; harmful at scale. */",
+    "follow_up": "Which browser tools would you use to see whether layer count or paint/composite cost is the real issue?"
+   },
+   {
+    "question": "If users report that typing into a search box feels laggy only when the network is flaky, how would you reason about the interaction between frontend performance and network failure modes?",
+    "answer": "Lag under bad network often means the app ties input, rendering, and request state too closely. Re-renders may be triggered by retries, spinners, cancellation logic, or large result merges, and those effects can stack while requests are slow or failing. I’d separate immediate input updates from fetch-driven state, make requests cancellable, cap concurrent work, and avoid retry storms that keep the main thread busy. Good perceived performance under failure comes from backpressure and isolation, not just faster code paths.",
+    "real_world": "Autocomplete UIs often become unusable on spotty mobile connections because each keystroke starts work that is never fully canceled, leading to stale results and repeated state churn.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you instrument that flow to prove whether the lag comes from rendering, network retries, or state-management churn?"
+   },
+   {
+    "question": "How would you explain the difference between throughput and latency in frontend performance, and why can improving one make the other worse?",
+    "answer": "Latency is how quickly one user-visible action completes, like a click leading to updated UI, while throughput is how much total work the app can process over time. Batching, background precomputation, and aggressive caching can improve throughput but increase tail latency if they create queueing or monopolize the main thread. In the browser, users usually feel latency first, especially input and navigation latency. A strong design isolates urgent work from bulk work and measures percentiles, not just averages.",
+    "real_world": "A dashboard can process more data per second after batching updates, yet feel worse because clicks wait behind large render batches. Teams often fix this by prioritizing input-driven work and pushing aggregation to workers or the server.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you instrument a SPA to separate interaction latency from background throughput work?"
+   },
+   {
+    "question": "What actually makes a page janky during scrolling or animations, even when frame rate looks okay on average?",
+    "answer": "Jank is usually about missed deadlines and uneven frame times, not just the average FPS. A page can average near 60 FPS but still feel bad if some frames take much longer because of JavaScript, style recalculation, layout, paint, or GPU upload bursts. Input handling and scroll-linked effects are especially sensitive because they compete with rendering on tight budgets. I look at frame-time distribution and main-thread slices, not only headline FPS.",
+    "real_world": "A sticky header with scroll handlers may show 60 FPS in a summary, but users still notice hitching on low-end phones because every few seconds one frame takes 40 to 80 ms. That often comes from small per-frame work plus occasional expensive style or paint invalidation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What browser tooling would you use to tell whether the bottleneck is JavaScript, layout, paint, or compositing?"
+   },
+   {
+    "question": "If you had to optimize Interaction to Next Paint in a complex frontend, what would you focus on first?",
+    "answer": "I would first find the slow interactions and break the delay into input handling, app logic, rendering, and paint. The biggest wins usually come from reducing synchronous work on the critical path: less work in event handlers, fewer unnecessary renders, and splitting non-urgent updates so the next paint can happen sooner. I also check whether one interaction triggers network retries, logging, or expensive state propagation that the user does not need immediately. INP gets better when urgent work is small and predictable.",
+    "real_world": "In large React-style apps, one keypress sometimes fans out to global state updates, analytics, and validation, turning a simple interaction into a 200 ms stall. Teams often recover by making local optimistic updates first and deferring expensive side effects.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of work are safe to defer without creating inconsistent UI?"
+   },
+   {
+    "question": "Can you walk me through the performance trade-offs of streaming HTML from the server versus waiting to send a full document?",
+    "answer": "Streaming can improve perceived performance by letting the browser parse and render earlier, especially when above-the-fold content is available before the whole page is ready. The trade-off is complexity: chunk boundaries, buffering by proxies, head dependencies, and hydration ordering can erase the gain or even create flashes and rework. It works best when the server can produce meaningful early bytes and the client can progressively enhance without blocking on one large script. If the first chunk is tiny but the real content is delayed, streaming does not help much.",
+    "real_world": "Teams sometimes enable streaming and see no user benefit because the CDN or framework buffers until larger chunks accumulate, so TTFB changes but first paint does not. In other cases, early HTML helps a lot on slow networks but exposes hydration mismatches if data arrives in a different order.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What measurements would tell you whether streaming is helping in production rather than just changing TTFB?"
+   },
+   {
+    "question": "When does compression become a frontend performance problem instead of a win?",
+    "answer": "Compression usually helps transfer time, but it is not free: servers spend CPU compressing, clients spend CPU decompressing, and highly compressed text can still be expensive to parse and execute afterward. On fast networks and weak devices, reducing bytes further may not matter as much as reducing JavaScript complexity or image decode cost. Compression can also hurt if it increases server latency under load or if assets are so dynamic they cannot be efficiently cached. The right trade-off depends on network speed, CPU class, and cache hit rate.",
+    "real_world": "A team serving personalized HTML with heavy on-the-fly compression can push origin CPU high during traffic spikes, increasing TTFB for everyone. Another common mistake is celebrating a tiny transfer size for a large JS app that still stalls low-end phones during parse and execution.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether an asset is network-bound or CPU-bound in the field?"
+   },
+   {
+    "question": "What are the performance implications of using many small islands or microfrontends on the same page?",
+    "answer": "They can improve organizational scalability and reduce the work loaded for a single feature, but they often duplicate framework runtime, state management, polyfills, styling systems, and hydration costs. The browser pays overhead per island or microfrontend in network requests, parsing, initialization, and sometimes competing schedulers. Isolation is useful, but too much fragmentation creates death by a thousand cuts. The best setups share infrastructure where possible and enforce budgets at the page level, not just per team.",
+    "real_world": "A commerce page built from independently deployed widgets can look efficient in isolation, yet total startup cost explodes because each widget ships its own runtime and boot sequence. Production incidents often show up as acceptable local metrics but poor page-level CPU time on mid-range mobile devices.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design shared dependencies so teams keep autonomy without paying duplicate startup cost?"
+   },
+   {
+    "question": "How do you reason about the performance cost of CSS itself in a large application?",
+    "answer": "CSS cost is not just file size; it also affects selector matching, style recalculation scope, invalidation, and sometimes memory. Deep or broad selectors, frequent class changes high in the tree, and large DOMs increase the amount of work when styles must be recomputed. A good strategy limits invalidation blast radius with simpler selectors, scoped styling patterns, and fewer global dependencies. The key is to think about how often style changes happen, not only how many kilobytes of CSS you serve.",
+    "real_world": "A theme toggle or expanded accordion can suddenly become expensive when one class change near the root invalidates styles across thousands of nodes. Teams often discover the issue only after adding dynamic UI to a stylesheet that was fine for mostly static pages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of selectors or styling patterns tend to create larger invalidation work?"
+   },
+   {
+    "question": "What happens performance-wise when a page keeps creating and discarding lots of short-lived objects during interactions?",
+    "answer": "You increase allocation rate and put pressure on the JavaScript engine and garbage collector. Even if individual allocations are cheap, frequent churn can lead to GC pauses or more incremental GC work that steals time from rendering and input handling. This is especially noticeable in animation loops, drag interactions, and hot render paths. I optimize it only after measuring, because readability matters and modern engines handle many cases well.",
+    "real_world": "A canvas editor or data grid can feel fine in small tests but stutter in production because every pointer move allocates arrays, closures, and temporary objects. Fixes often come from reusing structures in the hottest paths rather than broad micro-optimizations everywhere.",
+    "code_lang": "javascript",
+    "code": "let point = { x: 0, y: 0 };\nwindow.addEventListener('pointermove', e => {\n  point.x = e.clientX;\n  point.y = e.clientY;\n  draw(point);\n});",
+    "follow_up": "How would you confirm that GC rather than rendering is the main source of interaction stalls?"
+   },
+   {
+    "question": "How would you think about memory leaks as a web performance problem, not just a correctness bug?",
+    "answer": "A leak grows the live object graph, which increases memory use and can slow down GC, layout, image management, and even trigger tab discarding or crashes on mobile. Performance often degrades gradually: the page starts fine, then interactions get slower after long sessions or repeated route changes. I look for retained DOM nodes, event listeners, timers, caches without bounds, and closures holding large state. In frontend systems, memory stability over time is as important as startup speed.",
+    "real_world": "Single-page apps commonly leak detached DOM trees or keep old page data in global stores, so customer support reports 'it gets slow after an hour' instead of 'it never loads.' This is especially painful on low-RAM mobile devices where the browser may kill the tab.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What workflow would you use in DevTools to prove that a route change is leaking retained objects?"
+   },
+   {
+    "question": "If a team wants to add aggressive client-side prefetching everywhere, what performance risks would you push back on?",
+    "answer": "Prefetching can help future navigations, but done broadly it can steal bandwidth, connection slots, CPU, memory, and cache space from the page the user is actually using. It can also waste data on mobile, fetch content the user never visits, and trigger server load spikes if many clients speculate at once. I would gate it by user intent, network conditions, device class, and cacheability, and I would cap concurrency. Good prefetching is selective, cancelable, and measured against real navigation wins.",
+    "real_world": "A common incident is a homepage that feels slower because background prefetches compete with images and API calls on constrained networks. Another is a traffic surge after deploying link-hover or viewport-based prefetching to millions of users without back-pressure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you use to decide whether a given link should be prefetched?"
+   }
+  ]
+ }
+}

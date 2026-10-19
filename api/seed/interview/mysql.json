@@ -1,0 +1,469 @@
+{
+ "slug": "mysql",
+ "name": "MySQL",
+ "category": "Databases",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is a primary key in MySQL, and why would you use one?",
+    "answer": "A primary key is the column or set of columns that uniquely identifies each row in a table. It cannot contain duplicate values, and it should not be NULL. You use it to make row lookup reliable and to give other tables something stable to reference with foreign keys. In practice, it also helps MySQL index and enforce data integrity.",
+    "real_world": "A user table might use an auto-incrementing `id` as the primary key so each account can be referenced from orders, posts, or audit logs. Without a stable primary key, updates and joins become fragile.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE users (\n  id INT PRIMARY KEY,\n  email VARCHAR(255) NOT NULL\n);",
+    "follow_up": "What is the difference between a primary key and a unique key?"
+   },
+   {
+    "question": "What does `JOIN` do in MySQL, and when would you use an `INNER JOIN` versus a `LEFT JOIN`?",
+    "answer": "A `JOIN` combines rows from two tables based on a related column. An `INNER JOIN` returns only rows where the match exists in both tables. A `LEFT JOIN` returns all rows from the left table and matching rows from the right table, with NULLs when there is no match. Use `INNER JOIN` when the relationship must exist, and `LEFT JOIN` when missing related data is still important.",
+    "real_world": "If you list all customers and their latest orders, a `LEFT JOIN` lets you show customers who have never ordered. Using `INNER JOIN` there would silently drop those customers.",
+    "code_lang": "sql",
+    "code": "SELECT c.id, c.name, o.total\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id;",
+    "follow_up": "What happens if the join condition matches multiple rows on the right side?"
+   },
+   {
+    "question": "What is the difference between `DELETE`, `TRUNCATE`, and `DROP` in MySQL?",
+    "answer": "`DELETE` removes selected rows and can use a `WHERE` clause. `TRUNCATE` removes all rows from a table much faster than deleting them one by one, but it does not let you filter rows. `DROP` removes the entire table definition and its data. The key trade-off is control versus speed and permanence.",
+    "real_world": "A team might use `DELETE` to remove only expired sessions, `TRUNCATE` to clear a temporary staging table, and `DROP` only when retiring a table entirely. Mixing them up can wipe out production data.",
+    "code_lang": "sql",
+    "code": "DELETE FROM sessions WHERE expires_at < NOW();\nTRUNCATE TABLE temp_import;\nDROP TABLE old_logs;",
+    "follow_up": "How would you safely remove many rows from a large production table?"
+   },
+   {
+    "question": "What is an index in MySQL, and why can it both help and hurt performance?",
+    "answer": "An index is a data structure that makes finding rows faster, similar to a book index. It helps read queries, especially `WHERE`, `JOIN`, and `ORDER BY` on indexed columns. It can hurt performance because inserts, updates, and deletes must also update the index, and indexes take extra storage. The goal is to add indexes where they match real query patterns, not on every column.",
+    "real_world": "A search page may become slow without an index on the column used in filtering. But adding too many indexes to a write-heavy table can slow down every insert.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide which column to index first?"
+   },
+   {
+    "question": "What does `NULL` mean in MySQL, and how is it different from an empty string or zero?",
+    "answer": "`NULL` means the value is unknown or missing, not that it is empty or zero. An empty string is a real string value with length zero, and `0` is a numeric value. This matters because comparisons and aggregations treat `NULL` differently; for example, `NULL = NULL` is not true. You usually check for it with `IS NULL`, not `=`.",
+    "real_world": "A middle name field might be `NULL` if the person has no middle name, while an empty string might mean bad data entry. Confusing those values can break reporting and filters.",
+    "code_lang": "sql",
+    "code": "SELECT * FROM users WHERE middle_name IS NULL;",
+    "follow_up": "How do aggregate functions like `COUNT` handle NULL values?"
+   },
+   {
+    "question": "What does a foreign key do in MySQL?",
+    "answer": "A foreign key enforces a relationship between two tables by requiring values in one table to exist in a referenced table. It helps prevent orphaned rows, like an order pointing to a customer that does not exist. It also makes the schema self-documenting and keeps data consistent. The trade-off is that it adds constraints, so inserts and deletes must respect the relationship.",
+    "real_world": "An `orders.customer_id` foreign key prevents bad data from creating orders for deleted or nonexistent customers. Without it, applications can accumulate broken references that are hard to clean up later.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE orders (\n  id INT PRIMARY KEY,\n  customer_id INT,\n  FOREIGN KEY (customer_id) REFERENCES customers(id)\n);",
+    "follow_up": "What happens when you try to delete a parent row that is still referenced?"
+   },
+   {
+    "question": "What is the purpose of `GROUP BY` in MySQL?",
+    "answer": "`GROUP BY` collects rows with the same value in one or more columns so you can calculate aggregates for each group. It is commonly used with functions like `COUNT`, `SUM`, and `AVG`. You use it when you need summary data instead of individual rows. A common mistake is selecting non-aggregated columns that are not included in the grouping, which can produce confusing results.",
+    "real_world": "A dashboard that shows total orders per customer or average order value per day depends on `GROUP BY`. Without it, you would only see raw row-level data.",
+    "code_lang": "sql",
+    "code": "SELECT customer_id, COUNT(*) AS order_count\nFROM orders\nGROUP BY customer_id;",
+    "follow_up": "What is the difference between `WHERE` and `HAVING`?"
+   },
+   {
+    "question": "What does `ORDER BY` do in MySQL, and what should you know about its cost?",
+    "answer": "`ORDER BY` sorts the result set by one or more columns. It is essential when you need predictable output, like newest rows first or alphabetical lists. Sorting can be expensive on large result sets, especially if MySQL cannot use an index to help. A good habit is to sort only when the application actually needs ordered results.",
+    "real_world": "A feed or admin table often needs `ORDER BY created_at DESC` so users see the newest records first. If the query returns many rows, sorting can become a major performance cost.",
+    "code_lang": "sql",
+    "code": "SELECT id, title, created_at\nFROM posts\nORDER BY created_at DESC;",
+    "follow_up": "When can MySQL avoid a filesort by using an index?"
+   },
+   {
+    "question": "What’s the difference between a database and a table in MySQL?",
+    "answer": "A database is a logical container for related tables and other objects, while a table stores rows of data in a specific structure. You usually create one database per application or major service, then create multiple tables inside it for different entities like users, orders, or sessions. This separation helps with organization, permissions, and backups.",
+    "real_world": "Teams often split prod and staging into separate databases, and then keep application data in multiple tables inside each one. A common beginner mistake is thinking a table is the same thing as a database.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you create a database and a table in MySQL?"
+   },
+   {
+    "question": "How do you create a table in MySQL, and what do column types do?",
+    "answer": "You use `CREATE TABLE` to define the table name, columns, and each column’s data type. Data types matter because they control what values are allowed and how MySQL stores and compares them, such as `INT` for numbers, `VARCHAR` for variable-length text, and `DATETIME` for timestamps. Picking the right type avoids bad data and makes queries clearer.",
+    "real_world": "A common production bug is storing numbers as strings, which leads to incorrect sorting and awkward validation. Teams also choose types carefully to keep storage smaller and queries more efficient.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE users (\n  id INT,\n  email VARCHAR(255),\n  created_at DATETIME\n);",
+    "follow_up": "What’s the difference between `CHAR` and `VARCHAR`?"
+   },
+   {
+    "question": "What’s the difference between `CHAR` and `VARCHAR` in MySQL?",
+    "answer": "`CHAR` stores fixed-length strings, while `VARCHAR` stores variable-length strings. Use `CHAR` for values that are always the same length, like country codes or hashed tokens with a fixed format, and `VARCHAR` for most human text like names or emails. `VARCHAR` usually saves space when values vary in length.",
+    "real_world": "If a team stores short codes in `CHAR`, comparisons and validation stay simple. If they use `CHAR` for long, uneven text, they can waste space across millions of rows.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose `TEXT` instead of `VARCHAR`?"
+   },
+   {
+    "question": "What does `INSERT` do in MySQL, and what should you watch out for when inserting rows?",
+    "answer": "`INSERT` adds new rows to a table. You should provide values in the right order or name the columns explicitly, and you need to make sure the values match the column types and any constraints. A common mistake is relying on column order without listing columns, which breaks when the schema changes.",
+    "real_world": "In application code, explicit column lists make migrations safer because adding a new column won’t silently change insert behavior. This also helps when only some columns have values at creation time.",
+    "code_lang": "sql",
+    "code": "INSERT INTO users (id, email, created_at)\nVALUES (1, 'a@example.com', NOW());",
+    "follow_up": "How do you update an existing row instead of inserting a new one?"
+   },
+   {
+    "question": "How does `UPDATE` work in MySQL, and why is the `WHERE` clause important?",
+    "answer": "`UPDATE` changes existing rows, and `WHERE` limits which rows are modified. Without `WHERE`, every row in the table is updated, which is one of the most common and dangerous beginner mistakes. In practice, you should always double-check the filter before running a data-changing query.",
+    "real_world": "A missing `WHERE` in production can overwrite an entire table’s data in seconds. Teams often test the matching rows with a `SELECT` first, then run the `UPDATE` once they’re sure.",
+    "code_lang": "sql",
+    "code": "UPDATE users\nSET email = 'new@example.com'\nWHERE id = 42;",
+    "follow_up": "How would you check how many rows an update will affect before running it?"
+   },
+   {
+    "question": "What does `WHERE` do in MySQL, and how is it different from `HAVING`?",
+    "answer": "`WHERE` filters rows before grouping happens, while `HAVING` filters groups after `GROUP BY`. Use `WHERE` for conditions on individual rows, and `HAVING` when you need to filter on an aggregate like `COUNT(*)` or `SUM(...)`. Putting a row filter in `HAVING` usually works less efficiently than using `WHERE`.",
+    "real_world": "A reporting query often needs `WHERE` to limit a date range and `HAVING` to keep only groups with enough activity. Mixing them up can give the right answer but scan far more data than necessary.",
+    "code_lang": "sql",
+    "code": "SELECT department, COUNT(*) AS n\nFROM employees\nWHERE active = 1\nGROUP BY department\nHAVING COUNT(*) > 10;",
+    "follow_up": "What operators can you use inside a `WHERE` clause?"
+   },
+   {
+    "question": "How do `AND`, `OR`, and `NOT` work in a MySQL `WHERE` clause?",
+    "answer": "They combine conditions: `AND` means both conditions must be true, `OR` means either can be true, and `NOT` reverses a condition. Parentheses matter because `AND` and `OR` can change the meaning of a query if you rely on default precedence. A good habit is to group conditions explicitly with parentheses.",
+    "real_world": "A filter like “active users in the US or Canada” can easily return the wrong set if parentheses are missing. This kind of bug often shows up in dashboards or customer-targeting queries.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM users\nWHERE active = 1\n  AND (country = 'US' OR country = 'CA');",
+    "follow_up": "How would you match text patterns in MySQL?"
+   },
+   {
+    "question": "How does `LIKE` work in MySQL, and what are its common wildcard patterns?",
+    "answer": "`LIKE` matches text patterns using wildcards: `%` matches any sequence of characters, and `_` matches exactly one character. It’s useful for simple pattern searches, such as prefixes or partial matches, but it’s less precise than equality and can be slower on large tables. You also need to remember that pattern matching depends on the column’s collation and case-sensitivity rules.",
+    "real_world": "Support teams often search for users by email prefix or product name with `LIKE`. A common mistake is using it when an exact match would be simpler and faster.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM users\nWHERE email LIKE 'a%@example.com';",
+    "follow_up": "When would you use `IN` instead of `LIKE`?"
+   },
+   {
+    "question": "What does `DISTINCT` do in MySQL, and when would you use it?",
+    "answer": "`DISTINCT` removes duplicate rows from the result set. It’s useful when you want unique values, such as a list of cities or customer IDs, but it can hide data problems if you use it to paper over duplicate records in the source table. If duplicates are unexpected, it’s better to understand why they exist first.",
+    "real_world": "A reporting query might use `DISTINCT` to show each customer once even if they have many orders. But relying on it too often can mask bad joins or duplicate inserts.",
+    "code_lang": "sql",
+    "code": "SELECT DISTINCT country\nFROM users;",
+    "follow_up": "What’s the difference between `DISTINCT` and `GROUP BY`?"
+   },
+   {
+    "question": "What happens if you run a query with `LIMIT`, and why is it useful?",
+    "answer": "`LIMIT` restricts how many rows MySQL returns. It’s useful for pagination, previews, and testing queries on a small sample. If you combine it with `ORDER BY`, you get a predictable top slice; without ordering, the returned rows are not guaranteed to be in any meaningful order.",
+    "real_world": "Application APIs often fetch 20 rows at a time for lists and feeds. Developers also use `LIMIT` during debugging to avoid scanning or printing huge result sets.",
+    "code_lang": "sql",
+    "code": "SELECT id, email\nFROM users\nORDER BY id\nLIMIT 10;",
+    "follow_up": "How would you write the next page of results after this query?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do MySQL transactions help when two related updates must succeed or fail together?",
+    "answer": "A transaction groups multiple statements into one atomic unit, so either all changes are committed or none are if something fails. In MySQL, this is how you keep related writes consistent, like debiting one account and crediting another. The main trade-off is that long transactions can hold locks longer and reduce concurrency. You should keep them as short as possible and only put the statements that truly need to succeed together inside the transaction.",
+    "real_world": "A payment service might create an order, reserve inventory, and write a ledger entry in one transaction. If the inventory step fails, you do not want a half-created order or a charge without stock reserved.",
+    "code_lang": "sql",
+    "code": "START TRANSACTION;\nUPDATE accounts SET balance = balance - 100 WHERE id = 1;\nUPDATE accounts SET balance = balance + 100 WHERE id = 2;\nCOMMIT;",
+    "follow_up": "What happens if one statement inside that transaction fails?"
+   },
+   {
+    "question": "When would you use a composite index instead of separate single-column indexes?",
+    "answer": "Use a composite index when your queries commonly filter or sort by the same leading columns together. MySQL can use the leftmost prefix of a composite index, so the column order matters a lot. Separate single-column indexes are not always equivalent because MySQL may still need extra work to combine them. The trade-off is that composite indexes help specific access patterns but add write overhead and take more space.",
+    "real_world": "A user search page might filter by `tenant_id` and `status` on every request. A composite index on `(tenant_id, status)` can cut query time dramatically compared with relying on two separate indexes.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX idx_orders_tenant_status\nON orders (tenant_id, status);",
+    "follow_up": "How do you choose the column order in a composite index?"
+   },
+   {
+    "question": "What does MySQL do with `IS NULL` versus `= NULL`, and why does it matter?",
+    "answer": "`= NULL` does not work the way many people expect because `NULL` means unknown, not a comparable value. You should use `IS NULL` or `IS NOT NULL` to test for nulls. This matters in production because a query written with `= NULL` can silently return no rows and look like a data problem. It also affects how you reason about filters and outer joins.",
+    "real_world": "A bug often shows up when a report is supposed to find rows missing a foreign reference, but the query returns nothing because it used `= NULL`. The fix is usually a small syntax change, but the impact can be large.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM orders\nWHERE shipped_at IS NULL;",
+    "follow_up": "How do NULLs behave inside `COUNT`, `SUM`, or comparisons?"
+   },
+   {
+    "question": "How do `INNER JOIN` conditions in the `WHERE` clause differ from putting them in the `ON` clause for a `LEFT JOIN`?",
+    "answer": "For an `INNER JOIN`, moving a join predicate between `ON` and `WHERE` usually gives the same result. For a `LEFT JOIN`, putting a filter on the right table in `WHERE` can turn it into an inner join by removing the unmatched rows. The `ON` clause controls which rows match, while `WHERE` filters the final result. This distinction is important when you want to keep rows even when the joined table has no match.",
+    "real_world": "A dashboard might need to show all customers, including those with no recent orders. If the order-date filter goes in `WHERE`, those customers disappear and the report looks wrong.",
+    "code_lang": "sql",
+    "code": "SELECT c.id, o.id\nFROM customers c\nLEFT JOIN orders o\n  ON o.customer_id = c.id\n AND o.created_at >= '2026-01-01';",
+    "follow_up": "How would you write the same query if you only wanted customers with at least one qualifying order?"
+   },
+   {
+    "question": "What is an `EXPLAIN` plan in MySQL used for, and what do you look for first?",
+    "answer": "`EXPLAIN` shows how MySQL expects to execute a query, including which indexes it will use and how many rows it estimates scanning. I first look for full table scans on large tables, missing or wrong indexes, and whether MySQL is using a filesort or temporary table. It is not perfect, but it is the fastest way to debug why a query is slow. The key trade-off is that it reports estimates, so you still need to validate with real measurements.",
+    "real_world": "When a query gets slow after data grows, the plan often reveals that MySQL stopped using the expected index. That is usually faster to diagnose than guessing from the application code.",
+    "code_lang": "sql",
+    "code": "EXPLAIN\nSELECT *\nFROM orders\nWHERE customer_id = 42\nORDER BY created_at DESC;",
+    "follow_up": "What would make you add or change an index after reading the plan?"
+   },
+   {
+    "question": "How do `COUNT(*)`, `COUNT(column)`, and `COUNT(DISTINCT column)` differ?",
+    "answer": "`COUNT(*)` counts all rows, including rows with NULLs in any column. `COUNT(column)` counts only rows where that column is not NULL. `COUNT(DISTINCT column)` counts unique non-NULL values, which is more expensive because MySQL must deduplicate. Choosing the wrong form can give the wrong business metric or a slower query than needed.",
+    "real_world": "A team may think they are counting all users who signed up, but `COUNT(confirmed_at)` only counts confirmed users. That can lead to misleading dashboards or broken alerts.",
+    "code_lang": "sql",
+    "code": "SELECT\n  COUNT(*) AS total_rows,\n  COUNT(email) AS rows_with_email,\n  COUNT(DISTINCT country) AS countries\nFROM users;",
+    "follow_up": "When would you avoid `COUNT(DISTINCT ...)` in favor of a separate summary table?"
+   },
+   {
+    "question": "What is a deadlock in MySQL, and how would you handle it in an application?",
+    "answer": "A deadlock happens when two transactions each hold locks the other needs, so MySQL has to abort one to break the cycle. The right response is usually to retry the failed transaction, because deadlocks can happen even in well-designed systems under concurrency. You reduce them by keeping transactions short, locking rows in a consistent order, and indexing the rows you update or delete. The trade-off is that stronger consistency and concurrency both increase the chance of contention.",
+    "real_world": "In an inventory system, two checkout requests may reserve items in opposite order and deadlock under load. If the app does not retry, users see random checkout failures.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you redesign the transaction flow to make deadlocks less likely?"
+   },
+   {
+    "question": "What is the difference between `REPEATABLE READ` and `READ COMMITTED` in MySQL, in practical terms?",
+    "answer": "`REPEATABLE READ` gives a transaction a stable view of rows it has already read, while `READ COMMITTED` lets each statement see the latest committed data. The practical difference is whether a transaction can see changes made by others between two reads. `REPEATABLE READ` is safer for consistency within a transaction, but it can increase locking behavior and surprise you with stale reads. `READ COMMITTED` reduces some contention but can make repeated reads inside one transaction change.",
+    "real_world": "A reporting job that reads the same row twice may need stable results, while a web request that just wants fresh data may prefer `READ COMMITTED`. Picking the wrong level can cause confusing user-visible behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a stricter isolation level, and when would you avoid it?"
+   },
+   {
+    "question": "How would you use a covering index to speed up a query?",
+    "answer": "A covering index includes all columns needed by the query, so MySQL can answer it from the index without reading the table rows. That can be much faster for read-heavy paths because it reduces random I/O. The trade-off is larger indexes and slower writes, so you should only add covering indexes for important queries. It is especially useful for pagination, lookup pages, and narrow reporting queries.",
+    "real_world": "A product list page might only need `id`, `name`, and `price` for each row. If those columns are covered by one index, the page can load much faster on a large catalog.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX idx_products_listing\nON products (category_id, price, id, name);",
+    "follow_up": "How would you verify that the query is actually using the covering index?"
+   },
+   {
+    "question": "What is a safe way to page through a large MySQL table, and why can `LIMIT ... OFFSET ...` become slow?",
+    "answer": "`LIMIT ... OFFSET ...` gets slower as the offset grows because MySQL still has to scan and discard the skipped rows. For large tables, keyset pagination is usually better: remember the last seen sort key and ask for rows after it. That gives more stable performance and avoids missing or duplicated rows when data changes between requests. The trade-off is that keyset pagination is less flexible for jumping to arbitrary pages.",
+    "real_world": "An activity feed or admin table often starts fast and then becomes sluggish on page 200. Switching from large offsets to keyset pagination can fix the latency spike.",
+    "code_lang": "sql",
+    "code": "SELECT id, created_at\nFROM events\nWHERE created_at < '2026-10-16 12:00:00'\nORDER BY created_at DESC\nLIMIT 50;",
+    "follow_up": "What problems can happen if the sort key is not unique?"
+   },
+   {
+    "question": "When would you choose a unique index instead of just enforcing uniqueness in application code?",
+    "answer": "A unique index is the database-backed way to guarantee no duplicates, even if two app instances race. It also makes lookups by that column fast, so it solves correctness and performance together. Application-only checks can still pass under concurrency unless you wrap them carefully in a transaction and lock the right rows. In practice, use the database constraint and handle the duplicate-key error in the app.",
+    "real_world": "This matters for usernames, email addresses, order numbers, or any external identifier that must not repeat. Teams often discover the bug only after duplicate records already exist in production.",
+    "code_lang": "sql",
+    "code": "CREATE UNIQUE INDEX ux_users_email ON users(email);\n-- later, duplicate inserts fail with a constraint error",
+    "follow_up": "What does MySQL do if two transactions try to insert the same unique value at the same time?"
+   },
+   {
+    "question": "How do you think about choosing an InnoDB storage engine for most OLTP tables, and what trade-offs does it bring?",
+    "answer": "InnoDB is the default choice for transactional workloads because it gives row-level locking, crash recovery, foreign keys, and good concurrent write behavior. The trade-off is that features like secondary indexes and transactions add overhead compared with simpler storage models. For most production apps that update data concurrently, those guarantees are worth it. The main design work is then around indexing and transaction boundaries, not the engine itself.",
+    "real_world": "This shows up in systems with many concurrent writes, like checkout flows or ticketing. Using the wrong engine or expecting table-level locking behavior can cause surprising contention or data-loss risk after a crash.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of workloads would make you revisit that choice?"
+   },
+   {
+    "question": "What is the practical difference between an `INNER JOIN` and a `UNION`, and when would you use one over the other?",
+    "answer": "An `INNER JOIN` combines matching rows from related tables into wider rows, while `UNION` stacks result sets with the same shape into one list. Use a join when the rows represent related entities and you want columns from both tables. Use `UNION` when you want to merge two similar queries, often from different sources or partitions. If you accidentally use `UNION` where a join is needed, you can lose the relationship between records.",
+    "real_world": "A common mistake is trying to combine users and orders with `UNION` and then wondering why the output is duplicated or mis-shaped. This matters in reporting queries and migrations where two tables need to be compared or merged.",
+    "code_lang": "sql",
+    "code": "SELECT id, email FROM users\nUNION ALL\nSELECT id, email FROM archived_users;",
+    "follow_up": "When would you use `UNION ALL` instead of `UNION`?"
+   },
+   {
+    "question": "How do you make a query on a date range stay fast, and what can go wrong if you wrap the indexed column in a function?",
+    "answer": "Range filtering on the raw column can use an index efficiently, so write the predicate to match the stored value directly. If you call a function on the column, MySQL often has to evaluate every row instead of using the index. A common fix is to rewrite the predicate so the function is applied to the constant side, or to add a generated column that matches the search shape. This matters most on large tables where a full scan becomes expensive.",
+    "real_world": "Teams hit this with queries like “events from last month” or “all orders created today.” A small reporting query can become a production incident once the table grows.",
+    "code_lang": "sql",
+    "code": "-- Good: can use an index on created_at\nSELECT * FROM orders\nWHERE created_at >= '2026-01-01'\n  AND created_at <  '2026-02-01';",
+    "follow_up": "How would you verify from `EXPLAIN` that the index is actually being used?"
+   },
+   {
+    "question": "How do you debug a slow MySQL query that suddenly got worse after a data growth spike?",
+    "answer": "First check whether the execution plan changed: look for full table scans, bad row estimates, missing indexes, or a join order that no longer makes sense. Then compare the predicates and selected columns with the available indexes, because a query can become slow simply because the old index no longer filters enough rows. Also look at data distribution, not just schema, since skew can make a previously good plan bad. If needed, rewrite the query, add a better index, or reduce the number of rows returned.",
+    "real_world": "This is common after a launch, a backfill, or seasonal traffic growth. A query that was fine at a million rows can become the top CPU consumer at fifty million.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether the issue is the query text, the index design, or stale statistics?"
+   },
+   {
+    "question": "What happens if you use `REPLACE` in MySQL instead of `INSERT ... ON DUPLICATE KEY UPDATE`?",
+    "answer": "`REPLACE` works like a delete plus an insert when a unique key conflict happens, so it can fire delete-related side effects and create a new row identity. `INSERT ... ON DUPLICATE KEY UPDATE` updates the existing row in place, which is usually safer when you want to preserve relationships and avoid unnecessary churn. The trade-off is that the latter is more explicit about which columns change. In most application code, the upsert form is easier to reason about.",
+    "real_world": "This matters when other tables reference the row or when triggers, audit logs, or auto-increment values are involved. Using `REPLACE` can silently break assumptions about row continuity.",
+    "code_lang": "sql",
+    "code": "INSERT INTO inventory(sku, qty)\nVALUES ('A1', 10)\nON DUPLICATE KEY UPDATE qty = VALUES(qty);",
+    "follow_up": "What side effects would you check before allowing an upsert on a production table?"
+   },
+   {
+    "question": "How do you approach batching large writes into MySQL without causing lock contention or huge transactions?",
+    "answer": "Use smaller batches so each transaction is short, predictable, and easier to retry after failure. Large single transactions hold locks longer, increase undo/redo pressure, and make recovery or replication lag worse. The trade-off is more commits and more application logic, but usually much better operational behavior. For imports or backfills, batching also makes it easier to monitor progress and resume safely.",
+    "real_world": "This comes up during data migrations, backfills, and ETL jobs. A one-shot update can block live traffic or fill logs until the server becomes unhealthy.",
+    "code_lang": "sql",
+    "code": "START TRANSACTION;\nUPDATE users SET status='active' WHERE id IN (1,2,3,4,5);\nCOMMIT;",
+    "follow_up": "How would you make that batch job resumable after a crash?"
+   },
+   {
+    "question": "What are MySQL isolation levels protecting you from, and why do phantom reads matter in real systems?",
+    "answer": "Isolation levels define what one transaction can observe from another, mainly to balance consistency against concurrency. Phantom reads matter when a transaction repeats a range query and sees newly inserted rows that match the same condition, which can change business decisions mid-flight. In MySQL, the effective behavior depends on the isolation level and the storage engine, so you should choose based on the anomaly your code cannot tolerate. Stronger isolation usually means more contention.",
+    "real_world": "This is important in allocation and validation flows, like “is there still room left?” or “has this coupon already been claimed?” A transaction that sees new matching rows can double-book inventory or allow inconsistent approvals.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the query or locking strategy to prevent that?"
+   },
+   {
+    "question": "How do you safely add a new index to a live MySQL table without surprising the application?",
+    "answer": "You want to understand whether the index can be built online for your table and MySQL version, because rebuild behavior and locking can affect writes. Even when the add is online, it can still consume I/O and CPU, so the operational risk is often performance impact rather than outright downtime. Plan it with a slower period, watch replication lag, and verify the query plan afterward because adding an index can change optimizer choices. The goal is to improve one workload without accidentally hurting another.",
+    "real_world": "This matters during incident fixes and schema migrations. A well-intended index can trigger latency spikes or replication delay if it is added at the wrong time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to keep or drop an index that helped one query but slowed another?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how MVCC actually works in InnoDB and why long-running transactions are dangerous?",
+    "answer": "InnoDB keeps older row versions in undo logs, and each transaction reads the version visible to its snapshot. That lets readers avoid blocking writers for many workloads, but old versions cannot be purged while any transaction might still need them. A long-running transaction therefore grows undo history, increases purge lag, and can make reads and crash recovery more expensive. It also surprises teams because a single idle transaction can hold back cleanup across the whole instance.",
+    "real_world": "A common production incident is an analytics session left open for hours, after which undo tablespaces grow, replication falls behind, and simple queries slow down because the engine must traverse long version chains.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you identify the transaction that is preventing purge and what metrics would you watch?"
+   },
+   {
+    "question": "What is the difference between a clustered index and a secondary index in InnoDB, and how does that affect schema design?",
+    "answer": "In InnoDB, the table data is stored in primary key order, so the primary key is the clustered index. Secondary index leaf entries store the secondary key plus the primary key, not a physical row pointer, so fetching non-covered columns requires a second lookup into the clustered index. That means wide primary keys make every secondary index larger and increase memory, I/O, and write cost. For OLTP tables, a short, stable primary key usually performs better than a wide natural key.",
+    "real_world": "Teams sometimes choose a long UUID string as the primary key, then discover that every secondary index becomes much bigger and buffer pool hit rate drops under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes if you use random UUIDs versus time-ordered identifiers as the primary key?"
+   },
+   {
+    "question": "If a query uses an index but is still slow, what does index condition pushdown or multi-range read change under the hood?",
+    "answer": "Using an index is not enough if MySQL still has to do many row lookups. Index condition pushdown lets the storage engine evaluate more of the predicate while scanning the index, reducing base-row reads. Multi-range read reorders row fetches for many matching keys so access to the clustered index is more sequential. Both features matter when a secondary index narrows the search but not enough to make random row access cheap.",
+    "real_world": "This shows up in reporting queries with a selective prefix and extra filters: the plan says 'using index' or uses an index range, but latency is dominated by thousands of scattered row reads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What EXPLAIN indicators or runtime counters would tell you the bottleneck is row lookups rather than index traversal?"
+   },
+   {
+    "question": "How does InnoDB’s change buffer help, and when can it backfire?",
+    "answer": "The change buffer defers some secondary-index page modifications when those pages are not in memory, so inserts and updates can avoid immediate random I/O. It helps most when there are many writes to non-unique secondary indexes and the workload is not forced to read those pages right away. It can backfire if the workload later touches those pages heavily, because the deferred merges create extra work and latency spikes. It is much less useful on systems where the working set already fits in memory or storage is very fast.",
+    "real_world": "Bulk loads into a table with several non-unique indexes may look fast at first, then read latency jumps later when background or foreground merges catch up.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why doesn’t the same benefit apply in the same way to unique secondary indexes?"
+   },
+   {
+    "question": "What are next-key locks and gap locks in InnoDB, and why do they matter even when no rows match?",
+    "answer": "InnoDB does not just lock existing rows for some statements; under locking reads and updates it may also lock gaps between index records to prevent conflicting inserts into a searched range. A next-key lock is effectively a row lock plus the gap before it, while a pure gap lock covers only the interval. This is how InnoDB prevents phantoms under its default behavior, but it also means a query that matches nothing can still block inserts into that range. Whether this happens depends on the statement type, isolation behavior, and whether an index supports the search condition.",
+    "real_world": "A common surprise is 'SELECT ... FOR UPDATE' on a missing value in a hot range blocking order creation because the engine locked the gap where that value would go.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would a unique index on the searched column change the locking behavior for an equality lookup?"
+   },
+   {
+    "question": "When does the MySQL optimizer choose the wrong join order or access path, and how do you diagnose that without immediately reaching for hints?",
+    "answer": "The optimizer relies on statistics and cost estimates, so it can go wrong when cardinality estimates are stale, skewed, or correlations between columns are not captured well. That can lead to scanning a large table first, choosing index merge when a composite index is better, or underestimating the cost of random lookups. I start by comparing estimated versus actual row counts, checking table and index stats, and verifying whether the predicates are sargable. Hints can rescue an outage, but they hard-code assumptions and often become tomorrow’s regression.",
+    "real_world": "This often appears right after a traffic shift where one tenant or status value suddenly dominates, and a once-good plan starts reading millions of rows.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools in modern MySQL would you use to inspect the optimizer’s reasoning beyond a basic EXPLAIN?"
+   },
+   {
+    "question": "How do row-based and statement-based replication differ in failure modes and operational trade-offs?",
+    "answer": "Statement-based replication logs the SQL, so it is compact but depends on deterministic execution and matching data state; non-deterministic statements and certain side effects can cause replicas to diverge. Row-based replication logs the changed rows, which is safer and more predictable for many workloads, but it can generate much more binlog volume. The choice affects network, disk, and replica apply behavior as well as how easy it is to audit or replay changes. Mixed modes exist, but I prefer choosing based on correctness first.",
+    "real_world": "Teams often switch away from statement-based logging after discovering replica drift caused by non-deterministic updates or statements that depend on execution order.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does replication format affect write amplification and the throughput of replicas applying large updates?"
+   },
+   {
+    "question": "What actually happens during a crash in InnoDB, and why do redo logs and the doublewrite buffer exist?",
+    "answer": "On commit, InnoDB relies on redo logging to make logical page changes durable before dirty data pages are flushed to their final locations. After a crash, recovery replays committed changes from redo and uses undo information to roll back incomplete transactions. The doublewrite buffer protects against torn-page writes: pages are written to a safe area first, then to their final tablespace location, so recovery can repair a partially written page. Without these mechanisms, power loss could leave page contents inconsistent even if the transaction was reported committed.",
+    "real_world": "This matters during power failures or kernel panics: databases that looked healthy before the crash can spend significant time in recovery, and storage issues sometimes show up first as repeated page corruption warnings.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What configuration trade-offs affect durability versus throughput around transaction commit?"
+   },
+   {
+    "question": "Why can ‘filesort’ or temporary tables still appear even when you have indexes, and when is that acceptable?",
+    "answer": "MySQL can use an index for ordering or grouping only when the index order matches the query shape closely enough. If you sort on expressions, mix directions in unsupported ways, group after a join that changes the access path, or request columns that force a different plan, it may fall back to a temporary table or filesort. That is not automatically bad; sorting a few thousand rows in memory can be cheaper than forcing an index that reads far more data. The key is whether the sort is small and bounded or grows with your largest customers and traffic spikes.",
+    "real_world": "An endpoint may look fine in staging with a small result set, then time out in production when a tenant with millions of rows triggers disk-based temp tables.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell from EXPLAIN and runtime metrics whether the sort itself is the problem or the row production before it?"
+   },
+   {
+    "question": "What is the trade-off between partitioning a MySQL table and just indexing it better, and when does partitioning disappoint people?",
+    "answer": "Partitioning helps most with administrative and pruning benefits: dropping old data quickly, isolating maintenance, or restricting scans to a subset when predicates align with the partition key. It is not a general substitute for good indexing, because within each partition you still need efficient access paths and the optimizer may touch many partitions if the filter does not prune well. Partitioning also adds complexity around unique keys, query planning, and operational tooling. People are disappointed when they partition by date but most important queries filter by user or tenant instead.",
+    "real_world": "A common pattern is log or event tables partitioned by time so retention becomes a metadata operation, while OLTP account tables often see little benefit unless access patterns align tightly with the partition key.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you check before partitioning a multi-terabyte table that suffers from slow deletes and long retention maintenance?"
+   },
+   {
+    "question": "How does `AUTO_INCREMENT` behave under concurrency and replication, and what problems have you seen with it in production?",
+    "answer": "`AUTO_INCREMENT` guarantees uniqueness, not gap-free sequences. Under concurrency, inserts can reserve values that are later rolled back, and bulk inserts can allocate IDs in chunks, so gaps are normal. In replication or multi-writer setups, the real concern is avoiding collisions and hotspots, especially if the primary key is also the clustered key. It’s fine for surrogate keys, but it’s a poor fit for business-visible numbering like invoice IDs.",
+    "real_world": "Teams often discover too late that auditors or customers expect contiguous numbers, then find MySQL IDs have gaps from rollbacks and failed inserts. In multi-primary topologies, misconfigured increment/offset settings can create duplicate key failures during failover.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you needed globally unique IDs across regions without a single writer, what key design would you choose and why?"
+   },
+   {
+    "question": "What is a metadata lock in MySQL, and how can a simple `ALTER TABLE` end up causing an outage?",
+    "answer": "A metadata lock protects table definitions while sessions are reading or changing them. Even a query that only reads a table holds a metadata lock until its transaction ends, so an `ALTER TABLE` can end up waiting behind a long transaction, and then new queries pile up behind the waiting DDL. The outage is often caused less by the DDL itself and more by the lock queue that forms around it. The fix is operational: find long-running transactions, schedule carefully, and use online schema change strategies when needed.",
+    "real_world": "A common incident is a migration that looks harmless in staging but blocks production traffic because one idle transaction kept a metadata lock for minutes. Suddenly every request touching that table starts timing out, even though CPU and disk look normal.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect the session blocking a metadata lock wait on a busy production server?"
+   },
+   {
+    "question": "Why does `utf8mb4` sometimes break old indexes or unique constraints, and how do you reason about character sets and collations in MySQL?",
+    "answer": "Character sets define encoding, while collations define comparison and sort rules; both affect index behavior. With multibyte encodings like `utf8mb4`, index entries can consume more bytes, so older schemas that were near index length limits may fail after conversion. Collation also matters for uniqueness because two strings that look different byte-wise may compare equal under a case- or accent-insensitive collation. You need to choose collation intentionally based on application semantics, not just storage.",
+    "real_world": "A migration from `utf8` to `utf8mb4` often surfaces latent issues: index creation fails, or a supposedly unique username column starts rejecting values users thought were distinct. These are production problems because they appear only with real multilingual data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you migrate a large table to `utf8mb4` with minimal downtime and verify that uniqueness rules still match product expectations?"
+   },
+   {
+    "question": "What is the difference between `innodb_flush_log_at_trx_commit` settings in practical durability terms?",
+    "answer": "At a high level, the setting trades commit latency for how much recently committed data you can lose on a crash. Flushing the log at every commit gives the strongest durability but more I/O pressure, while less frequent flushing reduces fsync cost at the risk of losing some recent transactions if the OS or host fails. The exact risk depends on whether the failure is a mysqld crash, kernel panic, or power loss. You choose based on your recovery point objective, not just benchmark numbers.",
+    "real_world": "Teams sometimes relax this setting to get higher write throughput, then are surprised after a host crash when a small window of acknowledged commits is gone. That may be acceptable for cache rebuilds but not for payment or order data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does this interact with binary log durability settings if you care about both local crash safety and replication consistency?"
+   },
+   {
+    "question": "How do binary logs, GTIDs, and replicas change the way you think about backup and point-in-time recovery?",
+    "answer": "A full backup alone only restores you to one moment; binary logs let you replay changes to a chosen point in time. GTIDs make replication and recovery bookkeeping much safer because transactions have stable identifiers, which helps when promoting replicas or skipping problematic events. For recovery design, you care about backup consistency, binlog retention, and whether replicas have applied everything you need. The operational trade-off is more storage and process discipline in exchange for much better recovery options.",
+    "real_world": "Without retained binlogs, a team can restore last night’s backup but still lose a full day of writes after an accidental delete. With GTID-based replicas and binlogs, they can restore, replay to just before the bad statement, and bring service back with much lower data loss.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What conditions must be true for a backup to be safe for point-in-time recovery on an InnoDB-heavy system?"
+   },
+   {
+    "question": "When does `INSERT ... SELECT` or a big `UPDATE` become dangerous in MySQL, even if the SQL itself is correct?",
+    "answer": "Large set-based writes can be dangerous because they create huge transactions, generate lots of undo and redo, hold locks for a long time, and can saturate replication. They may also cause replica lag or fill temporary space if the read side of the statement is expensive. The SQL can be logically correct but still be operationally unsafe at production scale. A safer approach is usually chunking by primary key range and making the job restartable.",
+    "real_world": "A one-shot backfill that updates tens of millions of rows can run for hours, slow down foreground traffic, and leave replicas hours behind. If it gets killed halfway through, rollback itself may take a long time and extend the incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a chunked backfill so it can resume safely after a failure?"
+   },
+   {
+    "question": "Why can `SELECT ... FOR UPDATE` behave differently than people expect when there’s no usable index?",
+    "answer": "Locking reads are only as precise as the access path. If MySQL has to scan a large part of the table because there’s no suitable index, InnoDB may lock many rows it examines, not just the row you had in mind, which expands contention dramatically. Under `REPEATABLE READ`, range predicates can also involve gap or next-key locking, making the affected area larger than expected. So the correctness of your locking strategy depends heavily on indexing and predicate shape.",
+    "real_world": "This shows up in queue tables or account tables where developers add `FOR UPDATE` for safety but forget the supporting index. Suddenly workers that should operate independently block each other and throughput collapses under load.",
+    "code_lang": "sql",
+    "code": "BEGIN;\nSELECT *\nFROM jobs\nWHERE status = 'ready'\nORDER BY id\nLIMIT 1\nFOR UPDATE;\n-- Without an index like (status, id), this can scan and lock far more than one row.\n",
+    "follow_up": "How would you index a work-queue table to let multiple workers claim jobs with minimal blocking?"
+   },
+   {
+    "question": "What is the difference between `OPTIMIZE TABLE`, `ANALYZE TABLE`, and rebuilding an InnoDB table, and when do they actually help?",
+    "answer": "`ANALYZE TABLE` refreshes index statistics so the optimizer can make better plan choices. `OPTIMIZE TABLE` for InnoDB is effectively a table rebuild in many cases, which can reclaim space and defragment data, but it’s not a general cure for slow queries. A rebuild changes physical layout and can improve some access patterns, yet if the root cause is a bad query shape or missing index, it won’t solve much. These are maintenance tools, not first-line performance fixes.",
+    "real_world": "People often run `OPTIMIZE TABLE` during an incident hoping for a quick speedup, but if the slowdown came from a plan regression, `ANALYZE TABLE` is the relevant action. Conversely, after large deletes, a rebuild may matter because disk usage and scan cost stay high.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What symptoms would tell you stale optimizer statistics are more likely than fragmentation?"
+   },
+   {
+    "question": "How do temporary tables and internal memory limits affect MySQL performance under complex queries?",
+    "answer": "MySQL may materialize intermediate results for sorts, grouping, distincts, or derived tables; if they fit in memory the cost is lower, but once they spill to disk latency can jump sharply. The danger is multiplicative: a query that is merely acceptable alone can become a production problem when many sessions each build large temporary structures. You need to think about both query shape and concurrency, not just one session’s execution time. Good indexing and reducing row width often matter more than simply raising memory limits.",
+    "real_world": "A dashboard query may look fine in testing, then melt production because hundreds of concurrent requests each create temporary tables and spill to disk. The box suddenly shows high I/O wait even though no single query seems outrageous.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What plan or status indicators would you check to confirm a query is creating expensive temporary tables?"
+   },
+   {
+    "question": "What are the practical trade-offs between synchronous and asynchronous replication choices in MySQL architectures?",
+    "answer": "Classic MySQL replication is asynchronous, which keeps commit latency low but allows a failover to lose the most recent transactions if replicas lag. More synchronous designs reduce that data-loss window by waiting for acknowledgment from another node, but they increase commit latency and can reduce availability during network trouble. So the trade-off is really among latency, write availability, and recovery point objective. You pick based on business tolerance for losing acknowledged writes versus slowing or blocking writes.",
+    "real_world": "For ad-tech or analytics events, losing a few recent writes during failover may be acceptable, so asynchronous replication is often fine. For money movement or order systems, teams may accept higher latency to avoid promoting a replica that is missing committed transactions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you stay asynchronous, how would you make failover safer and reduce the chance of promoting a lagging replica?"
+   }
+  ]
+ }
+}

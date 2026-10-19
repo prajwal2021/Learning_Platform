@@ -1,0 +1,461 @@
+{
+ "slug": "angular",
+ "name": "Angular",
+ "category": "Frontend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Angular, and how is it different from just using plain JavaScript in the browser?",
+    "answer": "Angular is a front-end framework for building single-page applications with a structured way to organize UI, state, and behavior. Compared with plain JavaScript, it gives you built-in concepts like components, templates, dependency injection, routing, and forms, so teams can build larger apps more consistently. The trade-off is more framework rules and abstraction in exchange for maintainability and scalability.",
+    "real_world": "A team might choose Angular for a large internal dashboard where many screens share common patterns and multiple developers need consistent structure. It helps avoid ad hoc DOM code spreading across the app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a component in Angular?"
+   },
+   {
+    "question": "What is a component in Angular?",
+    "answer": "A component is a UI building block that combines a TypeScript class, an HTML template, and optional styles. It owns a piece of the screen and the data and logic needed to render it. You use components to split an app into reusable, testable parts instead of putting everything in one file.",
+    "real_world": "For a product page, you might have separate components for the header, product list, cart summary, and filter panel. That makes each piece easier to change without breaking the rest.",
+    "code_lang": "typescript",
+    "code": "@Component({\n  selector: 'app-hello',\n  template: `<h1>Hello {{name}}</h1>`\n})\nexport class HelloComponent {\n  name = 'Angular';\n}",
+    "follow_up": "What is the difference between a component and a directive?"
+   },
+   {
+    "question": "What is data binding in Angular?",
+    "answer": "Data binding is how Angular keeps the template and component class in sync. Common forms are interpolation for displaying values, property binding for passing data to DOM properties, event binding for handling user actions, and two-way binding for form inputs. It matters because it reduces manual DOM updates and keeps UI logic predictable.",
+    "real_world": "If a user types in a search box, binding lets the component react to the input and update results without writing direct DOM manipulation code. That is especially useful in forms and interactive dashboards.",
+    "code_lang": "typescript",
+    "code": "<input [value]=\"name\" (input)=\"name = $any($event.target).value\">\n<p>{{ name }}</p>",
+    "follow_up": "When would you use property binding instead of interpolation?"
+   },
+   {
+    "question": "What is the difference between property binding and interpolation?",
+    "answer": "Interpolation is mainly for putting values into text content, like `{{ title }}`. Property binding sets a DOM property or component input, like `[disabled]=\"isDisabled\"`, which is needed when you want to control element behavior, not just display text. A common mistake is trying to use interpolation where a property binding is required.",
+    "real_world": "A button should be disabled based on validation state; that needs property binding, not text insertion. Using the wrong one can make the UI look correct but behave incorrectly.",
+    "code_lang": "html",
+    "code": "<button [disabled]=\"isSaving\">Save</button>\n<p>{{ title }}</p>",
+    "follow_up": "What is an `@Input()` used for?"
+   },
+   {
+    "question": "What is `@Input()` used for in Angular?",
+    "answer": "`@Input()` lets a parent component pass data into a child component. It is the standard way to make child components reusable and configurable from the outside. You use it when the child should not own the data source itself, only render or react to it.",
+    "real_world": "A reusable alert component might take a message and severity from different pages. That way the same component can be used for errors, warnings, and success messages.",
+    "code_lang": "typescript",
+    "code": "@Component({ selector: 'app-alert', template: '<p>{{ message }}</p>' })\nexport class AlertComponent {\n  @Input() message = '';\n}",
+    "follow_up": "How do you send data from a child component back to a parent?"
+   },
+   {
+    "question": "How do you send data from a child component back to a parent in Angular?",
+    "answer": "Use `@Output()` with an `EventEmitter` to emit events from the child, and bind to that event in the parent. This is the normal pattern for child-to-parent communication in Angular. It keeps the child reusable because it only reports what happened instead of directly changing parent state.",
+    "real_world": "A row component in a table might emit a `deleted` event when the user clicks remove. The parent then updates the list and makes the API call.",
+    "code_lang": "typescript",
+    "code": "@Component({ selector: 'app-child', template: '<button (click)=\"clicked.emit()\">Click</button>' })\nexport class ChildComponent {\n  @Output() clicked = new EventEmitter<void>();\n}",
+    "follow_up": "What is a service, and why would you put logic there instead of in a component?"
+   },
+   {
+    "question": "What is a service in Angular, and why would you use one?",
+    "answer": "A service is a class for shared logic, data access, or state that should not live inside a component. You use services to keep components focused on UI and to share code across multiple parts of the app. Angular’s dependency injection makes services easy to provide and reuse.",
+    "real_world": "API calls are often moved into services so multiple components can use the same request logic and error handling. That avoids duplicating HTTP code in every screen.",
+    "code_lang": "typescript",
+    "code": "@Injectable({ providedIn: 'root' })\nexport class UserService {\n  getUsers() {\n    return this.http.get('/api/users');\n  }\n  constructor(private http: HttpClient) {}\n}",
+    "follow_up": "What does dependency injection mean in Angular?"
+   },
+   {
+    "question": "What does dependency injection mean in Angular?",
+    "answer": "Dependency injection means Angular creates and supplies objects a class depends on, instead of the class creating them itself. This makes code easier to test, reuse, and swap out for alternatives. In Angular, it is commonly used for services like HTTP clients, loggers, and data services.",
+    "real_world": "A component can receive a mock service in tests without changing the component code. In production, Angular injects the real service implementation.",
+    "code_lang": "typescript",
+    "code": "constructor(private userService: UserService) {}\n\nngOnInit() {\n  this.userService.getUsers().subscribe();\n}",
+    "follow_up": "What is the Angular router used for?"
+   },
+   {
+    "question": "What is the Angular router used for?",
+    "answer": "The router maps URLs to components so an Angular app can move between views without full page reloads. It is used for navigation, route parameters, redirects, guards, and lazy loading. This matters in single-page apps because it gives users fast navigation while keeping the browser URL meaningful.",
+    "real_world": "An app may route from `/products` to `/products/42` to show a detail page. That lets users bookmark and share links to specific views.",
+    "code_lang": "typescript",
+    "code": "const routes: Routes = [\n  { path: 'home', component: HomeComponent },\n  { path: 'users/:id', component: UserDetailComponent }\n];",
+    "follow_up": "What is the purpose of a route parameter?"
+   },
+   {
+    "question": "What is the purpose of a route parameter in Angular?",
+    "answer": "A route parameter lets you pass part of the URL into a component, usually to identify a record or resource. For example, `/users/42` can tell a detail page which user to load. It is better than hardcoding data in the component because the URL stays shareable and refresh-safe.",
+    "real_world": "A customer support app might open a ticket by ID from a link in an email. The route parameter lets the page load the correct ticket after refresh or direct navigation.",
+    "code_lang": "typescript",
+    "code": "this.route.paramMap.subscribe(params => {\n  const id = params.get('id');\n});",
+    "follow_up": "What is `ngIf`, and when would you use it?"
+   },
+   {
+    "question": "What is `*ngIf`, and when would you use it?",
+    "answer": "`*ngIf` conditionally adds or removes an element from the DOM based on a boolean expression. You use it when content should only exist in the page for certain states, like loading, error, or permission-based UI. A common mistake is using CSS alone when the element should not be rendered at all.",
+    "real_world": "If data has not loaded yet, showing a loading message with `*ngIf` avoids rendering empty or broken UI. It is also useful for hiding sensitive controls when a user lacks permission.",
+    "code_lang": "html",
+    "code": "<p *ngIf=\"isLoading\">Loading...</p>\n<div *ngIf=\"error\">{{ error }}</div>",
+    "follow_up": "What are Angular forms, and when would you use them?"
+   },
+   {
+    "question": "What is a module in Angular, and why did Angular apps historically use them?",
+    "answer": "An Angular module groups related components, directives, pipes, and services into a cohesive unit. Historically, modules helped organize large applications and define what features belong together and what gets imported or exported. In older Angular app structure, the root module was the entry point for bootstrapping the app. Even though newer Angular features reduce how much you rely on modules, understanding them is still important in many codebases.",
+    "real_world": "You’ll still see modules in existing enterprise apps, where teams organize features into separate module files. If imports and exports are wrong, components can fail to compile or directives may appear unavailable in templates.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between declaring something in a module and importing it?"
+   },
+   {
+    "question": "What is the difference between one-way binding and two-way binding in Angular?",
+    "answer": "One-way binding means data flows in a single direction, usually from component to template or from template events to the component. Two-way binding keeps the view and component property in sync, so changes in either place update the other. You use two-way binding mainly for form inputs where the UI should reflect model changes immediately and also update the model as the user types. The trade-off is convenience versus clearer control over data flow.",
+    "real_world": "This comes up in forms like settings pages and filters. If two-way binding is used carelessly, it can make it harder to trace where a value changed during debugging.",
+    "code_lang": "html",
+    "code": "<input [(ngModel)]=\"name\">\n<p>Hello {{ name }}</p>",
+    "follow_up": "What must be set up before `ngModel` works in a template-driven form?"
+   },
+   {
+    "question": "What is the difference between `[(ngModel)]` and reactive forms?",
+    "answer": "`ngModel` is part of template-driven forms, where much of the form logic lives in the template. Reactive forms define the form model in the component class and make validation and updates more explicit. You use template-driven forms for simpler cases and reactive forms when the form is complex, dynamic, or needs stronger control over validation and testing. Reactive forms are usually easier to reason about in larger applications.",
+    "real_world": "A login form can often use template-driven forms, but a multi-step checkout form with conditional fields usually benefits from reactive forms. Teams often switch when form logic becomes hard to maintain in the template.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a `FormControl` and how does it relate to a `FormGroup`?"
+   },
+   {
+    "question": "What is the purpose of `ngClass` and `ngStyle`?",
+    "answer": "`ngClass` adds or removes CSS classes based on expressions, and `ngStyle` sets inline styles dynamically. You use them when styling depends on component state, such as highlighting errors or marking selected items. `ngClass` is usually preferred for most conditional styling because it keeps CSS in stylesheets instead of mixing many inline style values into the template. `ngStyle` is more appropriate for values that truly need to be computed at runtime.",
+    "real_world": "A common example is showing validation errors with a red border or marking an active tab. Using the wrong one can make styles harder to maintain, especially if logic gets duplicated across components.",
+    "code_lang": "html",
+    "code": "<div [ngClass]=\"{ error: hasError }\">Name</div>\n<div [ngStyle]=\"{ 'font-size.px': size }\">Text</div>",
+    "follow_up": "When would you prefer a CSS class over inline styles?"
+   },
+   {
+    "question": "What is the purpose of Angular lifecycle hooks like `ngOnInit`?",
+    "answer": "Lifecycle hooks are methods Angular calls at specific times during a component’s life. `ngOnInit` is commonly used for initialization that should happen after Angular has set input values. Other hooks let you react to changes, view rendering, or cleanup. They matter because they give you the right place to put work instead of doing everything in the constructor.",
+    "real_world": "A component might fetch data after inputs are available or set up subscriptions when it starts. Putting that logic in the wrong place can cause undefined values or repeated initialization.",
+    "code_lang": "typescript",
+    "code": "export class ProfileComponent implements OnInit {\n  ngOnInit() {\n    this.loadProfile();\n  }\n}",
+    "follow_up": "Why is the constructor not the right place for most initialization logic?"
+   },
+   {
+    "question": "What is an observable in Angular, and why do people use it with HTTP requests?",
+    "answer": "An observable represents a stream of values that can arrive over time. Angular uses observables a lot, especially for HTTP calls, because they fit well with asynchronous operations and can be composed with operators. You subscribe to receive the result, and you can also transform or cancel streams more flexibly than with a single promise-like value. The main thing to remember is that nothing happens until you subscribe.",
+    "real_world": "This matters when loading API data, responding to user input, or listening to route changes. A common beginner mistake is expecting an HTTP request to run without subscribing, so the page stays empty.",
+    "code_lang": "typescript",
+    "code": "this.http.get('/api/users').subscribe(users => {\n  this.users = users;\n});",
+    "follow_up": "What problems can happen if you forget to unsubscribe from an observable?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "When would you choose reactive forms over template-driven forms in Angular, and what trade-off are you making?",
+    "answer": "Use reactive forms when the form is complex, dynamic, or needs strong programmatic control and testability. You define the form model in TypeScript, which makes validation, conditional fields, and value changes easier to manage. Template-driven forms are simpler for small forms, but they become harder to reason about as logic grows. The trade-off is more setup and code for reactive forms in exchange for better structure and maintainability.",
+    "real_world": "This comes up in checkout flows, admin screens, and multi-step onboarding where fields appear or change based on previous answers. Teams often switch to reactive forms after template-driven validation logic becomes hard to debug.",
+    "code_lang": "typescript",
+    "code": "const form = new FormGroup({\n  email: new FormControl('', [Validators.required, Validators.email]),\n  age: new FormControl(null)\n});\n\nform.valueChanges.subscribe(v => console.log(v));",
+    "follow_up": "How would you build a dynamic form where fields depend on API data?"
+   },
+   {
+    "question": "How do Angular HTTP interceptors work, and what are the most common things you use them for?",
+    "answer": "An interceptor sits between your app and outgoing HTTP requests or incoming responses. It is commonly used to attach auth tokens, add headers, handle errors centrally, and show or hide loading indicators. This keeps cross-cutting concerns out of individual services and components. The trade-off is that interceptors can hide behavior if the chain is not documented well.",
+    "real_world": "A common production issue is a token refresh or 401 handling bug that must be fixed in one place instead of in every API call. Teams also use interceptors to log failures or send request timing to monitoring.",
+    "code_lang": "typescript",
+    "code": "intercept(req: HttpRequest<any>, next: HttpHandler) {\n  const authReq = req.clone({\n    setHeaders: { Authorization: `Bearer ${token}` }\n  });\n  return next.handle(authReq);\n}",
+    "follow_up": "How would you avoid an interceptor accidentally affecting a request that should not have authentication?"
+   },
+   {
+    "question": "What happens if you subscribe to an Angular observable and never unsubscribe from it?",
+    "answer": "If the observable does not complete on its own, the subscription can keep resources alive after the component is destroyed. That can cause memory leaks, duplicate side effects, or callbacks running on a dead component. HTTP observables usually complete after one value, but streams like `valueChanges`, router events, or custom subjects often do not. The key is to clean up subscriptions or use Angular patterns that do it for you.",
+    "real_world": "This often shows up as a page that gets slower after repeated navigation or a handler firing multiple times after returning to a screen. It is a common source of subtle UI bugs in long-lived dashboards.",
+    "code_lang": "typescript",
+    "code": "private sub?: Subscription;\nngOnInit() {\n  this.sub = this.route.params.subscribe(() => this.load());\n}\nngOnDestroy() {\n  this.sub?.unsubscribe();\n}",
+    "follow_up": "What Angular patterns can reduce the need to unsubscribe manually?"
+   },
+   {
+    "question": "How would you decide between an async pipe in the template and subscribing in the component class?",
+    "answer": "Use the async pipe when the template just needs to render observable data, because Angular handles subscription and cleanup for you. Subscribe in the component when you need side effects, imperative control, or to combine the result with other non-template logic. The async pipe usually leads to simpler code and fewer leaks, but it is not a fit for every workflow. A strong rule is to keep data flow declarative unless you need imperative behavior.",
+    "real_world": "Teams often start with manual subscriptions and later move display-only streams to the async pipe to reduce cleanup bugs. This is especially useful in list and detail pages driven by route or API streams.",
+    "code_lang": "typescript",
+    "code": "items$ = this.api.getItems();\n// template:\n// <li *ngFor=\"let item of items$ | async\">{{ item.name }}</li>",
+    "follow_up": "How would you combine several observables for a single view model?"
+   },
+   {
+    "question": "What is the difference between pure and impure pipes in Angular, and when would you avoid an impure pipe?",
+    "answer": "A pure pipe runs only when Angular detects a change in its input reference, while an impure pipe can run on many change detection cycles. Pure pipes are better for performance because they are predictable and inexpensive when used with immutable data. Impure pipes can be useful for very specific cases, but they can become a performance problem in large lists because they execute frequently. In most apps, you should prefer pure pipes or precompute values in the component.",
+    "real_world": "This matters when a page with many rows starts feeling slow because a formatting pipe runs repeatedly during change detection. A careless impure pipe can create unnecessary CPU work in dashboards or tables.",
+    "code_lang": "typescript",
+    "code": "@Pipe({ name: 'fullName', pure: true })\nexport class FullNamePipe implements PipeTransform {\n  transform(p: { first: string; last: string }) {\n    return `${p.first} ${p.last}`;\n  }\n}",
+    "follow_up": "What changes in Angular change detection make a pure pipe rerun?"
+   },
+   {
+    "question": "How do `trackBy` functions help with `*ngFor`, and what problem do they solve?",
+    "answer": "`trackBy` tells Angular how to identify items in a list so it can reuse DOM elements instead of recreating them. This improves performance and helps preserve focus, input state, and animation state when list data changes. Without it, Angular may treat updated objects as entirely new rows even when they represent the same logical item. The trade-off is a bit of extra code for much better behavior in dynamic lists.",
+    "real_world": "This is important in editable tables, message feeds, and any list refreshed from the server. Without `trackBy`, users can lose cursor position or see unnecessary re-rendering.",
+    "code_lang": "typescript",
+    "code": "trackById(index: number, item: { id: string }) {\n  return item.id;\n}\n// *ngFor=\"let item of items; trackBy: trackById\"",
+    "follow_up": "When would using the array index as `trackBy` be a bad idea?"
+   },
+   {
+    "question": "How do you usually structure state when multiple components need the same data in an Angular feature?",
+    "answer": "For shared feature state, I usually keep the data in a service and expose it as observables or signals rather than passing it through many component layers. This makes the state source explicit and avoids tight coupling between siblings and parents. For small local state, component state is simpler and easier to reason about. The trade-off is between centralization and extra abstraction versus simplicity and locality.",
+    "real_world": "This comes up in filters, selected items, or shared carts where several screens need the same current value. Without a shared state approach, teams often end up duplicating logic and getting out-of-sync views.",
+    "code_lang": "typescript",
+    "code": "private selectedId = new BehaviorSubject<string | null>(null);\nselectedId$ = this.selectedId.asObservable();\nsetSelectedId(id: string) { this.selectedId.next(id); }",
+    "follow_up": "When would you choose a state library instead of a plain service?"
+   },
+   {
+    "question": "How would you debug a form that shows as valid in the UI but still does not submit correctly?",
+    "answer": "I would check whether the actual form group state matches the template expectations, especially custom validators, disabled controls, and async validation. It is also important to verify that controls are registered correctly and that submit logic is reading the form values rather than the raw DOM. A common issue is a control being disabled, which removes it from the form value, or a validator not running because the input never updates the form model. Debugging usually means inspecting `form.valid`, `form.errors`, and individual control states in the component.",
+    "real_world": "This happens in production when a payment or profile form looks complete, but the server receives missing fields. It is often traced to a disabled control, a typo in a formControlName, or a custom validator bug.",
+    "code_lang": "typescript",
+    "code": "console.log(this.form.valid, this.form.errors);\nconsole.log(this.form.get('email')?.status);\nconsole.log(this.form.value);\nconsole.log(this.form.getRawValue());",
+    "follow_up": "How would you test a custom validator like this?"
+   },
+   {
+    "question": "What is a good Angular testing strategy for components that depend on services or HTTP calls?",
+    "answer": "For unit tests, mock the service and verify the component reacts correctly to emitted values or method calls. For HTTP logic, test the service with Angular’s HTTP testing tools rather than hitting a real backend. The goal is to isolate behavior so tests are fast, deterministic, and focused on one layer at a time. In practice, you test rendering and interaction in the component, and request construction plus response handling in the service.",
+    "real_world": "This matters when a CI suite becomes slow or flaky because tests depend on real network calls or shared backend state. Good Angular tests catch regressions in service contracts and UI behavior without requiring end-to-end coverage for everything.",
+    "code_lang": "typescript",
+    "code": "it('loads users', () => {\n  service.getUsers().subscribe(users => expect(users.length).toBe(2));\n  const req = httpMock.expectOne('/api/users');\n  req.flush([{ id: 1 }, { id: 2 }]);\n});",
+    "follow_up": "When would you prefer an integration test over a shallow unit test?"
+   },
+   {
+    "question": "How do you decide whether logic belongs in a component, a service, or a pipe in Angular?",
+    "answer": "Put UI-specific orchestration in the component, reusable business or data-access logic in a service, and pure display transformations in a pipe. If code needs HTTP, caching, shared state, or coordination across multiple components, it usually belongs in a service. Keeping components thin makes them easier to test and reduces duplicated logic. Pipes should stay deterministic and side-effect free.",
+    "real_world": "A common bug is a component growing into a pile of API calls, filtering, and formatting logic that becomes hard to test and reuse. Splitting that code into a service and a pipe usually makes the feature easier to maintain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you avoid putting logic into a pipe even if it looks reusable?"
+   },
+   {
+    "question": "What is the difference between `constructor` and `ngOnInit`, and what should go in each?",
+    "answer": "Use the constructor for simple dependency injection and immediate field setup, not for work that depends on Angular inputs or the view. `ngOnInit` is the right place to start initialization that needs `@Input()` values, route data, or service calls. Keeping side effects out of the constructor makes the class easier to instantiate in tests. If initialization depends on the template or child components, a later hook may be needed.",
+    "real_world": "This matters when a component fetches data using an input like an ID from the parent. If the logic runs too early in the constructor, the ID may still be undefined and the request fails.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would change if the initialization depends on a `ViewChild`?"
+   },
+   {
+    "question": "How do you handle an `@Input()` value that can change after the component has initialized?",
+    "answer": "`ngOnInit` only runs once, so it is not enough if the parent updates the input later. For simple cases, use a setter on the input or `ngOnChanges` to react whenever the value changes. If the update should drive a stream of async work, combine the input with RxJS and cancel stale requests when a new value arrives. The key is to distinguish initial setup from ongoing synchronization.",
+    "real_world": "This comes up in detail panels where the selected item changes without destroying the component. If the code only reads the input once, the panel keeps showing stale data.",
+    "code_lang": "typescript",
+    "code": "@Input() set userId(id: string) {\n  if (id) this.loadUser(id);\n}\n\nngOnChanges() {\n  // use when you need old/new values or multiple inputs together\n}",
+    "follow_up": "When would you prefer `ngOnChanges` over an input setter?"
+   },
+   {
+    "question": "What happens if you mutate an object bound into a child component instead of replacing it with a new object?",
+    "answer": "The child may see the updated properties, but Angular change detection is easier to reason about when you treat inputs as immutable. With `OnPush`, replacing the object is especially important because Angular checks references to decide whether to re-render. Mutating shared objects also makes state changes harder to track and can create subtle bugs between components. A new object makes the change explicit.",
+    "real_world": "A team often sees a child table not refresh after editing one field on an item. The issue is usually mutation in place, while the parent and child both expect a new reference.",
+    "code_lang": "typescript",
+    "code": "// prefer this\nthis.user = { ...this.user, name: 'Ada' };\n\n// over mutating shared state\nthis.user.name = 'Ada';",
+    "follow_up": "How does this relate to `ChangeDetectionStrategy.OnPush`?"
+   },
+   {
+    "question": "What is `ChangeDetectionStrategy.OnPush`, and what trade-off do you make when using it?",
+    "answer": "`OnPush` tells Angular to skip checking a component unless an input reference changes, an event happens in the component, or an observable used by the template emits. The benefit is fewer unnecessary checks in large UIs, which can improve performance and make rendering more predictable. The trade-off is that you must update state immutably and be careful with manual subscriptions or mutations. It rewards disciplined state flow.",
+    "real_world": "This is useful in dashboards and large tables where many components render at once. It often fixes sluggish scrolling or typing, but only if the team avoids mutating inputs in place.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns help `OnPush` components update reliably with async data?"
+   },
+   {
+    "question": "How would you debug a form control that shows an error in the template even though the user has entered a valid value?",
+    "answer": "First check whether the validator is attached to the right control and whether the control is actually receiving the value you expect. Then inspect the control state: touched, dirty, pending, and the current errors object. Custom validators often fail because they return an error object even after the value becomes valid, or because they read the wrong control in a group. The debugging approach is to trace the form model, not just the UI.",
+    "real_world": "A common production issue is a required or pattern message that never disappears after users fix the field. The root cause is usually a validator bug or a mismatched form control name.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test a custom validator like this?"
+   },
+   {
+    "question": "When would you use a resolver or guard in the Angular router, and what are the trade-offs?",
+    "answer": "Use a guard to allow or block navigation based on conditions like authentication or permissions. Use a resolver when the route should wait for data before activation, such as fetching an entity by ID. Guards keep users out of pages they cannot access, while resolvers reduce loading logic in the component but can make navigation slower if the request is slow. Choose based on whether the page can render meaningfully before the data arrives.",
+    "real_world": "This matters on admin screens where a user should never briefly see protected content. Resolvers are also useful when a page would otherwise flash empty and then fill in after the API returns.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What do you do if a resolver fails or times out?"
+   },
+   {
+    "question": "How do you avoid duplicate HTTP requests when multiple parts of the app need the same data?",
+    "answer": "Cache the shared result in a service and expose it as an observable, instead of having each component call the API independently. If the data is stale-sensitive, add an explicit refresh path rather than re-fetching on every subscription. For one-time lookups, sharing a single request among subscribers avoids wasted network calls and inconsistent state. The trade-off is that you now own cache invalidation.",
+    "real_world": "A feature like a user profile header and a settings page may both need the current user. Without shared caching, both screens can trigger separate calls and briefly disagree on the data.",
+    "code_lang": "typescript",
+    "code": "private user$?: Observable<User>;\n\ngetUser() {\n  this.user$ ??= this.http.get<User>('/api/user').pipe(shareReplay(1));\n  return this.user$;\n}",
+    "follow_up": "How would you invalidate or refresh that cache?"
+   },
+   {
+    "question": "What is the difference between `Subject`, `BehaviorSubject`, and `ReplaySubject` in Angular state sharing?",
+    "answer": "A `Subject` is a plain multicast stream with no initial value and no replay to late subscribers. A `BehaviorSubject` stores the latest value and immediately emits it to new subscribers, which makes it useful for simple shared state. A `ReplaySubject` replays a chosen number of past values, which is helpful when late subscribers need recent history. The main trade-off is memory and the semantics of what new subscribers should see.",
+    "real_world": "Teams often use a `BehaviorSubject` for current user or selected filter state. Choosing the wrong subject can lead to late subscribers seeing nothing or too much history.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you avoid exposing a `BehaviorSubject` directly from a service?"
+   },
+   {
+    "question": "How do you approach testing an Angular component that makes an HTTP call on startup?",
+    "answer": "Prefer testing the component behavior while mocking the HTTP layer or the service it depends on, rather than hitting a real backend. If you are testing the service itself, verify the request, response handling, and error path separately. In component tests, assert that the UI updates after the observable emits, and that loading or error states render correctly. The goal is to test behavior, not Angular internals.",
+    "real_world": "This catches regressions where a spinner never stops or an error message is missing after a failed request. Teams often discover that tests passed only because they mocked too much and never exercised the async flow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test the loading state before the HTTP response arrives?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how Angular change detection actually walks the component tree, and what Zone.js is doing in that process?",
+    "answer": "Angular keeps metadata for each view and runs change detection by traversing the component tree, reevaluating bindings and updating the DOM when values differ. Zone.js patches async browser APIs like timers, events, and promises so Angular knows when application code may have changed state and should schedule a check. The cost is that a lot of async work can trigger global checks even if only a small subtree changed. In newer apps, teams often reduce that cost with OnPush, signals, or zoneless setups, but then they take on more responsibility for explicitly surfacing state changes.",
+    "real_world": "A common production issue is a dashboard that becomes janky because websocket messages, timers, and user events all keep retriggering app-wide checks. Teams often profile this and find most time is spent in template reevaluation rather than network or rendering.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when you run Angular without Zone.js, and what do developers have to do differently?"
+   },
+   {
+    "question": "What are the practical differences between `ngDoCheck`, `ngOnChanges`, and custom differ APIs, and when would you reach for them?",
+    "answer": "`ngOnChanges` runs when Angular sets an input reference and is the first choice when you care about input changes from the parent. `ngDoCheck` runs on every change detection pass for that component, so it is powerful but easy to make expensive; it is mainly for cases Angular does not detect the way you need. Iterable and key-value differs let you efficiently detect changes inside collections without hand-rolling deep comparisons each cycle. If you can redesign around immutable updates, that is usually simpler and cheaper than custom checking.",
+    "real_world": "This matters in large data grids where someone mutates rows in place and expects the UI or validation summary to stay in sync. A naive `ngDoCheck` fix can work but create frame drops under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect changes in a large mutable array without turning every check into an O(n) deep comparison?"
+   },
+   {
+    "question": "How does content projection work under the hood in Angular, and what are the performance or API design trade-offs of using `ng-content` heavily?",
+    "answer": "Angular resolves projected nodes against projection slots at creation time and keeps them owned by the parent view, even though they render inside the child component's template. That gives flexible composition, but it also means the projected content is checked in the parent's context, which can make data flow and debugging less obvious. Heavy multi-slot projection can complicate APIs, testing, and styling boundaries compared with explicit inputs or template outlets. It is best when you need structural customization, not just a few values or flags.",
+    "real_world": "Design-system teams hit this with reusable table, modal, and card components: projection makes them flexible, but consumers can accidentally embed expensive templates that rerender more often than expected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use `ngTemplateOutlet` or a `TemplateRef` input instead of plain content projection?"
+   },
+   {
+    "question": "If you had to render tens of thousands of rows in Angular, what would you change beyond adding a `trackBy`?",
+    "answer": "I would reduce the amount of DOM first, usually with virtual scrolling or pagination, because even perfect change detection cannot make 50,000 live DOM nodes cheap. Then I would use OnPush or signals-based state flow, avoid template function calls that allocate, precompute view models, and make row components cheap and stable. I'd also look at event delegation, memoized formatting, and whether scrolling or resizing triggers extra work. The main trade-off is complexity: virtualization improves throughput a lot, but it changes keyboard navigation, measurement, and testing.",
+    "real_world": "Large admin screens often fail not because fetching data is slow but because layout, painting, and Angular checks blow the frame budget once all rows are in the DOM.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you capture in the browser to tell whether the bottleneck is Angular work, DOM size, or layout and paint?"
+   },
+   {
+    "question": "How do standalone components change Angular architecture, and what trade-offs do they introduce in large codebases?",
+    "answer": "Standalone components remove the need to declare everything in NgModules and make dependencies explicit at the component or route level. That usually improves locality, lazy loading, and tree-shaking because imports are closer to where features are used. The trade-off is that shared dependency patterns can become more repetitive, and teams need conventions so imports, providers, and route composition stay consistent across hundreds of components. In migrations, mixed standalone and module-based code is fine, but unclear boundaries can create confusing provider scopes.",
+    "real_world": "At scale, teams often use standalone routes to split large features cleanly, but they also discover duplicated imports and inconsistent provider placement unless they define architecture rules early.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What provider-scoping mistakes become easier to make when moving features from NgModules to standalone APIs?"
+   },
+   {
+    "question": "How does Angular’s hierarchical injector really work, and what bugs show up when a service is provided at the wrong level?",
+    "answer": "Angular resolves dependencies by walking injector hierarchies, typically from the component or environment injector upward until it finds a provider. Providing a service at root gives a singleton for the app, while providing it at a component or lazy feature creates separate instances for those subtrees. The bug pattern is accidental duplication of stateful services, caches, or side effects because a provider was added in a component or lazy route instead of a shared scope. The opposite bug is over-sharing state globally when a feature actually needed isolation.",
+    "real_world": "A classic incident is duplicated websocket connections or polling because each lazy-loaded feature created its own instance of a data service. Another is a 'singleton' store resetting on navigation because it was really scoped to a route subtree.",
+    "code_lang": "typescript",
+    "code": "@Injectable()\nexport class SessionStore { count = 0; }\n\n@Component({\n  selector: 'feature-shell',\n  providers: [SessionStore],\n  template: ''\n})\nexport class FeatureShell {}",
+    "follow_up": "How would you deliberately scope a service per tab, per route, or per embedded widget?"
+   },
+   {
+    "question": "What can go wrong with RxJS concurrency in Angular effects or service layers, and how do you choose between `switchMap`, `mergeMap`, `concatMap`, and `exhaustMap`?",
+    "answer": "The operator choice defines cancellation, ordering, parallelism, and how your UI behaves under rapid user input. `switchMap` cancels stale work and is usually right for typeahead or route-driven fetches; `concatMap` preserves order but can backlog; `mergeMap` runs concurrently and can overload APIs or race UI updates; `exhaustMap` ignores new triggers while one is active, which fits submit buttons. The failure mode is usually either stale data winning, duplicate writes, or a queue that grows silently under load. You pick based on whether the action is replaceable, must be ordered, can be parallel, or must not overlap.",
+    "real_world": "Search boxes, autosave, and bulk actions often look fine in demo data but fail in production when users click quickly or networks reorder responses.",
+    "code_lang": "typescript",
+    "code": "search$.pipe(\n  debounceTime(200),\n  distinctUntilChanged(),\n  switchMap(q => this.http.get(`/api/items?q=${q}`))\n).subscribe();",
+    "follow_up": "How would you prevent a canceled read from updating shared state if some side effect happens before the HTTP observable completes?"
+   },
+   {
+    "question": "How do you handle route-level data loading so navigation stays responsive when APIs are slow or partially failing?",
+    "answer": "I separate critical data needed to enter the page from secondary data that can stream in after activation. Resolvers are useful when the route should not activate without data, but blocking all navigation on slow APIs hurts perceived performance and complicates retries. For many screens, I prefer activating the route quickly, showing skeleton or partial UI, and handling failures inside the feature with clear retry logic. The trade-off is between simpler route contracts and better resilience under real network conditions.",
+    "real_world": "A production outage often looks worse when every route waits on multiple backend calls before rendering anything; one degraded dependency can make the whole app feel down.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you keep a resolver despite the risk of blocking navigation?"
+   },
+   {
+    "question": "What are the SSR and hydration failure modes in Angular, and how would you debug a mismatch between server HTML and the client app?",
+    "answer": "Hydration can fail when the client renders different markup than the server because of non-deterministic values, browser-only APIs, timing-dependent logic, or data that differs between environments. I first isolate whether the mismatch is structural, like conditional nodes, or just content, like dates and locales, then check any code running during construction or first render that depends on `window`, random IDs, current time, or async races. Fixes usually involve making initial render deterministic, transferring server-fetched state, and deferring browser-only behavior until after hydration. The trade-off is that SSR improves startup and SEO, but it raises the bar for render purity.",
+    "real_world": "Teams often discover this only in production when a page looks server-rendered but then flashes, rerenders, or loses interactivity on certain locales or under A/B test code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of component code are safe in an SSR app but unsafe during hydration?"
+   },
+   {
+    "question": "How would you investigate and fix a memory leak in a long-lived Angular dashboard that gets slower over a few hours?",
+    "answer": "I would confirm growth with browser memory tools, then look for retained component instances, DOM nodes, timers, subscriptions, event listeners, and cached observables that never release values. In Angular apps, common causes are manual subscriptions tied to destroyed views, global listeners added outside Angular abstractions, and `shareReplay` used without understanding its lifetime. The fix depends on ownership: bind subscriptions to component teardown, scope caches intentionally, and ensure dynamic components or overlays are really destroyed. You need both a code fix and a reproducible profiling path so regressions are caught.",
+    "real_world": "Dashboards with polling, charts, and modal overlays often pass normal QA but degrade after hours because each navigation or refresh leaves behind listeners or retained data buffers.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What specific RxJS patterns cause leaks even when components themselves are destroyed correctly?"
+   },
+   {
+    "question": "How do Angular signals change the mental model compared with RxJS-based component state, and where would you avoid signals in a large app?",
+    "answer": "Signals make dependency tracking synchronous and pull-based at read time, so Angular knows exactly which consumers depend on which state. That reduces template subscription boilerplate and can make fine-grained updates cheaper than broad observable chains. I would still avoid signals for cross-process streams like websockets, cancellation-heavy async workflows, or complex event composition, where RxJS operators remain a better fit. In practice, signals work well for local UI state and derived view state, while RxJS stays strong at async orchestration boundaries.",
+    "real_world": "Teams often over-convert everything to signals and then rebuild stream semantics poorly. A common production issue is losing cancellation, retry, or backpressure behavior that was explicit in RxJS.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you bridge an HTTP observable into signals without accidentally triggering duplicate requests?"
+   },
+   {
+    "question": "What actually happens when a template reads a signal, and why can a badly designed computed signal still cause performance issues?",
+    "answer": "When a template reads a signal, Angular records that read so the component can be marked when the signal changes. A computed signal caches its value and recomputes only when one of the signals it read last time changes. The trap is putting expensive filtering, sorting, or object recreation inside a computed that invalidates too often, because caching only helps if the dependency graph is stable and the work is scoped. You can still create churn by returning fresh arrays or cascading broad dependencies through the tree.",
+    "real_world": "In data-heavy dashboards, a single computed that rebuilds large lists on every keystroke can dominate frame time even though the app is using signals correctly on paper.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns would you use to keep computed signals cheap for large collections?"
+   },
+   {
+    "question": "If an Angular app starts thrashing change detection because of high-frequency events like scroll or mousemove, how would you contain it?",
+    "answer": "I would first move noisy listeners outside Angular so they do not trigger a full app tick for every event, then re-enter Angular only when state that affects the UI actually changes. From there I would throttle or sample the event stream, coalesce updates, and isolate the affected subtree with OnPush or signal-driven local state. If the handler does DOM reads and writes, I would align updates with animation frames to avoid layout thrash. The key is reducing both event frequency and the blast radius of each update.",
+    "real_world": "A common production incident is a sticky header or drag interaction making the whole app janky because every pointer event wakes the entire tree.",
+    "code_lang": "typescript",
+    "code": "constructor(private zone: NgZone) {}\nngOnInit() {\n  this.zone.runOutsideAngular(() => {\n    fromEvent(window, 'scroll').pipe(auditTime(16)).subscribe(() => {\n      const y = window.scrollY;\n      this.zone.run(() => this.scrollY.set(y));\n    });\n  });\n}",
+    "follow_up": "What are the risks of using `runOutsideAngular` incorrectly?"
+   },
+   {
+    "question": "How would you design Angular route splitting and preloading for a very large app with hundreds of screens?",
+    "answer": "I would split by user task or ownership boundary, not by tiny component, so each lazy chunk has coherent behavior and caching value. Then I would preload selectively based on likely next routes, device/network quality, and role, because preloading everything can compete with critical API traffic and hurt low-end devices. Shared dependencies need attention too, since poor boundaries can duplicate code across chunks or create a giant shared bundle that defeats splitting. The right design balances initial load, navigation latency, and long-term maintainability.",
+    "real_world": "At scale, teams often discover that a 'fully lazy' app still has a huge initial bundle because a shared UI barrel or utility package pulls most features into the main chunk.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you verify whether a refactor actually improved chunking rather than just moving code around?"
+   },
+   {
+    "question": "What are the failure modes when you use `shareReplay` for caching HTTP data in Angular, and how do you avoid them?",
+    "answer": "`shareReplay` can be effective for deduplicating work, but it is easy to create caches that never refresh, retain large responses indefinitely, or replay stale errors to every future subscriber. Another common mistake is building the shared observable inside a method so each call creates a new cache and you still get duplicate requests. I prefer making cache lifetime explicit, especially for auth-scoped or mutable data, and being careful about error handling and invalidation triggers. The operator is not a full cache strategy by itself.",
+    "real_world": "A production bug I’ve seen is one user’s tenant-scoped config being reused after account switching because the cached stream lived longer than the auth context.",
+    "code_lang": "typescript",
+    "code": "private users$?: Observable<User[]>;\ngetUsers() {\n  if (!this.users$) {\n    this.users$ = this.http.get<User[]>('/api/users').pipe(\n      shareReplay({ bufferSize: 1, refCount: true })\n    );\n  }\n  return this.users$;\n}",
+    "follow_up": "When would you avoid `refCount` on a shared HTTP cache?"
+   },
+   {
+    "question": "How do you prevent feedback loops or inconsistent state when reactive forms are synchronized with external observables or signals?",
+    "answer": "The main risk is bidirectional syncing where a form update pushes state out, that state flows back in, and you trigger another form update. I prevent that by defining a single source of truth for each phase, using guarded patches with `emitEvent: false` when mirroring external state, and comparing before writing to avoid redundant updates. Timing matters too: async validators, disabled controls, and partial form patches can make the aggregate form state temporarily inconsistent. A clean design separates user edits, server echoes, and derived UI state rather than letting them all write freely.",
+    "real_world": "This shows up in profile or settings screens where autosave and server normalization keep rewriting the same form, causing flicker, dirty-state bugs, or endless save loops.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure autosave so slow responses do not overwrite newer user edits?"
+   },
+   {
+    "question": "What are the trade-offs between Angular’s default style encapsulation modes, and when would you deliberately turn encapsulation off?",
+    "answer": "Emulated encapsulation scopes component styles predictably without native shadow DOM constraints, so it is the practical default for most apps. Shadow DOM gives stronger isolation, but it complicates global theming, overlay styling, and third-party CSS integration. Turning encapsulation off can be appropriate for deliberate design-system layers, wrapper components around legacy markup, or when you need styles to reach projected or externally rendered content. The trade-off is that global CSS power comes with a much larger regression surface.",
+    "real_world": "Styling bugs often appear around overlays, portals, or projected content where engineers expect component styles to apply but the DOM actually lives elsewhere.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do Angular CDK overlays affect your styling strategy?"
+   },
+   {
+    "question": "What really happens when an `AsyncPipe` switches from one observable instance to another, and what bugs can that cause?",
+    "answer": "`AsyncPipe` unsubscribes from the previous observable and subscribes to the new one, then marks the view for update when values arrive. That is usually what you want, but if the template creates a fresh observable every change detection pass, the pipe keeps tearing down and resubscribing. That can restart HTTP requests, reset multicasted streams, or lose buffered values depending on the source. Stable observable references matter just as much as using `AsyncPipe` itself.",
+    "real_world": "A subtle production issue is an innocent getter returning `this.http.get(...)` or `items$.pipe(map(...))` in the template, causing repeated calls or flickering values under load.",
+    "code_lang": "typescript",
+    "code": "// bad: new observable each check\nget user$() { return this.http.get<User>('/api/user'); }\n\n// better: create once\nuser$ = this.http.get<User>('/api/user');",
+    "follow_up": "Why is calling methods from Angular templates often riskier than it looks?"
+   },
+   {
+    "question": "How would you reason about Angular CDK virtual scrolling limits, especially when row heights are dynamic or the list updates in real time?",
+    "answer": "Virtual scrolling works best when item size is predictable, because the viewport can map scroll offset to rendered range cheaply. With dynamic heights, frequent inserts, or live updates, maintaining accurate offsets becomes harder and can cause jumps, blank gaps, or expensive remeasurement. I would question whether the UX can be redesigned to use paging, grouping, or fixed-height rows before forcing complex measurement logic into the client. Virtualization reduces DOM cost, but it does not remove data, layout, or accessibility trade-offs.",
+    "real_world": "Realtime monitoring screens often look fine in demos and then break in production when rows expand, collapse, or stream in fast enough to invalidate scroll assumptions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you inspect to tell whether the bottleneck is DOM count, layout, or JavaScript work?"
+   },
+   {
+    "question": "If you had repeated production bugs around stale UI after background tab resume or flaky network reconnection, where would you look in an Angular app?",
+    "answer": "I would inspect assumptions about one-shot subscriptions, cached state lifetimes, and whether the app treats reconnect as a first-class event. Background tabs can pause timers, delay retries, and leave in-memory state inconsistent with the server, especially if visibility changes are ignored. I would also check websocket resubscription logic, token refresh races, and whether components rely on initialization paths that only run once per page load. These incidents are usually architecture issues around lifecycle and recovery, not just a missing retry operator.",
+    "real_world": "Dashboards commonly resume with green indicators backed by dead sockets or expired auth because the app never rebuilt its subscriptions after the browser suspended work.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a reconnection strategy that avoids stampeding the backend after a regional network blip?"
+   }
+  ]
+ }
+}

@@ -1,0 +1,378 @@
+{
+  "slug": "limit-is-five-times-too-high",
+  "title": "The rate limit allows five times too much",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "rate-limiting",
+    "distributed-systems",
+    "redis",
+    "load-balancing",
+    "incident-response"
+  ],
+  "scenario": "An API promises 100 requests per minute per user. It runs on 5 identical servers behind a load balancer, and each server keeps its own in-memory counter. Customers report that about 500 requests per minute per user are getting through, and the database is overloaded during traffic spikes.",
+  "goal": "Find why the limiter admits too much traffic and choose a production-safe fix.",
+  "concepts": [
+    {
+      "key": "rate-limit",
+      "name": "Rate limit",
+      "summary": "A rule that caps how many requests a client can make in a time period. It is commonly used to protect services and enforce product contracts.",
+      "used_here": "The API promises at most 100 requests per minute per user."
+    },
+    {
+      "key": "load-balancer",
+      "name": "Load balancer",
+      "summary": "A component that distributes incoming requests across multiple servers. It may send different requests from the same user to different servers.",
+      "used_here": "It spreads API traffic across 5 identical servers."
+    },
+    {
+      "key": "in-memory-counter",
+      "name": "In-memory counter",
+      "summary": "A count stored inside one process or server memory. Other servers cannot see it unless a separate sharing mechanism exists.",
+      "used_here": "Each API server counts only the requests that reached that server."
+    },
+    {
+      "key": "database-overload",
+      "name": "Database overload",
+      "summary": "A database is overloaded when it receives more work than it can handle within acceptable latency. Symptoms often include high CPU, slow queries, timeouts, or connection exhaustion.",
+      "used_here": "Too many admitted API requests are causing excess database work."
+    },
+    {
+      "key": "sticky-session",
+      "name": "Sticky session",
+      "summary": "A load balancing behavior that tries to send the same client to the same backend server. It depends on routing state such as cookies, IPs, or headers.",
+      "used_here": "It is a possible mitigation people may suggest for keeping one user's requests on one server."
+    },
+    {
+      "key": "autoscaling",
+      "name": "Autoscaling",
+      "summary": "Autoscaling changes the number of running servers based on load or configuration. The server count can increase or decrease over time.",
+      "used_here": "The API fleet can change size, which affects any approach tied to the number of servers."
+    },
+    {
+      "key": "redis",
+      "name": "Redis",
+      "summary": "Redis is an in-memory data store often used for fast shared counters, locks, and caches. Multiple application servers can read and write the same Redis keys.",
+      "used_here": "It can hold rate-limit counters that all 5 API servers share."
+    },
+    {
+      "key": "atomic-operation",
+      "name": "Atomic operation",
+      "summary": "An atomic operation completes as one indivisible action from the perspective of other clients. It prevents other operations from observing a half-finished update.",
+      "used_here": "The limiter must increment the count, set the key lifetime, and decide allow or reject without races."
+    },
+    {
+      "key": "lua-script",
+      "name": "Lua script in Redis",
+      "summary": "Redis can run a Lua script as a single atomic command. The script can perform several reads and writes before returning one result.",
+      "used_here": "It can implement the rate-limit update and decision in one server-side step."
+    },
+    {
+      "key": "fixed-window",
+      "name": "Fixed window",
+      "summary": "A fixed-window rate limit counts requests in named time buckets, such as each calendar minute. The count resets when the next bucket starts.",
+      "used_here": "The API promise is expressed as 100 requests per minute per user."
+    },
+    {
+      "key": "ttl",
+      "name": "TTL / expiry",
+      "summary": "A TTL is a time after which a stored key is automatically deleted. It prevents old counters from living forever.",
+      "used_here": "Rate-limit keys should expire after their minute window is no longer needed."
+    },
+    {
+      "key": "fail-open",
+      "name": "Fail open",
+      "summary": "Fail open means allowing requests when a dependency needed for enforcement is unavailable. It favors availability over strict enforcement.",
+      "used_here": "It is one possible behavior if the shared rate-limit store cannot be reached."
+    },
+    {
+      "key": "fail-closed",
+      "name": "Fail closed",
+      "summary": "Fail closed means denying or stopping requests when a dependency needed for enforcement is unavailable. It favors strict control over accepting uncertain traffic.",
+      "used_here": "It is another possible behavior if the shared rate-limit store cannot be reached."
+    },
+    {
+      "key": "timeout",
+      "name": "Timeout",
+      "summary": "A timeout is a limit on how long a system waits for an operation before giving up. It prevents requests from hanging indefinitely on a slow dependency.",
+      "used_here": "Limiter calls need bounded waiting when Redis is slow or unavailable."
+    },
+    {
+      "key": "http-429",
+      "name": "HTTP 429",
+      "summary": "HTTP 429 means Too Many Requests. APIs commonly use it when a client exceeds a rate limit.",
+      "used_here": "The API can return it when a user is over the allowed rate."
+    },
+    {
+      "key": "http-503",
+      "name": "HTTP 503",
+      "summary": "HTTP 503 means Service Unavailable. APIs commonly use it when the service cannot safely handle a request right now.",
+      "used_here": "The API can return it when the limiter dependency is unavailable and the request cannot be checked."
+    },
+    {
+      "key": "canary",
+      "name": "Canary rollout",
+      "summary": "A canary rollout releases a change to a small portion of traffic before expanding it. It limits the blast radius of bugs.",
+      "used_here": "The new limiter can be enforced for a small slice before full deployment."
+    },
+    {
+      "key": "shadow-mode",
+      "name": "Shadow mode",
+      "summary": "Shadow mode runs new logic and records what it would have done without changing user-visible behavior. It helps compare new behavior against the current system.",
+      "used_here": "The new limiter can compute decisions before it starts rejecting requests."
+    },
+    {
+      "key": "observability",
+      "name": "Observability",
+      "summary": "Observability is the practice of collecting signals such as metrics, logs, and traces to understand a running system. It helps confirm whether a change behaves as expected.",
+      "used_here": "It is used during rollout to verify the limiter and the database response."
+    },
+    {
+      "key": "p99-latency",
+      "name": "p99 latency",
+      "summary": "p99 latency is the response time below which 99% of requests complete. It highlights slow tail behavior that averages can hide.",
+      "used_here": "The shared limiter adds a dependency on the request path, so its tail latency matters."
+    },
+    {
+      "key": "rollback",
+      "name": "Rollback",
+      "summary": "A rollback returns a system to a previous known-good version or configuration. It is used when a deployment causes unacceptable behavior.",
+      "used_here": "The limiter change should be reversible if it rejects too much traffic or adds too much latency."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the symptom that matches the number",
+      "question": "The API promises 100 requests per minute per user, but customers measure about 500. Where should you look first to explain that exact multiplier?",
+      "concept_keys": [
+        "rate-limit",
+        "load-balancer",
+        "in-memory-counter",
+        "database-overload"
+      ],
+      "options": [
+        {
+          "text": "Compare load balancer logs and per-server counters for the same user during the same minute.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Increase the database connection pool so admitted requests wait less often.",
+          "correct": false,
+          "hint": "More connections can sometimes make overload worse by increasing concurrency. It also does not explain why the admitted rate is close to 5 times the contract.",
+          "id": "b"
+        },
+        {
+          "text": "Inspect the slowest database queries and add indexes for the overloaded tables first.",
+          "correct": false,
+          "hint": "The database pain is real, but it may be a downstream effect. Start by checking whether too many requests are being admitted before tuning storage.",
+          "id": "c"
+        },
+        {
+          "text": "Check whether the customer client retries failed requests without exponential backoff.",
+          "correct": false,
+          "hint": "Retries can amplify traffic, but they do not naturally produce a clean 5x limit on a 5-server fleet. Look for a mechanism tied to the server count.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The 500-per-minute measurement lines up with 5 servers each allowing 100 requests per minute. Comparing load balancer routing with each server's local counter tests whether each backend is enforcing its own separate limit. Database investigation is tempting because the database is overloaded, but it does not explain the exact 5x admission rate."
+    },
+    {
+      "title": "Interpret the per-server evidence",
+      "question": "You find that one user sent about 500 requests in a minute. The load balancer spread them roughly evenly, and each of the 5 servers recorded about 100 allowed requests for that user. No single server exceeded its local limit. What does this prove?",
+      "concept_keys": [
+        "rate-limit",
+        "load-balancer",
+        "in-memory-counter"
+      ],
+      "options": [
+        {
+          "text": "The load balancer is retrying requests to every backend and counting each retry as a success.",
+          "correct": false,
+          "hint": "That would likely show repeated attempts for the same request IDs or errors. The evidence says different accepted requests were spread across servers.",
+          "id": "a"
+        },
+        {
+          "text": "The user's requests are being duplicated after the API server writes to the database.",
+          "correct": false,
+          "hint": "Duplication after admission would not make each API server stop neatly at 100 local requests. Focus on where the allow decision is made.",
+          "id": "b"
+        },
+        {
+          "text": "Each server enforces 100 per minute independently, so the fleet admits about 5 × 100.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The counters reset early because the server clocks disagree by several seconds.",
+          "correct": false,
+          "hint": "Clock skew can cause boundary errors, but it would not consistently turn 100 into about 500 across a 5-server fleet. The multiplier is the important clue.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Because the counters are in memory, each server only sees the fraction of the user's traffic routed to it. With 5 servers, five independent 100-per-minute counters can admit about 500 per minute total. Clock skew is a plausible rate-limit bug, but it would cause boundary leakage, not a clean multiplication by the number of servers."
+    },
+    {
+      "title": "Pick the safest immediate mitigation",
+      "question": "You need to reduce database overload today while a code fix is prepared. The fleet may autoscale from 5 to 8 servers, and traffic is not always evenly distributed. Which mitigation is safest if your edge load balancer already supports a centrally enforced per-user throttle?",
+      "concept_keys": [
+        "rate-limit",
+        "load-balancer",
+        "sticky-session",
+        "autoscaling",
+        "database-overload"
+      ],
+      "options": [
+        {
+          "text": "Double database capacity and keep the current limiter until the next scheduled release.",
+          "correct": false,
+          "hint": "Extra capacity may buy time, but it leaves the product contract unenforced. The incident is caused by admitting too much work, not only by insufficient storage.",
+          "id": "a"
+        },
+        {
+          "text": "Turn on sticky sessions so one user's requests usually go to the same API server.",
+          "correct": false,
+          "hint": "Routing affinity can reduce the leak, but it is not a correctness guarantee. Failover, rebalance events, multiple client IPs, and uneven routing can still break the promise.",
+          "id": "b"
+        },
+        {
+          "text": "Set each server's local limit to 20 requests per minute because 100 divided by 5 is 20.",
+          "correct": false,
+          "hint": "This depends on the fleet staying at exactly 5 servers and traffic being perfectly even. Both assumptions are known to be false.",
+          "id": "c"
+        },
+        {
+          "text": "Enable the load balancer's central per-user limit at 100 requests per minute and leave the database unchanged.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "A centrally enforced edge throttle gives one decision point for the user, so it is not multiplied by the number of API servers. Dividing the limit by 5 is tempting, but autoscaling to 8 would make the effective limit 160 if set to 20 per server, and uneven routing could reject some users early while still over-admitting others."
+    },
+    {
+      "title": "Implement the shared limiter safely",
+      "question": "You are now implementing the application-level fix using Redis for a fixed-window limit of 100 requests per user per minute. Which design is production-safe for the counter update and allow/reject decision?",
+      "concept_keys": [
+        "redis",
+        "atomic-operation",
+        "lua-script",
+        "fixed-window",
+        "ttl",
+        "rate-limit"
+      ],
+      "options": [
+        {
+          "text": "Write one row per user in the main database and do SELECT count, then UPDATE count on every request before handling it.",
+          "correct": false,
+          "hint": "The main database is already overloaded, so putting every limiter check there can worsen the incident. A read-then-write sequence also needs careful locking to avoid races.",
+          "id": "a"
+        },
+        {
+          "text": "Have each server publish its local count every minute and reject users next minute if the summed count was over 100.",
+          "correct": false,
+          "hint": "This detects excess after it already happened. A limiter must decide before admitting the request that creates the load.",
+          "id": "b"
+        },
+        {
+          "text": "Use one Redis Lua script that uses the current minute window in the key, increments it, sets expiry for a new key to just after that window ends, and returns allow only when the count is at most 100.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "For each request, run Redis INCR on key rate:{user}, call EXPIRE 60 when INCR returns 1, then allow when the returned count is at most 100.",
+          "correct": false,
+          "hint": "INCR is atomic by itself, but the sequence of increment, expiry, and decision still has edge cases. Also check whether the key represents a named minute window or a rolling lifetime from first request.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The Redis Lua script makes the increment, expiry setup, and allow/reject decision one atomic operation. Using a per-user-per-minute key makes it a true fixed-window minute limiter, and expiring the key just after the window ends prevents stale counters from accumulating. A plain INCR followed by a separate EXPIRE is tempting, but a failure between commands can leave a key without expiry, and it does not by itself define a calendar-minute window."
+    },
+    {
+      "title": "Decide what happens when Redis is unavailable",
+      "question": "The shared Redis limiter is now on the request path. During peak traffic, Redis becomes unreachable for 2 minutes. The business priority for this endpoint is to protect the database from excess traffic, and clients can retry later. What failure behavior should you choose?",
+      "concept_keys": [
+        "redis",
+        "fail-open",
+        "fail-closed",
+        "timeout",
+        "http-429",
+        "http-503",
+        "database-overload"
+      ],
+      "options": [
+        {
+          "text": "Cache the last successful allow decision per user for 60 seconds and keep accepting while that cache entry exists.",
+          "correct": false,
+          "hint": "A cached allow is not the same as a remaining quota. It can let a user keep sending requests without decrementing a shared counter.",
+          "id": "a"
+        },
+        {
+          "text": "Keep retrying Redis for up to 2 seconds on each request, then allow the request if no response arrives.",
+          "correct": false,
+          "hint": "Long retries add latency and can tie up request workers during an outage. The final allow decision still admits traffic when enforcement is uncertain.",
+          "id": "b"
+        },
+        {
+          "text": "Fail closed for protected requests after a short Redis timeout, returning 429 or 503 and paging the on-call engineer.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Fail open: allow requests using only the old per-server in-memory counters and alert the on-call engineer.",
+          "correct": false,
+          "hint": "This preserves availability, but it returns to the failure mode that admitted about 500 requests per minute. Consider what the stated priority is during peak traffic.",
+          "id": "d"
+        }
+      ],
+      "explanation": "If the main goal is protecting the database, the system should not admit requests it cannot check. A short timeout prevents Redis slowness from consuming all request capacity, and 429 or 503 tells clients to retry later. Failing open is tempting for availability, but it recreates the original 5-server multiplication during the exact period when enforcement is most needed."
+    },
+    {
+      "title": "Roll out and prove the fix works",
+      "question": "The Redis-backed limiter is ready. What rollout and validation plan best reduces risk while proving that the API now enforces 100 requests per minute per user?",
+      "concept_keys": [
+        "shadow-mode",
+        "canary",
+        "observability",
+        "p99-latency",
+        "rollback",
+        "redis",
+        "database-overload",
+        "http-429"
+      ],
+      "options": [
+        {
+          "text": "Run it in shadow mode, then canary enforcement for a small slice, watching admitted and rejected counts per user, Redis errors and p99 latency, API latency, and database load before expanding with rollback ready.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Run unit tests for the Lua script, deploy to all servers at once, and consider the incident fixed if no exceptions appear in logs.",
+          "correct": false,
+          "hint": "Unit tests are necessary but do not prove behavior under real routing, concurrency, and dependency latency. A global deployment also gives little room to catch mistakes safely.",
+          "id": "b"
+        },
+        {
+          "text": "Deploy at midnight and watch total request volume per server; if all servers have similar traffic, keep the change.",
+          "correct": false,
+          "hint": "Balanced server traffic does not prove a per-user global limit. The key question is whether each user is capped across the whole fleet.",
+          "id": "c"
+        },
+        {
+          "text": "Enable it only on one API server and check whether that server rejects users after 100 requests per minute.",
+          "correct": false,
+          "hint": "One-server testing can verify local integration, but the bug is about fleet-wide behavior. You need evidence across routed traffic and users.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Shadow mode lets you compare decisions without breaking clients, and a canary limits blast radius when enforcement starts. The right proof is per-user admitted requests across the whole fleet staying at or below 100 per minute, with expected 429s, acceptable Redis and API p99 latency, and reduced database load. Looking only at server-level traffic is tempting, but the original bug existed even when traffic was evenly spread."
+    }
+  ],
+  "takeaway": "A rate limit enforced with per-server memory is a per-server limit, not a fleet-wide limit. For a per-user contract across multiple servers, use a shared decision point with atomic counter update, expiry, and allow/reject logic. Also decide the dependency failure mode explicitly and roll out with measurements that prove the global behavior, not just local server behavior.",
+  "review_issues": []
+}

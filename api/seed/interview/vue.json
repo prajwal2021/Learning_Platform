@@ -1,0 +1,469 @@
+{
+ "slug": "vue",
+ "name": "Vue",
+ "category": "Frontend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Vue, and what problem does it solve in frontend development?",
+    "answer": "Vue is a JavaScript framework for building user interfaces, especially single-page apps and interactive parts of pages. It helps you keep the UI in sync with application state using components, reactive data, and declarative templates. The main benefit is that you describe what the UI should look like, and Vue updates the DOM when state changes.",
+    "real_world": "Teams use Vue to build dashboards, forms, and admin panels where lots of small UI updates happen. It reduces manual DOM manipulation bugs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is Vue different from using plain JavaScript and the DOM directly?"
+   },
+   {
+    "question": "What is a Vue component?",
+    "answer": "A component is a reusable, self-contained piece of UI with its own template, logic, and styles. In Vue, apps are usually built by composing components instead of putting all UI code in one file. Components make code easier to reuse, test, and reason about.",
+    "real_world": "A product page might be split into components like a search box, filter sidebar, product card, and pagination control. That keeps changes isolated and reusable across pages.",
+    "code_lang": "vue",
+    "code": "<template>\n  <button>{{ label }}</button>\n</template>\n\n<script>\nexport default {\n  props: { label: String }\n}\n</script>",
+    "follow_up": "What is the difference between props and local state in a component?"
+   },
+   {
+    "question": "What is data binding in Vue?",
+    "answer": "Data binding connects JavaScript data to the rendered HTML so the UI updates when the data changes. Vue commonly uses interpolation like {{ name }} for text and directives like v-bind for attributes. This avoids manual DOM updates and keeps the UI consistent with state.",
+    "real_world": "If a user changes their profile name, the displayed header can update automatically without querying and editing the DOM by hand.",
+    "code_lang": "vue",
+    "code": "<template>\n  <img :alt=\"userName\" :src=\"avatarUrl\">\n  <p>Hello, {{ userName }}</p>\n</template>",
+    "follow_up": "What is the difference between v-bind and text interpolation?"
+   },
+   {
+    "question": "What does v-model do?",
+    "answer": "v-model creates two-way binding between an input element and a piece of component state. When the user types, the data changes; when the data changes, the input updates. It is commonly used for forms because it reduces boilerplate, though you still need to validate and submit the data explicitly.",
+    "real_world": "Login forms, search fields, and settings pages often use v-model so the UI and form data stay in sync as the user types.",
+    "code_lang": "vue",
+    "code": "<template>\n  <input v-model=\"email\" />\n  <p>{{ email }}</p>\n</template>\n\n<script>\nexport default { data() { return { email: '' } } }\n</script>",
+    "follow_up": "When would you avoid v-model and use an explicit event handler instead?"
+   },
+   {
+    "question": "What is a prop in Vue?",
+    "answer": "A prop is data passed from a parent component to a child component. Props are read-only from the child’s point of view, which helps keep data flow predictable. If a child needs to change something, it should usually emit an event instead of mutating the prop directly.",
+    "real_world": "A parent list component might pass each item into a reusable card component. That lets the card render the item without owning the source data.",
+    "code_lang": "vue",
+    "code": "<template>\n  <UserCard :user=\"user\" />\n</template>",
+    "follow_up": "Why is mutating a prop inside a child component a bad idea?"
+   },
+   {
+    "question": "What are events in Vue, and why do you use them?",
+    "answer": "Events let a child component notify its parent that something happened, such as a button click or form submission. This is how children communicate upward without directly changing parent state. In Vue, custom events help keep components loosely coupled and easier to reuse.",
+    "real_world": "A modal component can emit a close event when the user clicks the X button, while the parent decides whether to hide it or track analytics.",
+    "code_lang": "vue",
+    "code": "<template>\n  <button @click=\"$emit('save')\">Save</button>\n</template>",
+    "follow_up": "How would you pass data back to the parent through an emitted event?"
+   },
+   {
+    "question": "What is the purpose of v-if and v-for, and what is a common mistake when using them together?",
+    "answer": "v-if conditionally renders an element, while v-for renders a list of items. A common mistake is putting both on the same element, which can make the logic harder to read and may cause unexpected behavior. Usually you filter the list in a computed property and then iterate over the filtered result.",
+    "real_world": "This comes up in tables and menus when you want to show only active records. Filtering first keeps the template simpler and easier to debug.",
+    "code_lang": "vue",
+    "code": "<template>\n  <li v-for=\"item in activeItems\" :key=\"item.id\">{{ item.name }}</li>\n</template>",
+    "follow_up": "Why does Vue want a unique key in a v-for loop?"
+   },
+   {
+    "question": "Why do you need a :key when rendering a list with v-for?",
+    "answer": "The key helps Vue track which list item is which between updates. With a stable unique key, Vue can reuse and move DOM elements correctly instead of guessing based on position. Using the array index as a key can cause UI bugs when items are inserted, removed, or reordered.",
+    "real_world": "This matters in editable lists, drag-and-drop UIs, and todo apps where items move around. Incorrect keys can make inputs appear to “jump” between rows.",
+    "code_lang": "vue",
+    "code": "<template>\n  <li v-for=\"todo in todos\" :key=\"todo.id\">\n    {{ todo.text }}\n  </li>\n</template>",
+    "follow_up": "When is it acceptable to use the array index as a key, if ever?"
+   },
+   {
+    "question": "What is the Vue lifecycle, and why would you use a mounted hook?",
+    "answer": "The lifecycle is the sequence of stages a component goes through from creation to removal. You use hooks like mounted when you need to run code after the component has been inserted into the DOM, such as focusing an input or starting a browser-only integration. Choosing the right hook matters because some work should happen before render and some after the DOM exists.",
+    "real_world": "A common case is autofocus on a search field when a page opens. You need the element in the DOM before calling focus.",
+    "code_lang": "javascript",
+    "code": "export default {\n  mounted() {\n    this.$refs.search.focus()\n  }\n}",
+    "follow_up": "What kinds of work should not be done in mounted?"
+   },
+   {
+    "question": "What is the difference between a computed property and a method in Vue?",
+    "answer": "A computed property is cached based on its reactive dependencies, so Vue only recalculates it when those dependencies change. A method runs every time the component re-renders or the template accesses it. Use computed properties for derived state and methods for actions or values that should be recalculated on each call.",
+    "real_world": "This matters when a template displays filtered or formatted data repeatedly. Using a method instead of a computed property can cause unnecessary work and make a list or dashboard feel slower.",
+    "code_lang": "javascript",
+    "code": "computed: {\n  fullName() {\n    return `${this.first} ${this.last}`\n  }\n}",
+    "follow_up": "When would you use a watcher instead of a computed property?"
+   },
+   {
+    "question": "What is a watcher in Vue used for?",
+    "answer": "A watcher lets you run code when a reactive value changes. It is useful for side effects like fetching data, saving to local storage, or reacting to one field changing another. Unlike computed properties, watchers are for work you do because something changed, not for returning derived values.",
+    "real_world": "Teams often use watchers when a form field should trigger an autosave or a search request after the user edits it. If you put that logic in the wrong place, you can mix side effects into rendering logic and make the component harder to reason about.",
+    "code_lang": "javascript",
+    "code": "watch: {\n  query(newValue) {\n    this.fetchResults(newValue)\n  }\n}",
+    "follow_up": "How is a watcher different from a computed property?"
+   },
+   {
+    "question": "What is the purpose of the `v-bind` directive?",
+    "answer": "`v-bind` is used to bind a JavaScript expression to an HTML attribute or component prop. It lets the attribute value stay in sync with reactive data instead of being a fixed string. In templates, the shorthand is `:`.",
+    "real_world": "This is common for things like `disabled`, `href`, `class`, and passing data into child components. A beginner mistake is writing `disabled=\"isLoading\"`, which sets a string instead of a real boolean binding.",
+    "code_lang": "html",
+    "code": "<button :disabled=\"isLoading\">Save</button>\n<img :src=\"imageUrl\" alt=\"Photo\">",
+    "follow_up": "What is the difference between a bound attribute and a regular HTML attribute?"
+   },
+   {
+    "question": "How do `v-if`, `v-else-if`, and `v-else` differ from CSS `display: none`?",
+    "answer": "`v-if` actually adds or removes the element from the DOM, while CSS hiding only keeps it invisible. That means `v-if` is better when the element is expensive or rarely shown, and CSS hiding is better when you want to keep it mounted and preserve its state. `v-else-if` and `v-else` let you build conditional branches in the template.",
+    "real_world": "This matters for modal dialogs, tabs, and heavy components like charts. If you use `v-if` on a form, the form state is destroyed when hidden; if you only hide it with CSS, the state stays in memory.",
+    "code_lang": "html",
+    "code": "<p v-if=\"status === 'loading'\">Loading</p>\n<p v-else-if=\"status === 'error'\">Error</p>\n<p v-else>Done</p>",
+    "follow_up": "When would you choose `v-show` instead of `v-if`?"
+   },
+   {
+    "question": "What does `v-show` do, and how is it different from `v-if`?",
+    "answer": "`v-show` toggles an element’s CSS `display` property instead of creating or destroying the element. It is faster for frequent toggling because the element stays in the DOM, but it still renders once up front. Use `v-if` when the element should not exist until needed, and `v-show` when you switch it on and off often.",
+    "real_world": "This often comes up with dropdown menus, tooltips, and panels that open and close repeatedly. Using `v-if` there can cause unnecessary mount and unmount work, while `v-show` keeps the UI snappy.",
+    "code_lang": "html",
+    "code": "<div v-show=\"isOpen\">Menu content</div>",
+    "follow_up": "What trade-off does `v-show` have compared with `v-if`?"
+   },
+   {
+    "question": "What is the `:class` binding in Vue used for?",
+    "answer": "`:` binds a dynamic class value so you can add or remove classes based on component state. You can pass an object, array, or expression depending on the shape of the classes you need. This keeps styling decisions in the template instead of building class strings manually.",
+    "real_world": "A common use is toggling error styles on a form input or highlighting an active menu item. Without class binding, the template becomes full of string concatenation and conditional logic.",
+    "code_lang": "html",
+    "code": "<div :class=\"{ active: isActive, error: hasError }\"></div>",
+    "follow_up": "How does `:class` differ from `class=\"...\"`?"
+   },
+   {
+    "question": "What is the difference between a local component and a global component?",
+    "answer": "A local component is registered and used only inside one component or file, while a global component is available throughout the app. Local registration is usually safer because it makes dependencies explicit and avoids namespace collisions. Global registration is convenient for shared UI pieces, but it can hide where a component comes from.",
+    "real_world": "Teams often register buttons, icons, or layout pieces globally in small apps, then move to local registration as the codebase grows. Global components can become confusing when two teams accidentally use the same name or when unused components are loaded everywhere.",
+    "code_lang": "javascript",
+    "code": "export default {\n  components: {\n    MyButton\n  }\n}",
+    "follow_up": "Why might local registration be preferred in a larger app?"
+   },
+   {
+    "question": "What is the `template` section in a Vue single-file component for?",
+    "answer": "The `template` section holds the component’s markup and tells Vue what to render. It uses Vue’s template syntax, so you can mix HTML with directives, bindings, and interpolations. In a single-file component, it is usually paired with `script` for logic and `style` for CSS.",
+    "real_world": "This structure keeps markup, behavior, and styles together for one component, which is easy for a junior developer to understand and maintain. If the template gets too large, it often signals that the component should be split into smaller pieces.",
+    "code_lang": "vue",
+    "code": "<template>\n  <h1>{{ title }}</h1>\n</template>",
+    "follow_up": "What belongs in the `script` section versus the `template` section?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "When would you choose a computed property over a watcher in Vue, and what trade-offs are you making?",
+    "answer": "Use a computed property when you derive state from other reactive values and want Vue to cache the result until dependencies change. Use a watcher when you need to perform side effects, like fetching data or writing to storage, in response to a change. The trade-off is that computed keeps logic declarative and easier to test, while watchers are more explicit for imperative work but easier to overuse for state derivation.",
+    "real_world": "A search page might use a computed value to filter results instantly, but a watcher to debounce and fetch server-side suggestions when the query changes.",
+    "code_lang": "javascript",
+    "code": "const filtered = computed(() =>\n  items.value.filter(i => i.name.includes(query.value))\n)\nwatch(query, async (q) => {\n  suggestions.value = await fetchSuggestions(q)\n})",
+    "follow_up": "How would you avoid a watcher firing too often when the user is typing?"
+   },
+   {
+    "question": "How do you pass data and events between a parent and a child component in Vue without creating tight coupling?",
+    "answer": "Pass data down through props and emit events up from the child. That keeps ownership of the state in the parent and makes the child reusable because it only knows about inputs and emitted actions, not where the data comes from. If a component tree gets deep, you may need provide/inject or a store, but props and emits should be the default.",
+    "real_world": "In a form wizard, each step can receive its current values as props and emit save or next events, instead of mutating shared state directly.",
+    "code_lang": "vue",
+    "code": "<!-- Child -->\n<script setup>\nconst emit = defineEmits(['save'])\n</script>\n<button @click=\"emit('save')\">Save</button>",
+    "follow_up": "When would you reach for provide/inject instead of props and emits?"
+   },
+   {
+    "question": "What happens if you mutate a prop inside a child component, and how should you handle that case instead?",
+    "answer": "Mutating a prop directly is an anti-pattern because props are owned by the parent, and the child should treat them as read-only. In development, Vue warns about this because the parent can overwrite the change on the next render. If the child needs local edits, copy the prop into local state or emit an event so the parent updates the source of truth.",
+    "real_world": "This often shows up in editable tables where a row component tries to toggle or modify a prop object and the UI seems to revert after re-rendering.",
+    "code_lang": "javascript",
+    "code": "const localValue = ref(props.value)\nwatch(() => props.value, v => {\n  localValue.value = v\n})",
+    "follow_up": "How do you keep a local copy in sync if the parent updates the prop later?"
+   },
+   {
+    "question": "What is the practical difference between `ref` and `reactive` in Vue, and when would you use each?",
+    "answer": "`ref` wraps a single value and is the most flexible choice for primitives, arrays, or objects when you want a stable container with `.value` in script. `reactive` makes an object deeply reactive and is convenient for grouped state, but you lose the simplicity of replacing it wholesale and need to be careful with destructuring. In real projects, `ref` is often easier to reason about, while `reactive` works well for state objects that always move together.",
+    "real_world": "A form with a few fields is often cleaner as one `reactive` object, while an API loading flag and result list are often separate refs.",
+    "code_lang": "javascript",
+    "code": "const count = ref(0)\nconst form = reactive({ name: '', email: '' })\ncount.value++\nform.name = 'Ada'",
+    "follow_up": "What bug can happen when you destructure a `reactive` object into local variables?"
+   },
+   {
+    "question": "How would you handle a slow API request in a Vue component so the UI stays responsive and stale responses do not win?",
+    "answer": "Track loading and error state separately, and protect against race conditions when multiple requests can overlap. A common pattern is to capture the latest request identity and ignore older responses, or cancel in-flight requests when the query changes. This matters because without it, the UI can briefly show results for an older input after the user has already typed something new.",
+    "real_world": "Autocomplete and live search are common places where an earlier network response arrives after a later one and overwrites the correct data.",
+    "code_lang": "javascript",
+    "code": "let requestId = 0\nasync function search(q) {\n  const id = ++requestId\n  loading.value = true\n  const data = await api.search(q)\n  if (id === requestId) results.value = data\n  loading.value = false\n}",
+    "follow_up": "How would you debounce the request without making the UI feel sluggish?"
+   },
+   {
+    "question": "What is a common cause of a Vue component re-rendering more often than expected, and how do you debug it?",
+    "answer": "A common cause is changing reactive state inside a render path or creating new object and function instances on every render, which can trigger child updates. Another cause is depending on a broad reactive object when only one field is needed. To debug it, inspect which reactive sources are changing, use Vue Devtools, and reduce the scope of reactivity so components only depend on what they actually use.",
+    "real_world": "This comes up in dashboards where a timer or store update causes an entire table to repaint even though only one cell changed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent expensive child components from updating when their relevant props did not change?"
+   },
+   {
+    "question": "How do `computed`, `methods`, and inline expressions differ in templates from a performance and readability perspective?",
+    "answer": "Computed properties are best for derived values because Vue caches them until dependencies change. Methods run every time the component renders, so they are fine for lightweight or event-driven logic but not ideal for expensive derivations used in templates. Inline expressions are okay for simple formatting, but once the logic grows, moving it into computed or a method keeps templates readable.",
+    "real_world": "A table that formats and filters thousands of rows can become noticeably slower if the template calls a method repeatedly instead of using a computed value.",
+    "code_lang": "javascript",
+    "code": "const fullName = computed(() => `${first.value} ${last.value}`)\nfunction formatName(name) {\n  return name.trim().toLowerCase()\n}",
+    "follow_up": "When would you keep logic in the template instead of extracting it?"
+   },
+   {
+    "question": "What is the difference between `v-once` and `v-memo`, and when would you use them?",
+    "answer": "`v-once` renders a subtree only once and never updates it again, which is useful for truly static content. `v-memo` lets you skip updates for a subtree until specified dependencies change, so it is more selective and useful when most of a large list item stays the same. The trade-off is that both are optimization tools, and using them too early can make code harder to understand without solving a real bottleneck.",
+    "real_world": "Large feed items or admin tables can benefit when most of the markup is static but a small part changes frequently.",
+    "code_lang": "vue",
+    "code": "<div v-once>\n  <h2>Static header</h2>\n</div>\n<div v-memo=\"[item.id, item.updatedAt]\">\n  {{ item.name }}\n</div>",
+    "follow_up": "How would you decide whether an optimization like this is actually worth keeping?"
+   },
+   {
+    "question": "How do slots help with component reuse, and what is the difference between default and named slots?",
+    "answer": "Slots let a parent provide markup that a child component renders in a controlled place, which makes wrapper components flexible without hardcoding their content. A default slot is the main unnamed insertion point, while named slots let you define multiple regions such as header, body, and footer. This pattern is useful when the child owns layout or behavior but the parent owns the actual content.",
+    "real_world": "A modal component often owns the overlay and close logic, while the parent provides the title and body through slots.",
+    "code_lang": "vue",
+    "code": "<MyModal>\n  <template #header>Delete user</template>\n  <p>This action cannot be undone.</p>\n</MyModal>",
+    "follow_up": "What would scoped slots add on top of named slots?"
+   },
+   {
+    "question": "How would you test a Vue component that depends on user interaction and async data without making the test brittle?",
+    "answer": "Test behavior, not implementation details: render the component, trigger the user action, and assert on the visible result or emitted events. For async work, wait for the promise or DOM update to settle before asserting, and mock external APIs at the boundary so the test stays deterministic. Avoid asserting internal reactive state unless that state is part of the public behavior.",
+    "real_world": "This matters in forms, modals, and dashboards where a test that reaches into component internals breaks every time the refactoring changes but the user experience does not.",
+    "code_lang": "javascript",
+    "code": "await user.click(screen.getByText('Save'))\nawait screen.findByText('Saved')\nexpect(api.save).toHaveBeenCalledWith({ name: 'Ada' })",
+    "follow_up": "How would you test a component that uses a composable with network calls?"
+   },
+   {
+    "question": "How do you decide between `watch` and `watchEffect` in Vue, and what are the trade-offs?",
+    "answer": "Use `watch` when you know exactly which source you want to observe and you need access to old and new values or precise control over when it runs. Use `watchEffect` when the side effect should automatically track any reactive values it touches and you want less boilerplate. The trade-off is control versus convenience: `watchEffect` is easier to write, but it can be less explicit and easier to over-capture dependencies. In real code, `watch` is usually better for API calls tied to one field; `watchEffect` is useful for derived side effects during setup.",
+    "real_world": "A form autosave feature often watches one input field and should not fire for unrelated reactive changes. A data-fetching effect that depends on several reactive values can be simpler with `watchEffect`, but you need to be careful not to read extra state accidentally.",
+    "code_lang": "javascript",
+    "code": "watch(searchTerm, async (term, oldTerm) => {\n  if (term === oldTerm) return\n  results.value = await fetchResults(term)\n})",
+    "follow_up": "How would you cancel or ignore outdated async work started by a watcher?"
+   },
+   {
+    "question": "What problem do Vue 3 composables solve, and how are they different from mixins?",
+    "answer": "Composables let you extract reusable reactive logic into plain functions, which makes dependencies explicit and avoids name collisions. Compared with mixins, they are easier to trace because you can see what a composable returns and what it depends on. Mixins merge options implicitly, which can create conflicts and make component behavior harder to debug. In practice, composables are the preferred pattern for reusable stateful logic in Vue 3.",
+    "real_world": "A team might extract pagination, debounced search, or permission checks into composables and reuse them across multiple pages. This reduces copy-paste and makes unit testing easier because the logic is not hidden inside component options.",
+    "code_lang": "javascript",
+    "code": "export function useCounter() {\n  const count = ref(0)\n  const inc = () => count.value++\n  return { count, inc }\n}",
+    "follow_up": "What are the risks of creating state inside a composable versus sharing a singleton composable instance?"
+   },
+   {
+    "question": "When should you use `provide` and `inject`, and what are the trade-offs compared with props and emits?",
+    "answer": "Use `provide` and `inject` when several nested descendants need the same dependency and passing it through every intermediate component would be noisy. It is a good fit for things like form context, theme settings, or service objects. The trade-off is weaker explicitness: injected dependencies are harder to see from the template and can make components less reusable if overused. For direct parent-child communication, props and emits are still clearer.",
+    "real_world": "A form wizard can provide validation state to deeply nested input components without threading props through every layout wrapper. This is common in design systems where many child components need the same context.",
+    "code_lang": "javascript",
+    "code": "provide('theme', theme)\nconst theme = inject('theme', 'light')\nif (theme === 'dark') {\n  // render dark styles\n}",
+    "follow_up": "How would you make an injected dependency easier to test?"
+   },
+   {
+    "question": "What happens when you use `v-for` with a computed list that filters or sorts data, and what performance issues can show up?",
+    "answer": "Vue will re-render based on the computed result, so every dependency change can recalculate the filtered or sorted array. That is usually fine for small lists, but with large lists the extra work can become noticeable, especially if the list changes frequently. The key trade-off is keeping the template simple versus moving expensive transformations closer to the data source or caching them carefully. Also make sure the list items still have stable keys so Vue can patch efficiently.",
+    "real_world": "A dashboard table that filters thousands of rows on every keystroke can become sluggish if the filter and sort both run in the UI thread. Teams often move expensive preprocessing to the backend or debounce the input.",
+    "code_lang": "javascript",
+    "code": "const visibleUsers = computed(() =>\n  users.value.filter(u => u.name.includes(query.value)).sort(byName)\n)",
+    "follow_up": "How would you reduce work further if the list is still too slow?"
+   },
+   {
+    "question": "How do you handle form validation in Vue without turning the component into a tangle of watchers and flags?",
+    "answer": "Keep validation rules close to the form state, and derive validation messages from the current values rather than storing every possible error as separate mutable state. For simple forms, computed properties can express validity clearly; for larger forms, a dedicated validation composable or library usually scales better. The main trade-off is between hand-rolled control and consistency across many fields. You also want to validate on the right user interaction, such as blur or submit, not on every keystroke if that harms usability.",
+    "real_world": "In production, teams often see forms that are hard to maintain because each field has its own watcher, touched flag, and error string. Consolidating that logic makes it easier to change validation rules without breaking unrelated behavior.",
+    "code_lang": "javascript",
+    "code": "const emailError = computed(() => {\n  if (!email.value) return 'Required'\n  if (!isEmail(email.value)) return 'Invalid email'\n  return ''\n})",
+    "follow_up": "How would you prevent validation from showing errors before the user interacts with the field?"
+   },
+   {
+    "question": "What is the difference between `nextTick` and `setTimeout` in Vue, and when would you reach for `nextTick`?",
+    "answer": "`nextTick` waits until Vue has finished applying the current reactive DOM update, so it is the right tool when you need to read or focus the updated DOM immediately after changing state. `setTimeout` just queues work later and does not guarantee it runs after Vue’s render flush. The trade-off is precision versus delay: `nextTick` is about synchronization with Vue, while `setTimeout` is a coarse timing hack. Use `nextTick` when you need reliable DOM measurement or scrolling after a state change.",
+    "real_world": "A chat window often needs to scroll to the newest message after the message list updates. Without `nextTick`, the code may scroll before the new element exists in the DOM.",
+    "code_lang": "javascript",
+    "code": "messages.value.push(newMessage)\nawait nextTick()\nlistRef.value.scrollTop = listRef.value.scrollHeight",
+    "follow_up": "What kinds of bugs happen if you try to measure DOM size before Vue has flushed updates?"
+   },
+   {
+    "question": "How do you keep component state from being lost when a component is conditionally rendered with `v-if`?",
+    "answer": "`v-if` destroys and recreates the component, so any local state inside it is reset each time it toggles. If you need to preserve state, you can lift the state up to a parent, use `v-show` when hiding instead of removing, or wrap the component in `keep-alive` for dynamic components. The trade-off is memory versus lifecycle cost: keeping state around is convenient, but it can retain more data than necessary. Choose based on whether the hidden component needs to stay alive or just stay visible.",
+    "real_world": "A tab panel may need to preserve unsaved form input when users switch tabs. If you use `v-if` naively, the draft disappears every time the tab changes.",
+    "code_lang": "javascript",
+    "code": "<KeepAlive>\n  <component :is=\"activeTab\" />\n</KeepAlive>",
+    "follow_up": "When would you prefer `v-show` over `keep-alive`?"
+   },
+   {
+    "question": "What is the point of emitting custom events with payloads instead of letting a child component mutate shared state directly?",
+    "answer": "Emitting events keeps the child focused on describing what happened, while the parent decides how to update state. That preserves one-way data flow and makes the child easier to reuse, because it does not need to know where the data lives. The trade-off is a bit more plumbing, but the data flow becomes much easier to reason about and test. Direct shared-state mutation is usually harder to trace and can create hidden coupling.",
+    "real_world": "A reusable date picker should notify the parent that a date changed, not decide how the parent stores or submits that date. This pattern is especially important in design systems used across many products.",
+    "code_lang": "vue",
+    "code": "<script setup>\nconst emit = defineEmits(['select'])\nemit('select', value)\n</script>",
+    "follow_up": "How would you type that event payload in TypeScript?"
+   },
+   {
+    "question": "How do you debug a Vue component that looks correct in code but the UI is out of sync with the state?",
+    "answer": "First check whether the state you are updating is actually reactive and whether you are mutating the right reference. Then inspect whether the template is reading a computed value, a ref, or a stale copy created during setup. Many bugs come from cloning props into local state once and then forgetting to sync changes, or from mutating nested objects in a way the code path does not expect. If needed, log the state before and after the update and use Vue Devtools to inspect the reactive graph.",
+    "real_world": "A common production bug is a modal that shows old data after the parent selects a different record. The root cause is often local state initialized from props only once and never updated afterward.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design that component so it can react correctly when the parent changes the input data?"
+   },
+   {
+    "question": "What should you test in a Vue component unit test, and what should you avoid over-testing?",
+    "answer": "Test behavior that matters to users: rendered output, emitted events, state changes from interaction, and important async states like loading or error. Avoid testing Vue internals, implementation details, or exact DOM structure that is likely to change during refactors. The trade-off is confidence versus brittleness: the more you test private implementation, the more fragile the test suite becomes. Good component tests exercise the public contract of the component, not the way it happens to be written.",
+    "real_world": "A team that tests only click handlers and emitted events can refactor templates safely without rewriting every test. But a test that depends on exact nested markup often fails during harmless UI changes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you mock a fetch request or store dependency in a component test without coupling to a specific implementation?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how Vue 3's reactivity system actually tracks dependencies and triggers updates under the hood?",
+    "answer": "Vue 3 wraps objects in Proxies and tracks property reads during an active reactive effect. Each property maps to a dependency set, so when that property is written, Vue schedules the subscribed effects to re-run. For refs, Vue uses getter and setter access on `.value`, but the same tracking idea applies. This matters because destructuring, reading outside an effect, or mixing raw and reactive objects can break tracking in ways that look like random stale UI bugs.",
+    "real_world": "A common production bug is a composable returning a reactive object that gets destructured in a component; updates stop propagating and only some fields render correctly. Teams often standardize on `toRefs` or returning refs to avoid this class of issue.",
+    "code_lang": "javascript",
+    "code": "const state = reactive({ count: 0 })\nconst { count } = state // loses reactivity\n\nwatchEffect(() => {\n  console.log(count) // plain number, won't update\n})\n\nconst { count: safeCount } = toRefs(state)",
+    "follow_up": "What are the main cases where Vue cannot make a value reactive, or where developers accidentally opt out of reactivity?"
+   },
+   {
+    "question": "What happens inside Vue's scheduler when reactive state changes many times in the same tick, and why does that matter for performance?",
+    "answer": "Vue batches effect and component update jobs into a queue and de-duplicates them before flushing, typically in a microtask. If the same component is invalidated ten times synchronously, it should still render once with the latest state. That reduces wasted work and avoids DOM thrashing, but it also means intermediate states are usually not visible until the flush runs. Understanding that helps when debugging timing issues, especially with watchers, DOM reads, and code that assumes updates are immediate.",
+    "real_world": "In data-heavy screens, a burst of websocket messages can update reactive state dozens of times per frame. Without batching, the app can stall on repeated renders; with batching, the bottleneck usually moves to expensive computed chains or list diffing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do watcher flush modes like pre, post, and sync change the timing guarantees?"
+   },
+   {
+    "question": "How would you reason about the performance cost of rendering a very large list in Vue, beyond just saying 'use virtualization'?",
+    "answer": "The cost is usually a mix of reactive dependency tracking, VNode creation, diffing, and real DOM work, plus any child component overhead. Virtualization helps when the DOM node count is the bottleneck, but it does not fix expensive per-item computed state, unstable keys, or parent updates that invalidate the whole list. I would profile whether time is spent in scripting, layout, or painting, then reduce the fan-out of updates by stabilizing props, memoizing subtrees, and avoiding reactive work for offscreen data. The trade-off is more complexity around scrolling, accessibility, and item measurement.",
+    "real_world": "A table with 20,000 rows may still lag after virtualization if each row gets new object props every tick, forcing child updates. Teams often need both virtualization and stricter data-shaping so unchanged rows can bail out.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What specific coding patterns make child components in a large list update even when the visible values did not change?"
+   },
+   {
+    "question": "What is the difference between patching and remounting in Vue, and how do you intentionally force one or avoid it?",
+    "answer": "Patching means Vue reuses an existing component or element instance and updates it in place; remounting destroys the old instance and creates a new one. Keys are the main lever: keeping the same key preserves local state, while changing the key forces a fresh instance and reruns setup and lifecycle hooks. You avoid accidental remounts by using stable keys and not recreating component types unnecessarily. You force remounts when local state or third-party DOM state is corrupted and a clean reset is safer than incremental patching.",
+    "real_world": "A common incident is form inputs losing focus or resetting validation because keys are tied to array index or volatile data. The opposite problem also happens: a map widget keeps stale internal state because the component was patched when the team expected a full reset.",
+    "code_lang": "vue",
+    "code": "<UserForm :key=\"userId\" :user-id=\"userId\" />\n\n<!-- same key: patch existing instance -->\n<!-- different key: unmount + mount new instance -->",
+    "follow_up": "How does this interact with KeepAlive, where an instance may be deactivated instead of fully unmounted?"
+   },
+   {
+    "question": "How does `KeepAlive` really work, and what are the trade-offs when you use it aggressively?",
+    "answer": "`KeepAlive` caches component instances instead of destroying them when they leave the active tree, so local state, refs, and rendered subtrees can be restored quickly. The lifecycle changes too: components get activated and deactivated rather than mounted and unmounted each time. That improves tab-switching latency, but the cached instances still hold memory and can keep effects, timers, or subscriptions alive if cleanup is tied only to unmount. Used too broadly, it shifts the problem from CPU churn to memory growth and stale background activity.",
+    "real_world": "Teams often add `KeepAlive` around route views to make navigation feel instant, then later discover hidden tabs still polling APIs or keeping large datasets resident. Production symptoms are rising memory usage and duplicated network traffic after long sessions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What cleanup belongs in `onDeactivated` versus `onUnmounted` for a cached component?"
+   },
+   {
+    "question": "How would you explain Vue's async component and Suspense model, including where it helps and where it can surprise you?",
+    "answer": "Async components let code and sometimes data be deferred until needed, and Suspense coordinates a fallback UI while async dependencies in the subtree resolve. It helps avoid shipping or blocking on heavy sections upfront, especially for routes and rarely used panels. The surprise is that async boundaries affect hydration, error handling, and loading waterfalls if nested components resolve serially instead of in parallel. You need clear boundary placement, cancellation for abandoned work, and a plan for retries or partial failure.",
+    "real_world": "A dashboard may look fast in local testing but feel slow in production because nested async components each wait for the previous one to resolve before showing meaningful content. Teams often flatten boundaries or preload critical chunks to avoid fallback flicker and waterfalls.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent a route change from letting an old async dependency resolve and overwrite newer state?"
+   },
+   {
+    "question": "What can go wrong during SSR and hydration in Vue, and how do you debug a mismatch that only happens in production?",
+    "answer": "Hydration expects the client render to match the server HTML closely; if it does not, Vue has to patch or discard parts of the DOM, which hurts performance and can break event attachment or user-visible state. Mismatches often come from non-deterministic rendering such as time, randomness, locale differences, browser-only APIs, or data that changes between server render and client boot. I debug by isolating the first divergent node, checking all conditional branches for environment-specific output, and making initial state serialization deterministic. The fix is usually to defer client-only rendering or ensure both sides see the same inputs.",
+    "real_world": "A classic production-only issue is rendering dates with different timezone or locale settings on server and client, causing hydration warnings and subtle text flicker. Another is using `window`-derived values in setup, which works in SPA mode but breaks SSR builds.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns do you use for client-only sections so they do not create hydration instability?"
+   },
+   {
+    "question": "How do you design state management boundaries in a large Vue app so reactivity stays predictable and the app does not become one giant store?",
+    "answer": "I separate domain state, server cache, and local UI state because they have different lifecycles and consistency needs. Global state should hold data that truly spans routes or needs coordinated writes; component-local or feature-local state should stay near the consumer to reduce coupling and update fan-out. The danger of a giant store is that everything can read and write everything, which makes dependencies implicit and re-renders harder to reason about. Good boundaries usually mean feature stores or composables with explicit actions and normalized data where that complexity pays off.",
+    "real_world": "In large apps, a single global reactive object often becomes a hotspot where one write invalidates many subscribers, making unrelated screens janky. Teams recover by moving ephemeral flags back into components and treating server-fetched collections as cached resources rather than mutable shared state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you normalize entities in a Vue store, and when is that extra complexity not worth it?"
+   },
+   {
+    "question": "What are the main failure modes when integrating Vue with imperative third-party libraries like charts, maps, or editors?",
+    "answer": "The biggest issues are double ownership of the DOM, lifecycle leaks, and feedback loops between Vue state and the library's internal state. If Vue re-renders nodes the library mutates, or the library emits change events that synchronously write reactive state and trigger another update, you can get jitter, duplicate listeners, or corrupted UI. The safe pattern is to isolate the library behind a component boundary, pass minimal stable inputs, and update the instance imperatively in controlled watchers with cleanup. Sometimes the right trade-off is opting parts of the subtree out of deep reactivity and letting the library own them.",
+    "real_world": "Rich text editors are a common incident source: typing can become laggy because every keystroke round-trips through reactive state and rerenders wrappers. Map integrations often leak memory when markers and listeners are recreated on each prop change without proper teardown.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent a chart component from reinitializing on every parent update when its data object identity keeps changing?"
+   },
+   {
+    "question": "If a Vue app starts leaking memory after users keep it open all day, where would you look first and what patterns usually cause it?",
+    "answer": "I would first inspect retained component instances, watchers, event listeners, timers, cached route views, and large reactive collections that never get released. Common causes are composables creating effects outside component scope, subscriptions cleaned up only on unmount while components are actually kept alive, and closures that retain old state through long-lived callbacks. I would use browser memory snapshots plus Vue Devtools to correlate retained objects with component trees and route transitions. The fix is usually explicit disposal with effect scopes, tighter cache limits, and avoiding accidental global references.",
+    "real_world": "A real pattern is opening and closing modal-heavy workflows for hours: each modal registers listeners and intervals, but a missing cleanup leaves dozens of hidden instances retained. Another is infinite-scroll data appended to a reactive array without eviction, causing both memory growth and slower updates over time.",
+    "code_lang": "javascript",
+    "code": "const scope = effectScope()\nscope.run(() => {\n  const stop = watch(source, handler)\n  onScopeDispose(() => stop())\n})\n\n// later\nscope.stop()",
+    "follow_up": "How do effect scopes help when you build long-lived composables outside normal component setup?"
+   },
+   {
+    "question": "When would you choose `shallowRef`, `shallowReactive`, or `markRaw` in Vue, and what are the risks if you use them in the wrong place?",
+    "answer": "They are escape hatches to reduce deep proxying cost or avoid wrapping objects that should stay imperative, like editor instances, large immutable payloads, or class instances. `shallowRef` tracks replacement of the value but not nested mutations, `shallowReactive` only makes the top level reactive, and `markRaw` opts an object out entirely. The trade-off is performance versus observability: nested changes may stop updating the UI unless you replace the container or manually trigger updates. I use them only when I can describe exactly which mutations Vue should and should not see.",
+    "real_world": "A common production issue is a 10k-row dataset or a third-party SDK object being deeply proxied, causing startup slowdowns and hard-to-debug behavior when the library checks object identity.",
+    "code_lang": "typescript",
+    "code": "const rows = shallowRef(loadBigImmutableArray())\nrows.value = [...rows.value, newRow] // triggers\nrows.value[0].name = 'x' // does not trigger by itself\n\nconst editor = markRaw(createEditor())\nconst state = reactive({ editor })",
+    "follow_up": "How would you update the UI safely when nested data inside a `shallowRef` changes frequently?"
+   },
+   {
+    "question": "How does Vue's effect flush timing work for watchers, and when do `pre`, `post`, and `sync` lead to different behavior?",
+    "answer": "Flush timing controls when a watcher callback runs relative to component updates. `pre` runs before the component's DOM patch, which is useful for deriving state but not for reading updated DOM; `post` runs after patching, which is the safe choice for layout reads or imperative DOM integration. `sync` runs immediately on every mutation, so it can bypass batching and cause cascades or inconsistent intermediate states if overused. The choice matters because the same watcher can be correct, flaky, or expensive depending on whether it observes state, DOM, or both.",
+    "real_world": "Teams often get intermittent bugs when measuring element size in a default watcher and reading stale DOM, especially around transitions, virtualized lists, or resize-driven layouts.",
+    "code_lang": "typescript",
+    "code": "watch(source, () => {\n  // DOM is updated here\n  const h = el.value?.offsetHeight\n}, { flush: 'post' })",
+    "follow_up": "What kind of bug can appear if you use `flush: 'sync'` in a watcher that mutates other reactive state?"
+   },
+   {
+    "question": "What actually happens when a Vue component updates because one reactive source changed, and how do block trees and patch flags reduce work?",
+    "answer": "The render effect reruns to produce a new vnode tree, but the compiler marks dynamic regions so the runtime does not diff everything equally. Patch flags annotate nodes with which parts may change, and block trees collect dynamic children so Vue can skip large static sections during updates. In practice, this means template shape and compiler-friendly patterns matter: static hoisting and stable subtrees can remove a lot of diff work. If you defeat those optimizations with highly dynamic render paths, inline object creation everywhere, or unstable child structure, update cost climbs fast.",
+    "real_world": "On dense dashboards, most of the screen is often static chrome while a few numbers tick every second; compiler-guided diffing is why those updates stay cheap instead of traversing the whole subtree.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What coding patterns tend to prevent Vue from taking full advantage of those compiler optimizations?"
+   },
+   {
+    "question": "How would you use `effectScope` in a real Vue codebase, and what problem does it solve that ordinary cleanup hooks do not fully solve?",
+    "answer": "`effectScope` lets you create a group of reactive effects and dispose them together, which is useful in composables that start watchers or computed chains outside a single component's obvious lifecycle. It makes ownership explicit: whoever creates the scope is responsible for stopping it, instead of hoping every nested watcher gets tied to the right instance. That matters for long-lived services, dynamically created feature modules, or composables used both inside and outside components. Without it, reactive effects can outlive their intended owner and keep responding to updates long after the UI path is gone.",
+    "real_world": "A common incident is a modal or tab system that opens and closes repeatedly while background watchers keep running, duplicating requests and growing CPU use over hours.",
+    "code_lang": "typescript",
+    "code": "const scope = effectScope()\nscope.run(() => {\n  watch(userId, loadUser, { immediate: true })\n  watch(filters, syncUrl)\n})\n// later\nscope.stop()",
+    "follow_up": "How do you decide whether a composable should create its own scope or inherit the caller's component scope?"
+   },
+   {
+    "question": "What are the trade-offs between route-level code splitting, component-level async loading, and eager bundling in a large Vue application?",
+    "answer": "Route-level splitting usually gives the best first-win because navigation boundaries are natural loading boundaries, while component-level async loading helps when a route contains heavy optional panels that many users never open. Eager bundling reduces request overhead and avoids loading waterfalls, but it increases initial parse and execute cost, which often hurts time-to-interactive more than transfer size alone suggests. The trade-off is not just bundle size; it is also chunk graph shape, caching, duplicate vendor code, and whether async boundaries align with actual user flows. I start with route splits, then add finer async boundaries only where profiling shows real savings.",
+    "real_world": "A common failure mode is over-splitting: one route renders five async widgets, each waits on its own chunk and data, and the page feels slower despite smaller bundles.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect that your code splitting strategy is causing a waterfall instead of improving real user performance?"
+   },
+   {
+    "question": "How do you avoid race conditions and stale shared state when multiple Vue components kick off writes to the same backend resource?",
+    "answer": "I treat writes as a state machine with explicit request identity, cancellation where possible, and a clear policy for optimistic versus confirmed state. If multiple components can edit the same resource, local UI state should merge into a single owner or store action that serializes, deduplicates, or rejects conflicting writes instead of letting each component patch shared state independently. On response, I only commit if the result still matches the latest intent or version I care about. Otherwise, old responses can roll back newer user actions and create 'saved' UIs that are actually inconsistent.",
+    "real_world": "This shows up in settings screens where autosave, a background refresh, and a second editor panel all touch the same object; users see toggles flip back or save banners lie.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose optimistic updates versus waiting for server confirmation in a Vue UI?"
+   },
+   {
+    "question": "How do Teleport and Transition interact with stacking context, focus management, and cleanup, and what problems show up in production modals?",
+    "answer": "Teleport moves rendered DOM to another target, but the component still belongs to its original logical parent, so reactivity and event ownership stay there. That solves clipping and stacking issues, but you still need to manage focus trapping, scroll locking, escape handling, and teardown carefully because those concerns now span outside the local subtree. Transitions add timing complexity: the DOM may remain during leave animations after state says 'closed', so cleanup tied to visibility has to respect transition hooks. If you assume the modal vanished immediately, you can leak listeners, restore focus to the wrong element, or let users interact with background content too early.",
+    "real_world": "Production modal bugs often only appear under rapid open-close sequences: body scroll remains locked, focus disappears, or a second modal inherits stale listeners from the first.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you verify in an accessibility review of a teleported modal component?"
+   },
+   {
+    "question": "What is the practical difference between `defineAsyncComponent` retries, error boundaries, and Suspense fallbacks, and how would you design failure handling for each?",
+    "answer": "They solve different parts of async failure. `defineAsyncComponent` controls how a component's code is loaded and can handle loading, timeout, and retry behavior for chunk fetch failures; Suspense handles waiting for async dependencies before rendering a subtree; an error boundary catches rendering-time errors from descendants and shows a fallback UI instead of crashing the whole tree. In a production design, I separate them: retry transient network failures for code or data, show localized loading states with clear boundaries, and use error boundaries to degrade gracefully when a subtree is broken. Mixing all three without a plan often hides root causes or traps users behind infinite spinners.",
+    "real_world": "A real incident is a stale deployment where HTML references a chunk that no longer exists in the CDN cache path; without targeted handling, the whole route becomes a blank screen.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle a chunk load failure after a new deployment without forcing users into a broken state?"
+   },
+   {
+    "question": "If a Pinia or shared reactive store becomes a bottleneck, how do you diagnose whether the problem is too much state, too many subscribers, or the wrong granularity of updates?",
+    "answer": "I first measure fan-out: which mutations trigger how many components, getters, and watchers, and whether those subscribers actually need the changed fields. Then I look at state shape and access patterns: broad reactive objects and getters that touch many keys create large dependency surfaces, while normalized or feature-scoped stores usually shrink update propagation. The fix is often not 'move less into the store' but 'make ownership and subscriptions narrower' by splitting stores, deriving values closer to consumers, or storing immutable snapshots for expensive regions. A giant store can work, but only if updates are granular and read paths are disciplined.",
+    "real_world": "In admin apps, one shared `currentAccount` object often grows until changing a minor flag repaints half the interface because dozens of components indirectly depend on it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What anti-patterns in getters or component access tend to create overly broad subscriptions?"
+   },
+   {
+    "question": "How do you reason about hydration-safe architecture when a Vue app mixes SSR, client-only widgets, user-specific data, and time-sensitive content?",
+    "answer": "I separate what must be identical on server and client from what can intentionally defer to the client. Anything based on current time, random values, browser-only APIs, viewport size, or user-only secrets should either be serialized explicitly from the server or rendered behind a client-only boundary so hydration does not compare different trees. For user-specific data, I make sure the same initial snapshot is available to both sides or I accept a loading state rather than rendering speculative markup. Hydration safety is mostly about deterministic first render, not about never using dynamic content.",
+    "real_world": "This matters in production when only some users hit mismatches: a server-rendered relative timestamp or A/B bucket differs on the client, causing warnings, discarded DOM, and subtle event binding issues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of values do you ban from directly appearing in server-rendered templates unless they are serialized deterministically?"
+   }
+  ]
+ }
+}

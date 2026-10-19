@@ -1,0 +1,379 @@
+{
+  "slug": "cache-stampede-at-midnight",
+  "title": "The database falls over at exactly 00:00",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "caching",
+    "redis",
+    "database",
+    "latency",
+    "incident-response"
+  ],
+  "scenario": "A popular profile page is cached in Redis for 1 hour. Every time its key expires, database CPU jumps to 100% for a few seconds and p99 latency climbs from 40 ms to 4 s. Thousands of requests per second ask for that same profile, and the incident is most visible at exactly 00:00.",
+  "goal": "Find the cause of the midnight database spike and choose production-safe changes that prevent it from recurring.",
+  "concepts": [
+    {
+      "key": "redis",
+      "name": "Redis",
+      "summary": "Redis is an in-memory key-value store often used as a cache. Applications read from it to avoid slower database work.",
+      "used_here": "It stores the rendered or assembled profile data for a popular profile page."
+    },
+    {
+      "key": "cache-ttl",
+      "name": "Cache TTL",
+      "summary": "A TTL is the amount of time a cached item is allowed to live before the cache removes it. After removal, the next request must get the data another way.",
+      "used_here": "The profile cache entry is configured to expire after 1 hour."
+    },
+    {
+      "key": "cache-miss",
+      "name": "Cache miss",
+      "summary": "A cache miss happens when the requested value is not available in the cache. The application usually falls back to a slower source such as a database.",
+      "used_here": "A profile miss causes the application to load the profile from the database and write a new cache value."
+    },
+    {
+      "key": "hot-key",
+      "name": "Hot key",
+      "summary": "A hot key is one cache key that receives much more traffic than most keys. Problems on a hot key are amplified because many requests hit the same item.",
+      "used_here": "Thousands of requests per second ask for the same profile cache key."
+    },
+    {
+      "key": "database-cpu",
+      "name": "Database CPU",
+      "summary": "Database CPU measures how much processor time the database is using. High CPU often means queries are too frequent, too expensive, or both.",
+      "used_here": "The database reaches 100% CPU for a few seconds when the profile cache entry expires."
+    },
+    {
+      "key": "p99-latency",
+      "name": "p99 latency",
+      "summary": "p99 latency is the response time that 99% of requests are faster than. It highlights the slow tail that averages can hide.",
+      "used_here": "The profile page p99 rises from 40 ms to 4 s during the incident."
+    },
+    {
+      "key": "metrics",
+      "name": "Metrics",
+      "summary": "Metrics are numeric measurements collected over time, such as request counts, latency, and error rates. They help connect a symptom to a likely cause.",
+      "used_here": "Cache, database, and latency metrics are compared around 00:00."
+    },
+    {
+      "key": "request-coordination",
+      "name": "Request coordination",
+      "summary": "Request coordination limits how many workers do the same expensive work at the same time. Other workers wait, reuse a result, or take a bounded fallback path.",
+      "used_here": "It can be applied around the profile cache refill path."
+    },
+    {
+      "key": "distributed-lock",
+      "name": "Distributed lock",
+      "summary": "A distributed lock is a shared claim used by processes on different machines. It must expire and be released safely so crashes do not block all work forever.",
+      "used_here": "A Redis key can act as a short-lived claim for the profile cache refill."
+    },
+    {
+      "key": "lock-token",
+      "name": "Lock token",
+      "summary": "A lock token is a unique value stored with a lock so the owner can prove it still owns the lock. It prevents one worker from deleting another worker's newer lock.",
+      "used_here": "The cache refill lock stores a unique token that is checked before release."
+    },
+    {
+      "key": "atomic-operation",
+      "name": "Atomic operation",
+      "summary": "An atomic operation completes as one indivisible action from the point of view of other clients. It prevents races between separate read, check, and write steps.",
+      "used_here": "The lock release needs to check the token and delete the lock as one operation."
+    },
+    {
+      "key": "stale-data",
+      "name": "Stale data",
+      "summary": "Stale data is older than the preferred refresh time but may still be acceptable for a short period. A system should define the maximum allowed staleness clearly.",
+      "used_here": "The profile may be shown briefly beyond its normal 60-minute refresh time if the limit is enforced."
+    },
+    {
+      "key": "soft-expiry",
+      "name": "Soft expiry",
+      "summary": "A soft expiry says when data should be refreshed, but does not immediately make the old value unusable. It is often paired with a stricter final cutoff.",
+      "used_here": "The profile can be marked for refresh at 60 minutes while still being available briefly during refill."
+    },
+    {
+      "key": "hard-expiry",
+      "name": "Hard expiry",
+      "summary": "A hard expiry is the final time after which cached data must not be served. It enforces the maximum age allowed by the product.",
+      "used_here": "The profile cache must stop serving the old value after the allowed stale window ends."
+    },
+    {
+      "key": "randomization",
+      "name": "Randomization",
+      "summary": "Randomization adds controlled variation so many events do not happen at exactly the same time. It is useful when identical schedules create bursts.",
+      "used_here": "Cache refresh or expiration times can be spread across a small time range."
+    },
+    {
+      "key": "observability",
+      "name": "Observability",
+      "summary": "Observability is the ability to understand system behavior from logs, metrics, and traces. It is used to confirm both the cause and the effect of a fix.",
+      "used_here": "The fix should be verified with cache, database, latency, and freshness signals."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the timing",
+      "question": "The database falls over for a few seconds exactly when the 1-hour Redis key expires. What should you inspect first to test whether cache expiry is causing the spike?",
+      "concept_keys": [
+        "redis",
+        "cache-ttl",
+        "cache-miss",
+        "database-cpu",
+        "p99-latency",
+        "metrics"
+      ],
+      "options": [
+        {
+          "text": "Review recent application deploys and feature flags that changed near midnight.",
+          "correct": false,
+          "hint": "A deploy can cause latency, but the repeated alignment with the key expiry is a stronger clue. Look for evidence that connects the cache event to the database work.",
+          "id": "a"
+        },
+        {
+          "text": "Graph Redis hits and misses, database query count, database CPU, and p99 latency for that profile around 00:00.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Run EXPLAIN on the profile query and check whether the database changed its query plan.",
+          "correct": false,
+          "hint": "A bad query plan can burn CPU, but it usually affects every execution, not only the seconds after one cache key disappears. First confirm whether the number of executions changes.",
+          "id": "c"
+        },
+        {
+          "text": "Increase trace sampling for all profile requests and wait for the next midnight spike.",
+          "correct": false,
+          "hint": "More traces may help later, but you already have a narrow time window and a suspected cache event. Start with low-cardinality counters that show the size and timing of the burst.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The key clue is the alignment between cache expiry, database CPU, and p99 latency. Graphing Redis misses and database query count around 00:00 can show whether the database is being flooded because the cache disappeared. A query plan check is tempting, but it would not explain why CPU jumps only for a few seconds after a 1-hour TTL boundary."
+    },
+    {
+      "title": "Interpret the miss burst",
+      "question": "The graphs show Redis misses for the profile jump from near 0 to about 5,000 requests per second for 3 seconds. During the same 3 seconds, the database receives about 15,000 identical profile SELECTs. What is the most likely cause?",
+      "concept_keys": [
+        "cache-miss",
+        "hot-key",
+        "database-cpu",
+        "p99-latency"
+      ],
+      "options": [
+        {
+          "text": "The profile SELECT became slower, so each request held a database connection longer.",
+          "correct": false,
+          "hint": "Slow queries can raise latency, but the key number is the sudden count of identical SELECTs. Explain why thousands of requests all went to the database at once.",
+          "id": "a"
+        },
+        {
+          "text": "Redis briefly lost network connectivity, so all application instances bypassed the cache.",
+          "correct": false,
+          "hint": "A Redis connectivity problem would usually produce client errors and affect many keys. Here the misses line up with one key's normal expiration.",
+          "id": "b"
+        },
+        {
+          "text": "All concurrent requests missed the same hot key and recomputed the same profile from the database.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The cached profile value grew too large, so Redis serialization made cache reads slower.",
+          "correct": false,
+          "hint": "Large cached values can make hits slow, but the graph shows misses and database reads. Focus on why the database saw about 15,000 identical queries in 3 seconds.",
+          "id": "d"
+        }
+      ],
+      "explanation": "At 5,000 requests per second for 3 seconds, about 15,000 requests observed the same missing hot key and all loaded the profile from the database. That duplicate work explains both 100% database CPU and the p99 jump from 40 ms to 4 s. A slow SELECT alone would not create the sudden burst of identical SELECT executions at the cache expiry boundary."
+    },
+    {
+      "title": "Stop duplicate refills",
+      "question": "You need a production change that directly prevents thousands of requests from doing the same database refill when the hot key expires, while keeping the normal 1-hour cache behavior. Which change is best?",
+      "concept_keys": [
+        "redis",
+        "cache-ttl",
+        "request-coordination",
+        "database-cpu"
+      ],
+      "options": [
+        {
+          "text": "Allow only the request that wins a short shared cache-fill claim to read the database; other requests wait briefly and then read the refilled cache.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Add several read replicas so the identical profile SELECTs are spread across more database machines.",
+          "correct": false,
+          "hint": "Replicas may reduce the symptom, but they do not remove the duplicate work. A very hot key can still create a large burst and overload shared resources.",
+          "id": "b"
+        },
+        {
+          "text": "Warm the profile cache once at application startup on every instance before serving traffic.",
+          "correct": false,
+          "hint": "Startup warming does not coordinate later expiry events. The problem occurs whenever the key disappears under high concurrent traffic.",
+          "id": "c"
+        },
+        {
+          "text": "Increase the profile cache TTL from 1 hour to 6 hours so the spike happens less often.",
+          "correct": false,
+          "hint": "This reduces frequency but keeps the same failure mode. When the key finally expires, concurrent requests can still stampede into the database.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The direct fix is to coordinate the refill so only one request performs the expensive database read for that key. The remaining requests should wait briefly for the cache to be repopulated instead of all issuing the same SELECT. Raising the TTL is tempting, but it only moves the spike from every 1 hour to every 6 hours."
+    },
+    {
+      "title": "Make the shared claim safe",
+      "question": "The application runs on 20 instances, so you implement the cache-fill claim in Redis. Which locking behavior is safest for production?",
+      "concept_keys": [
+        "redis",
+        "distributed-lock",
+        "lock-token",
+        "atomic-operation"
+      ],
+      "options": [
+        {
+          "text": "Create a Redis lock with a 5-minute TTL and always delete it after the database query returns.",
+          "correct": false,
+          "hint": "A long TTL can block recovery after a crash, and blindly deleting can remove a newer owner's lock. The release path must prove ownership.",
+          "id": "a"
+        },
+        {
+          "text": "Acquire with a single Redis SET using NX and a short PX TTL plus a unique token; release by atomically deleting only if the token still matches.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Use one process-wide mutex in each application instance, then let each instance refill independently if its mutex is free.",
+          "correct": false,
+          "hint": "A local mutex only coordinates threads inside one process. With 20 instances, up to 20 requests can still refill the same cache key at once.",
+          "id": "c"
+        },
+        {
+          "text": "Use SETNX for the lock key, then call EXPIRE in a second command, and delete the key when the refill finishes.",
+          "correct": false,
+          "hint": "If the process crashes between the two commands, the lock may have no expiration. Separate commands can create failure windows in a distributed system.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A safe Redis lock needs atomic acquisition with an expiration, so a crashed worker cannot leave the refill blocked forever. The unique token and atomic compare-and-delete release prevent an old worker from deleting a newer worker's lock after the TTL has expired and been reacquired. SETNX followed by EXPIRE is a common trap because a crash between those commands can leave a permanent lock."
+    },
+    {
+      "title": "Use bounded stale data",
+      "question": "Product says the profile should normally refresh after 60 minutes, but during a slow refill or transient failure it may be served for at most 5 minutes beyond that normal refresh time. Which design satisfies that limit and reduces user-visible latency during refresh?",
+      "concept_keys": [
+        "stale-data",
+        "soft-expiry",
+        "hard-expiry",
+        "request-coordination",
+        "redis"
+      ],
+      "options": [
+        {
+          "text": "Keep a single Redis key with a 65-minute TTL and start rebuilding only after Redis removes it.",
+          "correct": false,
+          "hint": "This allows the value to live longer, but it still creates a hard miss when the key disappears. It does not give requests a value to serve while the rebuild is happening.",
+          "id": "a"
+        },
+        {
+          "text": "Store the payload with a refresh-after time at 60 minutes and a hard stop at 65 minutes; after refresh-after, one coordinated refresh runs while requests serve the old payload until the hard stop.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Keep the Redis TTL at 60 minutes and rely on browser caching to show the previous profile for another 5 minutes after a miss.",
+          "correct": false,
+          "hint": "Browser caches are not a reliable server-side control for all clients and requests. The backend still needs to enforce the maximum stale window.",
+          "id": "c"
+        },
+        {
+          "text": "Run a cron job every 5 minutes on one host that refreshes the profile whether or not it is being requested.",
+          "correct": false,
+          "hint": "A cron job can fail, overlap, or refresh unnecessary data. It also does not define what requests should do while a refresh is slow.",
+          "id": "d"
+        }
+      ],
+      "explanation": "This design separates the preferred refresh time from the final time the old value may be served. The maximum age is 65 minutes, which is exactly 5 minutes beyond the normal 60-minute refresh point, not “5 minutes old” in absolute terms. A plain 65-minute TTL still causes a miss and a possible herd at the hard expiry."
+    },
+    {
+      "title": "Avoid synchronized expirations",
+      "question": "After the hot-key fix, you find a nightly job rewrites many profile cache entries at 23:00 with the same 1-hour TTL, so many keys expire together at 00:00. The business accepts refresh anytime between 55 and 60 minutes. What should you change?",
+      "concept_keys": [
+        "cache-ttl",
+        "randomization",
+        "database-cpu"
+      ],
+      "options": [
+        {
+          "text": "Flush the Redis database at 22:55 so the nightly job starts from a clean cache state.",
+          "correct": false,
+          "hint": "Flushing creates misses and removes useful cached data. It does not solve the shared schedule that makes expirations line up.",
+          "id": "a"
+        },
+        {
+          "text": "Add a second job at 23:59 that warms all profiles immediately before they expire.",
+          "correct": false,
+          "hint": "A synchronized warmup can create its own database burst. The goal is to avoid making many keys need work at the same instant.",
+          "id": "b"
+        },
+        {
+          "text": "Assign each rewritten key an independent random TTL between 55 and 60 minutes.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Change all rewritten keys to a 2-hour TTL so the midnight database spike moves to 01:00.",
+          "correct": false,
+          "hint": "This shifts the synchronized expiry instead of spreading it out. It also exceeds the stated 55-to-60-minute refresh window.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A per-key random TTL spreads expirations over 5 minutes instead of concentrating them at exactly 00:00. Because the accepted window is 55 to 60 minutes, choosing within that range preserves the freshness requirement. A warmup job at 23:59 is tempting, but it can simply move the database burst earlier."
+    },
+    {
+      "title": "Confirm the fix",
+      "question": "You deploy coordinated refills, bounded stale serving, and randomized TTLs. Which dashboard best confirms the incident is fixed and the freshness limit is still respected?",
+      "concept_keys": [
+        "observability",
+        "cache-miss",
+        "database-cpu",
+        "p99-latency",
+        "stale-data"
+      ],
+      "options": [
+        {
+          "text": "Deployment success rate, host CPU on application instances, and the nightly job completion timestamp.",
+          "correct": false,
+          "hint": "These are useful operational checks, but they do not show whether cache expiry still causes duplicate database reads. Include cache, database, latency, and freshness measurements.",
+          "id": "a"
+        },
+        {
+          "text": "Per-profile cache misses, cache-fill claim wins and waits, database SELECTs per refill window, p99 latency, database CPU, and maximum served profile age.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Redis hit rate for the entire cluster, application error rate, and the number of active read replicas.",
+          "correct": false,
+          "hint": "Cluster-wide hit rate can look healthy while one hot key is failing. Replica count also does not prove duplicate work has stopped.",
+          "id": "c"
+        },
+        {
+          "text": "Average profile latency, total Redis memory used, and total database connections across the whole service.",
+          "correct": false,
+          "hint": "Averages and broad totals can hide a hot-key problem. You need signals tied to refills, duplicate database work, and stale age.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The fix should reduce miss amplification: one refill should produce roughly one database load for that profile, not thousands. p99 latency and database CPU should no longer spike at the expiry boundary, and the maximum served age should stay within the 65-minute hard limit. Broad Redis hit rate or average latency can hide the exact hot-key behavior that caused the incident."
+    }
+  ],
+  "takeaway": "Hot keys can turn a normal cache expiry into a database flood because many concurrent requests all miss and recompute the same value. Use coordinated refills, safe short-lived locks, bounded stale serving, and randomized expiration times to remove the burst instead of merely delaying it. Confirm the fix with per-key cache, database, latency, and freshness metrics.",
+  "review_issues": []
+}

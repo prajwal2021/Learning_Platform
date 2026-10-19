@@ -1,0 +1,501 @@
+{
+ "slug": "state-management",
+ "name": "State management (Redux, NgRx, Pinia, Zustand)",
+ "category": "Frontend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What problem does a state management library solve in a frontend app?",
+    "answer": "It gives you a predictable place to store and update shared application state. Instead of passing data through many component levels or duplicating it in multiple places, components read from and update a central store. This makes state changes easier to trace and debug, especially when many parts of the UI depend on the same data.",
+    "real_world": "In a dashboard, several widgets may need the same user, filters, and loading state. Without shared state, teams often end up with prop drilling or inconsistent copies of the same data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you keep state in a component instead of putting it in a store?"
+   },
+   {
+    "question": "What is the difference between local component state and global application state?",
+    "answer": "Local state belongs to one component or a small subtree, like an open dropdown or input text. Global state is shared across unrelated parts of the app, like the authenticated user, theme, or shopping cart. The basic rule is to keep state as close as possible to where it is used, and only lift it into a store when multiple parts need it.",
+    "real_world": "A form field usually stays local, but the logged-in user profile often belongs in global state because the header, profile page, and API layer may all need it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are examples of state that should not be stored globally?"
+   },
+   {
+    "question": "What is a store in Redux or Zustand?",
+    "answer": "A store is the object that holds the application state and provides a way to read and update it. In Redux, updates happen through dispatched actions and reducers; in Zustand, the store often exposes state and setter functions directly. The main idea is still the same: one source of truth for shared data.",
+    "real_world": "If a login flow updates a user store, the navbar can immediately show the user name without passing props through intermediate components.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does it mean to have a single source of truth?"
+   },
+   {
+    "question": "What is an action in Redux or NgRx?",
+    "answer": "An action is a plain object that describes something that happened or should happen. It usually has a type and sometimes a payload with data. Actions do not change state by themselves; they are just the event that the store reacts to.",
+    "real_world": "A cart app might dispatch an action like 'add item' with the product id and quantity, and the reducer uses that information to update the cart state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between an action and a reducer?"
+   },
+   {
+    "question": "What does a reducer do?",
+    "answer": "A reducer takes the current state and an action, and returns the next state. It should be a pure function: the same inputs always produce the same output, and it should not mutate the existing state. This makes updates predictable and easier to test.",
+    "real_world": "If a reducer mutates state directly, bugs can appear where React or Angular does not detect changes the way you expect, especially in nested objects.",
+    "code_lang": "javascript",
+    "code": "function counter(state = 0, action) {\n  switch (action.type) {\n    case 'increment':\n      return state + 1;\n    default:\n      return state;\n  }\n}",
+    "follow_up": "Why is immutability important in reducer-based state management?"
+   },
+   {
+    "question": "What is the difference between dispatching an action and updating state directly?",
+    "answer": "Dispatching an action sends a description of an event through the state system, where reducers or store logic decide how state changes. Updating state directly can be simpler in small stores like Zustand, but in Redux or NgRx the standard flow is action first, then state update. The action-based approach makes changes easier to log, replay, and debug.",
+    "real_world": "Teams use dispatched actions to inspect exactly what happened in Redux DevTools when tracking a production bug or a bad user flow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is direct state mutation a problem, and when is it acceptable?"
+   },
+   {
+    "question": "What is selector logic, and why use selectors instead of reading state directly everywhere?",
+    "answer": "A selector is a function that reads part of the store state, often deriving or shaping data for a component. Using selectors keeps components simpler, avoids repeating lookup logic, and can help with memoization when the derived data is expensive. It also makes state structure easier to change later because components depend on the selector, not the raw shape.",
+    "real_world": "If the app stores a large normalized data set, selectors can build a user-specific view model without every component knowing the internal structure.",
+    "code_lang": "javascript",
+    "code": "const selectCartTotal = (state) =>\n  state.cart.items.reduce((sum, item) => sum + item.price, 0);",
+    "follow_up": "What is memoization, and how does it help selectors?"
+   },
+   {
+    "question": "What is the main idea behind immutability in state management?",
+    "answer": "Immutability means you create a new state object instead of changing the old one in place. This helps change detection work reliably and makes time-travel debugging and undo/redo patterns possible. The trade-off is more copying, so you usually update only the parts that changed and reuse the rest.",
+    "real_world": "A common beginner bug is pushing into an array from state and then wondering why the UI does not re-render consistently.",
+    "code_lang": "javascript",
+    "code": "// bad\nstate.items.push(newItem)\n\n// good\nreturn { ...state, items: [...state.items, newItem] }",
+    "follow_up": "How do you update nested state without mutating it?"
+   },
+   {
+    "question": "What is the difference between Redux and Zustand at a high level?",
+    "answer": "Redux is a more structured pattern with actions, reducers, and a central store flow. Zustand is lighter and more direct, often letting you define state and setter functions in one place with less boilerplate. Redux is a better fit when you want a strict, traceable architecture; Zustand is often easier for small to medium apps or local-feeling global state.",
+    "real_world": "A team might choose Redux for a large enterprise app with many contributors, but use Zustand for a simpler product where setup speed matters more than ceremony.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What trade-offs do you get when you choose a more opinionated library?"
+   },
+   {
+    "question": "What is the difference between Redux and NgRx?",
+    "answer": "NgRx is the Angular-focused state management library inspired by Redux. It uses the same core ideas of actions, reducers, and selectors, but it is designed to fit Angular patterns and commonly uses observables heavily. If you already work in Angular, NgRx usually feels more integrated with the framework than plain Redux.",
+    "real_world": "In a large Angular app, NgRx can centralize API state, loading flags, and user permissions so different feature modules stay consistent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are effects used for in NgRx?"
+   },
+   {
+    "question": "What is a common beginner mistake when using a global store?",
+    "answer": "A very common mistake is putting everything into the store, including temporary UI state that only one component needs. That makes the store noisy, harder to debug, and more coupled than necessary. Another mistake is updating state in too many places instead of using one clear flow, which makes bugs harder to track.",
+    "real_world": "Teams often start by storing every form field globally, then later have to untangle performance issues and confusing state resets when users navigate between pages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which kinds of state should stay local, and which belong in a store?"
+   },
+   {
+    "question": "How do you decide whether data should live in a global store or stay in a component?",
+    "answer": "Put data in a global store when multiple unrelated parts of the app need it, when it must survive route changes, or when you need one source of truth. Keep data local when only one component or a small subtree uses it, because local state is simpler and easier to reason about. A good rule is to start local and lift it into the store only when sharing or persistence becomes necessary.",
+    "real_world": "A search filter used by one page section usually stays local, but a logged-in user profile or theme setting often belongs in global state. Teams often move too much into the store and end up with more boilerplate than benefit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are examples of state that should almost always stay local?"
+   },
+   {
+    "question": "What is the difference between a store and a slice of state?",
+    "answer": "A store is the overall container that holds the application state and usually provides ways to read and update it. A slice is one logical part of that state, such as auth, cart, or UI preferences. Splitting state into slices helps organize code and makes it easier to update one feature without touching unrelated data.",
+    "real_world": "In a large app, one team may own the cart slice while another owns user settings. This keeps the codebase maintainable and reduces accidental coupling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure slices for a medium-sized app?"
+   },
+   {
+    "question": "What does it mean for a state update to be immutable, and why does that matter?",
+    "answer": "Immutable updates mean you create a new object or array instead of changing the existing one in place. This matters because many state libraries and UI frameworks rely on reference changes to detect that something changed. If you mutate nested data directly, updates can be missed or debugging can become confusing.",
+    "real_world": "A table may not rerender after editing a row if the row object was mutated instead of replaced. These bugs are hard to spot because the code may look like it changed the data correctly.",
+    "code_lang": "javascript",
+    "code": "const state = { user: { name: 'Ava' } };\nconst nextState = {\n  ...state,\n  user: { ...state.user, name: 'Mina' }\n};",
+    "follow_up": "Why can shallow copying be enough in some cases but not others?"
+   },
+   {
+    "question": "How do Redux, NgRx, Pinia, and Zustand let components read from the store without coupling everything together?",
+    "answer": "They use subscriptions and selectors so components can ask for just the data they need. When that selected data changes, only the relevant components rerender or update. This avoids passing props through many layers and keeps components focused on what they display.",
+    "real_world": "In a dashboard with many widgets, each widget can subscribe to its own piece of state instead of rerendering on every unrelated change. That helps performance and keeps updates predictable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the risk of selecting too much state in one component?"
+   },
+   {
+    "question": "What is the difference between synchronous and asynchronous state logic in these libraries?",
+    "answer": "Synchronous logic updates state immediately in response to an action or method call. Asynchronous logic handles things like API requests, then updates state when the request succeeds or fails. Most libraries keep async work separate from the pure state update so the update path stays predictable.",
+    "real_world": "Loading user data usually means setting a loading flag, calling the API, then storing either the result or an error. Mixing the network call directly into a reducer would make the logic harder to test and reason about.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you put API calls in Redux or NgRx?"
+   },
+   {
+    "question": "What is a common way to model loading and error state in a store?",
+    "answer": "A common pattern is to keep separate fields such as `data`, `loading`, and `error`. That lets the UI show a spinner while a request is in progress and a message if it fails. It is better than overloading one field with many meanings, because the UI state becomes explicit.",
+    "real_world": "For a product list, the app may need to show old data while refreshing, or show an error banner if the refresh fails. Clear loading and error flags make those cases easy to handle.",
+    "code_lang": "javascript",
+    "code": "const initialState = {\n  data: [],\n  loading: false,\n  error: null\n};",
+    "follow_up": "When would you keep old data visible during loading instead of clearing it?"
+   },
+   {
+    "question": "What is the difference between a selector and a derived value computed inside a component?",
+    "answer": "A selector is reusable state-reading logic, often centralized and memoized, while a derived value in a component is computed ad hoc for that one component. Selectors are useful when several components need the same transformation or when the computation is expensive. Keeping that logic outside the component also makes testing easier.",
+    "real_world": "If several screens need the number of items in the cart, a selector keeps the count logic in one place. If you compute it directly in each component, you risk duplicated bugs when the business rule changes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is memoization sometimes useful for selectors?"
+   },
+   {
+    "question": "What is a middleware or side-effect layer used for in state management?",
+    "answer": "It handles work that should happen around state updates, such as logging, async requests, persistence, or analytics. The main idea is to keep reducers or direct state mutations focused on updating state, not performing side effects. That separation makes the core state logic easier to test and reuse.",
+    "real_world": "A team may log every logout action or save preferences to local storage whenever settings change. Putting that in middleware or an effect layer avoids scattering the same code across many components.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would middleware differ from a reducer in responsibility?"
+   },
+   {
+    "question": "What is the difference between a centralized store and using multiple small stores?",
+    "answer": "A centralized store gives you one place to inspect and coordinate app state, which is helpful when many features depend on each other. Multiple small stores can reduce coupling and keep feature code isolated, but they can also make cross-feature coordination harder. The right choice depends on app size, team structure, and how shared the state really is.",
+    "real_world": "A small app may do fine with one store, while a large product may split state by domain or feature. Teams often choose smaller stores when independent modules are developed and deployed separately.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide what state belongs in each store?"
+   },
+   {
+    "question": "What is one beginner mistake when using a store inside React or Angular components?",
+    "answer": "A common mistake is subscribing to too much state or triggering updates from the wrong place, which causes unnecessary rerenders or loops. Another is treating the store like a place to put every variable, even values that only matter during one interaction. Components should read the minimum state they need and update it through the library’s intended API.",
+    "real_world": "A form component that subscribes to the entire app state can rerender on every unrelated change and feel sluggish. This usually shows up first as performance problems and then as hard-to-debug UI behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a good way to reduce unnecessary rerenders from store updates?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you avoid unnecessary re-renders when a component subscribes to store state?",
+    "answer": "Select the smallest possible piece of state and avoid returning fresh object or array literals from the selector unless the library can compare them safely. In React stores like Zustand or Redux, a component re-renders when the selected value changes by reference, so broad selectors can cause extra work. For derived data, memoize it or compute it in a selector so unrelated updates do not cascade.",
+    "real_world": "This shows up when a dashboard gets slower after adding a global store: one broad subscription makes dozens of cards re-render on every keystroke or polling tick. The fix is usually to split selectors or normalize state.",
+    "code_lang": "javascript",
+    "code": "const count = useStore(s => s.count);\nconst userName = useStore(s => s.user.name);\n// Avoid: useStore(s => ({ count: s.count, name: s.user.name }))",
+    "follow_up": "How would you diagnose which selector is causing the extra renders?"
+   },
+   {
+    "question": "When would you keep normalized state instead of nested state in a store?",
+    "answer": "Use normalized state when the same entity is referenced from multiple places, or when you need to update one item without walking deep nested structures. Normalization makes updates simpler and reduces the risk of inconsistent copies of the same data. Nested state can be fine for purely local UI state, but it gets harder to maintain once relationships and edits grow.",
+    "real_world": "A common example is users, posts, and comments in a social feed. If the same user appears in many posts, keeping one user record avoids updating several duplicated copies after a profile change.",
+    "code_lang": "javascript",
+    "code": "{\n  usersById: { u1: { id: 'u1', name: 'A' } },\n  postsById: { p1: { id: 'p1', authorId: 'u1' } }\n}",
+    "follow_up": "What trade-offs come with normalization when you need to build view models for the UI?"
+   },
+   {
+    "question": "How do you handle optimistic updates with a store, and what can go wrong?",
+    "answer": "Apply the UI change immediately, keep enough information to roll it back, and then reconcile with the server response. The main risk is the server rejecting the change or returning a different canonical result, so you need a clear rollback or refetch path. You also have to guard against double-submits and out-of-order responses.",
+    "real_world": "This matters in apps like kanban boards or shopping carts where waiting for the network would feel sluggish. Problems appear when two quick edits race and the later rollback undoes the wrong version.",
+    "code_lang": "javascript",
+    "code": "const prev = store.getState().items;\nstore.setState({ items: [...prev, newItem] });\ntry { await api.create(newItem); }\ncatch { store.setState({ items: prev }); }",
+    "follow_up": "How would you make that safer if multiple optimistic updates can happen at once?"
+   },
+   {
+    "question": "What is the difference between a selector and a memoized selector, and when does memoization matter?",
+    "answer": "A plain selector computes a value every time it runs, while a memoized selector reuses the previous result when its inputs have not changed. Memoization matters when the computation is expensive or when the selector returns a derived object that should keep the same reference to avoid re-renders. It is not free, so use it where the derived value is reused or costly.",
+    "real_world": "Teams often add memoization after seeing a table or list component re-render on every store update. That is usually because the selector rebuilds filtered or sorted arrays each time.",
+    "code_lang": "javascript",
+    "code": "const selectVisible = createSelector(\n  s => s.items,\n  s => s.filter,\n  (items, filter) => items.filter(i => i.type === filter)\n);",
+    "follow_up": "What bug can happen if a memoized selector depends on mutable data?"
+   },
+   {
+    "question": "How do you structure side effects like fetching data so the store stays predictable?",
+    "answer": "Keep state updates in the store and move the effectful work into an action, thunk, effect, or similar layer depending on the library. That keeps the state transition easy to test and lets you separate “what happened” from “how the data was fetched.” The trade-off is more code structure, but better traceability and fewer hidden dependencies.",
+    "real_world": "In production, this helps when network calls need retries, cancellation, or analytics logging. If the fetch logic is scattered through components, bugs become hard to reproduce and test.",
+    "code_lang": "javascript",
+    "code": "const loadUser = async (id) => {\n  set({ loading: true });\n  const user = await api.getUser(id);\n  set({ user, loading: false });\n};",
+    "follow_up": "How would you cancel or ignore a stale request if the user changes filters quickly?"
+   },
+   {
+    "question": "How would you test a store update without rendering the whole UI?",
+    "answer": "Test the state transition directly by calling the reducer, action, or store method and asserting on the resulting state. For async logic, mock the API and verify both the intermediate loading state and the final success or error state. This is faster and more stable than testing through the UI for every case.",
+    "real_world": "This is useful for regression tests around checkout, permissions, or form workflows where a small state bug can break the whole flow. A direct store test catches logic errors without brittle DOM selectors.",
+    "code_lang": "javascript",
+    "code": "const next = reducer({ count: 1 }, { type: 'inc' });\nexpect(next.count).toBe(2);",
+    "follow_up": "What would you still want to cover with an end-to-end test?"
+   },
+   {
+    "question": "What is the practical difference between one big store and several feature stores?",
+    "answer": "One big store can make cross-feature coordination simpler, but it also creates tighter coupling and larger invalidation surface area. Several feature stores reduce blast radius and make ownership clearer, but shared workflows can require explicit composition or cross-store communication. The right choice depends on how often features need shared reads and updates.",
+    "real_world": "In a large app, checkout, catalog, and user settings often change at different rates and are maintained by different teams. Splitting them can reduce accidental breakage when one area evolves.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you share data between feature stores without creating circular dependencies?"
+   },
+   {
+    "question": "How do you debug a store update that seems to happen but the UI does not change?",
+    "answer": "First verify the store actually changed, then check whether the component is subscribed to the right slice and whether the selector returns the expected reference. The bug is often either stale derived state, a selector that reads the wrong path, or an in-place mutation that prevents change detection. Logging the store snapshot before and after the update usually narrows it down quickly.",
+    "real_world": "This often appears as “the network call succeeded but the screen did not update.” In React or Angular, the real issue is frequently a selector or subscription mismatch rather than the fetch itself.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs would tell you the issue is mutation versus a bad subscription?"
+   },
+   {
+    "question": "When would you store derived data in state, and when should you compute it on read?",
+    "answer": "Compute it on read if it can be derived deterministically from existing state and is cheap enough. Store it only when it is expensive to recompute, needs to be cached for performance, or represents a user-editable snapshot that is not a pure function of other fields. Duplicating derived values increases the chance they drift out of sync.",
+    "real_world": "Examples include filtered lists, totals, and display labels. Storing them can save work, but it also creates bugs when the source data changes and the cached value is forgotten.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide whether a derived calculation is expensive enough to memoize?"
+   },
+   {
+    "question": "What is a good pattern for handling errors from async store actions in the UI?",
+    "answer": "Store enough error state to let the UI react meaningfully, usually at least a message or error object plus which request failed. Separate transient request state from domain data so one failing call does not wipe valid cached state unless that is intended. Also clear or replace the error when the user retries, otherwise stale failures can keep showing after a successful action.",
+    "real_world": "This matters in forms and data grids where users need to retry a single operation without losing everything else on the page. Good error modeling keeps the rest of the app usable during partial failures.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Would you clear errors globally or per feature, and why?"
+   },
+   {
+    "question": "How do you decide whether to split state into multiple stores or keep one shared store for the app?",
+    "answer": "Split by feature boundaries and ownership, not just by how much data you have. A separate store or slice is useful when a feature can be developed, tested, and reasoned about mostly on its own; one shared store is better when state is tightly coupled and many parts of the app need to coordinate. The trade-off is simpler coordination versus clearer boundaries and less accidental coupling. Too many stores can make cross-feature flows harder to follow.",
+    "real_world": "This matters in large apps where a cart, auth, and search feature all update independently. A team often starts with one store and later splits features when unrelated changes start causing noisy re-renders and merge conflicts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals tell you a feature store has become too isolated and should be coordinated with the rest of the app?"
+   },
+   {
+    "question": "What is the practical difference between a reducer-style update and directly mutating state in a store like Pinia or Zustand?",
+    "answer": "Direct mutation is simpler to write, but you still need the library to detect the change in a way that updates subscribers correctly. Reducer-style updates make the transition explicit: given old state and an action, produce the next state. That explicitness helps with testing, time-travel debugging, and reasoning about complex flows. Mutation can be fine if the library handles it safely, but hidden mutation is dangerous when you accidentally preserve references that components rely on.",
+    "real_world": "Teams often hit bugs where nested objects are changed in place and the UI does not refresh as expected. This is especially painful when debugging a “state changed but screen didn’t” issue in production.",
+    "code_lang": "javascript",
+    "code": "// reducer-style\nfunction reducer(state, action) {\n  switch (action.type) {\n    case 'add':\n      return { ...state, count: state.count + 1 };\n    default:\n      return state;\n  }\n}",
+    "follow_up": "How do you know whether a library tracks mutations deeply or only notices reference changes?"
+   },
+   {
+    "question": "How do you prevent stale data when multiple async requests can update the same store state?",
+    "answer": "Track which request is the latest and ignore older responses when they arrive out of order. A common pattern is to store a request id or timestamp in state, set it when the request starts, and only apply the result if it still matches. This matters because fast user interactions can trigger overlapping requests and the slowest response can overwrite newer data. You also want loading and error state to be tied to the specific request, not just one global flag.",
+    "real_world": "This shows up in search boxes, filters, and auto-complete, where users type quickly and responses return unpredictably. Without a guard, the UI can show results for an earlier query after the user already moved on.",
+    "code_lang": "javascript",
+    "code": "let latestId = 0;\nasync function load(query) {\n  const id = ++latestId;\n  const data = await fetchData(query);\n  if (id === latestId) store.setState({ data });\n}",
+    "follow_up": "Would you cancel the previous request, ignore stale responses, or both?"
+   },
+   {
+    "question": "What is memoization buying you in selectors, and when is it not worth using?",
+    "answer": "Memoization avoids recomputing derived values when the inputs have not changed, which can save work and preserve referential equality for components that depend on the result. It matters most when the derived calculation is expensive or the selector returns arrays and objects that would otherwise be recreated on every read. It is not worth it for trivial computations or when the inputs change almost every time, because the caching overhead adds complexity without much gain. You still need to be careful that the selector’s inputs are stable and narrowly scoped.",
+    "real_world": "This is common in dashboards that filter or aggregate large lists. Without memoization, every store update can trigger expensive recalculation even when the visible data did not change.",
+    "code_lang": "javascript",
+    "code": "const selectVisible = createSelector(\n  [selectItems, selectFilter],\n  (items, filter) => items.filter(i => i.name.includes(filter))\n);",
+    "follow_up": "What can go wrong if a selector depends on an entire state object instead of a small set of inputs?"
+   },
+   {
+    "question": "How do you structure error handling for async actions so the UI can recover cleanly?",
+    "answer": "Store enough error detail to let the UI make a decision, but keep it serializable and tied to the operation that failed. Usually that means separate fields for loading, error, and the data itself, and clearing the error when a new request starts or succeeds. The key trade-off is between exposing useful feedback and avoiding a state shape that becomes a dumping ground for exceptions. For recoverability, the UI should be able to retry from the same state without special-case logic.",
+    "real_world": "A login form or checkout flow often needs to show one failure message, allow retry, and keep the rest of the screen usable. If errors are not modeled cleanly, users get stuck behind a permanent spinner or stale error banner.",
+    "code_lang": "javascript",
+    "code": "state = {\n  data: null,\n  loading: false,\n  error: null\n};\n// on start: loading=true, error=null\n// on success: data=payload, loading=false\n// on fail: error=message, loading=false",
+    "follow_up": "When would you keep multiple error fields instead of one shared error value?"
+   },
+   {
+    "question": "How do you test a store action that depends on an API call?",
+    "answer": "Mock the API boundary and assert on the state transitions, not on the UI. The important checks are that the store enters the expected loading state, writes the success or failure result, and does not mutate unrelated state. If the action is asynchronous, tests should await completion and verify both the intermediate and final states when that matters. This keeps tests fast and focused on business logic.",
+    "real_world": "Teams use this to catch regressions in login, search, and checkout flows before they reach the browser. It is much easier to debug a failing state test than a flaky end-to-end test that only fails under timing issues.",
+    "code_lang": "javascript",
+    "code": "api.fetchUser = jest.fn().mockResolvedValue({ id: 1 });\nawait store.loadUser();\nexpect(store.getState().user.id).toBe(1);\nexpect(store.getState().loading).toBe(false);",
+    "follow_up": "What would you verify if the request fails instead of succeeding?"
+   },
+   {
+    "question": "What does it mean to normalize state, and when does it help more than nested objects?",
+    "answer": "Normalization means storing entities by id and keeping relationships as ids instead of deeply nesting repeated data. It helps when the same entity appears in multiple places, because you update it once and every consumer reads the same source of truth. Nested state can be easier to read for small, isolated data, but it becomes harder to update consistently as relationships grow. The trade-off is a little more lookup code for much simpler updates and less duplication.",
+    "real_world": "This is common in apps with users, posts, comments, or products that appear in several views. Without normalization, a user name change can require updating many nested copies and missing one causes inconsistent UI.",
+    "code_lang": "javascript",
+    "code": "{\n  usersById: { '1': { id: '1', name: 'Ava' } },\n  postIds: ['10'],\n  postsById: { '10': { id: '10', authorId: '1' } }\n}",
+    "follow_up": "When would you intentionally keep nested state even if normalization is possible?"
+   },
+   {
+    "question": "How do you avoid creating store logic that is too tightly coupled to one component or route?",
+    "answer": "Keep the store focused on domain state and reusable actions, not on the exact UI flow of one screen. If a piece of logic only exists to support one component’s rendering details, it probably belongs in the component or a local hook rather than the store. This matters because UI-specific logic in global state makes the store harder to reuse and test. The trade-off is between convenience for one screen and long-term maintainability across the app.",
+    "real_world": "This often happens when developers move modal state, form steps, or table sorting into global state too early. Later, the store becomes full of route-specific flags that nobody else can reuse.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of state are good candidates for a shared store even if they are used by only one screen today?"
+   },
+   {
+    "question": "How do you debug a store update that should have happened but a component still shows old data?",
+    "answer": "First check whether the store state actually changed, then whether the component subscribed to the right slice, and finally whether the selector is returning a stable reference. A common failure is mutating nested state so the top-level reference does not change, or selecting a value that gets recreated on every render and causes confusing behavior. You should also check whether the component is reading stale props or has memoization that blocks updates. Debugging is easiest when you can inspect the state transition separately from the UI.",
+    "real_world": "This shows up as a “works in devtools, not on screen” bug after a refactor. The root cause is often either an incorrect selector or a component that is memoized too aggressively.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you isolate whether the bug is in the state update, the selector, or the component subscription?"
+   },
+   {
+    "question": "What are the trade-offs between putting derived values in the store and computing them when you read state?",
+    "answer": "Derived values should usually be computed on read, because storing them duplicates data and creates synchronization problems. Keeping them out of state avoids bugs where the source data changes but the derived copy does not. Put derived values in state only when computing them is expensive and the result is reused often, or when you need to preserve a server response or user-entered snapshot exactly as received. The main trade-off is memory and consistency versus performance.",
+    "real_world": "This matters in reporting screens and large lists where totals, counts, or filtered views can be expensive to calculate repeatedly. It also prevents bugs where a cached count drifts away from the actual underlying items.",
+    "code_lang": "javascript",
+    "code": "const total = useMemo(\n  () => items.reduce((sum, item) => sum + item.price, 0),\n  [items]\n);",
+    "follow_up": "How do you decide whether a derived value belongs in a memoized selector instead of a component hook?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does Redux actually know that state changed if reducers return new objects but most of the tree is structurally shared?",
+    "answer": "Redux itself does not diff the whole tree; it replaces the current root state with whatever the reducer returns. Change detection is pushed to subscribers and selectors, which usually rely on reference equality at the slice or selector output level. Structural sharing matters because unchanged branches keep the same references, so memoized selectors and UI bindings can cheaply conclude that nothing relevant changed. If you recreate large subtrees unnecessarily, you defeat that optimization and trigger avoidable recomputation and rendering.",
+    "real_world": "A common production regression is a reducer that spreads a whole feature object on every action, causing selector caches to miss and dozens of components to re-render on every keystroke.",
+    "code_lang": "javascript",
+    "code": "const prev = { users: { byId: { 1: { name: 'A' } } }, ui: { open: false } }\nconst next = {\n  ...prev,\n  ui: { ...prev.ui, open: true }\n}\nconsole.log(prev.users === next.users) // true\nconsole.log(prev.ui === next.ui)       // false",
+    "follow_up": "What kinds of reducer code accidentally destroy structural sharing even when the data did not logically change?"
+   },
+   {
+    "question": "If a selector is memoized, why can it still recompute far more often than you expect?",
+    "answer": "Most memoized selectors cache by input reference, not by deep value. If upstream selectors or reducers create new array or object references each time, the memoized selector sees different inputs and recomputes even when the contents are effectively the same. Parameterized selectors can also miss cache hits if each component instance creates its own selector or passes unstable arguments. The fix is to stabilize inputs, keep selectors layered, and be deliberate about selector instance lifecycles.",
+    "real_world": "Teams often add memoization and still see CPU spikes because a list selector gets a freshly mapped array on every action, so filtering and sorting rerun for every subscriber.",
+    "code_lang": "javascript",
+    "code": "const selectIds = state => [...state.ids] // bad: new ref every time\nconst selectItems = createSelector(\n  [selectIds, state => state.byId],\n  (ids, byId) => ids.map(id => byId[id])\n)\n// selectItems recomputes on every call",
+    "follow_up": "When would you use a selector factory instead of one shared selector instance?"
+   },
+   {
+    "question": "What are the scaling trade-offs between entity-style normalized state and keeping a denormalized read model in the store?",
+    "answer": "Normalized state gives cheap updates, avoids duplication, and makes merges from partial API responses safer because each entity has one canonical location. The cost is more joins at read time, more selector complexity, and sometimes more memoization work for large lists. A denormalized read model can simplify rendering and speed specific screens, but it increases write amplification and the risk of inconsistency when the same entity appears in multiple places. At scale, many teams keep canonical entities normalized and build read models through selectors or cached view state only where profiling justifies it.",
+    "real_world": "In admin apps with the same user shown in search results, detail panels, and audit logs, denormalized copies drift out of sync after edits unless every path is updated correctly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle pagination metadata and partially loaded entities in a normalized store?"
+   },
+   {
+    "question": "How would you reason about race conditions in an effect or async action when the user changes filters quickly and responses arrive out of order?",
+    "answer": "You need to decide the concurrency policy per use case: cancel previous, ignore stale results, queue requests, or let all complete and merge. In NgRx effects that often means choosing the right higher-order mapping strategy; in Redux or Zustand it often means request IDs, abort signals, or checking the latest params before committing. The key is that transport-level completion order is not the same as user intent. Without an explicit policy, the store can end up showing older data after a newer interaction.",
+    "real_world": "A search box that fires on each input can briefly show results for 'rea' after the user has already typed 'react' if the slower earlier request wins the race.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is cancellation not enough, so you still need stale-response guards in the reducer or action handler?"
+   },
+   {
+    "question": "What failure modes do you watch for when persisting store state to localStorage or IndexedDB?",
+    "answer": "The big ones are schema drift, partial hydration, oversized payloads, and restoring invalid or security-sensitive state. Persisted auth flags, in-flight request state, or stale feature data can boot the app into impossible states unless you version, migrate, and whitelist carefully. There is also a performance angle: serializing large stores on every update can block the main thread, especially if you stringify big entity maps frequently. Persistence should be selective, versioned, and resilient to corruption or missing data.",
+    "real_world": "A real incident is users stuck on a blank screen after a deployment because old persisted state no longer matched the new reducer shape and hydration threw before the app mounted.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which parts of store state would you explicitly refuse to persist, even if product asks for 'remember everything'?"
+   },
+   {
+    "question": "What does time-travel debugging require from your state layer, and why do some patterns break it?",
+    "answer": "Time-travel works when state transitions are deterministic and replayable from a log of actions or patches. Reducers or handlers must not depend on hidden mutable singletons, wall-clock time, random values, or side effects embedded in the transition itself unless those inputs are captured explicitly. Direct async work inside reducers, mutating external objects, or deriving state from current environment makes replay diverge from the original run. That is why strict separation between pure state transitions and effects matters beyond style.",
+    "real_world": "If an action handler calls Date.now() and stores the result directly during replay, each step produces different state, so bug reproduction from recorded actions stops being trustworthy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you preserve reproducibility when you do need timestamps or generated IDs in state?"
+   },
+   {
+    "question": "In Zustand or Pinia, what are the subtle risks of doing multiple set or patch calls inside one async workflow?",
+    "answer": "Multiple updates can expose intermediate states to subscribers, trigger extra renders, and make derived flags temporarily inconsistent. If each step reads current state after an await, you can also base later writes on state that another action has already changed. Batching related fields into one commit, or using a functional update against the freshest state, reduces those hazards. The store may feel simpler than reducer-based libraries, but concurrency and atomicity problems do not disappear.",
+    "real_world": "A checkout flow might set loading, then items, then totals in separate updates; analytics or UI subscribers can react to the half-updated state and show incorrect prices momentarily.",
+    "code_lang": "javascript",
+    "code": "const save = async () => {\n  set({ loading: true })\n  const data = await api.load()\n  set(state => ({\n    loading: false,\n    item: data,\n    version: state.version + 1\n  }))\n}",
+    "follow_up": "How would you make a multi-step async store update atomic from the point of view of subscribers?"
+   },
+   {
+    "question": "How do you decide whether an async cache belongs in a general-purpose state store versus a dedicated server-state library?",
+    "answer": "General-purpose stores are good when server data is tightly mixed with client workflow state, needs custom write orchestration, or must participate in domain-specific state transitions. Dedicated server-state tools usually win for request deduping, cache invalidation, background refetching, stale policies, pagination helpers, and synchronization with focus or reconnect events. Trying to rebuild those behaviors in Redux, NgRx, Pinia, or Zustand often creates a fragile custom cache. The decision is less about preference and more about whether you need a client-state model or a data-fetching cache with consistency policies.",
+    "real_world": "Teams often start by storing API results in Redux, then gradually re-implement retry, dedupe, and stale-while-revalidate logic poorly across many slices.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals tell you a Redux or Zustand slice has turned into an accidental server-state cache?"
+   },
+   {
+    "question": "What are the performance implications of subscribing at a very fine granularity versus selecting a larger slice once and deriving inside the component tree?",
+    "answer": "Fine-grained subscriptions can reduce wasted renders because each consumer updates only for the exact field it needs. The trade-off is more subscription bookkeeping, more selector executions, and sometimes harder reasoning about consistency when many components observe overlapping state. Coarser subscriptions simplify data flow but can cause large render fan-out if the selected object changes often. The right balance depends on update frequency, component count, and whether rendering or subscription churn is the actual bottleneck.",
+    "real_world": "On dense dashboards, moving from one top-level subscription to many small subscriptions can cut render work significantly, but on simpler pages it may add complexity with little measurable gain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you profile whether the bottleneck is selector recomputation, React rendering, or store notification overhead?"
+   },
+   {
+    "question": "How would you migrate a large frontend from ad hoc store updates to a more disciplined architecture without freezing feature development?",
+    "answer": "I would migrate by boundary, not by big rewrite: define conventions for action semantics, side-effect ownership, selector APIs, and entity shape, then wrap existing slices behind those interfaces. New code follows the target architecture immediately, while old areas are strangled incrementally as touched by product work. Instrumentation helps prioritize the painful parts first, like slices with high churn, poor testability, or production incidents. The key trade-off is accepting temporary duplication and adapters to avoid a risky stop-the-world migration.",
+    "real_world": "Large teams often keep shipping by introducing one feature store or domain module at a time, with compatibility layers so legacy components and new slices can coexist for months.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or symptoms would you use to choose the first slice to migrate?"
+   },
+   {
+    "question": "How do Redux and Zustand actually notify subscribers, and what consistency guarantees do you rely on during an update?",
+    "answer": "Both maintain a mutable current-state reference and a subscriber list; an update replaces or mutates the internal state according to the library's rules, then synchronously notifies listeners. The key guarantee is usually that each subscriber sees a completed state transition, not a half-applied one. What differs is how React integration snapshots that external state and avoids tearing during render; modern bindings use React's external store APIs for that. This matters because reading the store imperatively during async workflows can observe newer state than the render that scheduled the work.",
+    "real_world": "A production bug shows up when a handler reads from the store twice around an await and assumes both reads belong to the same UI state. Under rapid interactions, the second read reflects a later update and the workflow applies the wrong patch.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is tearing, and how can an external store integration avoid it in concurrent React?"
+   },
+   {
+    "question": "What are the trade-offs between event-style actions and command-style actions in a large frontend store?",
+    "answer": "Event-style actions describe something that happened, like `cartItemAdded`, while command-style actions express intent, like `addItemToCart`. Events compose better for logging, replay, and fan-out because multiple reducers or effects can react without changing the caller. Commands can be easier at first, but they often hide orchestration and create tighter coupling between dispatch sites and effect logic. In larger systems, teams often use commands at boundaries and emit domain events internally.",
+    "real_world": "Teams hit this when analytics, cache invalidation, and UI notifications all need to react to the same user flow. With command-shaped actions, one effect tends to become a god object that knows too much.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you keep event-style actions from becoming too generic to be useful?"
+   },
+   {
+    "question": "How would you design idempotent async store flows so retries or duplicate dispatches do not corrupt state?",
+    "answer": "I would put a request identity or entity version into the workflow and make the success path conditional on that identity still being current. For mutations, I prefer reducer logic that can safely apply the same success payload twice, or I track operation status by key and ignore duplicates once settled. Idempotency matters because retries can come from the client, the network layer, or the user double-clicking. Without it, counters drift, optimistic patches stack twice, or stale retries overwrite a newer truth.",
+    "real_world": "A save button wired to both keyboard shortcut and click dispatches the same action twice. If the reducer appends instead of upserting by id, production data appears duplicated until a full refetch.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when the backend API itself is not idempotent?"
+   },
+   {
+    "question": "What does a memory leak look like in store subscriptions, and where do they usually come from in Redux, Zustand, Pinia, or NgRx apps?",
+    "answer": "The classic leak is a listener, watcher, or effect that stays subscribed after the component, route, or feature lifetime is over. In Redux and Zustand it is often manual subscriptions not unsubscribed correctly; in Pinia and NgRx it can also be long-lived watchers or effects scoped more broadly than intended. The symptom is duplicate reactions, rising CPU, or updates fired into dead UI. I look for subscriptions created in callbacks, conditionally, or per item in large lists.",
+    "real_world": "A route-level subscription is recreated on every navigation but only cleaned up on full page unload. After an hour of use, one action fans out to dozens of stale listeners and the app feels randomly slow.",
+    "code_lang": "javascript",
+    "code": "const unsub = store.subscribe(() => {\n  syncToAnalytics(store.getState())\n})\n\n// later, on teardown\nunsub()",
+    "follow_up": "How would you detect this kind of leak in production if users just report slowness?"
+   },
+   {
+    "question": "How do you think about atomicity when one user action needs to update several parts of store state?",
+    "answer": "Atomicity means subscribers should observe one coherent transition, not a sequence of intermediate states that violate invariants. In reducer-driven systems, one action updating multiple slices in the same reduction is naturally atomic from the subscriber's perspective. In libraries where you call setters directly, multiple writes can notify subscribers multiple times unless you batch or consolidate them. If invariants matter, I prefer one state transition function that computes the whole next state together.",
+    "real_world": "Checkout updates `items`, `total`, `discounts`, and `inventoryHold`. If these are emitted as separate writes, UI and effects can briefly see a negative total or release inventory based on stale totals.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do React batching and store-level batching differ, and why does that distinction matter?"
+   },
+   {
+    "question": "What are the edge cases with storing non-serializable values in frontend state, and when is it still acceptable?",
+    "answer": "Non-serializable values like class instances, DOM nodes, functions, Maps, or AbortControllers break assumptions behind persistence, hydration, replay, devtools inspection, and equality checks. They can also capture resources or closures longer than expected, which becomes a leak risk. It is acceptable when the store is intentionally ephemeral and you understand that those features no longer work cleanly, for example storing an abort handle in a private side-effect layer rather than public app state. As a rule, durable app state should stay plain and data-shaped.",
+    "real_world": "A team persists the whole store and later cannot restore sessions because Dates, Maps, and custom model objects come back in the wrong shape. Another incident happens when a function stored in state closes over stale route params and dispatches to the wrong entity.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need abort or websocket handles, where would you keep them instead of in persisted state?"
+   },
+   {
+    "question": "How would you profile a state-management performance issue when dispatch itself is cheap but the app still feels slow?",
+    "answer": "I separate the cost into three buckets: producing next state, selector recomputation, and React or Angular rendering after subscription notifications. I would instrument action frequency and duration, inspect which selectors run and with what hit rate, then use framework profilers to find components rerendering on stable data. Often the store update is a few milliseconds but a broad invalidation causes hundreds of components to reconcile. The fix is usually subscription boundaries, stable references, or moving expensive derivation out of hot paths.",
+    "real_world": "On a grid with thousands of cells, a single selection change dispatches quickly, but a coarse selector returns a fresh object for every row. The UI stalls because nearly the whole table rerenders on each arrow key press.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you log in production to distinguish selector churn from render churn?"
+   },
+   {
+    "question": "How do you model dependent async workflows in a store without creating effect chains that are hard to reason about?",
+    "answer": "I prefer explicit state machines or at least explicit stage fields over ad hoc chains of success actions triggering more effects. That keeps dependencies visible: fetch account, then permissions, then features, with cancellation and failure behavior defined per stage. Chaining effects implicitly through action names scales poorly because retries, partial failures, and route changes create surprising interleavings. A good design makes it obvious which state owns the workflow and what can still happen after a given failure.",
+    "real_world": "Login triggers profile load, which triggers feature flags, which triggers dashboard data. When one middle step fails and auto-retries, downstream effects can keep firing against a half-initialized session.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a true state machine library over plain reducers and effects?"
+   },
+   {
+    "question": "What is the danger of writing to the store from inside selectors, computed getters, or subscriptions?",
+    "answer": "Those paths are expected to be pure observers, so writing from them can create feedback loops, re-entrancy bugs, and order-dependent behavior. A selector that dispatches or a subscription that conditionally patches state can retrigger itself and produce infinite loops or subtle double updates. Even when it terminates, it makes reads have side effects, which breaks testing and memoization assumptions. I keep writes in explicit actions or effects and treat selectors and computed state as pure functions.",
+    "real_world": "A subscription notices an empty cache and dispatches a fetch immediately. Under mount churn, multiple subscribers all do the same check and stampede the API before any loading flag is visible to the others.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need auto-fetch-on-read behavior, how would you implement it without side effects inside selectors?"
+   },
+   {
+    "question": "How would you handle schema evolution for persisted store state across releases?",
+    "answer": "I would version the persisted payload, migrate old versions on load, and be willing to drop incompatible slices instead of trying to repair everything. Migrations should be deterministic and scoped per slice so one bad feature payload does not brick the whole app. You also need a fallback when migration fails, plus a way to prevent old tabs from re-persisting obsolete shapes over newer ones. Persisted state is effectively client-side data storage, so it needs the same discipline as backend schema changes.",
+    "real_world": "A release renames keys and changes an entity shape. Users with week-old tabs reload into a blank screen because selectors assume the new schema, while the persisted payload still has the old one.",
+    "code_lang": "typescript",
+    "code": "type Persisted = { version: number; data: unknown }\n\nfunction migrate(p: Persisted) {\n  if (p.version === 1) return { version: 2, data: v1ToV2(p.data) }\n  if (p.version === 2) return p\n  return { version: 2, data: freshState() }\n}",
+    "follow_up": "How would you coordinate migrations across multiple independently deployed frontend bundles?"
+   }
+  ]
+ }
+}

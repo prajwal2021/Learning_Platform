@@ -1,0 +1,477 @@
+{
+ "slug": "cassandra",
+ "name": "Cassandra",
+ "category": "Databases",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Apache Cassandra, and what kind of problems is it designed to solve?",
+    "answer": "Cassandra is a distributed NoSQL database built for high write throughput, horizontal scaling, and high availability across multiple nodes. It is designed for workloads where you need to keep serving reads and writes even if some machines or a whole data center fail. It is a poor fit for ad hoc joins and complex relational queries, but a good fit for large, always-on time-series, logging, and event data.",
+    "real_world": "Teams use Cassandra for metrics, IoT events, inbox state, or clickstream data where the system must keep accepting writes during node failures. A common mistake is choosing it for reporting queries that need lots of joins and flexible filtering.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does Cassandra achieve high availability without a single leader?"
+   },
+   {
+    "question": "What does it mean that Cassandra is a partitioned, replicated database?",
+    "answer": "Data is split across nodes by a partition key, and each partition is stored on one or more replicas according to the replication factor. Partitioning lets Cassandra scale out, while replication protects against node loss and improves availability. The trade-off is that you must choose keys carefully so data is evenly distributed and your queries can target the right partitions.",
+    "real_world": "If the partition key is badly chosen, one node can become a hotspot and slow the whole cluster. If replication is too low, a node outage can cause unavailable data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a partition key and a clustering key?"
+   },
+   {
+    "question": "What is a partition key in Cassandra, and why is it so important?",
+    "answer": "The partition key determines which node stores a row or group of rows. Cassandra hashes the partition key to place data, so good partition keys spread traffic and data evenly across the cluster. A bad partition key can create hotspots, large partitions, or queries that scan too much data.",
+    "real_world": "A table keyed only by a low-cardinality field like country can overload a few partitions because most writes land in the same place. Teams often redesign keys after seeing slow reads or uneven disk usage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use a composite partition key?"
+   },
+   {
+    "question": "What is a clustering key, and how is it different from a partition key?",
+    "answer": "A clustering key orders rows within a partition after Cassandra has chosen the partition using the partition key. The partition key decides where the data lives, while clustering keys decide how rows are sorted inside that partition. This matters because Cassandra is fast when a query matches the partition key and can efficiently slice the ordered rows inside it.",
+    "real_world": "A chat app might partition by conversation ID and cluster by message time so recent messages are read in order. Without a clustering key, you often end up sorting in the application.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do clustering columns affect the sort order of results?"
+   },
+   {
+    "question": "What does a primary key mean in Cassandra?",
+    "answer": "In Cassandra, the primary key is made up of the partition key and optionally one or more clustering columns. It uniquely identifies a row and also defines how data is distributed and ordered. Unlike in relational databases, the primary key is not just a uniqueness constraint; it is central to query performance and storage layout.",
+    "real_world": "Developers coming from SQL often assume they can add any index and query later, but in Cassandra the primary key design comes first. Bad primary key design usually shows up as slow queries or denormalized tables that are hard to maintain.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE events (\n  user_id text,\n  ts timeuuid,\n  event_type text,\n  PRIMARY KEY (user_id, ts)\n);",
+    "follow_up": "What query patterns would this table support well?"
+   },
+   {
+    "question": "Why do people say Cassandra is 'query-driven'?",
+    "answer": "Because you design tables around the queries you need, not around fully normalized relationships. Cassandra does not support joins the way relational databases do, so you usually duplicate data into multiple tables to serve different access patterns. The trade-off is more write complexity in exchange for fast, predictable reads.",
+    "real_world": "A product team might store the same order data in one table by customer and another by order status so both dashboards are fast. If they try to reuse one table for every query, they often end up with scans or awkward client-side filtering.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a denormalized table in Cassandra?"
+   },
+   {
+    "question": "What is a denormalized table, and why is it common in Cassandra?",
+    "answer": "A denormalized table stores repeated data instead of splitting it into many related tables. Cassandra uses denormalization because it does not do joins efficiently, so duplicating data is often the simplest way to make a query fast. The main trade-off is that updates may need to be written to multiple tables to keep data consistent.",
+    "real_world": "An event system may write the same event into a table by customer, a table by device, and a table by day. If one write path fails, the duplicated tables can drift unless the application handles retries carefully.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do lightweight transactions help with consistency, and what is their cost?"
+   },
+   {
+    "question": "What is a consistency level in Cassandra?",
+    "answer": "A consistency level tells Cassandra how many replicas must respond for a read or write to be considered successful. Lower consistency can improve latency and availability, while higher consistency gives stronger read correctness at the cost of waiting for more replicas. The right choice depends on whether your application values freshness, availability, or latency more.",
+    "real_world": "An application may use one level for user-facing reads and a stricter one for account balance updates. Teams often choose too-low consistency and then see stale reads after a recent write.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What can go wrong if read and write consistency levels are mismatched?"
+   },
+   {
+    "question": "What happens if you query Cassandra without filtering by the partition key?",
+    "answer": "Cassandra usually has to scan many partitions or rely on mechanisms that are much less efficient than a direct partition lookup. That can be slow and expensive, and in many cases the query is rejected unless you explicitly allow a full scan-style operation. The common fix is to redesign the table so the query can be answered by the primary key.",
+    "real_world": "Beginners often write a query that works on small test data but becomes painfully slow in production because it touches too many partitions. This is one of the most common Cassandra modeling mistakes.",
+    "code_lang": "sql",
+    "code": "-- Often a bad idea if 'status' is not part of the primary key\nSELECT * FROM orders WHERE status = 'PENDING';",
+    "follow_up": "How would you model the table to make that query efficient?"
+   },
+   {
+    "question": "When would you use an index in Cassandra, and when would you avoid it?",
+    "answer": "An index can help when you need to look up data by a column that is not part of the primary key, but it is not a substitute for good data modeling. It is usually best for low-cardinality or selective lookups on smaller datasets, not as a replacement for partition-key-based queries. If a query is important or high volume, it is often better to create a table designed for that access pattern.",
+    "real_world": "A team might add an index for a rarely used admin search screen, but not for a hot path API endpoint. If they use indexes for everything, performance and operational predictability often suffer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the common mistakes when choosing a data model for Cassandra?"
+   },
+   {
+    "question": "What is a table in Cassandra, and how is it different from a relational table?",
+    "answer": "A Cassandra table is a schema for storing rows with a fixed set of columns, but it is designed around the queries you need rather than around normalization. Rows are grouped by partition key, and within a partition they are ordered by clustering columns. Unlike a relational table, you usually create separate tables to support different read patterns instead of joining data at query time.",
+    "real_world": "Teams often model the same business object in several tables so the app can fetch it efficiently by user, by time, or by status. A common mistake is expecting one table to serve every query the way a normalized SQL schema might.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do partition and clustering columns affect how rows are stored inside a table?"
+   },
+   {
+    "question": "What are the common Cassandra data types you should know as a beginner?",
+    "answer": "You should know the basic scalar types like text, int, bigint, boolean, uuid, timeuuid, date, and timestamp. You should also know collection types such as list, set, and map. Picking the right type matters because it affects how values are stored, compared, and queried.",
+    "real_world": "Using uuid for identifiers avoids collisions and is common in distributed systems. Choosing the wrong collection type can make updates or lookups awkward and lead to inefficient data modeling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use timeuuid instead of uuid?"
+   },
+   {
+    "question": "How does Cassandra store rows within a partition?",
+    "answer": "Rows inside a partition are ordered by the clustering columns in the order you define them. That ordering is one reason Cassandra is good at range queries within a partition, such as fetching the latest events for one user. If you want efficient access, the clustering order should match how you plan to read the data.",
+    "real_world": "An events table might cluster by event time so the newest rows are read first. If the clustering order does not match the query pattern, the application may need extra filtering or more expensive scans.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if you query rows in a different order than the clustering columns define?"
+   },
+   {
+    "question": "What is a collection type in Cassandra, and when is it useful?",
+    "answer": "Collections let you store multiple values in one column, such as a set of tags or a map of small attributes. They are useful for compact, simple groupings where you do not need a separate table. You should avoid using collections for large or unbounded data, because they can become awkward to update and query.",
+    "real_world": "A product record might keep a small set of labels or localized display names in a collection. If that data grows without limit, a separate table is usually a better design.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE products (\n  id uuid PRIMARY KEY,\n  tags set<text>,\n  attrs map<text, text>\n);",
+    "follow_up": "What is the difference between a set and a list in Cassandra?"
+   },
+   {
+    "question": "What is the purpose of the TTL feature in Cassandra?",
+    "answer": "TTL lets you set data to expire automatically after a certain amount of time. It is useful for temporary data like sessions, cache entries, or short-lived events. The trade-off is that expired data is removed eventually rather than instantly, so you should not use TTL for precise scheduling or business-critical deletes.",
+    "real_world": "A team might store session tokens with TTL so inactive sessions disappear automatically. A common mistake is assuming TTL expiration means the row vanishes exactly at that second in every query.",
+    "code_lang": "sql",
+    "code": "INSERT INTO sessions (session_id, user_id)\nVALUES (uuid(), 42)\nUSING TTL 3600;",
+    "follow_up": "What happens if you update a row that already has a TTL?"
+   },
+   {
+    "question": "What is compaction in Cassandra?",
+    "answer": "Compaction is the background process that merges SSTables and removes data that is no longer needed, including old versions and tombstones that are safe to drop. It helps keep reads efficient and storage from growing unnecessarily. Different compaction strategies exist, and the right choice depends on the write and read pattern.",
+    "real_world": "A cluster with many updates can accumulate lots of SSTables, which makes reads slower because Cassandra has to check more files. Compaction is what gradually cleans that up in the background.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What symptoms would tell you compaction is falling behind?"
+   },
+   {
+    "question": "What is the difference between INSERT and UPDATE in Cassandra?",
+    "answer": "In Cassandra, INSERT and UPDATE both write data, and they are often treated as upserts. If the row does not exist, INSERT creates it; if it does exist, UPDATE changes the specified columns. This matters because Cassandra is optimized for writes, and you do not usually need a separate existence check before writing.",
+    "real_world": "A service can safely write a user profile without first reading it to see whether the row exists. New engineers coming from SQL sometimes expect UPDATE to fail when the row is missing, but Cassandra does not work that way.",
+    "code_lang": "sql",
+    "code": "UPDATE users\nSET email = 'a@example.com'\nWHERE user_id = 123;",
+    "follow_up": "What happens if you update only one column in a wide row?"
+   },
+   {
+    "question": "What is the purpose of the WHERE clause in Cassandra, and what are its limits?",
+    "answer": "The WHERE clause narrows the rows Cassandra should read, but it is not a free-form filter like in SQL. In practice, it usually needs the partition key, and additional conditions must match the table’s primary key structure or use supported operators. The key idea is that Cassandra expects you to locate data by its storage layout, not by scanning and filtering arbitrary rows.",
+    "real_world": "A beginner often writes a query that looks valid but fails because it tries to filter by a non-key column. In production, that usually means the table model does not match the access pattern and needs to be redesigned.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which WHERE clause patterns are allowed on clustering columns?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you choose a good partition key in Cassandra for a high-traffic table?",
+    "answer": "You want a partition key that spreads reads and writes evenly, keeps partitions a manageable size, and matches your most common lookup patterns. A bad key creates hot partitions or huge partitions, both of which hurt latency and compaction. In practice, you often combine a business identifier with a bucketing field like time when one entity can generate too many rows. The key trade-off is between even distribution and query simplicity.",
+    "real_world": "This comes up in event or metrics tables where one user, tenant, or device can generate far more traffic than others. If you pick only the tenant as the partition key, one large tenant can overload a node.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect that a partition key is causing hot partitions in production?"
+   },
+   {
+    "question": "What are tombstones in Cassandra, and why can they hurt performance?",
+    "answer": "A tombstone is a marker that says a value or row was deleted or expired. Cassandra has to read and reconcile tombstones until compaction can purge them, so too many tombstones increase read latency and can make queries fail if they scan a lot of dead data. They are common with deletes, updates to collection elements, and TTL expiration. The practical goal is to avoid creating large numbers of tombstones in hot read paths.",
+    "real_world": "Teams often see sudden read latency spikes after a bulk delete or after TTL-based data ages out. The table still exists, but reads get slower because the coordinator has to process many tombstones.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns would you use to reduce tombstones in a table with expiring data?"
+   },
+   {
+    "question": "How does Cassandra handle eventual consistency when different replicas briefly disagree?",
+    "answer": "Cassandra uses timestamps and read repair mechanisms to converge replicas over time. For a given cell, the write with the latest timestamp wins, so concurrent updates are resolved by last-write-wins unless you use lightweight transactions. A read at a lower consistency level may return stale data if not enough replicas have the latest write yet. The trade-off is lower latency and higher availability versus immediately consistent reads.",
+    "real_world": "This matters when a service writes a status change and another service reads it right away from a different replica. If the consistency level is too low, the second service can briefly see the old value.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use lightweight transactions instead of normal writes?"
+   },
+   {
+    "question": "What is the purpose of compaction strategy choice, and how do you think about TimeWindowCompactionStrategy versus others?",
+    "answer": "Compaction strategy controls how SSTables are merged, which affects read amplification, disk usage, and tombstone cleanup. TimeWindowCompactionStrategy is often a good fit for time-series data because it groups data by time windows and works well when old data mostly ages out together. Other strategies may be better for general workloads with different access patterns. The key is to match the compaction behavior to how data is written and queried.",
+    "real_world": "If you use the wrong strategy for logs or metrics, old SSTables can pile up and reads get slower over time. On the other hand, a time-window strategy can be a poor fit if you frequently update old records.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What symptoms would tell you that a table's compaction strategy is a bad fit?"
+   },
+   {
+    "question": "How do you model a many-to-many relationship in Cassandra without using joins?",
+    "answer": "You usually create one table per access pattern and duplicate the relationship in both directions if needed. For example, if users belong to groups and you need lookups by user and by group, you store a user-to-groups table and a group-to-users table. This duplicates data, but it makes each query efficient and predictable. The trade-off is extra write work and the need to keep the tables in sync in your application.",
+    "real_world": "A messaging or collaboration app often needs to fetch all channels for a user and all members of a channel. Cassandra handles that well only if you design separate tables for each lookup path.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you keep those duplicated tables consistent if one write partially fails?"
+   },
+   {
+    "question": "What happens if a partition becomes too large, and how do you fix it?",
+    "answer": "Very large partitions make reads slower, increase memory pressure, and can create uneven compaction and repair work. They also make a single hot partition more likely, which can overload a node even if the cluster is healthy overall. The usual fix is to bucket the data, often by time or another bounded dimension, so each partition stays within a reasonable size. The exact bucket choice depends on the query pattern.",
+    "real_world": "This is common in audit logs, chat history, or IoT streams where one device or customer can accumulate millions of rows. The system looks fine until reads on that partition start timing out.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you redesign a table where one partition key is growing without bound?"
+   },
+   {
+    "question": "When would you choose a batch in Cassandra, and what is a common mistake people make with batches?",
+    "answer": "Batches are mainly for grouping multiple mutations that should be applied together, especially when they touch the same partition. They are not a performance feature for bulk loading or for making many unrelated writes faster. A common mistake is using large batches across many partitions, which adds coordination overhead and can hurt latency. Use batches sparingly and only when they fit the data model.",
+    "real_world": "A team might batch a write to a base table and a related lookup table for one entity. Problems start when they try to batch thousands of user updates together and see unpredictable slowdowns.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a logged batch and an unlogged batch?"
+   },
+   {
+    "question": "How do lightweight transactions differ from normal Cassandra writes, and what is the trade-off?",
+    "answer": "Lightweight transactions use a consensus protocol so Cassandra can compare and conditionally apply a write, which lets you do things like 'insert only if not exists' or update only if a value matches. They provide stronger guarantees for that row, but they are slower and have higher latency than ordinary writes. You should use them only for cases that truly need conditional correctness, like idempotency keys or unique reservations. For most data, normal writes are better because they scale more easily.",
+    "real_world": "This matters for preventing duplicate account creation or double-booking inventory. Teams often discover that using conditional writes everywhere can become a latency bottleneck.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure modes should you test around conditional writes?"
+   },
+   {
+    "question": "What is the practical difference between ALLOW FILTERING and modeling the table correctly?",
+    "answer": "ALLOW FILTERING lets Cassandra execute a query that would otherwise be rejected, but it may need to scan a lot of data before filtering results. That can work for small tables or rare admin queries, but it is usually a sign that the table does not match the access pattern. In production, it often leads to unpredictable latency as data grows. A correctly modeled table is almost always the better long-term solution.",
+    "real_world": "An engineer may use ALLOW FILTERING to ship quickly, then later discover that the query becomes a cluster-wide slow path. It can be especially painful when one dashboard or API endpoint starts timing out under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you inherit a query using ALLOW FILTERING, how do you decide whether to rewrite the table or keep it?"
+   },
+   {
+    "question": "How do you debug a Cassandra read that is much slower than expected?",
+    "answer": "Start by checking whether the query is hitting a single partition or scanning more data than intended, then look for tombstones, large partitions, and cache misses. You also want to compare latency at the client, coordinator, and replica levels so you know where the time is spent. If the query is correct but still slow, compaction pressure, disk I/O, or an unhealthy replica set may be the cause. The best debugging path is usually to verify the data model first, then the storage and cluster health.",
+    "real_world": "A real incident often looks like one API endpoint slowing down while the rest of the cluster seems fine. The root cause may be a new query pattern that scans a partition with lots of tombstones after a TTL-heavy workload.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or logs would you inspect first during that investigation?"
+   },
+   {
+    "question": "How do you think about read repair and why can it be useful but also risky in Cassandra?",
+    "answer": "Read repair is a mechanism that can reconcile replicas when a read notices they disagree. It can improve convergence without waiting for background repair, but it adds extra work on reads and can increase latency. In practice, you should not rely on it as your only repair strategy because it only helps for the data you happen to read. Regular repair is still needed to keep replicas consistent across the whole dataset.",
+    "real_world": "A team sees stale values on one node after an outage and assumes reads will eventually fix everything. Later they discover rarely read partitions can stay inconsistent for a long time unless repair jobs run.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does regular repair differ from read repair in terms of scope and operational cost?"
+   },
+   {
+    "question": "What is hinted handoff, and when does it help versus when does it not solve the problem?",
+    "answer": "Hinted handoff lets a replica temporarily store a write intended for another replica that is unavailable, then replay it later when the node returns. It helps with short outages and avoids immediate write failures at lower consistency levels. It does not replace repair, because hints can expire or be unavailable if the node is down too long. It is a durability aid, not a guarantee that every missed replica will catch up.",
+    "real_world": "During a rolling restart, one node misses writes for a few minutes and catches up from hints after it comes back. If the outage lasts longer, the team still needs repair or the node can remain behind.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens to availability if the coordinator cannot satisfy the requested consistency level while a replica is down?"
+   },
+   {
+    "question": "How do clustering order choices affect query patterns and write behavior in Cassandra?",
+    "answer": "Clustering order determines how rows are sorted within a partition, which affects how efficiently you can fetch the newest or oldest rows first. If your common query is time-ordered and you need the latest rows, descending clustering order can avoid extra client-side work. The trade-off is that the order should match the dominant read pattern for that table; changing it later usually means creating a new table. It does not change partitioning, only the row order inside each partition.",
+    "real_world": "An activity feed table is read mostly for the latest items, so the team stores rows in descending time order to make the first page fast. Without that, every request would need to scan deeper into the partition.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE events_by_user (\n  user_id text,\n  created_at timeuuid,\n  event text,\n  PRIMARY KEY (user_id, created_at)\n) WITH CLUSTERING ORDER BY (created_at DESC);",
+    "follow_up": "What are the trade-offs between timeuuid and a plain timestamp for time-ordered data?"
+   },
+   {
+    "question": "What is a static column in Cassandra, and when would you use one?",
+    "answer": "A static column stores one value per partition rather than one value per row. It is useful for partition-level metadata, like a user name or account status that applies to all rows in the partition. This avoids repeating the same value on every row and can simplify reads. The trade-off is that it only makes sense when the data really belongs to the whole partition, not individual rows.",
+    "real_world": "A messaging table stores many messages per conversation, but the conversation title should be shown on every page. A static column lets the app read that title once without duplicating it on each message.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE messages_by_thread (\n  thread_id text,\n  sent_at timestamp,\n  title text STATIC,\n  body text,\n  PRIMARY KEY (thread_id, sent_at)\n);",
+    "follow_up": "Can static columns ever cause surprising query results or update behavior?"
+   },
+   {
+    "question": "How do secondary indexes in Cassandra differ from modeling a separate table for the same access pattern?",
+    "answer": "A secondary index can make an alternate lookup path convenient, but it is usually best when the indexed column has limited cardinality and the result set is small. A separate table is more predictable because it is designed for the exact query pattern and avoids scatter-gather behavior. The trade-off is extra write amplification and operational complexity when you maintain multiple tables. For important or high-volume queries, modeling a table is usually safer than depending on an index.",
+    "real_world": "A product search feature starts fine with a secondary index on category, but traffic grows and queries become uneven across replicas. The team later replaces it with a dedicated table built for that access pattern.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of data distributions make a secondary index especially painful?"
+   },
+   {
+    "question": "What is a materialized view in Cassandra, and why do teams treat it cautiously?",
+    "answer": "A materialized view is a server-managed alternative table that is automatically updated from a base table for a different query pattern. It can reduce application-side duplication, but it adds write overhead and operational complexity. Teams treat it cautiously because view updates and repair behavior can be harder to reason about than explicit tables. In many projects, maintaining the extra table in the application is easier to debug and control.",
+    "real_world": "A team wants to query orders by customer and by status, and materialized views look tempting. After seeing inconsistent behavior under load, they move to explicit denormalized tables they can own directly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer an explicit denormalized table over a materialized view?"
+   },
+   {
+    "question": "How should you think about paging in Cassandra, and what problem does paging solve?",
+    "answer": "Paging lets the coordinator return a limited slice of a large result set and continue from where it left off. It is important because Cassandra can return many rows from a single partition or across many partitions, and loading everything at once can be expensive for both server and client. The key trade-off is that paging makes reads more manageable, but it does not make a bad query pattern efficient. If a query needs many pages, the underlying data model may still be wrong.",
+    "real_world": "An admin dashboard pulls recent activity for a busy tenant and times out when it requests too much at once. Paging lets the UI load the data incrementally instead of forcing a giant response.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What can go wrong if a client resumes paging with an old or mismatched paging state?"
+   },
+   {
+    "question": "How do tombstones affect reads during deletes or updates, and what practical symptoms do they cause?",
+    "answer": "A tombstone marks deleted or expired data so replicas can eventually reconcile the removal. During reads, Cassandra must scan tombstones and skip them, which can make queries slow if there are many of them. You often see high latency, timeouts, or warnings about large tombstone scans. The practical fix is usually to reduce churn, model data to avoid frequent per-cell deletes, and choose TTL or table design carefully.",
+    "real_world": "A time-series table with short-lived data starts slowing down even though the row count looks reasonable. The issue is not the live data but the accumulation of tombstones from expired rows.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish tombstone pressure from a large-partition problem when debugging a slow read?"
+   },
+   {
+    "question": "What is the difference between QUORUM and LOCAL_QUORUM, and when would you choose one over the other?",
+    "answer": "QUORUM considers a majority of replicas for the replicated data set, while LOCAL_QUORUM limits that majority to the local data center. In a multi-DC deployment, LOCAL_QUORUM is usually preferred for latency-sensitive application traffic because it avoids cross-DC round trips. QUORUM can be appropriate for global coordination or when the application truly needs a stronger multi-DC view. The trade-off is between lower latency and broader consistency across data centers.",
+    "real_world": "A globally deployed service sees read latency spikes because every user request waits on another region. Switching user-facing reads and writes to LOCAL_QUORUM keeps traffic local and predictable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What consistency level would you choose for a leader election or distributed lock pattern, and why?"
+   },
+   {
+    "question": "How do you test a Cassandra-backed application without relying on production-like behavior, and what are the limits of unit tests here?",
+    "answer": "Unit tests are good for verifying query construction and repository logic, but they do not prove that a schema supports the access pattern or that latency will be acceptable. For that, you need integration tests against a real Cassandra instance or a realistic test environment. It is also worth testing failure cases such as missing replicas, retries, and pagination behavior. The main limit is that a fast unit test cannot catch modeling mistakes that only show up under real data volume.",
+    "real_world": "A service passes all unit tests but fails in staging because a query needs a partition key that the repository code never supplies. Integration tests with real schema and sample data catch that earlier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What Cassandra behaviors do you consider essential to cover in integration tests?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Walk me through the Cassandra write path from the coordinator to durable storage, including what happens during a node failure.",
+    "answer": "The coordinator forwards the mutation to the replica set, and each replica appends it to the commit log before applying it to the memtable. Once enough replicas acknowledge for the requested consistency level, the client sees success even though the data may not be in SSTables yet. Later, memtables flush to SSTables and compaction merges them. If a replica is down, the write may still succeed at lower consistency levels, and recovery depends on mechanisms like hints, repair, and the commit-log-backed durability on the replicas that did receive it.",
+    "real_world": "A common incident is \"writes are fast but reads are inconsistent after a node outage\"; the root cause is often successful writes at a lower consistency level plus delayed repair after the failed replica returns.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does the commit log configuration affect durability, latency, and failure recovery?"
+   },
+   {
+    "question": "How does the Cassandra read path work internally, and where do the biggest latency spikes usually come from?",
+    "answer": "The coordinator contacts enough replicas for the requested consistency level, collects digests or full data, and may need extra round trips if replicas disagree. On each replica, the read checks caches, bloom filters, partition summaries and indexes, then may touch multiple SSTables and memtables before merging results. Latency spikes usually come from many SSTable lookups, disk seeks, decompression, tombstone-heavy scans, and replica mismatch that triggers extra reconciliation work. Large partitions make this worse because more data has to be scanned and merged even for a small logical result.",
+    "real_world": "Teams often see p99 reads degrade after write-heavy periods because compaction falls behind, SSTable counts rise, and reads fan out across too many files.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you check first to tell whether a slow read is a storage problem, a data-model problem, or a consistency-level problem?"
+   },
+   {
+    "question": "What exactly does repair do in Cassandra, and how would you design a repair strategy for a large multi-terabyte cluster?",
+    "answer": "Repair compares token ranges across replicas and synchronizes differences so replicas converge before gc_grace-related data loss becomes possible. In a large cluster, you usually run repair incrementally and continuously, scope it by keyspace or token range, and control concurrency so it does not saturate disks and network. The main trade-off is operational cost versus anti-entropy guarantees: skipping repair reduces load in the short term but increases the chance of inconsistent reads and resurrected deletes. The strategy also has to align with how long nodes can be down and with your tombstone retention window.",
+    "real_world": "A classic production failure is deleting data, missing repairs for too long, then bringing back an old replica and seeing deleted rows reappear because anti-entropy never converged before tombstones were purged.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does repair interact with gc_grace_seconds and node replacement?"
+   },
+   {
+    "question": "Explain vnodes versus a smaller number of tokens per node. Why do teams sometimes reduce vnode count in big clusters?",
+    "answer": "With vnodes, each node owns many token ranges instead of one or a few, which makes bootstrap and rebalance more uniform and simplifies adding capacity. The downside is more streams, more neighbors per operation, and more metadata and repair complexity, especially in large clusters. Teams often reduce the number of tokens per node to make repair, streaming, and failure blast radius more predictable. The trade-off is between balancing convenience and operational overhead at scale.",
+    "real_world": "In larger fleets, a single node replacement with many tiny token ranges can create a storm of streaming sessions and compaction load across the cluster, turning a routine operation into a multi-hour incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does token ownership affect hotspot diagnosis and capacity planning?"
+   },
+   {
+    "question": "What happens during bootstrap, decommission, and replace-node operations, and what are the main risks in each?",
+    "answer": "Bootstrap adds a node and streams it the token ranges it will own; decommission streams a node's ranges away before removing it; replace-node rebuilds a failed node's data ownership onto a new machine. All three are fundamentally streaming operations, so they stress network, disks, compaction, and sometimes cache locality. The main risks are saturating I/O, triggering long compaction backlog, choosing the wrong replacement procedure, and underestimating the effect on foreground latency while ownership changes. You have to treat them as data movement events, not just cluster membership changes.",
+    "real_world": "A frequent outage pattern is adding capacity during peak traffic without throttling streams, which fixes storage imbalance but pushes read and write latency over SLOs due to compaction and disk contention.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely add nodes to a hot cluster that is already near its disk or I/O limits?"
+   },
+   {
+    "question": "How should you think about replication factor across one datacenter versus multiple datacenters, and what failure model are you buying?",
+    "answer": "Replication factor determines how many copies exist and therefore how many failures you can tolerate while still meeting a given consistency level. In one datacenter, the choice is mostly about availability versus storage and write cost; in multiple datacenters, it is also about whether each datacenter can serve traffic independently and what happens during inter-DC failures. Higher replication improves resilience and read options but increases storage, repair volume, and write amplification. The right decision depends on whether you are designing for rack loss, node loss, full-DC isolation, or low-latency local reads with remote disaster recovery.",
+    "real_world": "Teams sometimes discover too late that their multi-DC setup was sized for node failures, not for a whole datacenter serving traffic alone, so a failover works functionally but overloads the surviving DC.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose consistency levels in a multi-DC deployment that has active traffic in each region?"
+   },
+   {
+    "question": "What are Bloom filters, partition indexes, and key caches in Cassandra, and how do they change read performance?",
+    "answer": "Bloom filters help Cassandra avoid touching SSTables that definitely do not contain a partition, which reduces unnecessary disk work on reads. Partition indexes and summaries help locate data inside SSTables efficiently, while the key cache can skip part of that lookup path for hot partitions. These structures are there to reduce I/O and CPU per read, but they consume memory and their effectiveness depends on data shape and access locality. They help most when reads are selective and the working set has some repetition; they help less when a query has to scan widely anyway.",
+    "real_world": "After a memory tuning change, teams sometimes see read latency regress because cache hit rates collapse and the system falls back to more index lookups and disk reads across many SSTables.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you had spare memory, how would you decide whether to give more of it to OS page cache or Cassandra-managed caches?"
+   },
+   {
+    "question": "How do memtables, flushes, and backpressure interact, and what failure mode do you get when the storage layer cannot keep up with writes?",
+    "answer": "Writes land in memtables and commit logs first, then memtables flush to SSTables when thresholds are reached. If flush and compaction cannot keep up, Cassandra applies backpressure because it cannot safely keep accumulating mutable in-memory state and commit-log segments forever. The visible symptoms are increasing write latency, pending flushes and compactions, and eventually timeouts even though the write path is usually thought of as append-friendly. This is often caused by disk saturation, too many indexes or tables, or compaction debt from an unsuitable data model or compaction strategy.",
+    "real_world": "A production cluster can look healthy at the network layer while writes time out simply because SSD throughput is exhausted by flush plus compaction, not by client traffic alone.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which metrics would tell you whether the bottleneck is memtable pressure, commit log pressure, or compaction backlog?"
+   },
+   {
+    "question": "Why is clock behavior such a big deal in Cassandra, and what kinds of bugs show up when time is wrong?",
+    "answer": "Cassandra uses timestamps to reconcile concurrent writes with last-write-wins semantics, so bad clocks can make an older write beat a newer one. Clock skew can also distort TTL expiration and make cross-node behavior look inconsistent even when the system is functioning as designed. The danger is subtle because the cluster may stay available while silently violating application expectations about ordering. You need disciplined time synchronization and you should avoid assuming Cassandra will infer causality from arrival order.",
+    "real_world": "A real incident pattern is one application node with a skewed clock writing \"future\" timestamps, causing later valid updates from healthy nodes to appear lost until enough time passes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If your application needs stronger ordering guarantees than timestamp reconciliation gives you, what design options do you have?"
+   },
+   {
+    "question": "Suppose one token range gets far hotter than the rest even though partitions look reasonable individually. How would you diagnose and mitigate that kind of hotspot?",
+    "answer": "I would first separate partition-level skew from token-range skew by looking at per-node request rate, ownership, latency, and the hottest partitions or partition key prefixes. A hotspot can come from an uneven token distribution, a small set of extremely hot keys, a time-based bucketing pattern that concentrates current traffic, or an application-side retry storm. Mitigation might mean salting or bucketing writes, changing the data model for the hottest access path, adding capacity only after confirming ownership imbalance, or adjusting client behavior if the issue is coordinator concentration. The key is that \"balanced partition sizes\" does not guarantee balanced traffic.",
+    "real_world": "Teams often add nodes and see no improvement because the real problem is a tiny set of hot partitions or all traffic being aimed at the same token range for the current time bucket.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you redesign a table that has unavoidable celebrity-key traffic without breaking the main read pattern?"
+   },
+   {
+    "question": "Can you explain how Cassandra uses commit log sync modes, and what latency versus durability trade-off they create?",
+    "answer": "Every write is appended to the commit log and applied to a memtable before Cassandra acks it at the requested consistency level. The sync mode controls when commit log data is forced to disk: more frequent fsync lowers potential data loss on a crash but raises tail latency, while batched or periodic syncing improves throughput at the cost of a wider loss window on process or host failure. The key point is that replication and commit log durability are separate concerns: RF protects against node loss, but acks can still be lost if multiple replicas crash before their commit logs are durable.",
+    "real_world": "Teams often discover this during power events or kernel panics: writes that were acknowledged at the client can disappear if the durability window was wider than expected and multiple replicas were affected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose commit log settings for a low-latency service versus a financial ledger?"
+   },
+   {
+    "question": "What is the difference between a normal timestamp-based write conflict and a lightweight transaction conflict in Cassandra?",
+    "answer": "Normal writes use last-write-wins based on timestamps at the cell level, so concurrent updates can silently overwrite each other if they touch the same cells and the later timestamp wins. Lightweight transactions add a Paxos round so the cluster agrees on whether a conditional write should apply, which gives linearizable compare-and-set semantics for that partition but with much higher latency and lower throughput. The important trade-off is that timestamps are cheap and scalable but do not prevent lost updates, while LWT prevents specific races but only where you explicitly pay for coordination.",
+    "real_world": "This matters when implementing uniqueness, state transitions, or idempotency keys. A normal INSERT is not enough if two clients can create the same logical record at the same time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you needed uniqueness without putting all traffic behind LWT, what design options would you consider?"
+   },
+   {
+    "question": "How do speculative retries help Cassandra reads, and when can they make a cluster less stable instead of faster?",
+    "answer": "Speculative retry sends an extra read to another replica when the coordinator thinks the original request is taking unusually long. It can cut tail latency when a minority of replicas are slow, because the first successful response wins and the coordinator stops waiting on the laggard. But it also increases read amplification and cross-node work, so under saturation it can create a feedback loop where extra retries make more replicas slow. It is useful for occasional stragglers, not as a fix for a generally overloaded cluster.",
+    "real_world": "A common incident pattern is rising p99 read latency followed by enabling aggressive speculative retry, then seeing CPU, network, and disk queues climb across the whole ring.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you check before deciding that speculative retry is helping rather than masking a deeper problem?"
+   },
+   {
+    "question": "What are wide rows good at in Cassandra, and where is the practical limit where they start hurting you?",
+    "answer": "Wide rows are efficient when you need ordered access to many related items under one partition key, like time-series data for a bounded bucket, because Cassandra can seek directly into the partition and read a slice by clustering columns. They become problematic when partition index structures, compaction work, repair streaming, and single-partition reads all get too large, creating high GC pressure and long tail latencies. The practical limit depends on row size, access pattern, and hardware, so I think in terms of keeping partitions bounded enough that a single hot key or repair range does not dominate a node.",
+    "real_world": "In production, a few giant partitions often explain why one node keeps timing out during repair or why specific user IDs have much worse latency than the rest.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you had to keep time-ordered queries but split an oversized partition, how would you preserve the read path?"
+   },
+   {
+    "question": "How do STCS, LCS, and TWCS differ in write amplification and read amplification, and how does that affect hardware sizing?",
+    "answer": "Size-tiered compaction favors write throughput because it merges similarly sized SSTables, but reads may touch more files, especially under update-heavy workloads. Leveled compaction keeps overlapping SSTables under tighter control, which usually improves read latency at the cost of much higher compaction and disk write amplification. Time-window compaction is optimized for mostly immutable time buckets, where old windows stop compacting and TTL-heavy workloads avoid repeatedly rewriting cold data. The hardware implication is that LCS usually wants more IOPS and compaction headroom, while STCS and TWCS tolerate cheaper write paths if their read patterns fit.",
+    "real_world": "Teams moving a mixed OLTP-like table from STCS to LCS often fix p99 reads but only after discovering their disks or cloud volumes cannot absorb the extra compaction traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What workload characteristics would make you reject LCS even if read latency is important?"
+   },
+   {
+    "question": "What failure mode do you get when gc_grace_seconds is set too low, and why is repair part of that story?",
+    "answer": "If deleted data is purged before all replicas have learned about the tombstone, an out-of-date replica can later reintroduce the old value during repair or replica reconciliation; that is the classic zombie data problem. gc_grace_seconds exists to keep tombstones around long enough for missed replicas to be repaired after outages. Setting it too high retains more tombstones and hurts reads, but setting it too low assumes a repair cadence and outage profile you may not actually meet. So the safe value depends on how reliably you repair and how long replicas can be out of contact.",
+    "real_world": "This shows up after a node was down for days, someone lowered grace to reduce tombstones, and deleted records suddenly reappear after maintenance.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is it actually reasonable to lower gc_grace_seconds substantially?"
+   },
+   {
+    "question": "How does Cassandra handle range movement and streaming under disk pressure, and why do nodes sometimes fail during topology changes even when the math says capacity is enough?",
+    "answer": "Bootstrap, rebuild, decommission, and replace all stream SSTable data by token range, which creates temporary spikes in disk usage, compaction work, and network traffic. Capacity planning that only counts final replicated data misses the transient overhead from streamed files, anti-compaction, compaction rewrites, snapshots, and uneven range sizes. Under disk pressure, nodes can stall on flush or compaction, and a topology change can tip them into write timeouts or even a no-space failure before streaming finishes. So you need free-space headroom for the operation, not just enough capacity for the steady state.",
+    "real_world": "Clusters often fail mid-decommission because the target nodes had room for the end state but not for the temporary duplicate SSTables and compaction churn during the move.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What checks would you do before replacing a dead node in a nearly full cluster?"
+   },
+   {
+    "question": "What does it mean that Cassandra isolation is per-partition and not relational transaction isolation, and where do people get surprised?",
+    "answer": "Cassandra guarantees atomicity and isolation for mutations within a single partition for a single statement, but it does not provide multi-statement serializable transactions across arbitrary rows the way an RDBMS can. Even within one logical workflow, updates to different tables or partitions can become visible at different times, and readers can observe partially propagated denormalized state. Lightweight transactions add stronger guarantees only for the partition and condition involved; they do not turn the whole schema into fully transactional storage. The surprise usually comes when teams assume their application-level invariant spans multiple partitions or tables without extra coordination.",
+    "real_world": "For example, writing an order row and an inventory reservation row separately can leave the system in an inconsistent intermediate state if one write succeeds and the other fails or is retried differently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design around that if you needed a cross-table business invariant?"
+   },
+   {
+    "question": "If a read at LOCAL_QUORUM times out but an immediate retry succeeds, what are the likely internal causes beyond just 'the node was slow'?",
+    "answer": "A retry succeeding right away usually means the cluster was healthy enough to answer, but one path had a transient stall. Common causes are a replica hitting a long GC pause, a disk stall during SSTable access, a compaction or flush backlog, coordinator overload, network jitter, or a digest mismatch that turned a cheap read into an extra data read. It can also be a hotspot where one replica for that token range is consistently slower than its peers. The right mental model is not randomness but queueing: a brief burst on the critical path can push one quorum read over the timeout and the next one under it.",
+    "real_world": "",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell from tracing or metrics whether the coordinator or a specific replica was the bottleneck?"
+   },
+   {
+    "question": "What are the real trade-offs of using logged versus unlogged batches when writes span many partitions?",
+    "answer": "Logged batches add a batch log so the group can be replayed if the coordinator fails mid-flight, but they do not make a multi-partition write atomic in the relational sense and they add extra coordination and storage work. Unlogged batches avoid that overhead, so they are mainly a network optimization when you are sending multiple mutations that you would have sent separately anyway. For many partitions, both can be harmful because the coordinator fans out to many replicas and becomes a bottleneck. In Cassandra, batching is usually about efficiency for related mutations, not about transaction semantics.",
+    "real_world": "A frequent production issue is a service wrapping thousands of independent writes into one logged batch, then blaming Cassandra when coordinator CPU spikes and latencies explode.",
+    "code_lang": "sql",
+    "code": "BEGIN UNLOGGED BATCH\n  INSERT INTO events_by_user (user_id, ts, id) VALUES (1, now(), 10);\n  INSERT INTO events_by_user (user_id, ts, id) VALUES (1, now(), 11);\nAPPLY BATCH;",
+    "follow_up": "When is a logged batch actually the right tool?"
+   }
+  ]
+ }
+}

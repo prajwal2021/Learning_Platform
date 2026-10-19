@@ -1,0 +1,413 @@
+{
+ "slug": "php",
+ "name": "PHP",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between `==` and `===` in PHP?",
+    "answer": "`==` compares values with type juggling, so PHP may convert operands before comparing them. `===` compares both value and type, so it is stricter and usually safer for avoiding surprises. In most application code, `===` is the better default unless you explicitly want coercion.",
+    "real_world": "This matters when comparing user input, database results, or values from JSON, where strings and integers often get mixed. Bugs from loose comparison are a common source of login or validation issues.",
+    "code_lang": "php",
+    "code": "var_dump('5' == 5);   // true\nvar_dump('5' === 5);  // false",
+    "follow_up": "When would loose comparison still be useful, if ever?"
+   },
+   {
+    "question": "How do `include`, `require`, `include_once`, and `require_once` differ?",
+    "answer": "`include` and `require` both load and execute another PHP file, but `require` raises a fatal error if the file cannot be loaded, while `include` only raises a warning and the script can continue. The `_once` versions prevent the same file from being loaded multiple times. Use `require` for mandatory files like bootstrap or config, and `include` for optional pieces.",
+    "real_world": "This comes up when splitting a codebase into shared files. Using the wrong one can either hide a missing dependency until later or crash the request immediately.",
+    "code_lang": "php",
+    "code": "require 'config.php';\ninclude 'sidebar.php';\nrequire_once 'helpers.php';\ninclude_once 'analytics.php';",
+    "follow_up": "Why might `require_once` be slower or less preferable in some cases?"
+   },
+   {
+    "question": "What happens if you compare a string to a number in PHP?",
+    "answer": "PHP may coerce the string to a number during comparison, depending on the operator and the values involved. This can produce surprising results if you are not careful, especially with loose comparisons. To avoid bugs, compare values with strict operators and validate input types explicitly.",
+    "real_world": "This shows up in form handling and authentication code, where input often arrives as strings. A loose comparison can accidentally treat different values as equal.",
+    "code_lang": "php",
+    "code": "var_dump('10' == 10);   // true\nvar_dump('10abc' == 10); // depends on PHP behavior and context\nvar_dump('10' === 10);   // false",
+    "follow_up": "How would you safely validate that a form field contains an integer?"
+   },
+   {
+    "question": "What is the purpose of `null` in PHP?",
+    "answer": "`null` means a variable has no value. It is commonly used to represent missing data, uninitialized state, or an optional field that has not been set yet. It is different from `0`, `false`, or an empty string, so checking for `null` can be important when handling optional inputs.",
+    "real_world": "This matters in forms, APIs, and database records where a field may be intentionally absent. Confusing `null` with empty values can lead to incorrect validation or updates.",
+    "code_lang": "php",
+    "code": "$name = null;\nvar_dump($name === null); // true\nvar_dump($name == '');    // false",
+    "follow_up": "How do `isset()` and `empty()` behave differently with `null`?"
+   },
+   {
+    "question": "What does `isset()` check in PHP?",
+    "answer": "`isset()` returns true if a variable is set and is not `null`. It is often used to guard access to values that may not exist yet, especially in arrays or superglobals. It does not tell you whether a value is empty, only whether it exists and has a non-null value.",
+    "real_world": "This is common when reading `$_GET`, `$_POST`, or array keys from decoded JSON. Without it, code can emit notices or make assumptions about missing fields.",
+    "code_lang": "php",
+    "code": "$data = ['age' => null];\nvar_dump(isset($data['age']));   // false\nvar_dump(array_key_exists('age', $data)); // true",
+    "follow_up": "When would `array_key_exists()` be better than `isset()`?"
+   },
+   {
+    "question": "What is the difference between `==` and `empty()` when checking user input?",
+    "answer": "`empty()` checks whether a value is considered empty by PHP, which includes values like `''`, `0`, `'0'`, `null`, `false`, and empty arrays. That makes it useful for quick presence checks, but it can be too broad if `0` is a valid input. For form validation, you often need a stricter check than `empty()`.",
+    "real_world": "A classic bug is rejecting a valid age or quantity because it is `0`. Teams often choose stricter validation to avoid treating legitimate zero-like values as missing.",
+    "code_lang": "php",
+    "code": "$value = '0';\nvar_dump(empty($value)); // true\nvar_dump($value === ''); // false",
+    "follow_up": "How would you validate a required numeric field that may legally be zero?"
+   },
+   {
+    "question": "What is an array in PHP, and how is it commonly used?",
+    "answer": "An array in PHP is an ordered map, so it can act like a list, a dictionary, or a mix of both. In beginner code, arrays are often used to store collections of items or key-value data. Because PHP arrays are very flexible, they are convenient but can become hard to reason about if overused for everything.",
+    "real_world": "Arrays are everywhere in PHP applications: request data, configuration, decoded JSON, and database result sets. Mistakes often happen when code assumes an array is a simple list but it actually has string keys.",
+    "code_lang": "php",
+    "code": "$user = ['name' => 'Ada', 'age' => 30];\n$colors = ['red', 'green', 'blue'];\necho $user['name'];\necho $colors[0];",
+    "follow_up": "What is the difference between an indexed array and an associative array?"
+   },
+   {
+    "question": "What is the difference between `==` and `===` when checking if a value is in an array with `in_array()`?",
+    "answer": "By default, `in_array()` uses loose comparison, so types may be converted during the search. That can lead to unexpected matches if your array contains mixed types. Passing the strict option makes the comparison type-safe and avoids those surprises.",
+    "real_world": "This matters when checking IDs, flags, or role values from databases or APIs. Loose matching can accidentally accept the wrong value if the input type is not what you expected.",
+    "code_lang": "php",
+    "code": "$values = ['1', '2'];\nvar_dump(in_array(1, $values));        // true\nvar_dump(in_array(1, $values, true));   // false",
+    "follow_up": "Why is strict comparison especially important when checking permissions or roles?"
+   },
+   {
+    "question": "What are the main PHP variable types a beginner should know, and how do they differ?",
+    "answer": "The main scalar types are int, float, string, and bool, plus compound types like array and object. PHP is dynamically typed, so a variable does not have a fixed type declaration in the basic case; its type comes from the value stored in it. Knowing the type matters because operators and functions behave differently depending on whether you're working with numbers, text, or collections.",
+    "real_world": "A common bug is treating a form field as a number when it arrives as a string, which can change how concatenation or comparisons work. Teams often validate and convert input early to avoid type-related surprises.",
+    "code_lang": "php",
+    "code": "$x = 5;\n$y = \"5\";\n$z = 5.0;\n$done = true;",
+    "follow_up": "How do you convert a string from a form into an integer safely?"
+   },
+   {
+    "question": "What does `foreach` do when you modify the array you're looping over?",
+    "answer": "`foreach` iterates over the array as it exists for that loop, and changing the array inside the loop can lead to confusing results. Adding or removing elements during iteration is something to be careful with because the loop may not see changes the way you expect. If you need to transform values, it is often safer to build a new array.",
+    "real_world": "This comes up when filtering a list of users or deleting items while processing jobs. A team may switch to collecting results in a new array to avoid skipping elements or processing stale data.",
+    "code_lang": "php",
+    "code": "$nums = [1, 2, 3];\nforeach ($nums as $n) {\n    if ($n === 2) unset($nums[1]);\n}",
+    "follow_up": "What is a safer pattern for filtering an array?"
+   },
+   {
+    "question": "What is a function in PHP, and why would you use one?",
+    "answer": "A function is a reusable block of code that takes input, does a task, and can return a result. Functions help avoid duplication, make code easier to test, and give names to common actions. In PHP, they are the basic way to organize repeated logic in a readable way.",
+    "real_world": "In a form handler, you might write one function to validate an email and reuse it in several places. That keeps the rules consistent and reduces copy-paste bugs.",
+    "code_lang": "php",
+    "code": "function greet(string $name): string {\n    return \"Hello, $name\";\n}\necho greet('Sam');",
+    "follow_up": "What is the difference between passing by value and passing by reference?"
+   },
+   {
+    "question": "What are PHP superglobals, and name a few common ones?",
+    "answer": "Superglobals are built-in variables that are available in most scopes without needing to pass them around. Common ones include `$_GET`, `$_POST`, `$_SERVER`, `$_SESSION`, and `$_COOKIE`. They are useful for request data and environment information, but you still need to validate anything that comes from outside the program.",
+    "real_world": "A login form reads credentials from `$_POST`, while routing or debugging might inspect `$_SERVER`. Mistakes here often lead to trusting raw request data instead of validating it first.",
+    "code_lang": "php",
+    "code": "$name = $_POST['name'] ?? '';\necho $name;",
+    "follow_up": "Why is it important to validate data from superglobals?"
+   },
+   {
+    "question": "What is a common beginner mistake with PHP strings and variables inside double quotes?",
+    "answer": "In double-quoted strings, PHP interpolates variables, so `$name` is replaced by its value. A common mistake is assuming the same behavior in single-quoted strings, where variables are not expanded. Another common issue is forgetting braces when a variable is next to text and PHP cannot tell where the name ends.",
+    "real_world": "This often shows up in HTML output or email templates where a developer expects a username to appear but gets the literal variable name instead. Using the right quoting style avoids confusing output bugs.",
+    "code_lang": "php",
+    "code": "$name = 'Ada';\necho \"Hello, $name\";\necho 'Hello, $name';",
+    "follow_up": "When do you need curly braces like `{$name}` in a string?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide between using a plain PHP array and a dedicated object or DTO for a piece of data?",
+    "answer": "Use a plain array for simple, short-lived data, especially when you are moving a small set of values through a script. Use an object or DTO when the shape matters, the data is reused across layers, or you want type safety and clearer intent. Arrays are flexible but easy to misuse because keys are implicit and errors show up at runtime. Objects make refactoring and validation easier, but they add a bit more structure and boilerplate.",
+    "real_world": "This comes up when data is passed from controllers to services or templates. Teams often start with arrays and later introduce DTOs when bugs appear from missing or misspelled keys.",
+    "code_lang": "php",
+    "code": "$user = ['id' => 1, 'name' => 'Ana'];\n// vs\nfinal class UserDTO {\n    public function __construct(public int $id, public string $name) {}\n}",
+    "follow_up": "When would you choose an associative array over a DTO in a real codebase?"
+   },
+   {
+    "question": "What is the difference between passing a variable by value and by reference in PHP?",
+    "answer": "By value, a function gets its own copy-like view of the value, so changes inside the function do not affect the caller. By reference, the function can mutate the original variable, which can be useful but makes control flow less obvious. References can make debugging harder because side effects happen outside the function’s return value. In most application code, returning a new value is easier to reason about than using references.",
+    "real_world": "This matters in helper functions that are supposed to normalize or enrich data. A reference-based function can accidentally change shared state and create hard-to-track bugs.",
+    "code_lang": "php",
+    "code": "function addOne(int &$n): void {\n    $n++;\n}\n$x = 3;\naddOne($x);\n// $x is now 4",
+    "follow_up": "When would you avoid references even if they seem simpler?"
+   },
+   {
+    "question": "How does PHP handle exceptions, and when would you use `try/catch` versus returning an error value?",
+    "answer": "Exceptions are for exceptional situations where the normal flow cannot continue cleanly, such as failed I/O or invalid external input. `try/catch` is useful when you can recover locally or translate a low-level failure into a domain-specific one. Returning an error value is better for expected outcomes like validation failures, because callers can handle them without exception overhead or hidden control flow. The key is to be consistent within a layer so errors are predictable.",
+    "real_world": "In production APIs, uncaught exceptions often become 500 responses and noisy logs. Clear exception boundaries let teams distinguish bugs from expected business rule failures.",
+    "code_lang": "php",
+    "code": "try {\n    $data = json_decode($body, true, 512, JSON_THROW_ON_ERROR);\n} catch (JsonException $e) {\n    // log and return a 400 response\n}",
+    "follow_up": "How do you design custom exceptions for application-specific errors?"
+   },
+   {
+    "question": "What is the difference between `require`-ing a file and using an autoloader for classes?",
+    "answer": "`require` loads a file immediately and is best for explicit bootstrap or configuration files. An autoloader loads class files only when a class is first referenced, which reduces manual wiring and scales better in larger codebases. Autoloading is usually the right choice for classes because it keeps file inclusion out of business logic. Explicit `require` still makes sense for files that execute setup or define functions rather than classes.",
+    "real_world": "This matters when a project grows and manual includes become brittle. Autoloading prevents missing-file bugs and makes tests and CLI scripts easier to maintain.",
+    "code_lang": "php",
+    "code": "spl_autoload_register(function ($class) {\n    require __DIR__ . '/src/' . $class . '.php';\n});\n\n$user = new User();",
+    "follow_up": "What are the trade-offs of a simple autoloader versus Composer’s autoloading?"
+   },
+   {
+    "question": "How do PHP sessions work, and what are the main pitfalls when using them in a web app?",
+    "answer": "Sessions let you store server-side state keyed by a session ID sent back to the browser, usually through a cookie. They are useful for login state and short-lived workflow data, but they are not a place for large objects or long-term persistence. Common pitfalls include forgetting that multiple requests can contend for the same session and assuming session data is durable across deployments or restarts. You should keep session data small and treat it as temporary state.",
+    "real_world": "A checkout flow often uses sessions to keep a cart or step state. Problems appear when requests block each other or when the app assumes session data survives a node replacement.",
+    "code_lang": "php",
+    "code": "session_start();\n$_SESSION['user_id'] = 42;\n\nif (isset($_SESSION['user_id'])) {\n    // user is logged in\n}",
+    "follow_up": "When would you prefer a signed token or database storage over sessions?"
+   },
+   {
+    "question": "How do you approach debugging a PHP warning or notice in a legacy codebase?",
+    "answer": "First reproduce the issue with the smallest possible input and identify the exact line and stack trace if available. Then inspect the surrounding assumptions: missing keys, null values, wrong types, or side effects from earlier code. In legacy code, warnings often point to a deeper contract problem, so the fix should usually make the data shape explicit instead of just silencing the message. I would also add a regression test once the bug is understood.",
+    "real_world": "Legacy systems often log notices in production but keep running, which hides real defects until traffic grows. Debugging them early prevents fragile behavior from spreading through the app.",
+    "code_lang": "php",
+    "code": "// Common pattern behind notices\n$name = $row['name'] ?? 'unknown';\n// instead of assuming $row['name'] always exists",
+    "follow_up": "How would you reduce the chance of this class of bug in new code?"
+   },
+   {
+    "question": "What is composer autoloading, and why is it preferable to manually including class files in most projects?",
+    "answer": "Composer autoloading maps namespaces to files and loads classes automatically when they are first used. It removes repetitive include statements, keeps dependencies centralized, and makes large applications easier to refactor. It also works well with third-party packages because they register their own classes in a standard way. Manual includes are still fine for a tiny script, but they do not scale well as the codebase grows.",
+    "real_world": "Most PHP teams rely on Composer for both package management and class loading. Without it, file dependencies become a maintenance burden and deployment mistakes become more common.",
+    "code_lang": "php",
+    "code": "require __DIR__ . '/vendor/autoload.php';\n\nuse App\\Service\\Mailer;\n$mailer = new Mailer();",
+    "follow_up": "What problems can happen if the namespace-to-path mapping is wrong?"
+   },
+   {
+    "question": "How do you test code that depends on time, random values, or external services in PHP?",
+    "answer": "The main idea is to make the dependency injectable so the test can replace it with a deterministic fake or stub. For time, pass in a clock or timestamp rather than calling time functions directly. For random values or services, wrap them behind an interface and mock only at the boundary, not deep inside the code. This keeps tests stable and makes the business logic easier to verify.",
+    "real_world": "Flaky tests often come from code that reads the current time or calls an API directly. Teams usually fix this by introducing small seams for clocks and clients.",
+    "code_lang": "php",
+    "code": "function expiresAt(int $now, int $ttl): int {\n    return $now + $ttl;\n}\n\n// test passes a fixed $now\nassert(expiresAt(100, 10) === 110);",
+    "follow_up": "How do you decide what to mock and what to use as a real integration test?"
+   },
+   {
+    "question": "What is a common performance mistake in PHP when building strings or arrays in a loop?",
+    "answer": "A common mistake is repeatedly concatenating or merging in a way that creates many intermediate copies. For simple cases PHP handles this reasonably, but in tight loops or large datasets the pattern can become expensive. It is often better to collect pieces in an array and join once, or to build the final structure in one pass. The right choice depends on the size of the data and whether readability outweighs the extra work.",
+    "real_world": "This matters in report generation, CSV exports, and HTML assembly for large pages. A small inefficiency can turn into noticeable latency when the loop runs thousands of times.",
+    "code_lang": "php",
+    "code": "$parts = [];\nforeach ($rows as $row) {\n    $parts[] = $row['name'];\n}\n$output = implode(',', $parts);",
+    "follow_up": "How would you profile PHP code to confirm a suspected bottleneck?"
+   },
+   {
+    "question": "How do you decide between `foreach`, `for`, and `while` in PHP code you write in a real project?",
+    "answer": "Use `foreach` when you’re iterating over array or traversable values, because it reads clearly and avoids index bookkeeping. Use `for` when the loop is naturally index-based, such as stepping through a numeric range or accessing positions in a list. Use `while` when the number of iterations depends on a condition that changes inside the loop, like reading until a stream ends. The main trade-off is clarity versus control.",
+    "real_world": "In a cleanup script, `foreach` is usually the best fit for rows fetched from the database, while `while` is common for file or socket reads. Choosing the wrong loop often makes code harder to review and more error-prone.",
+    "code_lang": "php",
+    "code": "foreach ($users as $user) {\n    echo $user->email, PHP_EOL;\n}\n\nfor ($i = 0; $i < count($ids); $i++) {\n    echo $ids[$i], PHP_EOL;\n}",
+    "follow_up": "When would you avoid `foreach` even if you have an array?"
+   },
+   {
+    "question": "What happens if you use `array_merge()` versus the `+` array union operator in PHP?",
+    "answer": "`array_merge()` combines arrays and reindexes numeric keys, while string keys from later arrays overwrite earlier ones. The `+` operator keeps keys from the left-hand array and ignores duplicates from the right-hand side. That difference matters when keys are identifiers or when numeric indexes must be preserved. The trade-off is between merging values and preserving the original key map.",
+    "real_world": "This comes up when merging request defaults with user input, or when combining config files. Using the wrong operator can silently drop overrides or renumber list items.",
+    "code_lang": "php",
+    "code": "$a = ['x' => 1, 0 => 'a'];\n$b = ['x' => 2, 1 => 'b'];\nvar_dump(array_merge($a, $b));\nvar_dump($a + $b);",
+    "follow_up": "How does this behave differently with numeric keys and string keys?"
+   },
+   {
+    "question": "How do PHP references in arrays or variables cause subtle bugs in production code?",
+    "answer": "References can make two variables point to the same underlying value, so changes through one name affect the other. A common bug is leaving a reference variable around after a `foreach ($arr as &$value)` loop, then accidentally reusing it and mutating the last element. References are useful for performance-sensitive mutation, but they make code harder to reason about and test. In most application code, copying values is safer unless you really need shared mutation.",
+    "real_world": "This often appears in legacy code that transforms arrays in place and later starts producing strange duplicated or overwritten values. The bug can be intermittent and hard to trace because the aliasing is not obvious in code review.",
+    "code_lang": "php",
+    "code": "$arr = [1, 2, 3];\nforeach ($arr as &$v) {}\n$v = 99;\nvar_dump($arr);",
+    "follow_up": "How would you fix that bug without changing the overall algorithm?"
+   },
+   {
+    "question": "How do you think about when to use an associative array versus a Value Object or DTO in PHP?",
+    "answer": "Use an associative array for short-lived, loosely structured data, especially at the boundaries of a script. Use a DTO or Value Object when the shape matters, the data is passed across layers, or you want type safety and clearer intent. Objects make it easier to validate, refactor, and document fields, but they add boilerplate. The trade-off is speed of writing versus long-term maintainability.",
+    "real_world": "This matters in service code that receives API payloads and passes them through several methods. Arrays are quick at first, but missing keys and typos become a recurring source of bugs.",
+    "code_lang": "php",
+    "code": "final class UserDTO {\n    public function __construct(\n        public string $email,\n        public int $id,\n    ) {}\n}",
+    "follow_up": "How would you validate that DTO before using it?"
+   },
+   {
+    "question": "What happens if a function parameter has a default value and the caller passes `null` in PHP?",
+    "answer": "If the caller explicitly passes `null`, PHP treats that as an actual argument value, not as “use the default.” That means the function receives `null` unless the parameter is nullable or the code replaces it manually. This matters because default values only apply when the argument is omitted. The trade-off is between explicit caller intent and convenient fallback behavior.",
+    "real_world": "This shows up in controller methods and helper functions where `null` may come from decoded JSON or missing form fields. A function that assumes the default will be used can fail later with a type error or bad query.",
+    "code_lang": "php",
+    "code": "function greet(string $name = 'guest'): void {\n    echo $name;\n}\n\ngreet();\n// greet(null); // TypeError in strict typing contexts or invalid type usage",
+    "follow_up": "How do nullable parameters change that behavior?"
+   },
+   {
+    "question": "How do you decide between catching a broad `Exception` and catching specific exception types in PHP?",
+    "answer": "Catch specific exception types when you can handle them differently, because that preserves the meaning of the failure and avoids hiding bugs. Catch a broader exception only at boundaries, such as a top-level request handler, where you log the error and return a generic response. Over-catching in the middle of the code often turns programmer errors into silent failures. The trade-off is convenience versus observability and correctness.",
+    "real_world": "In payment or email code, swallowing every exception can make a service appear healthy while requests silently fail. Narrow catches help you retry, alert, or fallback only where it makes sense.",
+    "code_lang": "php",
+    "code": "try {\n    $client->charge($amount);\n} catch (PaymentDeclinedException $e) {\n    // show user-friendly message\n} catch (Throwable $e) {\n    // log and rethrow or fail fast\n}",
+    "follow_up": "When would you catch `Throwable` instead of `Exception`?"
+   },
+   {
+    "question": "How would you approach file uploads safely in PHP?",
+    "answer": "Treat uploaded files as untrusted input: check size, validate the real content type, store them outside executable paths, and generate a new server-side filename. Do not rely only on the client-provided filename or extension. You also want to handle upload errors and permissions explicitly, because failures can happen before your code sees the file. The trade-off is user convenience versus security and operational safety.",
+    "real_world": "This is critical in apps that accept profile pictures, invoices, or attachments. A weak upload path can lead to disk exhaustion, malware storage, or even code execution if files are placed in the wrong directory.",
+    "code_lang": "php",
+    "code": "if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {\n    throw new RuntimeException('Upload failed');\n}\n$tmp = $_FILES['photo']['tmp_name'];\n$dest = '/var/uploads/' . bin2hex(random_bytes(16));\nmove_uploaded_file($tmp, $dest);",
+    "follow_up": "How would you validate the file type before storing it?"
+   },
+   {
+    "question": "What is a practical way to structure PHP code so it is easier to test without a full framework?",
+    "answer": "Put business logic in small classes or functions that take their dependencies as arguments, instead of reaching directly into globals or static state. Then isolate I/O in adapters for the database, HTTP, time, or filesystem. This makes unit tests fast and focused, while integration tests cover the real adapters. The trade-off is a bit more structure up front in exchange for much easier testing and refactoring.",
+    "real_world": "In a legacy app, teams often start by extracting one service at a time from a controller or script. Once the logic is separated from I/O, bugs are easier to reproduce and test failures are much more actionable.",
+    "code_lang": "php",
+    "code": "final class PriceService {\n    public function total(array $items, callable $taxRate): float {\n        $sum = array_sum($items);\n        return $sum * $taxRate();\n    }\n}",
+    "follow_up": "How would you test that service with a predictable tax rate?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain copy-on-write in PHP arrays and objects, and when a simple assignment actually becomes expensive?",
+    "answer": "PHP arrays are value types implemented with copy-on-write, so `$b = $a` usually just copies a handle and bumps a refcount. The real copy happens when one side is mutated, and for large arrays that can turn an innocent-looking write into a big CPU and memory spike. Objects behave differently: assigning an object copies the handle, so both variables point to the same instance unless you explicitly `clone`. This matters because arrays feel cheap until a write forces separation, while objects share mutable state by default.",
+    "real_world": "A common production incident is a worker loading a large config or result set, assigning it through a few helper layers, then adding one field and suddenly doubling memory usage. Teams hit this when processing big payloads in queue consumers where one extra array write pushes the process over the memory limit.",
+    "code_lang": "php",
+    "code": "<?php\n$a = range(1, 100000);\n$b = $a;      // cheap: shared until write\n$b[] = 100001; // expensive: copy occurs here\n\n$o1 = (object)['x' => 1];\n$o2 = $o1;\n$o2->x = 2;   // mutates same object\n",
+    "follow_up": "How would you reduce memory churn when transforming a very large dataset in PHP?"
+   },
+   {
+    "question": "What are the performance and correctness implications of PHP arrays being ordered hash tables rather than packed vectors or maps only?",
+    "answer": "PHP uses one general-purpose array type for both lists and dictionaries, which is convenient but relatively memory-heavy. You get ordered iteration and flexible keys, but each element carries more overhead than a plain vector in lower-level languages, so large arrays can dominate memory and cache behavior. Numeric-keyed sequential arrays can be optimized internally, but mixing string keys, sparse indexes, and frequent reshaping usually costs more. For hot paths, that trade-off can justify generators, specialized extensions, or moving large in-memory workloads out of PHP.",
+    "real_world": "This shows up in import jobs and API aggregation services where millions of rows are accumulated in arrays and a box with plenty of CPU still falls over on memory. Teams often fix it by streaming results instead of materializing everything first.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a generator over building an array of all results first?"
+   },
+   {
+    "question": "How do generators actually help with memory usage in PHP, and what trade-offs do they introduce?",
+    "answer": "Generators let you produce values lazily, so you can process one item at a time instead of materializing the whole collection. That usually cuts peak memory dramatically and can improve time-to-first-result, especially for file, database, or API pipelines. The trade-off is that generators are single-pass, can make control flow harder to follow, and do not magically reduce work if you still buffer everything downstream. They help most when the rest of the pipeline stays streaming too.",
+    "real_world": "In ETL jobs, replacing `fetchAll()` plus array transforms with a generator pipeline often turns a job that crashes at a few hundred thousand rows into one that runs comfortably. The failure mode is thinking a generator alone fixes memory while later code still collects everything into an array.",
+    "code_lang": "php",
+    "code": "<?php\nfunction lines(string $path): Generator {\n    $h = fopen($path, 'r');\n    while (($line = fgets($h)) !== false) {\n        yield trim($line);\n    }\n    fclose($h);\n}\n",
+    "follow_up": "What parts of a typical PHP data pipeline still defeat streaming even if you start with a generator?"
+   },
+   {
+    "question": "What exactly changes in PHP when you enable OPcache, and what problems does it solve versus not solve?",
+    "answer": "OPcache stores compiled script bytecode in shared memory so workers do not need to parse and compile the same PHP files on every request. That reduces CPU usage and improves latency, especially in codebases with many files and heavy framework bootstrap. It does not cache your application data, database results, or arbitrary function outputs; it mainly removes compilation overhead. It also changes deployment concerns because stale code can be served if invalidation or restarts are mishandled.",
+    "real_world": "Without OPcache, a fleet under traffic can waste a large fraction of CPU just recompiling the same code. With OPcache, the more common incident is a bad deploy sequence where some workers still serve old bytecode until processes are reloaded or caches are invalidated correctly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a zero-downtime PHP deployment so OPcache does not serve mixed code versions?"
+   },
+   {
+    "question": "How does PHP-FPM concurrency actually work, and why do slow I/O calls create scaling problems even when CPU is mostly idle?",
+    "answer": "PHP-FPM handles requests with a pool of worker processes, and each worker is typically busy for the full lifetime of a request. If a request blocks on the database, Redis, an HTTP API, or disk, that worker cannot serve another request, so throughput is capped by worker count and average request time rather than CPU alone. This means tail latency and queueing get bad quickly when downstream dependencies slow down. Tuning process counts helps, but the real fixes are reducing blocking work, setting timeouts, and isolating slow paths.",
+    "real_world": "A classic outage is an external API slowing from tens of milliseconds to several seconds, which ties up all FPM workers even though host CPU stays low. From the outside it looks mysterious: the app is 'up' but every new request is waiting for a free worker.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you check first to confirm PHP-FPM worker saturation versus a database bottleneck?"
+   },
+   {
+    "question": "What are the real trade-offs between using persistent database connections in PHP and opening connections per request?",
+    "answer": "Persistent connections can reduce connection setup overhead, but in PHP they also keep session state and resource usage alive across requests handled by the same worker. That means transaction state, temp tables, session variables, or connection-level settings can leak if code is sloppy, and too many idle persistent connections can overwhelm the database. Per-request connections are simpler and safer operationally, especially behind pooling proxies, but they pay setup cost each time. The right choice depends on database limits, request rate, and how disciplined the code is about resetting state.",
+    "real_world": "Teams have seen bizarre cross-request bugs because one request changed a connection setting and the next request reused that same persistent connection. On the scaling side, enabling persistence across many FPM workers can create far more open DB connections than the database can handle.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you do use persistent connections, what state must your application treat as unsafe to assume?"
+   },
+   {
+    "question": "What is the difference between `memory_limit` failures and out-of-memory kills in PHP, and how do you investigate each one?",
+    "answer": "A `memory_limit` failure is PHP detecting that the process exceeded its configured limit and raising a fatal error inside the runtime. An out-of-memory kill usually comes from the operating system or container runtime when total memory pressure is too high, so the process may just disappear or get SIGKILL without a useful PHP stack trace. The first points you toward application allocation patterns; the second also requires looking at FPM pool sizing, container limits, and total memory across concurrent workers. They look similar to users but have different remediation paths.",
+    "real_world": "In production, one oversized request might hit `memory_limit` consistently and be easy to reproduce. A more confusing incident is many 'normal' requests in parallel causing the host or pod to kill workers because aggregate memory across the pool exceeded what the machine had available.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you estimate a safe `pm.max_children` for PHP-FPM from observed worker memory usage?"
+   },
+   {
+    "question": "How do `strict_types` actually behave in PHP, and what edge cases matter when you’re designing module boundaries in a large codebase?",
+    "answer": "`declare(strict_types=1)` affects scalar parameter and return type coercion for calls made from that file; it is not a global mode for the whole application. That means the same function can be called strictly from one file and coercively from another, which surprises teams expecting type behavior to follow the callee. It also does not turn PHP into a purely static type system: arrays, object mutation, and many built-in behaviors still need care. In practice, strict types are most useful at service boundaries and for reducing ambiguous input handling.",
+    "real_world": "Large mixed codebases often have bugs where newer strict modules behave predictably in tests, but old entry points call them from non-strict files and silently coerce user input. The result is production-only edge cases around IDs, booleans, and numeric strings.",
+    "code_lang": "php",
+    "code": "<?php\ndeclare(strict_types=1);\nfunction add(int $a, int $b): int { return $a + $b; }\n\nadd(\"1\", \"2\"); // TypeError when called from this file\n",
+    "follow_up": "How would you migrate a large legacy PHP codebase toward stricter typing without breaking too many entry points at once?"
+   },
+   {
+    "question": "What are the practical implications of PHP request isolation, and what state can still leak across requests in production?",
+    "answer": "Most userland variables die at the end of the request, which is one reason classic PHP apps avoid many long-lived state bugs common in always-on runtimes. But not everything resets in the way people assume: persistent connections, OPcache, external caches, files, shared services, and long-running CLI workers can all carry state across requests or jobs. Static properties and globals are request-scoped under normal FPM usage, but they persist within a single long-running process model like a worker loop. The main mistake is designing as if every execution context is a fresh process.",
+    "real_world": "Teams move code from FPM to queue workers or event-loop servers and suddenly find memory growth, stale singletons, or state contamination because the code assumed request teardown would clean everything. Even under FPM, connection-level state and external caches can leak surprising behavior between users.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What coding patterns are safe under PHP-FPM but become risky in long-running worker processes?"
+   },
+   {
+    "question": "If a PHP service starts returning partial or corrupted responses under load, what buffering and output-path issues would you investigate?",
+    "answer": "I would check output buffering layers, premature output before headers, gzip/compression settings, reverse proxy buffering, and whether the code streams data while still doing work that can fail. Fatal errors after some bytes are already sent can leave clients with truncated bodies and no clean error envelope. I’d also look for mixed echo/stream behavior, large response generation that hits timeouts, and client disconnect handling. The fix is usually to make response generation atomic where possible, or intentionally stream with explicit failure semantics and tight observability.",
+    "real_world": "A common incident is a report export endpoint that starts sending CSV rows, then hits a timeout or fatal error and leaves clients with a seemingly valid but incomplete file. Another is stray output from warnings or BOMs breaking JSON or file downloads only in certain environments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely implement a large file export in PHP so clients either get a complete file or a clear failure?"
+   },
+   {
+    "question": "How does the Zend garbage collector actually work for cyclic references, and when can it become a production problem?",
+    "answer": "PHP uses reference counting for most memory management, so acyclic values are freed immediately when their count hits zero. Cycles are different: the cycle collector periodically scans possible roots to find groups that are only reachable from each other, which adds CPU overhead. In object-heavy code with lots of temporary graphs, that scan can become a measurable pause or memory growth issue. The practical fix is to avoid unnecessary cycles, release large graphs explicitly, and profile before blindly disabling GC.",
+    "real_world": "Long-running workers that hydrate ORM entities or build nested DOM-like structures can show rising memory and periodic latency spikes from GC runs, even though the same code looks fine in short web requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug a memory leak in a long-running PHP worker that seems related to object graphs?"
+   },
+   {
+    "question": "What really happens when you preload code in PHP, and what kinds of code benefit or break with preloading?",
+    "answer": "Preloading loads selected PHP files into shared OPcache memory at server startup so workers can reuse already-compiled code and, in some cases, persistent class metadata. It helps most with stable framework and library code that is used on nearly every request, reducing startup and class-loading overhead. It is a poor fit for code that changes frequently, because updates usually require a reload, and you must avoid request-specific side effects at preload time. The win is lower per-request overhead; the trade-off is operational complexity and a stricter deployment model.",
+    "real_world": "Teams often preload the framework kernel, DI container classes, and common vendor packages, but not app code that changes every deploy unless they already do coordinated FPM reloads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is preloading different from just having OPcache enabled?"
+   },
+   {
+    "question": "What are the main performance and correctness trade-offs between PDO buffered and unbuffered queries in PHP?",
+    "answer": "Buffered queries fetch the full result into client memory, which makes row counting, multiple active statements on one connection, and simpler control flow easier. Unbuffered queries stream rows incrementally, so peak memory is lower and first-row latency can improve, but the connection is effectively tied up until the result is consumed or closed. That means careless code can block later queries on the same connection or leave transactions open longer than expected. The trade-off is memory and responsiveness versus convenience and fewer state-management pitfalls.",
+    "real_world": "A report endpoint that returns millions of rows may work only with streaming, but if the code then tries to issue another query before draining the cursor, production requests start failing intermittently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely export a very large result set to CSV from PHP without exhausting memory?"
+   },
+   {
+    "question": "In PHP 8, what changed with JIT, and why doesn’t it automatically make a typical web app dramatically faster?",
+    "answer": "JIT compiles some VM operations to native machine code, which can help CPU-bound numeric or tight-loop workloads. Most typical PHP web apps spend more time in I/O, database calls, framework dispatch, string handling, and hash-table-heavy operations, so JIT often moves the needle only slightly. OPcache still matters much more for common request workloads because parsing and opcode reuse are the baseline win. JIT is useful when profiling shows hot CPU paths, not as a general substitute for application-level optimization.",
+    "real_world": "Teams sometimes enable JIT expecting big latency gains and see little change, because their actual bottleneck is remote database time or ORM hydration rather than opcode execution.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of PHP workloads tend to benefit the most from JIT?"
+   },
+   {
+    "question": "How do PHP stream wrappers affect security and architecture, and what mistakes do senior engineers still see around them?",
+    "answer": "Stream wrappers let many filesystem APIs work with more than local files, including network resources and custom schemes, which is powerful but broadens the attack surface. If untrusted input reaches functions like file reads, includes, or image handling through wrappers, you can end up with SSRF, local file disclosure, or unexpected behavior depending on configuration and the wrapper involved. Architecturally, wrappers are useful for abstraction, but security-sensitive code should validate scheme, path, and intent explicitly rather than assuming a plain file path. The core trade-off is flexibility versus a larger set of failure and abuse modes.",
+    "real_world": "Incidents happen when a feature accepts a 'file path' for import or preview, but an attacker supplies a URL or php:// stream and reaches internal services or bypasses assumptions about local files.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which classes of file-handling functions would you audit first if you suspected wrapper-related SSRF?"
+   },
+   {
+    "question": "What are the failure modes of `register_shutdown_function()` and shutdown handlers in PHP, and how should you use them in production?",
+    "answer": "Shutdown functions run when script execution ends, including after many fatal errors, but they are not a guaranteed transactional cleanup mechanism. They run late, after output may already be sent, while the process may be in a partially failed state, and external operations done there can hang or mask the original problem. They are good for last-chance logging, metrics, or releasing best-effort resources, not for critical business writes. If correctness matters, do the work in normal control flow and make it idempotent.",
+    "real_world": "A common incident is putting queue acks or database commits in shutdown logic; under fatal errors or timeouts, the ack may not happen or may happen after partial work, causing duplicates or stuck jobs.",
+    "code_lang": "php",
+    "code": "<?php\nregister_shutdown_function(function () {\n    $e = error_get_last();\n    if ($e) {\n        error_log(\"fatal: {$e['message']}\");\n    }\n});\n\nundefined_function();\n",
+    "follow_up": "How would you distinguish between using a shutdown handler and using `finally` for cleanup?"
+   },
+   {
+    "question": "What are the practical differences between PHP attributes, annotations in docblocks, and runtime reflection from a performance and design perspective?",
+    "answer": "Attributes are part of the language syntax, so they are parsed structurally and are less fragile than docblock parsing conventions. Reflection still has runtime cost, especially if repeated per request, so the common pattern is to read metadata once and cache the derived configuration. Docblock annotations can be more flexible in legacy systems, but they rely on parser libraries and string conventions that are easier to break. The design trade-off is native, explicit metadata versus legacy compatibility and tooling inertia.",
+    "real_world": "Framework code that reflects controllers, validators, or serializers on every request can add noticeable overhead unless metadata is cached during bootstrap or build time.",
+    "code_lang": "php",
+    "code": "<?php\n#[Attribute]\nclass Route {\n    public function __construct(public string $path) {}\n}\n\n#[Route('/health')]\nclass HealthController {}\n",
+    "follow_up": "If you built an attribute-driven router, where would you cache metadata to avoid repeated reflection?"
+   },
+   {
+    "question": "When do Fibers change how you structure PHP code, and what risks do they introduce compared with the traditional request model?",
+    "answer": "Fibers let libraries suspend and resume execution, making async I/O code look sequential without callback nesting. They matter when you have a runtime or framework that cooperatively schedules many I/O-bound tasks in one process; without that ecosystem support, Fibers alone do not create parallelism. The risks are reentrancy bugs, hidden suspension points, and libraries that assume blocking semantics or request-local lifecycles. The trade-off is higher concurrency per process versus a more complex execution model and different failure modes.",
+    "real_world": "An async HTTP client or event-driven worker can handle many open sockets efficiently with Fibers, but a blocking database driver in the same path can stall the whole loop and erase the benefit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is Fiber-based concurrency different from adding more PHP-FPM workers?"
+   },
+   {
+    "question": "How do serialization choices in PHP affect compatibility, security, and performance, especially with objects?",
+    "answer": "Native PHP serialization preserves PHP-specific types and object graphs well, but it tightly couples data to class names and object structure, which makes long-term compatibility harder. Deserializing untrusted data is dangerous because object instantiation and magic methods can trigger gadget chains or unexpected side effects. Formats like JSON are safer and more interoperable for boundaries, but they lose type fidelity unless you add explicit mapping. The right choice depends on whether the boundary is internal and trusted or external and long-lived.",
+    "real_world": "Production outages often happen after a deploy changes a class used in cached serialized payloads or queued jobs, and old data can no longer be restored cleanly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you inherit a system that stores serialized PHP objects in Redis, what migration path would you propose?"
+   },
+   {
+    "question": "What can go wrong with `fastcgi_finish_request()`, and when is it actually the right tool?",
+    "answer": "`fastcgi_finish_request()` lets PHP flush the response to the client and continue running server-side work in the same worker. It improves user-perceived latency, but the worker is still occupied, so heavy post-response work still consumes concurrency and can hurt throughput under load. You also lose the simplicity of request-scoped observability because failures now happen after the client is gone. It is best for very short best-effort tasks; anything significant should move to a queue or separate worker.",
+    "real_world": "Teams use it for tiny audit writes or cache warmups, then later discover that long email sends or webhook calls after response are exhausting FPM workers during traffic spikes.",
+    "code_lang": "php",
+    "code": "<?php\nhttp_response_code(202);\necho \"accepted\";\nif (function_exists('fastcgi_finish_request')) {\n    fastcgi_finish_request();\n}\n// only keep this work short\nerror_log('post-response task');\n",
+    "follow_up": "How would you decide whether post-response work belongs here, in a queue, or in the main request path?"
+   }
+  ]
+ }
+}

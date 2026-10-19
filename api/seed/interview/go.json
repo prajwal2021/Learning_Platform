@@ -1,0 +1,469 @@
+{
+ "slug": "go",
+ "name": "Go",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is a zero value in Go, and why does it matter?",
+    "answer": "A zero value is the default value a variable gets when it is declared without an explicit initializer. For example, numbers become 0, strings become \"\", booleans become false, and pointers, slices, maps, and interfaces become nil. It matters because Go code often relies on zero values instead of extra constructors or manual initialization.",
+    "real_world": "This comes up when a struct is created with just var x MyType and still needs to be usable safely. Bugs often happen when a developer assumes a field was initialized but it still has its zero value.",
+    "code_lang": "go",
+    "code": "package main\nimport \"fmt\"\nfunc main() {\n    var n int\n    var s string\n    var ok bool\n    fmt.Println(n, s, ok)\n}",
+    "follow_up": "What is the difference between nil and a zero value?"
+   },
+   {
+    "question": "What is the difference between an array and a slice in Go?",
+    "answer": "An array has a fixed length that is part of its type, while a slice is a lightweight view over an array with a variable length. Slices are used much more often because they are flexible and easier to pass around. A slice can grow with append, but an array cannot change size.",
+    "real_world": "This matters when you pass data to functions and expect changes to be reflected or when a slice unexpectedly reallocates during append. Mistakes here often lead to confusion about why updates are not visible or why performance changes.",
+    "code_lang": "go",
+    "code": "package main\nimport \"fmt\"\nfunc main() {\n    a := [3]int{1, 2, 3}\n    s := []int{1, 2, 3}\n    fmt.Println(len(a), len(s))\n}",
+    "follow_up": "What happens to a slice when append needs more capacity?"
+   },
+   {
+    "question": "When would you use a map in Go?",
+    "answer": "Use a map when you need fast lookup by key, such as counting, caching, or representing a dictionary. Maps are good when the data is naturally keyed and you do not care about order. You must initialize a map before writing to it, otherwise writes panic.",
+    "real_world": "A common production use is counting events by user ID or grouping records by status. A frequent beginner bug is assigning into a nil map and crashing the program.",
+    "code_lang": "go",
+    "code": "package main\nimport \"fmt\"\nfunc main() {\n    counts := make(map[string]int)\n    counts[\"go\"]++\n    fmt.Println(counts[\"go\"])\n}",
+    "follow_up": "What is the value returned when you read a missing key from a map?"
+   },
+   {
+    "question": "How do if statements work in Go, and what is the short statement form?",
+    "answer": "Go's if statement can include a short statement before the condition, and that variable is scoped only to the if block and its else. This is commonly used for error handling and small setup values. The condition itself must be a boolean expression; Go does not allow non-boolean conditions.",
+    "real_world": "You often see this pattern when checking an error from a function and returning early. A common mistake is expecting the variable declared in the short statement to exist after the if block.",
+    "code_lang": "go",
+    "code": "package main\nimport \"fmt\"\nfunc main() {\n    if n := 3; n > 0 {\n        fmt.Println(n)\n    }\n}",
+    "follow_up": "How do switch statements differ from if statements in Go?"
+   },
+   {
+    "question": "What is a goroutine?",
+    "answer": "A goroutine is a lightweight concurrent function managed by the Go runtime. You start one by writing go before a function call. Goroutines are useful when work can happen independently, but they need synchronization when they share data.",
+    "real_world": "This is used for handling multiple requests, background jobs, or polling without blocking the main flow. A common mistake is starting goroutines without waiting for them or protecting shared state.",
+    "code_lang": "go",
+    "code": "package main\nimport (\n    \"fmt\"\n    \"time\"\n)\nfunc main() {\n    go fmt.Println(\"hello\")\n    time.Sleep(time.Millisecond)\n}",
+    "follow_up": "How do you wait for a goroutine to finish?"
+   },
+   {
+    "question": "What problem do channels solve in Go?",
+    "answer": "Channels let goroutines communicate and synchronize by sending typed values between them. They are useful when you want one goroutine to produce work and another to consume it, without sharing memory directly. They can also be used to signal completion or cancellation patterns.",
+    "real_world": "Channels are common in worker pipelines, where jobs are fed into one stage and results come out of another. A common beginner mistake is sending or receiving on a nil channel and then wondering why the program blocks.",
+    "code_lang": "go",
+    "code": "package main\nimport \"fmt\"\nfunc main() {\n    ch := make(chan string)\n    go func() { ch <- \"done\" }()\n    fmt.Println(<-ch)\n}",
+    "follow_up": "What is the difference between buffered and unbuffered channels?"
+   },
+   {
+    "question": "What does the blank identifier underscore do in Go?",
+    "answer": "The blank identifier _ tells Go to ignore a value. It is commonly used to discard unwanted return values, import packages for side effects, or satisfy interfaces in limited cases. It is better than creating a throwaway variable you never use.",
+    "real_world": "This is common when a function returns a value you do not need, or when an import is only used to register something during initialization. A typical beginner mistake is forgetting to use all returned values and leaving compile errors unresolved.",
+    "code_lang": "go",
+    "code": "package main\nimport \"fmt\"\nfunc main() {\n    _, err := fmt.Println(\"hi\")\n    _ = err\n}",
+    "follow_up": "Why do Go functions often return an error as the last result?"
+   },
+   {
+    "question": "How do you declare and use a struct in Go?",
+    "answer": "A struct is a composite type that groups related fields together. You define it with fields and create values with a composite literal or var declaration. Structs are the main way to model records, objects, or entities in Go.",
+    "real_world": "You might use a struct for a user, order, or config object. A common issue is forgetting field names or relying on unexported fields when using packages across module boundaries.",
+    "code_lang": "go",
+    "code": "package main\nimport \"fmt\"\ntype User struct { Name string; Age int }\nfunc main() {\n    u := User{Name: \"Ana\", Age: 30}\n    fmt.Println(u.Name)\n}",
+    "follow_up": "What is the difference between a method and a function in Go?"
+   },
+   {
+    "question": "What is the standard way to handle errors in Go?",
+    "answer": "Go usually handles errors by returning them as values and checking them explicitly after each call. If err is not nil, you handle it immediately or return it upward. This is simpler than exceptions because the control flow is visible in the code.",
+    "real_world": "This is central in file I/O, network calls, and parsing. A common production bug is ignoring an error and continuing with bad state, which can cause silent data corruption or confusing failures later.",
+    "code_lang": "go",
+    "code": "package main\nimport \"fmt\"\nfunc do() error { return fmt.Errorf(\"failed\") }\nfunc main() {\n    if err := do(); err != nil {\n        fmt.Println(err)\n    }\n}",
+    "follow_up": "When should you wrap an error instead of returning it directly?"
+   },
+   {
+    "question": "What is a pointer in Go, and when would you use one?",
+    "answer": "A pointer holds the memory address of a value. You use pointers when a function needs to modify the original value, when copying a large struct would be expensive, or when a field can be absent using nil. In Go, pointers are explicit, so you can see where mutation may happen.",
+    "real_world": "Pointers matter in APIs that update structs in place, such as decoding data or changing shared state. A common mistake is dereferencing a nil pointer or assuming a function modified a copy when it only changed a local value.",
+    "code_lang": "go",
+    "code": "package main\nimport \"fmt\"\nfunc inc(n *int) { *n++ }\nfunc main() {\n    x := 1\n    inc(&x)\n    fmt.Println(x)\n}",
+    "follow_up": "What is the difference between passing by value and passing by pointer in Go?"
+   },
+   {
+    "question": "How do you write a for loop in Go, and what loop forms does Go have?",
+    "answer": "Go has one looping construct: `for`. You can use it as a traditional three-part loop, a condition-only loop, or an infinite loop with `for {}`. This matters because beginners often look for a separate `while` keyword that does not exist. The three forms cover the common cases without adding more syntax.",
+    "real_world": "You use the condition-only form for polling until something is ready, and the three-part form for counting or iterating over a fixed range.",
+    "code_lang": "go",
+    "code": "for i := 0; i < 3; i++ {\n    fmt.Println(i)\n}\nfor n < 10 {\n    n++\n}\nfor {\n    break\n}",
+    "follow_up": "How do `break` and `continue` work inside a Go loop?"
+   },
+   {
+    "question": "What does a `range` loop do in Go?",
+    "answer": "`range` iterates over a collection and gives you the index/key and value. With slices and arrays, you get the index and element; with maps, you get key and value; with strings, you iterate over Unicode code points. A common mistake is expecting a stable order from maps, because map iteration order is not guaranteed. It is the idiomatic way to walk most collections in Go.",
+    "real_world": "You use `range` to process a list of items, but you avoid assuming map iteration order when generating output or tests.",
+    "code_lang": "go",
+    "code": "nums := []int{10, 20, 30}\nfor i, v := range nums {\n    fmt.Println(i, v)\n}\nfor _, v := range nums {\n    fmt.Println(v)\n}",
+    "follow_up": "Why do people often write `for _, v := range ...` instead of using the index?"
+   },
+   {
+    "question": "What is an interface in Go?",
+    "answer": "An interface is a set of method signatures that a type can satisfy implicitly. A value implements an interface by having the required methods; there is no explicit `implements` keyword. Interfaces matter because they let you depend on behavior instead of concrete types, which makes code easier to test and swap out. Keep interfaces small and focused on one job.",
+    "real_world": "You might define a tiny interface for a logger or storage backend so production code and tests can use different implementations.",
+    "code_lang": "go",
+    "code": "type Stringer interface {\n    String() string\n}\nfunc printValue(s Stringer) {\n    fmt.Println(s.String())\n}",
+    "follow_up": "What does it mean for an interface value to be `nil` in Go?"
+   },
+   {
+    "question": "What is the difference between a type assertion and a type switch?",
+    "answer": "A type assertion asks whether an interface value holds a specific concrete type, and a type switch handles multiple possible types. Use a type assertion when you expect one specific type and want to check it safely. Use a type switch when you need to branch on several possibilities. Both are about working with interface values, not ordinary concrete variables.",
+    "real_world": "This comes up when decoding JSON into `interface{}` or when a library returns a generic interface and you need to inspect the actual value.",
+    "code_lang": "go",
+    "code": "if s, ok := v.(string); ok {\n    fmt.Println(s)\n}\nswitch x := v.(type) {\ncase int:\n    fmt.Println(x)\ncase string:\n    fmt.Println(x)\n}",
+    "follow_up": "What happens if a type assertion is written without the `, ok` form and it is wrong?"
+   },
+   {
+    "question": "What does `defer` do in Go?",
+    "answer": "`defer` schedules a function call to run when the surrounding function returns. It is commonly used to release resources like files, locks, or response bodies. Deferred calls run in last-in, first-out order, which matters when several cleanups depend on each other. This keeps cleanup close to setup and reduces forgotten-resource bugs.",
+    "real_world": "You often defer closing files or unlocking mutexes so cleanup still happens on early returns and error paths.",
+    "code_lang": "go",
+    "code": "f, err := os.Open(\"data.txt\")\nif err != nil { return err }\ndefer f.Close()\n\n// use f here",
+    "follow_up": "What order do multiple deferred calls run in?"
+   },
+   {
+    "question": "What is the difference between `new` and `make` in Go?",
+    "answer": "`new` allocates zeroed storage and returns a pointer to a value of a type. `make` initializes and returns a ready-to-use value for slices, maps, and channels, because those types need internal setup. A common beginner mistake is using `new` for a map or slice and then expecting it to work immediately. Use `make` when the type needs initialization, and `new` when you just want a pointer to a zero value.",
+    "real_world": "This matters when building collections; using the wrong constructor can lead to panics when you try to write to a nil map or use an uninitialized slice.",
+    "code_lang": "go",
+    "code": "m := make(map[string]int)\nm[\"a\"] = 1\ns := make([]int, 0, 10)\np := new(int)",
+    "follow_up": "What is the difference between a nil map and an empty map?"
+   },
+   {
+    "question": "What is a nil value in Go, and which types can be nil?",
+    "answer": "`nil` means the absence of a value for certain types. In Go, pointers, slices, maps, channels, functions, and interfaces can be nil. A nil slice is often safe to read and append to, but a nil map cannot be assigned to until it is initialized. Knowing which types can be nil helps avoid runtime panics and subtle bugs.",
+    "real_world": "A service may return a nil slice for “no results,” and callers need to handle that differently from an allocated empty slice in some APIs.",
+    "code_lang": "go",
+    "code": "var p *int\nvar s []int\nvar m map[string]int\nfmt.Println(p, s, m)\n// m[\"x\"] = 1 // panic: assignment to entry in nil map",
+    "follow_up": "How do nil slices behave compared with empty slices when you append or loop over them?"
+   },
+   {
+    "question": "What is the `init` function used for in Go?",
+    "answer": "`init` is a special function that runs before `main` in a package. It is used for package setup that must happen before the package is used, such as registering drivers or validating configuration. You should use it sparingly because hidden initialization can make code harder to understand and test. Most setup is clearer when done explicitly in `main` or in a constructor function.",
+    "real_world": "Packages often use `init` to register codecs, drivers, or handlers so importing the package enables the feature automatically.",
+    "code_lang": "go",
+    "code": "func init() {\n    fmt.Println(\"setup\")\n}\nfunc main() {\n    fmt.Println(\"main\")\n}",
+    "follow_up": "How does Go decide the order in which multiple `init` functions run?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How does a `select` statement behave when multiple channel operations are ready, and what is it commonly used for?",
+    "answer": "`select` waits on multiple channel operations and proceeds with one that is ready. If several cases are ready, Go chooses one pseudo-randomly, so you should not depend on a fixed order. It is commonly used for timeouts, cancellation, fan-in, and making goroutines responsive to multiple events. A `default` case makes it non-blocking, which is useful but easy to misuse if you accidentally spin in a busy loop.",
+    "real_world": "This comes up in services that need to stop work when a request is canceled, or in workers that merge results from multiple sources. A bad `select` design often shows up as a goroutine leak or high CPU from a busy loop.",
+    "code_lang": "go",
+    "code": "select {\ncase msg := <-ch:\n    handle(msg)\ncase <-ctx.Done():\n    return ctx.Err()\ndefault:\n    // no work available\n}",
+    "follow_up": "How would you use `select` to avoid leaking goroutines when a consumer stops reading?"
+   },
+   {
+    "question": "What happens if you close a channel in Go, and when should you close one?",
+    "answer": "Closing a channel signals that no more values will be sent. Receivers can keep reading buffered values, and then reads return the element type’s zero value with `ok == false` if they use the two-value receive form. Only the sending side should close a channel, and you should close it once, because sending on a closed channel panics. You usually close channels to broadcast completion, not to free memory or as a general cancellation mechanism.",
+    "real_world": "This matters in pipelines and worker pools where one goroutine produces a finite stream of results. A common production bug is a panic from closing a channel twice or from a sender continuing after close.",
+    "code_lang": "go",
+    "code": "v, ok := <-ch\nif !ok {\n    // channel is closed and drained\n    return\n}\nfmt.Println(v)",
+    "follow_up": "How would you structure ownership so only one goroutine is responsible for closing a channel?"
+   },
+   {
+    "question": "How do slices grow when you append, and why does preallocating capacity matter?",
+    "answer": "When an append would exceed a slice’s capacity, Go allocates a new backing array, copies the existing elements, and returns a new slice header. That means appending can be cheap most of the time but occasionally trigger allocation and copying. Preallocating with `make` and a capacity reduces reallocations and can improve performance in hot paths. The trade-off is that guessing too high wastes memory.",
+    "real_world": "This matters in request aggregators or log processing jobs that build large result slices. Without preallocation, repeated growth can dominate CPU time and allocation counts.",
+    "code_lang": "go",
+    "code": "items := make([]int, 0, 1000)\nfor i := 0; i < 1000; i++ {\n    items = append(items, i)\n}",
+    "follow_up": "What bugs can happen if two slices share the same backing array?"
+   },
+   {
+    "question": "What is the difference between a value receiver and a pointer receiver on a method, and how do you choose between them?",
+    "answer": "A value receiver gets a copy of the receiver, while a pointer receiver works with the original value. Use a pointer receiver when the method needs to mutate the receiver, when the value is large and copying is expensive, or when consistency matters across a method set. Value receivers are fine for small immutable types and can make APIs simpler. The important trade-off is between copy semantics and shared state.",
+    "real_world": "This comes up with structs that hold caches, mutexes, or large buffers. Using the wrong receiver can cause changes not to persist, or create expensive copies in a hot loop.",
+    "code_lang": "go",
+    "code": "func (u User) Rename(name string) { u.Name = name }\nfunc (u *User) RenamePtr(name string) { u.Name = name }",
+    "follow_up": "How does receiver choice affect whether a type satisfies an interface?"
+   },
+   {
+    "question": "What happens if two goroutines write to the same variable without synchronization, and how do you debug it?",
+    "answer": "That is a data race, which means the program has undefined behavior from the Go memory model’s perspective. The value you observe may be stale, torn, or just inconsistent, and the bug may disappear when you add logging. The usual fix is to protect the variable with a mutex, use atomic operations for simple counters, or redesign to communicate ownership through channels. To debug it, run the race detector and then trace the reported access paths back to the shared state.",
+    "real_world": "Race bugs often appear only under production load, especially in caches, metrics counters, and shared maps. They can be very hard to reproduce without the race detector.",
+    "code_lang": "go",
+    "code": "go test -race ./...\n# or\nlock.Lock()\ncount++\nlock.Unlock()",
+    "follow_up": "When would you choose a mutex over channels for coordinating shared state?"
+   },
+   {
+    "question": "How do you compare two slices for equality in Go, and what are the common pitfalls?",
+    "answer": "You cannot compare slices with `==` except against `nil`; that only checks whether the slice header is nil, not whether the contents match. For content equality, use `slices.Equal` in newer Go versions or compare element by element yourself. Be careful with `nil` versus empty slices, because they can behave differently in JSON and some APIs. The pitfall is assuming two slices with the same contents are directly comparable.",
+    "real_world": "This shows up in tests and API handlers that compare expected and actual collections. Teams often get flaky tests or confusing JSON differences because `nil` and empty slices are treated differently.",
+    "code_lang": "go",
+    "code": "if slices.Equal(got, want) {\n    // equal contents\n}\nif got == nil {\n    // nil slice\n}",
+    "follow_up": "How would you compare two structs that contain slices or maps?"
+   },
+   {
+    "question": "What does it mean for a map read versus a map write to be safe in concurrent Go code?",
+    "answer": "Concurrent reads from a map are safe only if no goroutine is writing to it at the same time. Any concurrent write, including read-write contention, must be synchronized; otherwise the program can panic or behave unpredictably. The usual options are a mutex, `sync.Map` for specific access patterns, or building the map once and then treating it as immutable. The choice depends on update frequency and read patterns.",
+    "real_world": "This comes up in in-memory caches, feature flags, and connection registries. A race on a map often appears as a fatal runtime error in production under load.",
+    "code_lang": "go",
+    "code": "var mu sync.RWMutex\nmu.RLock()\nval := m[key]\nmu.RUnlock()\n\nmu.Lock()\nm[key] = val\nmu.Unlock()",
+    "follow_up": "When would `sync.Map` be a better fit than a plain map with a mutex?"
+   },
+   {
+    "question": "How do you use `context.Context` in Go, and what should you avoid putting in it?",
+    "answer": "`context.Context` carries cancellation, deadlines, and request-scoped values across API boundaries. You should pass it as the first parameter to functions that can block or do I/O, and you should check `Done` so work stops when the caller no longer needs it. Avoid using context as a general-purpose bag of optional parameters or long-lived state. The trade-off is API clarity versus flexibility, and the main purpose is controlling request lifetimes.",
+    "real_world": "In web servers and background jobs, context prevents wasted work after clients disconnect or deadlines expire. It also helps stop cascading resource leaks when downstream calls hang.",
+    "code_lang": "go",
+    "code": "func fetch(ctx context.Context, url string) error {\n    req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)\n    _, err := http.DefaultClient.Do(req)\n    return err\n}",
+    "follow_up": "How do deadlines and cancellation propagate through nested function calls?"
+   },
+   {
+    "question": "What is the difference between `testing.T` and table-driven tests, and why are table-driven tests common in Go?",
+    "answer": "`testing.T` is the object each test uses to report failures and control subtests. Table-driven tests organize many cases into a slice of inputs and expected outputs, which makes it easy to add coverage and keep test logic compact. They are common in Go because they reduce duplication and make edge cases explicit. The main trade-off is that you must name cases well so failures are easy to diagnose.",
+    "real_world": "This is useful when testing parsers, validators, or business rules with many similar scenarios. Teams use it to cover edge cases quickly without writing one-off test functions for every input.",
+    "code_lang": "go",
+    "code": "cases := []struct {\n    name string\n    in   int\n    want int\n}{{\"double\", 2, 4}}\nfor _, tc := range cases {\n    t.Run(tc.name, func(t *testing.T) { /* ... */ })\n}",
+    "follow_up": "How do you avoid the loop-variable capture bug in table-driven subtests?"
+   },
+   {
+    "question": "How do you handle errors with wrapping in Go, and why is that better than returning plain strings?",
+    "answer": "Wrapping preserves the original error while adding context about what failed at a higher level. That lets callers inspect the chain with `errors.Is` or `errors.As` instead of relying on string matching. It matters because you can log useful context and still let upper layers make decisions based on the underlying cause. Plain strings lose structure and make recovery logic brittle.",
+    "real_world": "This is common in service layers that need to distinguish not-found, permission, and timeout failures while still reporting a helpful message. Without wrapping, teams often end up parsing error text, which breaks easily.",
+    "code_lang": "go",
+    "code": "if err != nil {\n    return fmt.Errorf(\"load user %d: %w\", id, err)\n}\nif errors.Is(err, fs.ErrNotExist) { /* ... */ }",
+    "follow_up": "When would you use `errors.As` instead of `errors.Is`?"
+   },
+   {
+    "question": "How do you decide between using a buffered and an unbuffered channel in Go?",
+    "answer": "Use an unbuffered channel when you want synchronization: the sender and receiver rendezvous, so work only proceeds when both sides are ready. Use a buffered channel when you want limited queueing to absorb bursts or decouple producer and consumer timing. The trade-off is that buffering can improve throughput, but it can also hide backpressure problems until the buffer fills. In practice, the choice should reflect whether blocking is part of the design or something you want to smooth out.",
+    "real_world": "This comes up in worker pipelines where producers can outpace consumers. A small buffer can reduce stalls, but an oversized buffer can mask overload and make latency spikes harder to diagnose.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you choose the buffer size in a real system?"
+   },
+   {
+    "question": "What is a nil map in Go, and what happens if you read from or write to it?",
+    "answer": "A nil map behaves like an empty map for reads: lookups return the zero value and the boolean false if you use the two-value form. Writes panic because a nil map has no underlying storage. This matters because maps are reference-like, but unlike slices they must be initialized before assignment. If a function may populate a map, it should either allocate it or take one that the caller has already created.",
+    "real_world": "A common production bug is forgetting to initialize a map in a constructor path, then hitting a panic only on the code path that writes to it. Reads may look fine in tests, so the failure shows up later under a different request flow.",
+    "code_lang": "go",
+    "code": "var m map[string]int\nfmt.Println(m[\"x\"])\n// m[\"x\"] = 1 // panic: assignment to entry in nil map\nm = make(map[string]int)\nm[\"x\"] = 1",
+    "follow_up": "How does a nil slice differ from a nil map?"
+   },
+   {
+    "question": "How do you avoid goroutine leaks in Go?",
+    "answer": "A goroutine leaks when it keeps running or blocked after its work is no longer needed, often because nobody will receive from its channel or its context was never canceled. The fix is to make shutdown explicit: use context cancellation, close outbound work channels from the owner, and ensure every blocking send or receive has a termination path. Leaks matter because they accumulate silently and can hold memory, file descriptors, or locks. In reviews, I look for goroutines started without a clear stop condition.",
+    "real_world": "This often shows up in servers with background retry loops or fan-out workers that keep waiting after the request is gone. Over time, the process memory grows and stack counts climb even though traffic is stable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns do you use to make sure every started goroutine can exit?"
+   },
+   {
+    "question": "What is the difference between `sync.Mutex` and `sync.RWMutex`, and when would you choose each?",
+    "answer": "A `Mutex` allows one goroutine at a time, while an `RWMutex` lets many readers proceed concurrently but still requires exclusive access for writers. `RWMutex` can help when reads are frequent and the protected section is small, but it adds overhead and can be slower than `Mutex` if contention is low or writes are common. The key trade-off is reader concurrency versus simplicity and writer fairness. I’d start with `Mutex` unless profiling shows a real read-heavy bottleneck.",
+    "real_world": "This matters for shared caches, in-memory config, and registries. Teams often reach for `RWMutex` too early and end up with more complex code without a measurable win.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What mistakes can make an `RWMutex` perform worse than a plain `Mutex`?"
+   },
+   {
+    "question": "How does Go's garbage collector affect performance, and what coding patterns can create extra pressure on it?",
+    "answer": "Go's GC is designed for low-latency concurrent collection, but it still has to trace live heap objects, so more allocations and more pointer-rich graphs generally mean more GC work. Common pressure points are allocating in hot loops, keeping large objects reachable longer than needed, and converting data structures in ways that create temporary garbage. The goal is usually to reduce allocation rate and object lifetime, not to try to disable the GC's behavior. Profiling with allocation and heap profiles is the right way to verify whether GC is actually a problem.",
+    "real_world": "A service can look CPU-bound when the real issue is allocation churn from request parsing or per-item formatting. Reducing allocations often cuts both latency and GC time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you confirm in production that GC is contributing to latency?"
+   },
+   {
+    "question": "What is the purpose of `sync.Once`, and what problems does it solve?",
+    "answer": "`sync.Once` runs a function exactly once, even if multiple goroutines call it at the same time. It is useful for lazy initialization, one-time registration, and startup code that must not execute twice. Compared with a hand-rolled boolean and mutex, it is safer and easier to get right because it handles synchronization and visibility for you. The important caveat is that if the function panics, the behavior depends on whether it completed; you should still design the initialization path carefully.",
+    "real_world": "Teams often use it to initialize clients, parse config, or register plugins in package-level setup. Without it, concurrent initialization can lead to duplicate connections or hard-to-reproduce races.",
+    "code_lang": "go",
+    "code": "var once sync.Once\nvar cfg *Config\nfunc GetConfig() *Config {\n  once.Do(func() { cfg = loadConfig() })\n  return cfg\n}",
+    "follow_up": "When would you prefer explicit initialization over `sync.Once`?"
+   },
+   {
+    "question": "How do you distinguish between cancellation and timeout when using contexts in Go?",
+    "answer": "A timeout is a specific kind of cancellation driven by a deadline, while cancellation can be triggered manually by calling the cancel function or by an upstream context ending. In code, both are observed through `ctx.Done()`, so the work usually does not need to know which one happened unless it wants different handling. The important part is to return promptly and inspect `ctx.Err()` when appropriate. This keeps request-scoped work from continuing after the caller has lost interest.",
+    "real_world": "In HTTP handlers and database calls, failing to honor context cancellation can waste capacity on requests that have already disconnected. Timeouts also help prevent a slow dependency from tying up worker goroutines indefinitely.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you make sure your own functions are context-aware without overcomplicating the API?"
+   },
+   {
+    "question": "How do you test code that depends on time, randomness, or external systems in Go?",
+    "answer": "You should isolate the dependency behind an interface or function parameter so tests can substitute a fake, stub, or deterministic source. For time, inject a clock; for randomness, inject a seeded generator or abstract the call; for external systems, use a test double or a controlled integration environment. This keeps tests fast and reliable instead of flaky and slow. The trade-off is a bit more design work up front for much better repeatability.",
+    "real_world": "This is common when testing retries, token expiry, and scheduled jobs. Without injection, tests often sleep or depend on the wall clock, which makes the suite slow and nondeterministic.",
+    "code_lang": "go",
+    "code": "type Clock interface { Now() time.Time }\nfunc Expired(c Clock, ttl time.Duration, start time.Time) bool {\n  return c.Now().Sub(start) > ttl\n}",
+    "follow_up": "How do you decide between a unit test with fakes and an integration test with the real dependency?"
+   },
+   {
+    "question": "How do you think about package design and visibility in Go, especially with exported versus unexported names?",
+    "answer": "Exported names start with a capital letter and form the package's public API, while unexported names stay internal to the package. Good package design keeps the exported surface small and stable, with unexported helpers doing most of the work. This matters because changing exported APIs is expensive for downstream users, while internal details can evolve freely. A practical rule is to export only what callers truly need and keep constructors or helper functions narrow and explicit.",
+    "real_world": "In real projects, oversized packages become hard to refactor because too many other packages depend on their internals. Limiting the public surface makes code reviews and versioning much easier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a package too large, and when would you split it?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how escape analysis works in Go and why a local variable sometimes ends up on the heap?",
+    "answer": "The compiler decides whether a value can stay on the stack or must escape to the heap based on whether its lifetime might outlive the current stack frame or whether it is referenced in ways the compiler cannot prove are safe. Common triggers are returning pointers to locals, storing values in interfaces, closures capturing variables, and sending references across goroutines. Heap allocation matters because it adds allocator and GC work, not because heap is always slow by itself. I usually verify with compiler diagnostics and profiles instead of guessing, because small code shape changes can change the result.",
+    "real_world": "A hot request path can start allocating because a refactor adds an interface conversion or closure capture, and suddenly GC time shows up in p99 latency. Teams often check compiler escape output during performance work to confirm whether an optimization actually removed allocations.",
+    "code_lang": "go",
+    "code": "type Big struct{ buf [1024]byte }\n\nfunc stack() Big {\n\tvar b Big\n\treturn b\n}\n\nfunc heap() *Big {\n\tvar b Big\n\treturn &b\n}",
+    "follow_up": "What patterns do you use to reduce allocations in a hot path without making the code fragile?"
+   },
+   {
+    "question": "What exactly happens to a panic in Go, and how do you decide where to recover?",
+    "answer": "A panic starts unwinding the current goroutine's stack, running deferred calls in LIFO order as it goes. `recover` only works from a deferred function in the same goroutine; you cannot catch a panic from another goroutine centrally without wrapping that goroutine's entrypoint. In libraries, panics are usually reserved for programmer errors or impossible states, while services often recover at process or request boundaries to turn a crash into logging, metrics, and an error response. Recovering too low in the stack can hide corruption or leave partial state committed.",
+    "real_world": "In HTTP servers, a middleware commonly recovers panics so one bad request does not kill the whole process, while still logging stack traces. In worker pools, forgetting to recover inside each worker can make one malformed job silently terminate workers and drain capacity.",
+    "code_lang": "go",
+    "code": "go func() {\n\tdefer func() {\n\t\tif r := recover(); r != nil {\n\t\t\tlog.Println(\"worker panic:\", r)\n\t\t}\n\t}()\n\tdoWork()\n}()",
+    "follow_up": "How would you make a panic recovery path safe if the goroutine holds locks or owns resources?"
+   },
+   {
+    "question": "How do `go` statements interact with loop variables, and what changed in newer Go versions?",
+    "answer": "Historically, closures in loops captured the loop variable itself, so concurrent work often observed the final or a later value unless you shadowed it or passed it as a parameter. Newer Go versions changed range loop semantics so each iteration gets its own variable, which removes a very common bug, but codebases may still contain old assumptions and classic `for` loops still deserve care. I still prefer passing values explicitly into goroutines because it is unambiguous and survives refactors. The underlying issue is variable lifetime and capture, not goroutines specifically.",
+    "real_world": "This bug often shows up when launching goroutines for fan-out RPCs and all requests accidentally hit the same shard or ID. It also appears in tests, where subtests run in parallel and all report the same case name.",
+    "code_lang": "go",
+    "code": "for _, v := range xs {\n\tv := v\n\tgo func(n int) {\n\t\tuse(n)\n\t}(v)\n}",
+    "follow_up": "Besides loop variables, what other closure-capture bugs have you seen in concurrent Go code?"
+   },
+   {
+    "question": "How does a Go map actually behave internally, and what consequences does that have for performance and correctness?",
+    "answer": "A Go map is a hash table organized into buckets, with overflow handling and runtime-managed growth as the load changes. Performance is usually amortized O(1), but it depends on hash quality, key size, and resize behavior, and iteration order is deliberately not stable. Because growth and mutation can relocate entries and update metadata, unsynchronized concurrent writes are unsafe, and even performance of single-threaded code can vary if you keep triggering growth. Key choice matters too: large struct keys increase hashing and comparison cost versus compact immutable keys like short strings or integers.",
+    "real_world": "A service using big composite structs as map keys can burn CPU in hashing and equality checks under load. Teams also get bitten when tests accidentally depend on map iteration order and start failing nondeterministically across runs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you replace a map with a slice, sorted slice, or a sharded map?"
+   },
+   {
+    "question": "What are the memory ordering guarantees around `sync/atomic` in Go, and when is atomic not enough?",
+    "answer": "Atomic operations let you read or update a specific memory location safely without a mutex, and they also establish synchronization so other goroutines observe writes in a defined order around those atomic accesses. They are good for counters, flags, and a few lock-free publication patterns, but they do not make a larger invariant safe by themselves. If you need to update multiple fields consistently, coordinate with other blocking operations, or preserve complex invariants, a mutex is usually simpler and safer. The common failure mode is mixing atomic and non-atomic access to the same state and assuming visibility just works.",
+    "real_world": "A readiness flag implemented atomically can publish whether config is loaded, but if the config object itself is mutated without synchronization, readers still see races or torn state. Production incidents here are subtle because the code may pass tests and fail only under load on real multicore machines.",
+    "code_lang": "go",
+    "code": "var ready atomic.Bool\n\nfunc publish() {\n\tcfg = loadConfig()\n\tready.Store(true)\n}\n\nfunc handler() {\n\tif ready.Load() { use(cfg) }\n}",
+    "follow_up": "How would you safely publish a frequently replaced immutable snapshot to many readers?"
+   },
+   {
+    "question": "How do you think about scheduler behavior in Go, especially preemption, blocking syscalls, and `GOMAXPROCS`?",
+    "answer": "The runtime schedules goroutines onto logical processors, which run on OS threads, and tries to keep work balanced while hiding most blocking. Blocking syscalls or cgo can tie up threads, so the runtime may create more threads to keep other goroutines running, but that has costs in memory and scheduling overhead. Modern Go has much better preemption than early versions, which helps long-running CPU loops stop starving the system, but tight CPU-bound workloads still care about `GOMAXPROCS`, work distribution, and backpressure. I think in terms of runnable goroutines, blocked threads, and whether the workload is CPU-bound, IO-bound, or mixed.",
+    "real_world": "A service that calls a slow C library through cgo can show latency spikes because Go cannot schedule through that code the same way it can through pure Go. CPU-bound batch jobs can also regress badly in containerized environments if `GOMAXPROCS` is mismatched to actual available CPU.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or profiles would you check if you suspected scheduler contention or thread explosion?"
+   },
+   {
+    "question": "What are the trade-offs of using `sync.Pool`, and when does it actually help?",
+    "answer": "`sync.Pool` is for temporary, reusable objects where allocation and GC dominate and exact retention is not required. Items in the pool can be dropped at any GC cycle, so it is a cache for reducing short-lived allocation pressure, not a correctness mechanism or a bounded resource pool. It helps most for frequently reused buffers or structs on hot paths, especially when reuse stays within similar size classes; it can hurt if pooled objects are large, rarely reused, or cause accidental retention. I only use it after measurement because simpler allocation is often fast enough.",
+    "real_world": "High-QPS JSON or protobuf paths often pool byte buffers to reduce allocation rate and GC churn. Teams also misuse it to store connections or request-scoped state, which fails under pressure because the runtime is free to clear the pool.",
+    "code_lang": "go",
+    "code": "var bufPool = sync.Pool{\n\tNew: func() any { return new(bytes.Buffer) },\n}\n\nb := bufPool.Get().(*bytes.Buffer)\nb.Reset()\ndefer bufPool.Put(b)",
+    "follow_up": "What mistakes can cause pooled objects to retain too much memory or corrupt data across requests?"
+   },
+   {
+    "question": "How do you approach backpressure in Go services so concurrency does not turn into overload?",
+    "answer": "I separate concurrency from throughput control: goroutines make work possible, but you still need limits on queue size, in-flight work, and downstream request rates. Common tools are bounded worker pools, semaphores, request shedding, deadlines, and cancellation propagation so work stops when the caller no longer cares. Unbounded channels or spawning a goroutine per task without limits can turn a slow dependency into heap growth, scheduler churn, and timeout storms. The right limit usually comes from observed latency curves and dependency capacity, not from a neat constant.",
+    "real_world": "A fan-out service can collapse when one downstream slows down: requests pile up, queues grow, GC increases, and eventually everything times out. Teams often fix this with bounded concurrency per dependency and explicit rejection once the system is saturated.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose between dropping work early, queueing, and blocking callers?"
+   },
+   {
+    "question": "How do you use `errgroup` or `sync.WaitGroup` correctly, and what failure modes do you watch for in fan-out code?",
+    "answer": "`sync.WaitGroup` only coordinates completion; it does not propagate errors or cancel sibling work. `errgroup` adds structured concurrency: when one task returns an error, the derived context is canceled so other tasks can stop early if they honor it. The big failure modes are forgetting to check the context inside workers, capturing shared mutable state unsafely, and letting a producer block forever because consumers exited on error. I prefer `errgroup` for request-scoped parallelism and `WaitGroup` for simple fire-and-join cases where error handling is separate.",
+    "real_world": "In a search aggregator, one shard error often means the overall request should stop, and without cancellation the remaining shard calls keep burning CPU and sockets. Another common bug is waiting forever because a goroutine tries to send results after the collector already returned on the first error.",
+    "code_lang": "go",
+    "code": "g, ctx := errgroup.WithContext(ctx)\nfor _, id := range ids {\n\tid := id\n\tg.Go(func() error {\n\t\treturn fetch(ctx, id)\n\t})\n}\nif err := g.Wait(); err != nil { return err }",
+    "follow_up": "How would you collect partial results safely if some subtasks are allowed to fail?"
+   },
+   {
+    "question": "When `encoding/json` becomes a bottleneck in Go, what do you look at before replacing it?",
+    "answer": "I first check whether the cost is allocation, reflection, copies, or unnecessary fields rather than blaming the package generically. Easy wins are reusing buffers, avoiding `map[string]any` in hot paths, decoding only needed fields, streaming large payloads instead of buffering everything, and using concrete structs with predictable shapes. Replacing the serializer can help, but it trades portability, maintenance, and sometimes edge-case compatibility for speed. I want profiles showing JSON on the hot path and a benchmark on representative payloads before taking on that complexity.",
+    "real_world": "APIs that handle large nested payloads often spend a lot of CPU and heap in marshal and unmarshal, especially when intermediary maps are used. Teams sometimes switch libraries and see gains, but just as often the bigger win comes from changing data shape or cutting unnecessary serialization hops.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What benchmark design would you use to compare two JSON approaches without misleading results?"
+   },
+   {
+    "question": "Why can an interface value be non-nil even when the concrete value inside it is nil, and how does that bite production code?",
+    "answer": "An interface value is only nil when both its dynamic type and dynamic value are nil. If you store a typed nil pointer inside an interface, the interface itself is non-nil because it still carries type information. This commonly breaks `if err != nil` checks when a function returns a typed nil that implements `error`. The fix is to return a plain `nil` interface on success and avoid wrapping nil pointers into interfaces.",
+    "real_world": "This shows up in error paths where logs say an error exists, but printing it reveals `<nil>`. Teams often hit it after introducing custom error types with pointer receivers.",
+    "code_lang": "go",
+    "code": "type MyErr struct{}\nfunc (*MyErr) Error() string { return \"boom\" }\n\nfunc f() error {\n\tvar e *MyErr = nil\n\treturn e\n}\n\n// f() != nil, because error holds type *MyErr.",
+    "follow_up": "How would you design custom error types so callers don't accidentally return typed nils?"
+   },
+   {
+    "question": "What are the trade-offs between channels and mutexes for coordinating shared state in Go?",
+    "answer": "Channels are good when you want to model ownership transfer, sequencing, or a pipeline; mutexes are usually better for protecting in-memory shared state with low overhead. A channel-based design can become harder to reason about if it turns simple reads and writes into message passing with extra goroutines and buffering decisions. Mutexes keep the data structure local and are often faster under contention patterns that don't need queue semantics. The key is whether you're coordinating work or protecting data.",
+    "real_world": "I've seen services built around 'everything through channels' become bottlenecked on a single event loop goroutine, while a mutex around a small cache scaled better and simplified shutdown behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you replace a mutex-protected structure with a single-owner goroutine anyway?"
+   },
+   {
+    "question": "What does it mean that a slice can retain a large backing array, and how do you prevent that memory leak pattern?",
+    "answer": "A small slice can keep the entire backing array alive because the slice header still points into that array. If you take a tiny subslice from a huge buffer and keep it around, the GC cannot free the big allocation. To prevent it, copy the needed bytes into a new slice before storing or returning them. This matters any time you parse or batch large payloads.",
+    "real_world": "A common incident is reading multi-megabyte request bodies, keeping just a small token or line, and accidentally retaining gigabytes of memory under load.",
+    "code_lang": "go",
+    "code": "buf := make([]byte, 10<<20) // 10 MB\nsmall := buf[:10]             // retains all 10 MB\n\nsafe := append([]byte(nil), small...)\n_ = safe // now buf can be collected",
+    "follow_up": "How would you confirm this kind of retention issue with pprof?"
+   },
+   {
+    "question": "How does method promotion through embedding work in Go, and what are the subtle API risks?",
+    "answer": "Embedded fields promote their methods so the outer type can appear to implement interfaces or expose behavior it didn't declare directly. That is convenient, but it can unintentionally widen your API surface, couple you to the embedded type, and create ambiguity if multiple embedded types provide the same method. It also affects interface satisfaction in ways that surprise reviewers during refactors. Embedding is best used when the promoted behavior is intentionally part of the outer type's contract.",
+    "real_world": "Teams get burned when embedding a sync primitive or client type exposes methods publicly, then later removing or replacing the embedded field becomes a breaking change.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do pointer versus value method sets interact with embedding and interface satisfaction?"
+   },
+   {
+    "question": "What actually happens when you append to a slice that aliases another slice, and how do you reason about correctness there?",
+    "answer": "Two slices can share the same backing array, so writes through one may affect the other. An `append` reuses that backing array if there is enough capacity; otherwise it allocates a new one, so behavior changes based on capacity, not just length. That makes aliasing bugs data-dependent and hard to reproduce. If ownership is unclear, copy before mutation or constrain capacity with a full slice expression.",
+    "real_world": "This causes production bugs in request processing where helper functions append to a slice they didn't allocate, unexpectedly mutating cached or reused data structures.",
+    "code_lang": "go",
+    "code": "a := []int{1, 2, 3, 4}\nb := a[:2:2]      // len 2, cap 2\nc := append(b, 9) // forced new backing array\n\na[0] = 7\n// b sees 7, c does not share after append",
+    "follow_up": "When would you deliberately use the full slice expression to enforce copy-on-append behavior?"
+   },
+   {
+    "question": "How do package initialization order and import side effects work in Go, and why can they become an operational problem?",
+    "answer": "Go initializes imported packages before the importing package, and within a package it initializes variables before running `init` functions. Side-effect imports and hidden registration in `init` make startup behavior implicit and order-sensitive across files and packages. That hurts testability, makes cold-start failures harder to diagnose, and can trigger expensive work before configuration or logging is ready. Explicit constructors are usually easier to reason about than magical global registration.",
+    "real_world": "This matters in services where a metrics, database, or driver package does work in `init`, causing startup panics or slow boots that only appear in certain binaries or test runs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is a side-effect import justified, and how would you document or contain it?"
+   },
+   {
+    "question": "How do you think about `unsafe` in Go, especially around `uintptr`, object lifetimes, and GC correctness?",
+    "answer": "`unsafe` lets you bypass the type system, but the main risk is violating the GC's assumptions about pointers and object reachability. `uintptr` is just an integer, not a tracked reference, so converting a pointer to `uintptr` and keeping it across operations can make the object movable or collectible from the GC's perspective. You should keep unsafe use tiny, local, and well-documented, and prefer standard-library patterns that are already vetted. Most bugs here are correctness bugs first and performance wins second.",
+    "real_world": "Unsafe code often passes tests and then fails under load or after a Go upgrade because timing and GC behavior changed, especially in serialization or zero-copy optimizations.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of zero-copy optimizations are usually not worth the maintenance risk in Go?"
+   },
+   {
+    "question": "What are the semantics of `errors.Is` and `errors.As`, and how do custom error types influence matching?",
+    "answer": "`errors.Is` checks whether an error matches a sentinel anywhere in the unwrap chain, and `errors.As` finds the first error assignable to a target type. Custom error types can participate by implementing `Unwrap`, and they can customize matching behavior by implementing an `Is` method. This matters because error handling becomes part of your API: callers depend on which conditions are matchable versus only human-readable. Overusing sentinels can couple packages tightly, while typed errors can carry richer context.",
+    "real_world": "In production, this is how callers distinguish retryable errors, not-found conditions, and permission failures without brittle string matching.",
+    "code_lang": "go",
+    "code": "if errors.Is(err, context.Canceled) {\n\treturn nil\n}\nvar pe *os.PathError\nif errors.As(err, &pe) {\n\tlog.Println(pe.Path)\n}",
+    "follow_up": "How would you design an error API for a package that wants to expose retryability without leaking implementation details?"
+   },
+   {
+    "question": "How does cgo change the behavior and performance profile of a Go program?",
+    "answer": "Crossing the cgo boundary is much more expensive than a normal Go call, and it limits what the Go scheduler and runtime can do while that work is in C. C code is outside the Go memory model and race detector, and pointer passing between Go and C has strict rules to keep the GC correct. It also complicates builds, deployment, and crash diagnosis because now you depend on native toolchains and ABIs. Use it when you must, but isolate it behind narrow interfaces and batch calls when possible.",
+    "real_world": "Services that call into C per request often discover the overhead only under high QPS, or they hit incidents where C blocks threads and capacity drops despite low Go CPU usage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or profiles would tell you cgo is the bottleneck rather than ordinary Go code?"
+   },
+   {
+    "question": "How would you diagnose and fix lock contention in a Go service under production load?",
+    "answer": "Start with mutex and block profiles, plus traces, to find which locks dominate wait time and whether the contention is bursty or constant. Then decide whether the problem is lock scope, too much shared state, poor sharding, or a design that serializes unrelated work. The fix might be reducing critical sections, moving expensive work outside the lock, partitioning state, or replacing a global structure with per-key or per-CPU style ownership. Blindly switching to `RWMutex` rarely helps unless reads are truly dominant and long enough to justify the overhead.",
+    "real_world": "A classic incident is a global cache or stats map guarded by one lock; latency spikes appear only at peak traffic because goroutines pile up waiting, not because CPU is saturated.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you choose sharding over a single lock with a better data structure?"
+   }
+  ]
+ }
+}

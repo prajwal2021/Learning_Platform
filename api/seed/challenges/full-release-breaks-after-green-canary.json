@@ -1,0 +1,338 @@
+{
+  "slug": "full-release-breaks-after-green-canary",
+  "title": "The canary is green, then the full release produces 500s",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "deployments",
+    "canary",
+    "backward-compatibility",
+    "database-migrations",
+    "workers"
+  ],
+  "scenario": "A marketplace checkout service releases a new version. The rollout canaries 5% of web traffic for 30 minutes and the canary dashboard shows no visible errors, so the release is promoted to 100% of web traffic. Within 10 minutes, checkout HTTP 500s jump to 18%. Checkout creates a fulfillment task, waits up to 2 seconds for a background worker to calculate a shipping quote, and returns 500 if that task fails or never produces a usable result. Worker deployment is separate from web deployment, and at the time of the full web rollout most workers are still on the old version.",
+  "goal": "Find the production-safe cause and release strategy that prevents this class of failure.",
+  "concepts": [
+    {
+      "key": "canary-release",
+      "name": "Canary release",
+      "summary": "A canary release sends a small share of traffic to a new version before sending all traffic to it. It reduces blast radius only if the canary covers the risky paths and dependencies.",
+      "used_here": "The web tier was canaried at 5%, but the canary did not fully represent the web-to-worker checkout path at full scale."
+    },
+    {
+      "key": "distributed-tracing",
+      "name": "Distributed tracing",
+      "summary": "Distributed tracing connects work done by several services or processes into one request timeline. It helps show where a request spent time or failed.",
+      "used_here": "Traces connect the checkout HTTP request to the fulfillment task and worker result that the request waits for."
+    },
+    {
+      "key": "background-workers",
+      "name": "Background workers",
+      "summary": "Background workers process jobs outside the main request handler. They often run a different deployment lifecycle from web servers.",
+      "used_here": "Checkout depends on workers to calculate shipping quotes before the HTTP request can return successfully."
+    },
+    {
+      "key": "synchronous-wait",
+      "name": "Synchronous wait on async work",
+      "summary": "A synchronous wait happens when a request blocks until another process finishes work. If that process fails, the user-facing request can fail too.",
+      "used_here": "Checkout waits up to 2 seconds for the worker to finish the fulfillment task, so worker failures become HTTP 500s."
+    },
+    {
+      "key": "mixed-version-fleet",
+      "name": "Mixed-version fleet",
+      "summary": "A mixed-version fleet has old and new application versions running at the same time. Deployments commonly create this state for minutes or hours.",
+      "used_here": "New web code writes data while old worker code is still reading and updating related records."
+    },
+    {
+      "key": "database-schema",
+      "name": "Database schema",
+      "summary": "A database schema defines tables, columns, constraints, and allowed values. Application code must agree with those rules when reading and writing data.",
+      "used_here": "A new constraint requires a column value that old worker code does not write when creating fulfillment attempt rows."
+    },
+    {
+      "key": "database-enum",
+      "name": "Database-backed enum",
+      "summary": "A database-backed enum restricts a column to a fixed set of values. Both the database and application parsers must allow a new value before it is safely written.",
+      "used_here": "The new web code writes a delivery speed value that old worker code does not recognize."
+    },
+    {
+      "key": "not-null-constraint",
+      "name": "NOT NULL constraint",
+      "summary": "A NOT NULL constraint prevents a database column from being stored without a value. Adding it before all writers provide the value can break older code.",
+      "used_here": "Old workers insert fulfillment attempt rows without the newly required handling code, so the database rejects the write."
+    },
+    {
+      "key": "feature-flag",
+      "name": "Feature flag",
+      "summary": "A feature flag lets operators turn behavior on or off without deploying new code. It is useful for stopping new writes or limiting a risky path quickly.",
+      "used_here": "The incompatible new delivery speed can be disabled while workers are upgraded and failed tasks are retried."
+    },
+    {
+      "key": "rollback",
+      "name": "Rollback",
+      "summary": "A rollback returns application code to a previous version. It is not always safe if the new version already wrote data the old version cannot handle.",
+      "used_here": "Rolling back only the web tier would not make existing fulfillment tasks readable by old workers."
+    },
+    {
+      "key": "expand-and-contract-migration",
+      "name": "Expand-and-contract migration",
+      "summary": "Expand-and-contract is a multi-step migration pattern: first add compatible capacity, then move traffic, then remove old assumptions. It avoids breaking old and new versions during a rollout.",
+      "used_here": "The safe release must first allow new values and tolerate both formats, then backfill, then enforce constraints later."
+    },
+    {
+      "key": "backfill",
+      "name": "Backfill",
+      "summary": "A backfill updates existing records to match a new data shape or requirement. It is usually run after code can safely handle both old and new data.",
+      "used_here": "Existing rows must receive the new required handling code before the database enforces it for all records."
+    },
+    {
+      "key": "backward-compatibility",
+      "name": "Backward compatibility",
+      "summary": "Backward compatibility means newer changes do not break older code that is still running. In deployments, it often means old readers can handle data written by new writers, or new writes are delayed.",
+      "used_here": "Workers and web servers need a compatibility window where either version can read and write safely."
+    },
+    {
+      "key": "dead-letter-queue",
+      "name": "Dead-letter queue",
+      "summary": "A dead-letter queue stores jobs that failed too many times so they can be inspected or replayed later. It prevents endless retries from hiding the real failure.",
+      "used_here": "Failed fulfillment tasks should be monitored and retried after the worker compatibility fix is deployed."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Find where the 500s are created",
+      "question": "The full rollout has produced 18% checkout HTTP 500s after a green 5% web canary. What is the best first investigation?",
+      "concept_keys": [
+        "canary-release",
+        "distributed-tracing",
+        "synchronous-wait"
+      ],
+      "options": [
+        {
+          "text": "Increase the canary sample to 10% for 15 minutes to gather a clearer error signal.",
+          "correct": false,
+          "hint": "More traffic gives more data, but it also widens the blast radius while the failure mode is unknown. Use the existing failing requests to localize the problem first.",
+          "id": "a"
+        },
+        {
+          "text": "Roll back all web pods immediately, then inspect logs after the error rate returns to normal.",
+          "correct": false,
+          "hint": "A quick reversal can be useful, but only when the failure is limited to code that has no lasting side effects. First determine whether the bad requests depend on state already written during the rollout.",
+          "id": "b"
+        },
+        {
+          "text": "Break down failed checkout traces by endpoint, request phase, dependency call, and result status.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Check CDN and load balancer health checks because the failure appeared only after promotion.",
+          "correct": false,
+          "hint": "Edge routing problems can cause broad failures, but checkout-specific 500s need request-level evidence. Start with where the application says the request failed.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Tracing the failed checkout requests shows whether the 500 is created in the web handler, a database call, or a downstream processing step. That is safer than immediately rolling back because some releases write durable state that an older version may not understand. The CDN or load balancer is less likely when the symptom is checkout 500s rather than connection failures or all endpoints failing."
+    },
+    {
+      "title": "Interpret the worker errors",
+      "question": "The traces show checkout creates a fulfillment task and waits for a shipping quote. Failed requests line up with worker logs showing `unknown DeliverySpeed value: instant` when reading the task, and `null value in column handling_code violates not-null constraint` when old workers insert `fulfillment_attempts` rows. The new web version writes `delivery_speed='instant'` for eligible orders, while most workers are still old. What is the most likely root cause?",
+      "concept_keys": [
+        "background-workers",
+        "synchronous-wait",
+        "mixed-version-fleet",
+        "database-enum",
+        "not-null-constraint"
+      ],
+      "options": [
+        {
+          "text": "The database is overloaded by full rollout traffic, so enum parsing and constraint errors are secondary symptoms.",
+          "correct": false,
+          "hint": "Load problems usually show saturation, slow queries, or connection errors. Deterministic errors around specific values and missing columns often indicate a contract mismatch.",
+          "id": "a"
+        },
+        {
+          "text": "The 2 second checkout wait is too short, so worker tasks complete successfully after the web request times out.",
+          "correct": false,
+          "hint": "Timeout tuning matters when work is merely slow. Here the logs include parse and constraint failures, which point to rejected work rather than late success.",
+          "id": "b"
+        },
+        {
+          "text": "The canary duration was too short, and a 60 minute canary would have prevented the production failure.",
+          "correct": false,
+          "hint": "A longer canary helps only if the canary exercises the risky interaction. If the risky component is not represented, time alone may not expose it.",
+          "id": "c"
+        },
+        {
+          "text": "The release introduced incompatible data while old worker versions were still consuming and updating it.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "This is a mixed-version compatibility failure: new web code writes `instant`, but old workers cannot parse that enum value. The NOT NULL error is also concrete: old workers create `fulfillment_attempts` rows without `handling_code`, and the database now rejects those inserts. Increasing the checkout timeout would not help because the worker is failing deterministically, not merely running longer than 2 seconds."
+    },
+    {
+      "title": "Mitigate without making the data problem worse",
+      "question": "You need to reduce the 18% checkout 500 rate now. Some fulfillment tasks with `delivery_speed='instant'` already exist, and old workers still fail on them. Which mitigation is safest?",
+      "concept_keys": [
+        "feature-flag",
+        "background-workers",
+        "database-enum",
+        "not-null-constraint",
+        "rollback",
+        "dead-letter-queue"
+      ],
+      "options": [
+        {
+          "text": "Drop the NOT NULL constraint immediately and keep the new enum writes enabled during investigation.",
+          "correct": false,
+          "hint": "Relaxing one constraint may reduce one error, but it does not address old code failing to parse the new enum value. Continuing incompatible writes keeps increasing the amount of data that needs repair.",
+          "id": "a"
+        },
+        {
+          "text": "Disable new `instant` writes, pause or isolate failing retries, roll workers forward to tolerate `instant` and write `handling_code`, then replay failed tasks.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Rollback the web tier to the old version and leave the workers unchanged until the queue drains.",
+          "correct": false,
+          "hint": "A rollback stops some new behavior, but it does not rewrite tasks already stored with values old code cannot read. It also does not make old workers provide a value required by the current schema.",
+          "id": "c"
+        },
+        {
+          "text": "Raise the worker retry count so transient failures have more chances to produce a quote.",
+          "correct": false,
+          "hint": "Retries help with intermittent failures such as network blips. Repeating the same parse or constraint violation usually amplifies load and delays recovery.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The safest mitigation stops creating more incompatible records, prevents retry storms, upgrades the consumers that must process existing records, and then replays failed work. A web-only rollback is tempting, but rows containing `instant` already exist and old workers still cannot process them. Dropping the NOT NULL constraint alone also leaves the enum parse failure untouched."
+    },
+    {
+      "title": "Plan the safe migration",
+      "question": "After the incident is stable, you need a release plan for adding `delivery_speed='instant'` and making `handling_code` required. Which sequence is production-safe?",
+      "concept_keys": [
+        "expand-and-contract-migration",
+        "database-schema",
+        "database-enum",
+        "not-null-constraint",
+        "background-workers",
+        "backfill",
+        "backward-compatibility"
+      ],
+      "options": [
+        {
+          "text": "First add the NOT NULL constraint and new enum value; then deploy all web and worker code as one coordinated full-fleet release.",
+          "correct": false,
+          "hint": "A perfectly simultaneous release is rarely real in production. If any old writer remains, enforcing the new requirement early can break it.",
+          "id": "a"
+        },
+        {
+          "text": "Keep the schema unchanged, encode `instant` as `express`, and let workers infer the new behavior from checkout metadata.",
+          "correct": false,
+          "hint": "Encoding a new meaning as an old value hides the contract change and can produce incorrect business behavior. A safe migration should make the allowed data shape explicit and compatible.",
+          "id": "b"
+        },
+        {
+          "text": "First expand the database to allow `instant` and a nullable or defaulted `handling_code`; deploy readers and workers that handle old and new values; backfill; then enforce NOT NULL and remove old paths after all versions are upgraded.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "First deploy web code that writes `instant`; then add the enum value and NOT NULL constraint once the canary is green.",
+          "correct": false,
+          "hint": "For a closed database enum, the database must allow a value before any producer can safely write it. Constraints should come after all writers can satisfy them and existing rows are repaired.",
+          "id": "d"
+        }
+      ],
+      "explanation": "This is the expand-and-contract pattern. The schema is expanded first, including the database enum value, so new-capable code can run without violating database rules. Enforcement such as NOT NULL comes only after all writers are upgraded and a backfill has filled existing rows; doing it earlier recreates the old-worker failure."
+    },
+    {
+      "title": "Make the canary cover the real risk",
+      "question": "The original canary watched only the 5% web pods and their direct HTTP 500 rate. What should the next canary include for this checkout path?",
+      "concept_keys": [
+        "canary-release",
+        "background-workers",
+        "synchronous-wait",
+        "dead-letter-queue",
+        "distributed-tracing"
+      ],
+      "options": [
+        {
+          "text": "Skip the canary and deploy during the lowest traffic hour so fewer users see the failure.",
+          "correct": false,
+          "hint": "Lower traffic reduces impact but does not validate compatibility. It can also hide a rate-dependent issue until normal traffic returns.",
+          "id": "a"
+        },
+        {
+          "text": "Canary only the web tier again, but require zero 500s for 60 minutes instead of 30 minutes.",
+          "correct": false,
+          "hint": "A stricter time window helps only for failures visible in that same measurement. If the risky path crosses another deployment unit, the canary has to measure that unit too.",
+          "id": "b"
+        },
+        {
+          "text": "Canary web and compatible workers together, send representative eligible checkout traffic, and monitor quote completion, worker exceptions, retries, and dead-letter counts.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Canary only database migrations, because schema changes are the source of most release failures.",
+          "correct": false,
+          "hint": "Schema safety matters, but this incident also depends on which application versions read and write the data. The canary should follow the whole request path that users depend on.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The canary must represent the dependency chain that checkout actually uses: web creates a task, workers process it, and the request waits for a result. Monitoring worker exceptions, retries, and dead-letter counts catches failures that may not appear as web pod crashes. Extending the same web-only canary from 30 to 60 minutes still misses a separate worker rollout risk."
+    },
+    {
+      "title": "Set the rollback rule",
+      "question": "What release rule would have prevented a fast rollback from becoming unsafe after the new web code wrote data?",
+      "concept_keys": [
+        "rollback",
+        "backward-compatibility",
+        "mixed-version-fleet",
+        "database-schema"
+      ],
+      "options": [
+        {
+          "text": "Every release must be rollback-safe for persisted data: old and new versions can both read existing records, or new-format writes stay disabled until all consumers are compatible.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Every release must be rolled back within 5 minutes if the full-rollout error rate exceeds 5%.",
+          "correct": false,
+          "hint": "A rollback speed target is useful operationally, but speed does not guarantee safety. If incompatible data has already been written, old code may fail faster after rollback.",
+          "id": "b"
+        },
+        {
+          "text": "Every release must avoid background workers in the canary and validate them only after web traffic is stable.",
+          "correct": false,
+          "hint": "Separating validation can make sense for some changes, but not when the request path depends on the worker result. Components that share a data contract need compatibility validation together.",
+          "id": "c"
+        },
+        {
+          "text": "Every release must deploy database changes after application changes so old code never sees new schema.",
+          "correct": false,
+          "hint": "Ordering is not one-size-fits-all. Some changes, such as adding an enum value before writing it, must happen before application behavior changes.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Rollback safety is a data contract, not just an operational button. If old versions may run after new versions, they must tolerate data written during the rollout, or the new writes must be gated until consumers are ready. A 5 minute rollback policy would not save rows already written with `instant` or missing values old workers cannot supply."
+    }
+  ],
+  "takeaway": "A green canary is only meaningful for the paths and components it actually exercises. For schema and data-format changes, use expand-and-contract: expand allowed data first, deploy tolerant readers and writers, backfill, then enforce constraints and remove old code. Do not depend on rollback after incompatible writes; make rollback safe before the release.",
+  "review_issues": [
+    "Step 5: The premise that the 5% web canary was green is under-specified/inconsistent with the stated synchronous checkout path. If new web canary requests created tasks that old workers failed, and the web request waits and returns HTTP 500, the canary web-pod 500 dashboard should likely have seen the same class of failures. Specify that canary traffic lacked representative `instant`-eligible checkouts, the sample was too small, or the dashboard did not segment/alert on this checkout path.",
+    "Step 2: The pre-step `concepts.used_here` entries explicitly state the root cause before the question, including that new web writes a delivery speed old workers do not recognize and old workers omit `handling_code`. If concepts are visible to the learner before answering, they give away Step 2.",
+    "Step 4: The pre-step `concepts.used_here` entry for expand-and-contract explicitly states the safe sequence: allow new values, tolerate both formats, backfill, then enforce constraints. If visible before answering, it gives away Step 4.",
+    "Step 6: Earlier material already gives away the rollback rule. Step 1’s rollback hint/explanation and Step 3’s question/options state that rollback may be unsafe after durable incompatible data has been written, which is essentially the correct answer to Step 6."
+  ]
+}

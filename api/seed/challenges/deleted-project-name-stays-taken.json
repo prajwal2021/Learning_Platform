@@ -1,0 +1,322 @@
+{
+  "slug": "deleted-project-name-stays-taken",
+  "title": "Deleted project names stay unavailable for 30 minutes",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "caching",
+    "redis",
+    "mysql",
+    "consistency",
+    "api"
+  ],
+  "scenario": "Users delete a project and immediately try to recreate it with the same slug, but the API returns 409 Conflict for about 30 minutes. The uniqueness row is removed from MySQL within 40 ms, and direct database checks show the slug is free. The availability endpoint is cached in Redis with a 1,800-second TTL and handles 4,000 checks/second during onboarding.",
+  "goal": "Find the cause of the stale 409 responses and make deleted or renamed slugs available again within 5 seconds without weakening correctness.",
+  "concepts": [
+    {
+      "key": "redis",
+      "name": "Redis",
+      "summary": "Redis is an in-memory key-value store often used as a cache. It can return answers much faster than a database, but cached data can be old.",
+      "used_here": "Redis stores the project slug availability answer used by the availability endpoint."
+    },
+    {
+      "key": "ttl",
+      "name": "TTL",
+      "summary": "A TTL is a time-to-live that tells a cache when to expire an entry automatically. Until it expires, the cache may keep returning the stored value.",
+      "used_here": "The availability cache entries live for 1,800 seconds unless something changes or removes them earlier."
+    },
+    {
+      "key": "mysql",
+      "name": "MySQL",
+      "summary": "MySQL is a relational database that stores durable application data. It is usually the source of truth for records and constraints.",
+      "used_here": "MySQL stores the project slug uniqueness row and shows the slug is removed within 40 ms."
+    },
+    {
+      "key": "unique-constraint",
+      "name": "Unique constraint",
+      "summary": "A unique constraint prevents two rows from having the same value for a protected field. It is enforced by the database even when requests race.",
+      "used_here": "The project slug uniqueness rule must remain enforced by MySQL at final project creation time."
+    },
+    {
+      "key": "cache-hit",
+      "name": "Cache hit",
+      "summary": "A cache hit means the application found a value in the cache and used it instead of doing slower work. This is fast but only correct if the cached value is still valid enough.",
+      "used_here": "The availability endpoint can return a cached 'taken' answer without querying MySQL."
+    },
+    {
+      "key": "stale-cache",
+      "name": "Stale cache",
+      "summary": "A stale cache contains a value that used to be true but no longer matches the source of truth. Stale cache entries often cause confusing behavior because the database looks correct.",
+      "used_here": "Redis can keep saying a slug is taken after MySQL has already removed the uniqueness row."
+    },
+    {
+      "key": "cache-invalidation",
+      "name": "Cache invalidation",
+      "summary": "Cache invalidation is removing or changing cached data when the underlying data changes. It keeps future reads from using an old answer.",
+      "used_here": "After the stale Redis answer is identified, the write path must deal with the affected availability keys."
+    },
+    {
+      "key": "transaction",
+      "name": "Transaction",
+      "summary": "A transaction groups database changes so they commit or roll back together. Side effects outside the database need careful ordering around the commit.",
+      "used_here": "The slug row delete or rename commits in MySQL before Redis should be changed for that committed write."
+    },
+    {
+      "key": "replication-lag",
+      "name": "Replication lag",
+      "summary": "Replication lag is delay between a primary database and a read replica. A read from a lagging replica can show old data.",
+      "used_here": "It is a plausible explanation for stale reads, but the incident includes direct checks showing MySQL has already removed the row."
+    },
+    {
+      "key": "observability",
+      "name": "Observability",
+      "summary": "Observability means using logs, metrics, traces, and checks to understand what a system is doing. It helps prove both the cause and the fix.",
+      "used_here": "Metrics and targeted tests confirm whether stale 409 responses disappear and whether Redis or MySQL load changes."
+    },
+    {
+      "key": "rollout",
+      "name": "Rollout",
+      "summary": "A rollout is the controlled release of a change to production. Safe rollouts limit blast radius and include monitoring and rollback plans.",
+      "used_here": "The cache behavior change should be deployed while watching correctness, latency, Redis churn, and database reads."
+    },
+    {
+      "key": "qps",
+      "name": "QPS",
+      "summary": "QPS means queries or requests per second. It is a measure of load on a service or datastore.",
+      "used_here": "The availability endpoint handles 4,000 checks per second, so reducing caching can increase MySQL traffic."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the component that can still say 'taken'",
+      "question": "A deleted slug is free in MySQL within 40 ms, but the API still returns 409 Conflict for about 30 minutes. What should you inspect first to explain the mismatch?",
+      "concept_keys": [
+        "mysql",
+        "redis",
+        "ttl",
+        "cache-hit",
+        "replication-lag"
+      ],
+      "options": [
+        {
+          "text": "Inspect MySQL replica delay to see whether the availability endpoint is reading from a replica that is 30 minutes behind.",
+          "correct": false,
+          "hint": "Replica lag is plausible for stale reads, but the scenario points to a cached availability endpoint with a 1,800-second lifetime. First verify whether the endpoint reads the database at all on this path.",
+          "id": "a"
+        },
+        {
+          "text": "Inspect API worker CPU and thread pools to see whether overloaded workers are replaying an old response body.",
+          "correct": false,
+          "hint": "Worker overload can raise latency or errors, but it does not usually create a repeatable 30-minute lifetime. Match the duration to a configured data lifetime.",
+          "id": "b"
+        },
+        {
+          "text": "Inspect MySQL lock waits and deadlock logs to see whether the delete transaction is blocked for most of the 30 minutes.",
+          "correct": false,
+          "hint": "The database evidence says the row is already gone within 40 ms. Look for a component that can answer without reading that current database state.",
+          "id": "c"
+        },
+        {
+          "text": "Inspect the Redis key used by the availability endpoint for that slug, including its value and remaining TTL during the 409 window.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The 30-minute symptom lines up exactly with the 1,800-second Redis TTL. If the endpoint returns a cached 'taken' answer on a cache hit, MySQL can be correct while the API remains stale. Checking MySQL locks is tempting, but the row removal within 40 ms makes a long-running delete unlikely."
+    },
+    {
+      "title": "Interpret the Redis evidence",
+      "question": "During the failure, Redis contains key `project-slug-availability:acme` with value `available=false` and TTL 1,694 seconds. Tracing shows the availability endpoint returns from Redis on this hit and does not query MySQL. What does this prove?",
+      "concept_keys": [
+        "redis",
+        "ttl",
+        "cache-hit",
+        "stale-cache",
+        "mysql"
+      ],
+      "options": [
+        {
+          "text": "The API is returning a stale cached availability result, even though MySQL is already the current source of truth.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "The client is retrying too aggressively, because the remaining TTL is lower than the original 1,800 seconds.",
+          "correct": false,
+          "hint": "Retries may increase traffic, but they do not explain why every request sees the same old availability value. Focus on who supplies the response.",
+          "id": "b"
+        },
+        {
+          "text": "The database unique constraint is corrupt, because the endpoint returns 409 while direct database checks show no row.",
+          "correct": false,
+          "hint": "A 409 can be produced before the final database write if the application uses an availability check. Separate the advisory check from the database constraint.",
+          "id": "c"
+        },
+        {
+          "text": "The MySQL uniqueness row still exists somewhere, because Redis would not contain `available=false` otherwise.",
+          "correct": false,
+          "hint": "A cache stores a copy of a past answer. Its presence does not prove the underlying database row still exists.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The trace shows the endpoint answers from Redis and skips MySQL, so the 409 is explained by a stale cache entry. The remaining TTL of 1,694 seconds also fits a value that was cached earlier and is counting down. The tempting database-constraint theory does not fit because the direct database check shows the uniqueness row is already gone."
+    },
+    {
+      "title": "Find why the stale value survives the write",
+      "question": "You review logs for one slug. Project creation stores `available=false` in Redis with a 1,800-second TTL. The delete transaction removes the MySQL uniqueness row and commits, but no Redis command appears after the delete. What is the root cause for the 30-minute unavailability?",
+      "concept_keys": [
+        "redis",
+        "ttl",
+        "stale-cache",
+        "transaction",
+        "mysql"
+      ],
+      "options": [
+        {
+          "text": "The delete transaction is committing before the API response is sent, so clients can retry faster than Redis can respond.",
+          "correct": false,
+          "hint": "Fast client retries can amplify a bug, but they do not explain why Redis still contains the old value. Look at what data remains after the commit.",
+          "id": "a"
+        },
+        {
+          "text": "The TTL is too short, so Redis refreshes the `available=false` value too often after the project is deleted.",
+          "correct": false,
+          "hint": "A shorter lifetime would reduce how long a wrong answer can survive. Here the wrong answer persists close to the configured 1,800 seconds.",
+          "id": "b"
+        },
+        {
+          "text": "The delete path leaves the old Redis `available=false` answer in place, so requests keep using it until its TTL expires.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The availability endpoint should return HTTP 404 instead of 409 when a deleted slug is checked.",
+          "correct": false,
+          "hint": "The status code choice is not the reason the old value lasts 30 minutes. The same stale decision would be wrong even with a different status code.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The old `available=false` cache entry was written when the slug was taken and is still present after the delete commits. With a 1,800-second TTL, it can keep producing the same wrong result for roughly 30 minutes. Client retry behavior is noisy but secondary; the persistent cached value is the cause."
+    },
+    {
+      "title": "Choose the production fix",
+      "question": "Now that you know Redis can keep an old `available=false` answer after a committed delete, what code change should you make for correctness in production?",
+      "concept_keys": [
+        "cache-invalidation",
+        "redis",
+        "mysql",
+        "unique-constraint",
+        "transaction"
+      ],
+      "options": [
+        {
+          "text": "Only change the recreate endpoint to bypass Redis when the previous project was deleted less than 30 minutes ago.",
+          "correct": false,
+          "hint": "Special-casing one endpoint leaves other availability checks and rename cases inconsistent. Prefer one rule for all writes that change slug availability.",
+          "id": "a"
+        },
+        {
+          "text": "Run a background job every 10 minutes that scans deleted projects and clears any matching Redis availability keys.",
+          "correct": false,
+          "hint": "A periodic cleanup can reduce some stale entries, but its schedule is slower than the user-visible freshness target. The write that changes the slug is the moment you know which key changed.",
+          "id": "b"
+        },
+        {
+          "text": "After each committed create, delete, or rename, remove or update the affected Redis availability keys in that write path, and keep the MySQL unique constraint as final authority.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Remove the MySQL unique constraint and rely on the Redis availability value so the API and cache always agree.",
+          "correct": false,
+          "hint": "A cache can be stale, evicted, or unavailable. Final uniqueness needs an authoritative mechanism that still works under races.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The cache must be changed when the source data changes, so the write path should update or remove the affected availability entries after the database commit succeeds. MySQL still needs to enforce uniqueness at final creation time because two clients can race and Redis is only advisory. A background cleanup is tempting, but a 10-minute scan cannot provide a 5-second freshness guarantee."
+    },
+    {
+      "title": "Set a safe freshness backstop",
+      "question": "Product requires a deleted or renamed slug to become available within 5 seconds, even if one Redis update is missed. The endpoint handles 4,000 checks/second, so you still want caching. What cache lifetime policy matches that target?",
+      "concept_keys": [
+        "ttl",
+        "redis",
+        "stale-cache",
+        "qps",
+        "cache-invalidation"
+      ],
+      "options": [
+        {
+          "text": "Keep the 1,800-second TTL because write-path cache updates should handle normal deletes and renames.",
+          "correct": false,
+          "hint": "Think about the stated failure case: one cache update can be missed. A long remaining lifetime would still expose users to the old answer.",
+          "id": "a"
+        },
+        {
+          "text": "Reduce the TTL range to 5–30 seconds so most stale answers clear quickly without increasing database reads too much.",
+          "correct": false,
+          "hint": "The requirement is not 'usually under 30 seconds.' If a stale entry can live for 30 seconds, it can violate a 5-second target.",
+          "id": "b"
+        },
+        {
+          "text": "Keep the 1,800-second TTL and add a background sweeper every 60 seconds to refresh popular availability keys.",
+          "correct": false,
+          "hint": "A 60-second sweep cannot guarantee a 5-second user-visible change. Also, popularity-based refresh can miss exactly the slug a user retries.",
+          "id": "c"
+        },
+        {
+          "text": "Use write-path cache updates as the primary mechanism, and cap all mutable availability cache entries, including existing ones during rollout, at a TTL of 5 seconds or less.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "If a Redis update is missed, TTL expiry is the backstop, so the TTL must be no greater than the 5-second requirement. Write-path updates make the normal case immediate, while the short TTL bounds the worst case. A 5–30 second range sounds balanced, but any 30-second entry can still violate the product target."
+    },
+    {
+      "title": "Roll out and prove the fix",
+      "question": "You are ready to deploy the write-path Redis updates and the 5-second TTL cap. What rollout and verification plan best confirms the incident is fixed without hiding new load problems?",
+      "concept_keys": [
+        "rollout",
+        "observability",
+        "redis",
+        "mysql",
+        "ttl",
+        "qps"
+      ],
+      "options": [
+        {
+          "text": "Roll out gradually, expire or rewrite existing long-lived availability keys to at most 5 seconds, test delete-and-recreate and rename flows, and monitor stale-409 duration, Redis operations, MySQL reads, and create conflict rates.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Deploy the code change everywhere and wait 30 minutes; if old Redis keys expire and complaints stop, consider the issue resolved.",
+          "correct": false,
+          "hint": "Waiting for the old TTL hides whether the new behavior works immediately. It also misses load changes caused by shorter cache lifetimes.",
+          "id": "b"
+        },
+        {
+          "text": "Rely on unit tests for the delete path and monitor total 409 counts across the whole API after deployment.",
+          "correct": false,
+          "hint": "Unit tests are useful, but this bug depends on production cache state and timing. Total 409 counts can stay high for legitimate conflicts and hide the stale subset.",
+          "id": "c"
+        },
+        {
+          "text": "Flush the entire Redis cluster at deploy time so no stale availability entries remain, then monitor only API error rate.",
+          "correct": false,
+          "hint": "A full cache flush can create a large traffic spike and affect unrelated features. You also need metrics specific to stale slug availability, not just broad errors.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The rollout must handle existing 1,800-second entries; otherwise old keys can keep causing failures after the code is deployed. Targeted flow tests prove the user-visible behavior, while Redis and MySQL metrics catch the expected trade-off from shorter TTLs at 4,000 checks/second. A full Redis flush is risky because it can shift too much load to backing stores at once."
+    }
+  ],
+  "takeaway": "Caches are advisory; the database constraint remains the final authority for uniqueness. When cached availability depends on mutable data, update the affected cache entries in the same write path and use a TTL backstop that is no longer than the promised freshness window. Shorter TTLs improve correctness but increase cache churn and database reads, so roll out with targeted metrics.",
+  "review_issues": []
+}

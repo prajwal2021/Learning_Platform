@@ -1,0 +1,337 @@
+{
+  "slug": "chat-messages-out-of-order",
+  "title": "Chat messages arrive out of order after reconnecting",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "websockets",
+    "chat",
+    "reconnect",
+    "ordering",
+    "deduplication"
+  ],
+  "scenario": "A chat app delivers messages over WebSockets. When a phone loses signal and reconnects, the conversation shows some messages twice and some in the wrong order. The server assigns no sequence numbers, and the client appends whatever arrives from the socket.",
+  "goal": "Find the cause and design a reconnect-safe message delivery flow that avoids duplicates and preserves conversation order.",
+  "concepts": [
+    {
+      "key": "websocket",
+      "name": "WebSocket",
+      "summary": "A WebSocket is a long-lived connection that lets a server push data to a client. It is useful for fast delivery but does not make application-level ordering decisions for you.",
+      "used_here": "The chat app uses WebSockets to deliver new messages quickly to phones."
+    },
+    {
+      "key": "reconnect",
+      "name": "Reconnect",
+      "summary": "A reconnect happens when a client loses a connection and opens a new one. Anything sent around the disconnect boundary can be missed, repeated, or arrive interleaved unless the app has a recovery protocol.",
+      "used_here": "Phones that lose signal reconnect and receive both live messages and replayed messages."
+    },
+    {
+      "key": "delivery-log",
+      "name": "Delivery log",
+      "summary": "A delivery log records what the system sent, to whom, and when. It helps distinguish storage problems from delivery problems.",
+      "used_here": "It is used to compare database messages with WebSocket sends around a reconnect."
+    },
+    {
+      "key": "message-id",
+      "name": "Message ID",
+      "summary": "A message ID is a stable unique identifier for one message. Clients can use it to recognize the same message if it is delivered more than once.",
+      "used_here": "The client needs message IDs to deduplicate deliveries from reconnect replay and live socket sends."
+    },
+    {
+      "key": "deduplication",
+      "name": "Deduplication",
+      "summary": "Deduplication means treating repeated copies of the same item as one item. It requires a stable identity, not just matching text.",
+      "used_here": "The client should ignore a message it has already applied, even if the server sends it again."
+    },
+    {
+      "key": "sequence-number",
+      "name": "Sequence number",
+      "summary": "A sequence number is an increasing number assigned to items in the order they should be processed. Per-conversation sequence numbers give a clear ordering inside one chat thread.",
+      "used_here": "Each message gets a monotonically increasing number within its conversation at write time."
+    },
+    {
+      "key": "clock-skew",
+      "name": "Clock skew",
+      "summary": "Clock skew is the difference between clocks on different devices or servers. Timestamps from phones are not reliable for deciding the true order of events.",
+      "used_here": "Sorting chat messages by client timestamp can show different orders on different devices."
+    },
+    {
+      "key": "database-transaction",
+      "name": "Database transaction",
+      "summary": "A database transaction groups changes so they commit together or not at all. It is used when related data must stay consistent.",
+      "used_here": "The message row and its sequence number must be created atomically."
+    },
+    {
+      "key": "cursor",
+      "name": "Cursor",
+      "summary": "A cursor is a marker that says how far a consumer has read. It lets a client ask for only the data after that point.",
+      "used_here": "The client reconnects with the last contiguous sequence number it has applied."
+    },
+    {
+      "key": "catch-up-read",
+      "name": "Catch-up read",
+      "summary": "A catch-up read fetches missed records from durable storage after a consumer falls behind. It turns recovery into a database query instead of guessing what the socket missed.",
+      "used_here": "On reconnect, the server reads messages after the client’s cursor and sends them in sequence order."
+    },
+    {
+      "key": "source-of-truth",
+      "name": "Source of truth",
+      "summary": "The source of truth is the durable system that defines the correct state. Other paths may be faster but should be recoverable from it.",
+      "used_here": "The database defines which messages exist and their order; the WebSocket is only the fast delivery path."
+    },
+    {
+      "key": "idempotent-client",
+      "name": "Idempotent client",
+      "summary": "An idempotent client can safely process the same input more than once. Repeated delivery does not create repeated UI state.",
+      "used_here": "The chat client can receive duplicate messages and still display one copy in the correct position."
+    },
+    {
+      "key": "unique-constraint",
+      "name": "Unique constraint",
+      "summary": "A unique constraint is a database rule that prevents duplicate values for a key. It protects invariants even when multiple writers run at the same time.",
+      "used_here": "A unique constraint on conversation ID and sequence number prevents two messages in one conversation from getting the same order."
+    },
+    {
+      "key": "rollout",
+      "name": "Rollout",
+      "summary": "A rollout is the controlled process of shipping a change to production. Safe rollouts allow old and new versions to coexist while you verify behavior.",
+      "used_here": "The sequence-number change must be deployed without breaking older clients."
+    },
+    {
+      "key": "observability",
+      "name": "Observability",
+      "summary": "Observability is the ability to understand system behavior from logs, metrics, and traces. It is how teams confirm a production fix worked.",
+      "used_here": "Metrics and logs should show reconnect catch-up, duplicate suppression, and ordering gaps."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with evidence around one reconnect",
+      "question": "A user reports that messages doubled and reordered after their phone came back online. Where should you look first to separate a storage bug from a delivery bug?",
+      "concept_keys": [
+        "websocket",
+        "reconnect",
+        "delivery-log",
+        "source-of-truth"
+      ],
+      "options": [
+        {
+          "text": "Tune the mobile reconnect backoff so the phone opens fewer sockets during weak signal periods.",
+          "correct": false,
+          "hint": "Reducing reconnects may reduce how often the symptom appears, but it does not explain whether the duplicate messages already exist in storage.",
+          "id": "a"
+        },
+        {
+          "text": "Increase the WebSocket keepalive interval so the original connection survives longer during signal loss.",
+          "correct": false,
+          "hint": "Keeping the socket open longer can help some disconnects, but phones can still lose signal completely. The recovery path still has to be correct.",
+          "id": "b"
+        },
+        {
+          "text": "Compare database rows with WebSocket delivery logs for the same conversation across the disconnect and reconnect window.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Add a client-side sort by displayed timestamp and test whether the conversation looks stable on one device.",
+          "correct": false,
+          "hint": "A UI experiment may hide the symptom locally, but first you need to know whether the server stored duplicates or delivered duplicates.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The database is the source of truth for which messages exist, while delivery logs show what the socket sent. Comparing both for one reconnect tells you whether duplicates were written or only delivered more than once. The tempting keepalive change may reduce disconnect frequency, but it does not address messages sent around an unavoidable reconnect."
+    },
+    {
+      "title": "Interpret the delivery pattern",
+      "question": "The database has one row each for messages m41, m42, m43, and m44. The delivery log shows m42 sent on the old socket, then m42 and m43 replayed on the new socket, while m44 arrived before m43 on the client. What does this most strongly indicate?",
+      "concept_keys": [
+        "websocket",
+        "reconnect",
+        "message-id",
+        "deduplication"
+      ],
+      "options": [
+        {
+          "text": "The network changed the payload order inside one WebSocket frame, so the client parsed messages incorrectly.",
+          "correct": false,
+          "hint": "WebSocket frames are ordered within a single connection. The symptom appears across old and new connections, where application recovery matters.",
+          "id": "a"
+        },
+        {
+          "text": "The database is corrupt because a replay should only happen when there are duplicate rows.",
+          "correct": false,
+          "hint": "The database check already showed one row per message. Focus on what happens between durable storage and the client UI.",
+          "id": "b"
+        },
+        {
+          "text": "The transport path can deliver repeats and interleavings around reconnect, so the app needs message identity and ordering rules.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The mobile renderer is dropping frames, so the same message appears twice when the list view redraws.",
+          "correct": false,
+          "hint": "A rendering bug would not usually explain the server log sending the same message ID on two different socket connections.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The same message ID sent on two socket connections points to at-least-once delivery during recovery, not duplicate storage. m44 arriving before m43 shows that app-level ordering cannot be inferred from socket arrival after reconnect. A renderer issue is plausible in many UI bugs, but here the delivery logs already show repeated sends."
+    },
+    {
+      "title": "Choose the ordering authority",
+      "question": "You need every device to render a conversation in the same order after reconnect. What should define the order of messages inside one conversation?",
+      "concept_keys": [
+        "sequence-number",
+        "clock-skew",
+        "database-transaction",
+        "source-of-truth"
+      ],
+      "options": [
+        {
+          "text": "Sort by the time each device receives the WebSocket event because that is the user-visible arrival order.",
+          "correct": false,
+          "hint": "Different devices and reconnects can receive the same messages in different orders. That would make the conversation order depend on network timing.",
+          "id": "a"
+        },
+        {
+          "text": "Sort by the client-created timestamp because it reflects when the sender typed the message.",
+          "correct": false,
+          "hint": "Phones can have wrong clocks or send later after being offline. A timestamp from the sender is useful metadata, not a reliable ordering authority.",
+          "id": "b"
+        },
+        {
+          "text": "Assign a monotonically increasing per-conversation sequence number when the message is written to the database.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Use an in-memory counter in each WebSocket server process and include that counter in every pushed message.",
+          "correct": false,
+          "hint": "Multiple server processes and restarts make local memory counters disagree. The ordering source needs to survive process failure and concurrency.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A server-assigned per-conversation sequence number created at write time gives all clients the same durable order. It should be assigned with the message write so a committed message cannot exist without its order. Client timestamps are tempting, but clock skew and offline sending make them unreliable for a shared ordering rule."
+    },
+    {
+      "title": "Design the reconnect recovery flow",
+      "question": "Messages now have a stable message ID and a per-conversation sequence number. What should happen when a client reconnects to a conversation?",
+      "concept_keys": [
+        "cursor",
+        "catch-up-read",
+        "sequence-number",
+        "source-of-truth",
+        "websocket",
+        "reconnect"
+      ],
+      "options": [
+        {
+          "text": "The client sends the timestamp of the last visible message, and the server returns messages created after that timestamp.",
+          "correct": false,
+          "hint": "Timestamps can collide and can come from clocks that disagree. The recovery marker should be the same value used for the authoritative order.",
+          "id": "a"
+        },
+        {
+          "text": "The server resends the most recent 500 messages on every reconnect and lets the client remove anything it has already displayed.",
+          "correct": false,
+          "hint": "A fixed replay window can be wasteful and still fail for a long offline period or a very busy conversation. A recovery request should be based on where the client actually stopped.",
+          "id": "b"
+        },
+        {
+          "text": "The client sends its last contiguous applied sequence; the server reads later messages from the database in sequence order and then continues live delivery without a gap.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The server resumes from the old socket’s in-memory queue if it still exists and otherwise starts with only new live messages.",
+          "correct": false,
+          "hint": "In-memory queues disappear on process restart and may not exist after reconnect. Recovery should work from durable state, not socket state.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A cursor based on the last contiguous applied sequence lets the server fetch exactly the missing durable messages. The server must avoid a boundary gap by ordering or buffering live delivery while catch-up completes, then continue with higher sequence numbers. Resending the last 500 messages is a common shortcut, but it is both wasteful and not correct for long outages."
+    },
+    {
+      "title": "Make the client safe under overlap",
+      "question": "During reconnect, the client may receive m43 from catch-up and also receive m43 from a live WebSocket push. It may also see m44 before m43. How should the client apply incoming messages?",
+      "concept_keys": [
+        "message-id",
+        "deduplication",
+        "sequence-number",
+        "cursor",
+        "idempotent-client"
+      ],
+      "options": [
+        {
+          "text": "Deduplicate by sender, text, and client timestamp, then keep the first copy that arrived at the device.",
+          "correct": false,
+          "hint": "Two real messages can have the same text from the same sender near the same time. Deduplication needs a stable server identity.",
+          "id": "a"
+        },
+        {
+          "text": "Deduplicate by message ID, place messages by sequence number, and advance the saved cursor only through contiguous applied sequences.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Append any message with a sequence greater than the largest sequence seen, and drop messages with smaller sequences.",
+          "correct": false,
+          "hint": "If m44 arrives before m43, this rule would advance past m43 and then incorrectly drop it when it arrives.",
+          "id": "c"
+        },
+        {
+          "text": "Replace the whole visible list with each catch-up batch, then resume appending live messages after the batch finishes.",
+          "correct": false,
+          "hint": "Replacing the list can lose optimistic or already loaded state, and live messages can still overlap with catch-up around the boundary.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The client should be idempotent: the same message ID can arrive twice without creating two UI entries. Ordering by sequence handles m44-before-m43, and saving only the highest contiguous sequence prevents the client from claiming it has processed a gap. Dropping anything below the largest seen is tempting, but it loses late-arriving messages that fill earlier holes."
+    },
+    {
+      "title": "Roll out and verify the fix",
+      "question": "You are ready to ship sequence numbers. Which rollout plan is safest for production?",
+      "concept_keys": [
+        "sequence-number",
+        "database-transaction",
+        "unique-constraint",
+        "rollout",
+        "observability"
+      ],
+      "options": [
+        {
+          "text": "Add a per-conversation sequence with a unique database constraint, assign it in the same transaction as the message write, backfill old rows, and monitor duplicate and gap metrics.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Keep the existing schema, add server logs for reconnects, and alert whenever one client receives the same message twice.",
+          "correct": false,
+          "hint": "Better observability helps confirm the problem, but it does not create an ordering or recovery mechanism.",
+          "id": "b"
+        },
+        {
+          "text": "Add a nullable sequence column, deploy clients to sort by it when present, and assign sequences later from an asynchronous job after message inserts.",
+          "correct": false,
+          "hint": "If ordering is assigned after the message commit, clients can observe committed messages without an authoritative order. The ordering invariant should be created with the message.",
+          "id": "c"
+        },
+        {
+          "text": "Deploy the new client first, require all users to upgrade, and then make the server start sending sequence numbers.",
+          "correct": false,
+          "hint": "Mobile upgrades are slow and uneven. A safe rollout should tolerate old and new clients during the transition.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The invariant must be protected at the source: each message in a conversation gets exactly one sequence number in the same transaction as the write, with a unique constraint to catch races. Backfilling old rows and supporting mixed clients makes the rollout safe while the fleet upgrades. An asynchronous assignment job is risky because a committed message could be delivered before it has an order."
+    }
+  ],
+  "takeaway": "WebSockets are a fast path, not the source of truth for chat history. Give each message a durable server-assigned order, reconnect from a cursor, and make the client idempotent with message IDs. Avoid ordering by arrival time or client clocks because reconnects and clock skew make those orders inconsistent.",
+  "review_issues": []
+}

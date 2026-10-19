@@ -1,0 +1,477 @@
+{
+ "slug": "flask",
+ "name": "Flask",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Flask, and what problem does it solve?",
+    "answer": "Flask is a lightweight Python web framework for building HTTP applications and APIs. It gives you routing, request/response handling, and integration with extensions, but it stays minimal so you choose the pieces you need. It is a good fit when you want a small app, a REST API, or a service where you do not want a lot of framework constraints.",
+    "real_world": "A team might pick Flask for an internal API service because they want something simple to start with and easy to deploy. It is also common for prototypes that may grow into a larger service later.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is Flask different from Django?"
+   },
+   {
+    "question": "What does a route do in Flask?",
+    "answer": "A route maps an HTTP path and method to a Python function. When a request matches that route, Flask calls the function and uses its return value as the response. Routes are the main way you expose endpoints in a Flask app.",
+    "real_world": "If `/health` is routed incorrectly, monitoring may think the service is down even when the app is running. Routes are also how frontend clients reach API endpoints.",
+    "code_lang": "python",
+    "code": "from flask import Flask\napp = Flask(__name__)\n\n@app.route('/hello')\ndef hello():\n    return 'Hello, world!'\n",
+    "follow_up": "How do you make a route accept both GET and POST?"
+   },
+   {
+    "question": "What is the difference between a request and a response in Flask?",
+    "answer": "The request is the incoming HTTP data from the client, including the path, method, headers, query string, and body. The response is what your Flask view sends back, such as HTML, JSON, or an error status. In Flask you usually read request data with `request` and return a string, dict, or `Response` object.",
+    "real_world": "A login endpoint reads credentials from the request body and returns a response that either sets a session or returns an error. Bugs here often come from reading the wrong place, like query parameters instead of JSON.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you read JSON from a request in Flask?"
+   },
+   {
+    "question": "What is the `request` object used for?",
+    "answer": "`request` gives you access to the current incoming HTTP request inside a view function. You use it to read query parameters, form data, JSON, headers, cookies, and the request method. It is only available during an active request context.",
+    "real_world": "A search endpoint may read `request.args['q']` to get the search term from the URL. Missing or misreading request data is a common source of 400s and confusing behavior.",
+    "code_lang": "python",
+    "code": "from flask import Flask, request\napp = Flask(__name__)\n\n@app.route('/search')\ndef search():\n    term = request.args.get('q', '')\n    return f'Searching for {term}'\n",
+    "follow_up": "What happens if you try to use `request` outside a route?"
+   },
+   {
+    "question": "What is the purpose of `app.run()`?",
+    "answer": "`app.run()` starts Flask’s built-in development server so you can test the application locally. It is meant for development, not production, because production deployments should use a proper WSGI server or platform-specific runtime. In many real projects, `app.run()` is guarded by `if __name__ == '__main__':` so the server only starts when the file is run directly.",
+    "real_world": "New developers often accidentally ship the development server to production, which is a deployment mistake. Teams usually use a separate process manager or server in production.",
+    "code_lang": "python",
+    "code": "from flask import Flask\napp = Flask(__name__)\n\nif __name__ == '__main__':\n    app.run(debug=True)\n",
+    "follow_up": "Why is the built-in development server not suitable for production?"
+   },
+   {
+    "question": "How do you return JSON from a Flask route?",
+    "answer": "You can return a Python dictionary from a route, and Flask will serialize it as JSON in modern versions. If you need more control, you can use `jsonify`, which also sets the correct content type. JSON responses are the standard choice for APIs.",
+    "real_world": "Frontend apps and mobile clients usually expect JSON from backend endpoints. Returning plain text by mistake often breaks client-side parsing.",
+    "code_lang": "python",
+    "code": "from flask import Flask, jsonify\napp = Flask(__name__)\n\n@app.route('/user')\ndef user():\n    return jsonify(id=1, name='Ava')\n",
+    "follow_up": "When would you prefer `jsonify` over returning a dict?"
+   },
+   {
+    "question": "What are query parameters, and how do you access them in Flask?",
+    "answer": "Query parameters are the key-value pairs after `?` in a URL, like `/items?page=2`. In Flask you access them through `request.args`, which behaves like a mapping of string values. They are commonly used for filtering, searching, and pagination.",
+    "real_world": "Pagination endpoints often read `page` and `limit` from query parameters. A common bug is treating absent parameters as errors instead of providing defaults.",
+    "code_lang": "python",
+    "code": "from flask import Flask, request\napp = Flask(__name__)\n\n@app.route('/items')\ndef items():\n    page = request.args.get('page', '1')\n    return f'Page {page}'\n",
+    "follow_up": "What is the difference between query parameters and form data?"
+   },
+   {
+    "question": "What is a template in Flask?",
+    "answer": "A template is an HTML file rendered by Flask, usually with Jinja2 variables and control flow. It lets you separate presentation from Python logic. Templates are useful when the server generates HTML pages rather than JSON APIs.",
+    "real_world": "An admin dashboard might use templates to render tables and status pages. Teams often use templates for server-side rendered apps or email bodies as well.",
+    "code_lang": "python",
+    "code": "from flask import Flask, render_template\napp = Flask(__name__)\n\n@app.route('/profile')\ndef profile():\n    return render_template('profile.html', name='Ava')\n",
+    "follow_up": "How do you pass data into a template?"
+   },
+   {
+    "question": "What is the difference between `GET` and `POST` in Flask routes?",
+    "answer": "`GET` is used to retrieve data and should not change server state, while `POST` is typically used to submit data that creates or changes something. In Flask, you choose allowed methods on a route and then inspect `request.method` or separate handlers. Using the right method matters for browser behavior, caching, and API design.",
+    "real_world": "A form that creates a user should usually use `POST`, not `GET`, so the submitted data does not end up in the URL. Accidentally using `GET` for writes can cause duplicate actions from refreshes or crawlers.",
+    "code_lang": "python",
+    "code": "from flask import Flask, request\napp = Flask(__name__)\n\n@app.route('/submit', methods=['GET', 'POST'])\ndef submit():\n    if request.method == 'POST':\n        return 'Saved'\n    return 'Form'\n",
+    "follow_up": "What other HTTP methods should a junior know for REST APIs?"
+   },
+   {
+    "question": "What is a Flask view function?",
+    "answer": "A view function is the Python function that runs when a matched route is requested. It usually reads request data, calls your application logic, and returns a response like text, HTML, or JSON. The route decorator connects the URL pattern to that function. In simple apps, the view function often contains most of the endpoint behavior.",
+    "real_world": "This is the basic unit behind every endpoint, so when a page returns the wrong content you usually debug the view function first. Teams also use view functions to keep request handling separate from business logic.",
+    "code_lang": "python",
+    "code": "from flask import Flask\napp = Flask(__name__)\n\n@app.route('/hello')\ndef hello():\n    return 'Hello!'\n",
+    "follow_up": "How would you make a view function accept a URL parameter?"
+   },
+   {
+    "question": "What does `url_for()` do in Flask, and why is it useful?",
+    "answer": "`url_for()` builds a URL for a given endpoint name, instead of hard-coding paths. That makes your app easier to refactor because changing a route path does not require updating every link. It also helps generate correct URLs for static files and redirects. In Flask, using endpoint names is usually safer than string-building URLs by hand.",
+    "real_world": "A common bug is breaking links after changing `/users/<id>` to `/profiles/<id>`. With `url_for()`, the app keeps working as long as the endpoint name stays the same.",
+    "code_lang": "python",
+    "code": "from flask import Flask, url_for\napp = Flask(__name__)\n\n@app.route('/about')\ndef about():\n    return url_for('about')\n",
+    "follow_up": "What is the difference between a route path and an endpoint name?"
+   },
+   {
+    "question": "What is a Flask blueprint?",
+    "answer": "A blueprint is a way to group related routes, templates, and static files before registering them on the main app. It helps organize larger applications into smaller pieces like auth, admin, or API modules. Blueprints are not separate apps; they are a structure for composing one app. They are useful when you want cleaner code and easier reuse.",
+    "real_world": "As an app grows, putting every route in one file becomes hard to maintain. Teams split features into blueprints so different developers can work on separate parts without stepping on each other.",
+    "code_lang": "python",
+    "code": "from flask import Blueprint\nbp = Blueprint('auth', __name__)\n\n@bp.route('/login')\ndef login():\n    return 'login'\n",
+    "follow_up": "How do you register a blueprint on the main Flask app?"
+   },
+   {
+    "question": "What are path parameters in Flask routes?",
+    "answer": "Path parameters are variables embedded in the URL, like `/users/42`. Flask captures that value and passes it into the view function as an argument. They are useful for identifying a specific resource, such as a user, post, or order. You can also use converters to control the type, like integers instead of strings.",
+    "real_world": "This is common in detail pages and REST APIs. If the parameter type is wrong, the route may not match at all or your view may receive a value in an unexpected format.",
+    "code_lang": "python",
+    "code": "from flask import Flask\napp = Flask(__name__)\n\n@app.route('/users/<int:user_id>')\ndef user_detail(user_id):\n    return f'User {user_id}'\n",
+    "follow_up": "What happens if the incoming URL does not match the converter type?"
+   },
+   {
+    "question": "How do you access form data in a Flask request?",
+    "answer": "For HTML forms submitted with `POST`, form fields are available in `request.form`. It acts like a dictionary of the submitted field names and values. You use it when handling regular browser form submissions, not JSON bodies. A common mistake is looking in `request.args`, which is for query parameters instead.",
+    "real_world": "This matters for login forms, search forms, and contact forms. If you read from the wrong place, the app may appear to receive empty input even though the browser sent it.",
+    "code_lang": "python",
+    "code": "from flask import Flask, request\napp = Flask(__name__)\n\n@app.route('/submit', methods=['POST'])\ndef submit():\n    name = request.form['name']\n    return name\n",
+    "follow_up": "What is the difference between `request.form` and `request.get_json()`?"
+   },
+   {
+    "question": "What is the Flask application context, in simple terms?",
+    "answer": "The application context makes the current app available to code that is running during a request or when the app is otherwise active. It lets Flask know which application object functions like `current_app` should refer to. Junior developers usually only need to know that some Flask features require an active context and will fail if used too early or outside a request. It is part of how Flask avoids passing the app object everywhere.",
+    "real_world": "This comes up when background code or helper functions try to use Flask globals and fail outside a request. It also matters in tests, where you sometimes need to push a context before accessing app-specific values.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the request context, and how is it different from the application context?"
+   },
+   {
+    "question": "What is a Flask configuration object used for?",
+    "answer": "Flask config stores settings your app uses at runtime, such as secret values, debug behavior, and feature flags. You can set values directly in `app.config` or load them from environment-specific sources. The main idea is to keep settings out of route code and make them easy to change between development and production. It also helps avoid hard-coding sensitive or environment-specific values.",
+    "real_world": "Teams often use config to switch database URLs, API keys, or debug mode between local, staging, and production. Without it, people end up editing code just to deploy to a different environment.",
+    "code_lang": "python",
+    "code": "from flask import Flask\napp = Flask(__name__)\napp.config['DEBUG'] = True\napp.config['APP_NAME'] = 'MyApp'\n",
+    "follow_up": "Why would you avoid hard-coding secrets in Flask config files?"
+   },
+   {
+    "question": "What is the `debug` mode in Flask for, and why should you be careful with it?",
+    "answer": "Debug mode is meant for development because it gives detailed error pages and usually reloads the app when code changes. That makes local debugging much faster. It should not be used in production because detailed error output can expose internal information. It can also create misleading behavior compared with the production server.",
+    "real_world": "Many beginners accidentally deploy with debug enabled and leak stack traces to users. In production, that can reveal code structure, dependencies, or secrets in error pages.",
+    "code_lang": "python",
+    "code": "from flask import Flask\napp = Flask(__name__)\n\nif __name__ == '__main__':\n    app.run(debug=True)\n",
+    "follow_up": "What is the difference between the development server and a production WSGI server?"
+   },
+   {
+    "question": "What is a Flask extension, and why would you use one?",
+    "answer": "A Flask extension is a package that adds common functionality to Flask apps, such as database access, authentication, or form handling. You use extensions when Flask itself is intentionally minimal and you do not want to build everything from scratch. Good extensions integrate with Flask’s app and request handling patterns. The trade-off is that you depend on external package behavior and version compatibility.",
+    "real_world": "A team might use an extension for sessions, migrations, or login management instead of writing that plumbing by hand. This saves time and reduces bugs in common infrastructure code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should you check before choosing a Flask extension for a project?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you structure a Flask app so it stays maintainable as it grows beyond a few routes?",
+    "answer": "A common pattern is the application factory plus blueprints: create the app inside a function, load config there, and register modular route groups. That keeps initialization testable and avoids circular imports as the project grows. I’d also keep database setup, auth, and request hooks in separate modules rather than putting everything in one file. The trade-off is a bit more boilerplate up front for much better separation and testability later.",
+    "real_world": "This matters when a small API grows into multiple teams or feature areas. Without a clean structure, imports start breaking and simple changes require touching unrelated code.",
+    "code_lang": "python",
+    "code": "from flask import Flask\n\ndef create_app():\n    app = Flask(__name__)\n    from .users import users_bp\n    app.register_blueprint(users_bp, url_prefix='/users')\n    return app",
+    "follow_up": "When would you choose a blueprint over just adding another route module?"
+   },
+   {
+    "question": "What’s the difference between `before_request`, `after_request`, and `teardown_request` hooks?",
+    "answer": "`before_request` runs before the view function and is useful for auth checks or opening resources. `after_request` runs after a response is created and is best for response tweaks like headers. `teardown_request` runs even if an exception happened, so it’s the right place to clean up request-scoped resources. The main difference is whether you need the request to succeed and whether you need access to the response.",
+    "real_world": "Teams use these hooks for logging, tracing, and database session cleanup. If cleanup is put in the wrong hook, connection leaks or missing logs can show up only under error conditions.",
+    "code_lang": "python",
+    "code": "@app.before_request\ndef check_auth():\n    pass\n\n@app.after_request\ndef add_header(resp):\n    resp.headers['X-Trace'] = '1'\n    return resp\n\n@app.teardown_request\ndef cleanup(exc):\n    pass",
+    "follow_up": "What should happen if `before_request` returns a response early?"
+   },
+   {
+    "question": "How do you usually handle errors in Flask for APIs, and why not just let exceptions bubble up?",
+    "answer": "For APIs, I’d register error handlers that return consistent JSON and appropriate status codes for expected failures like validation errors or missing resources. Letting exceptions bubble up is fine for unexpected bugs, but clients need stable error shapes for known cases. You also want to avoid leaking stack traces or internal details in production. The trade-off is between quick default behavior and explicit control over client-facing responses.",
+    "real_world": "This becomes important when frontend or mobile clients depend on predictable error payloads. Without handlers, different failures may return HTML in one place and JSON in another.",
+    "code_lang": "python",
+    "code": "@app.errorhandler(404)\ndef not_found(e):\n    return {'error': 'not found'}, 404\n\n@app.errorhandler(ValueError)\ndef bad_input(e):\n    return {'error': str(e)}, 400",
+    "follow_up": "How would you distinguish between a 400, 401, 403, and 404 in your API?"
+   },
+   {
+    "question": "How do Flask sessions work, and when would you avoid storing data in them?",
+    "answer": "Flask’s default session mechanism stores session data client-side in a signed cookie, so the client can read it but not tamper with it without detection. That makes sessions convenient for small bits of state like a user id or preferences. You should avoid storing large, sensitive, or frequently changing data there because cookies are size-limited and sent on every request. If you need server-side control, use a server-backed session store or fetch the data from your database.",
+    "real_world": "This often shows up when teams put too much into the session and suddenly every request gets slower or cookies stop fitting. It also matters for security reviews when people try to store secrets in browser cookies.",
+    "code_lang": "python",
+    "code": "from flask import session\n\n@app.route('/login')\ndef login():\n    session['user_id'] = 123\n    return 'ok'",
+    "follow_up": "What are the security implications of using cookie-based sessions?"
+   },
+   {
+    "question": "What’s the practical difference between using `request.get_json()` and reading `request.form`?",
+    "answer": "`request.get_json()` is for JSON request bodies, while `request.form` is for form-encoded or multipart form submissions. The main difference is the content type sent by the client and how Flask parses it. In API code, using the wrong one usually leads to empty data and confusing bugs. I’d validate the content type early and return a clear 400 if the payload format is wrong.",
+    "real_world": "A common production bug is a frontend switching from form posts to JSON without updating the backend parser. The endpoint then appears to “randomly” receive missing fields.",
+    "code_lang": "python",
+    "code": "data = request.get_json(silent=True)\nif data is None:\n    return {'error': 'JSON required'}, 400\nname = data.get('name')",
+    "follow_up": "How would you validate and report multiple missing fields cleanly?"
+   },
+   {
+    "question": "How do you test a Flask route without starting the server?",
+    "answer": "Use Flask’s test client to send requests directly to the app in tests. That lets you test status codes, headers, JSON, and error behavior quickly and deterministically. If the route depends on external services or the database, you usually mock or use a test database. The benefit is fast feedback without running a real HTTP server.",
+    "real_world": "This is the normal way to run automated API tests in CI. It catches broken routing, serialization mistakes, and auth regressions before deployment.",
+    "code_lang": "python",
+    "code": "def test_health(app):\n    client = app.test_client()\n    resp = client.get('/health')\n    assert resp.status_code == 200\n    assert resp.get_json() == {'ok': True}",
+    "follow_up": "What would you mock versus what would you keep real in a Flask integration test?"
+   },
+   {
+    "question": "What happens if you use a global variable to store per-request data in Flask?",
+    "answer": "That’s unsafe because globals are shared across requests, threads, and workers, so one user’s data can leak into another request. Flask gives you `request`, `g`, and context locals specifically to avoid that problem. If you need request-scoped temporary data, use `g`; if you need durable state, store it in a database or cache. The issue may not show up in single-user local testing but can appear under concurrency.",
+    "real_world": "This bug often appears in production after moving from a single-process dev server to gunicorn or another multi-worker setup. Symptoms are hard-to-reproduce cross-request data mixups.",
+    "code_lang": "python",
+    "code": "# Bad\ncurrent_user = None\n\n# Good\nfrom flask import g\n\ng.current_user = user",
+    "follow_up": "Why is `g` safe for request-scoped storage?"
+   },
+   {
+    "question": "How do you add authentication to a Flask app without repeating the same checks in every route?",
+    "answer": "A common approach is to centralize auth in a decorator, a `before_request` hook, or an extension like Flask-Login depending on the app shape. The key is to validate once and make the result available to the view, instead of copy-pasting token checks everywhere. For APIs, a decorator is often straightforward; for session-based apps, a login manager can reduce boilerplate. The trade-off is flexibility versus standardization.",
+    "real_world": "This matters when an app grows from a few protected endpoints to dozens. Repeated auth code tends to drift and create inconsistent security behavior.",
+    "code_lang": "python",
+    "code": "from functools import wraps\n\ndef login_required(f):\n    @wraps(f)\n    def wrapper(*args, **kwargs):\n        return f(*args, **kwargs)\n    return wrapper",
+    "follow_up": "How would you implement token auth versus session auth in Flask?"
+   },
+   {
+    "question": "How do you keep a Flask endpoint fast when it has to do expensive work?",
+    "answer": "First, identify whether the slowness is in Python code, database queries, or an external call. Then reduce work per request: cache stable results, avoid N+1 queries, paginate large reads, and move long-running jobs to a background queue. Flask itself is not the bottleneck most of the time; the app logic and I/O are. The main trade-off is freshness versus latency, especially when caching is involved.",
+    "real_world": "This comes up on endpoints that generate reports, render dashboards, or call third-party APIs. Without caching or async job offloading, request times can become unpredictable and tie up workers.",
+    "code_lang": "python",
+    "code": "@app.route('/stats')\ndef stats():\n    data = cache.get('stats')\n    if data is None:\n        data = compute_stats()\n        cache.set('stats', data, timeout=60)\n    return data",
+    "follow_up": "How would you decide whether to cache in memory, in Redis, or not at all?"
+   },
+   {
+    "question": "What’s the difference between deploying Flask behind a WSGI server and using the built-in development server?",
+    "answer": "The built-in server is for local development only; it’s not meant for production reliability or concurrency. In production, Flask is usually run behind a WSGI server that can handle multiple workers, restarts, and timeouts more robustly. That separation also lets you tune process count and keep the app code focused on request handling. The trade-off is a little more deployment complexity for much better operational behavior.",
+    "real_world": "If a team accidentally exposes the dev server publicly, it can become unstable under load and lacks production-grade management features. Most real deployments need a proper process manager and WSGI setup.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you look at first if requests are timing out in production?"
+   },
+   {
+    "question": "How would you handle database sessions in Flask so each request gets a clean connection lifecycle?",
+    "answer": "Use a request-scoped pattern: create or fetch the database session when needed, and close or remove it at the end of the request. This avoids leaking connections across requests and prevents one user’s transaction state from affecting another. In practice, you usually put cleanup in application hooks or use a context-managed session factory. The key trade-off is convenience versus making sure every code path releases resources.",
+    "real_world": "This matters when traffic grows and the app starts exhausting the database connection pool because sessions are never closed. It also prevents subtle bugs where stale ORM state appears across requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you manage a transaction that spans multiple model updates in one request?"
+   },
+   {
+    "question": "When would you choose Flask-Migrate or Alembic-style migrations instead of running schema changes manually?",
+    "answer": "Use migrations once the schema is shared by multiple environments or multiple developers. They make database changes repeatable, reviewable, and reversible, which is much safer than ad hoc SQL on production. Manual changes are fine for one-off experiments, but they break down when you need consistency across local, staging, and production. The trade-off is adding migration discipline and review overhead in exchange for safer deployments.",
+    "real_world": "Teams often hit bugs when one environment has a column the app expects and another does not. Migrations reduce these version-skew incidents during deploys.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should you watch out for when a migration has to backfill a large table?"
+   },
+   {
+    "question": "How do you choose between `request.args`, `request.form`, and `request.get_json()` in a real endpoint?",
+    "answer": "Use `request.args` for query string filters and simple read operations, `request.form` for form-encoded browser submissions, and `request.get_json()` for JSON APIs. The choice should match the client contract, because Flask parses them differently and they are not interchangeable. If you mix them up, you get missing data or surprising `None` values. A good API keeps one input style per endpoint.",
+    "real_world": "This comes up when frontend and backend teams disagree on payload format and requests start failing only in certain clients. It also shows up in debugging why a field is present in Postman but missing in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you make a Flask endpoint accept both JSON and form submissions cleanly if you really must?"
+   },
+   {
+    "question": "What are the trade-offs between storing cache data in memory inside Flask versus using an external cache like Redis?",
+    "answer": "In-memory caching is simple and fast, but it only works per process, so each worker has its own copy and data disappears on restart. An external cache is shared across workers and instances, which makes it much better for scaled deployments and coordinated invalidation. The downside is network latency and another system to operate. For anything beyond tiny deployments, shared cache is usually the safer choice.",
+    "real_world": "A common failure mode is a cache that works on a single dev server but behaves inconsistently after adding multiple Gunicorn workers. Redis avoids that split-brain behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide what data is safe to cache and for how long?"
+   },
+   {
+    "question": "How would you implement file uploads in Flask, and what are the main risks you need to handle?",
+    "answer": "Read the uploaded file from `request.files`, validate that it exists and has an allowed type, and avoid trusting the client-provided filename. In production you usually stream to object storage or save outside the web root, rather than keeping uploads in the app process. The main risks are large files exhausting memory, path traversal through unsafe filenames, and accepting untrusted content. Validation and size limits matter more than the upload code itself.",
+    "real_world": "This matters for avatar uploads, document ingestion, and any feature that accepts user-generated files. Bad handling can lead to disk exhaustion or security issues.",
+    "code_lang": "python",
+    "code": "from flask import request\nfrom werkzeug.utils import secure_filename\n\nfile = request.files.get(\"file\")\nif file:\n    name = secure_filename(file.filename)\n    file.save(f\"/var/uploads/{name}\")",
+    "follow_up": "How would you enforce file size limits and reject unsupported content types?"
+   },
+   {
+    "question": "What’s the difference between middleware-style logic and Flask request hooks, and when would you prefer one over the other?",
+    "answer": "Request hooks are Flask-specific and work inside the app lifecycle, while middleware sits lower in the WSGI stack and can wrap the whole application. Use hooks for app concerns like auth checks, logging, or request setup when you want access to Flask context objects. Use middleware when you need behavior that should apply before Flask sees the request, or across multiple apps. Middleware is more general, but hooks are usually easier to reason about in a Flask project.",
+    "real_world": "This choice matters when adding cross-cutting concerns like correlation IDs or compression. If the logic must run even when Flask routing fails, middleware can be the better layer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can happen if you put too much logic in request hooks?"
+   },
+   {
+    "question": "How would you add a custom error handler for an API, and what should it return differently from the default Flask error page?",
+    "answer": "Register handlers for the exception types or status codes you expect, and return JSON with a useful error shape instead of HTML. APIs should include a consistent message, an HTTP status code, and ideally a machine-readable error code so clients can react programmatically. You also want to avoid leaking internal stack traces or implementation details. The trade-off is a bit more boilerplate for much better client behavior and observability.",
+    "real_world": "This matters when mobile or frontend clients need predictable failures rather than raw HTML responses. It also prevents internal exceptions from exposing sensitive debug information.",
+    "code_lang": "python",
+    "code": "from flask import jsonify\n\n@app.errorhandler(404)\ndef not_found(e):\n    return jsonify(error=\"not_found\", message=\"Resource not found\"), 404",
+    "follow_up": "How would you make sure unhandled exceptions are still visible in logs while returning a safe response?"
+   },
+   {
+    "question": "What are the practical implications of running Flask with multiple worker processes?",
+    "answer": "Multiple workers improve throughput and resilience, but each worker has its own memory space, so globals, in-memory caches, and per-process state are not shared. That means anything you store in memory must be either read-only, duplicated intentionally, or moved to an external system. It also affects debugging because a bug may only appear in one worker or under concurrent load. The main trade-off is scaling capacity versus losing the simplicity of a single process.",
+    "real_world": "Teams often discover this when a feature flag or cache works locally but behaves inconsistently in production behind Gunicorn. It also explains why a counter stored in a module variable resets unexpectedly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design shared state safely if multiple workers need to coordinate?"
+   },
+   {
+    "question": "How do you test Flask code that depends on the current request or application context?",
+    "answer": "Use the test client for end-to-end request tests, and create an app or request context when you need to exercise code that reads `current_app`, `g`, or `request` directly. That lets Flask populate the context-local objects the same way it does during a real request. Without the context, those objects are unavailable and your tests fail for the wrong reason. The main idea is to test behavior at the right layer, not to fake Flask internals.",
+    "real_world": "This shows up when utility functions work in a view but fail in unit tests because no request context exists. Setting up the context keeps tests aligned with production behavior.",
+    "code_lang": "python",
+    "code": "def test_current_user(app):\n    with app.test_request_context(\"/profile\"):\n        assert request.path == \"/profile\"",
+    "follow_up": "When would you prefer a unit test with mocks over a request-context test?"
+   },
+   {
+    "question": "How would you make a Flask endpoint idempotent, and why does that matter for retries?",
+    "answer": "Design the endpoint so repeating the same request does not create duplicate side effects. For writes, that often means using a client-generated idempotency key, checking for an existing record, or making the underlying operation upsert-like. This matters because clients, proxies, and retries can resend requests after timeouts or network failures. The trade-off is extra state management in exchange for safer recovery from transient errors.",
+    "real_world": "Payment, order creation, and webhook endpoints often need idempotency because duplicate requests are common in real networks. Without it, retries can create duplicate charges or duplicate records.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you store and expire idempotency keys in a real system?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how Flask’s request and application contexts actually work under the hood, and where `current_app`, `request`, and `g` come from?",
+    "answer": "Those objects are proxies, not globals. Flask pushes an application context and usually a request context at the start of handling a request, and the proxies resolve to the context-local object for the current execution flow. Historically that relied on thread or greenlet locals; modern Flask uses Python context variables so it works better across async-aware boundaries. The important part is lifetime: once the context is popped, accessing those proxies raises an error, which is why background threads and delayed callbacks often break if they capture them implicitly.",
+    "real_world": "A common production bug is spawning a thread from a view and then reading `request.headers` inside it; it works in a quick test and then fails with \"working outside of request context\" under load.",
+    "code_lang": "python",
+    "code": "from flask import has_request_context, request\n\n@app.get('/x')\ndef x():\n    return {'path': request.path}\n\ndef later():\n    if has_request_context():\n        return request.path\n    return 'no request context'",
+    "follow_up": "If you need to hand work to a background worker, what request data would you extract explicitly instead of passing the proxy objects?"
+   },
+   {
+    "question": "What are the real concurrency limits of a Flask app, and how do threads, processes, and async code change what it can handle?",
+    "answer": "Flask itself is synchronous WSGI-first, so one worker handles one request at a time unless your server adds threads. More processes improve CPU isolation and fault isolation, while threads mainly help when requests spend time waiting on I/O; neither makes CPU-bound Python code scale well because of the GIL. Async views can help if the stack is truly async-aware, but under WSGI they do not magically turn the app into a high-concurrency event loop server. The scaling decision is really about request profile: blocking DB calls, external HTTP calls, and CPU-heavy work need different deployment strategies.",
+    "real_world": "Teams often add more threads to fix latency, then discover p95 gets worse because every thread is still blocking on the same database pool or upstream API.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose worker count and thread count for an API that is mostly database I/O versus one doing image processing?"
+   },
+   {
+    "question": "What happens when Flask is behind a reverse proxy, and what can go wrong if proxy headers aren’t handled correctly?",
+    "answer": "Flask sees the connection details presented by the immediate peer, so without trusted proxy handling it may think every request is plain HTTP from the proxy’s IP. That breaks absolute URL generation, secure cookie behavior, redirect schemes, and client IP logging or rate limiting. The fix is to configure the proxy to send the standard forwarding headers and configure the app stack to trust only the expected proxy hops. The security trade-off is important: blindly trusting forwarded headers lets a client spoof origin IP or scheme.",
+    "real_world": "A classic incident is login redirects bouncing between HTTP and HTTPS because the app thinks the request is insecure after TLS termination at the load balancer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What’s the risk of trusting `X-Forwarded-For` directly in application code for auth or rate limiting?"
+   },
+   {
+    "question": "How does Flask’s routing system match URLs, and what performance or correctness issues show up in large route tables?",
+    "answer": "Werkzeug builds a URL map of rules and matches incoming paths by rule structure, converters, methods, and sometimes host or subdomain settings. In most apps route matching is not the bottleneck, but correctness issues show up with overlapping dynamic routes, greedy path converters, unexpected trailing slash redirects, and method handling. Large apps benefit from being explicit about converters and route shape so ambiguous matches do not produce surprising 404 or 405 behavior. URL building matters too: endpoint names and defaults have to stay stable or internal links and reverse routing break.",
+    "real_world": "In a monolith with many blueprints, a broad `/<path:anything>` route can accidentally swallow paths meant for newer endpoints and turn a deploy into a spike of hard-to-explain 404s.",
+    "code_lang": "python",
+    "code": "@app.get('/users/<int:user_id>')\ndef by_id(user_id):\n    ...\n\n@app.get('/users/<path:slug>')\ndef by_slug(slug):\n    ...",
+    "follow_up": "How would you debug a case where a request returns 405 even though the path looks correct?"
+   },
+   {
+    "question": "If you needed streaming responses in Flask, how do they work and what failure modes would you watch for?",
+    "answer": "A streaming response returns an iterable or generator, and the server sends chunks as they are produced instead of buffering the full body first. That reduces memory use and time-to-first-byte for large exports or server-sent streams, but it ties up a worker for the entire stream duration under typical WSGI deployment. You also have to think about client disconnects, cleanup, and middleware or proxies that buffer responses and erase the benefit. Anything touching request context inside the generator must keep the context available explicitly if iteration continues after the view returns.",
+    "real_world": "CSV export endpoints often look fine in staging, then in production a few long downloads exhaust workers because each open stream occupies one worker for minutes.",
+    "code_lang": "python",
+    "code": "from flask import Response, stream_with_context\n\ndef generate():\n    yield 'id,name\\n'\n    for i in range(3):\n        yield f'{i},user{i}\\n'\n\n@app.get('/export')\ndef export():\n    return Response(stream_with_context(generate()),\n                    mimetype='text/csv')",
+    "follow_up": "What changes if the app sits behind a proxy that buffers upstream responses?"
+   },
+   {
+    "question": "What are the trade-offs of using Flask’s signed cookie session versus a server-side session store at scale?",
+    "answer": "The default session is client-stored but signed so the client can read it but not modify it undetected. That keeps the app stateless and simple, but every request pays cookie bandwidth and serialization cost, and you are limited to small payloads. A server-side store avoids sending session state over the wire and supports larger or revocable sessions, but it adds network hops, expiration management, and consistency questions in a multi-instance deployment. For high-volume APIs, even a couple of extra kilobytes of cookie data on every request can become noticeable latency and egress cost.",
+    "real_world": "Teams sometimes put user preferences or cart-like data into the Flask session and later discover requests are carrying huge cookies through every CDN, proxy, and app hop.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would secret key rotation affect signed cookie sessions compared with a Redis-backed session store?"
+   },
+   {
+    "question": "How would you reason about memory leaks or steadily growing memory in a long-running Flask service?",
+    "answer": "I’d first separate true leaks from normal allocator behavior and worker lifetime effects. Common causes are unbounded in-process caches, global registries, large objects retained in closures or signal handlers, per-request data accidentally stored beyond the request, and libraries that fragment memory. The debugging approach is to reproduce with a fixed traffic pattern, compare per-worker RSS growth, inspect object retention, and use worker recycling only as a containment measure, not the primary fix. In prefork servers, a leak in one code path can look intermittent because only some workers hit it.",
+    "real_world": "A service can appear healthy after deploy and then get OOM-killed six hours later because one endpoint stores request-derived data in a module-level dict that never evicts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would tell you the problem is an unbounded cache in application code rather than just Python not returning memory to the OS?"
+   },
+   {
+    "question": "How do you make Flask observability-friendly for tracing and metrics without adding a lot of per-request overhead or noisy cardinality?",
+    "answer": "You want consistent request timing, status counts, error tracking, and correlation IDs, but the labels have to be bounded. Use route templates or endpoint names instead of raw URLs, avoid user IDs or query strings in metric labels, and make trace propagation explicit across outbound calls. Hooks or middleware are good for coarse request metrics, while DB and HTTP client instrumentation gives you the dependency view; both can add overhead if you sample badly or log too much. The goal is enough context to debug tail latency and failures without turning observability itself into a performance problem.",
+    "real_world": "A metrics setup that labels by full path can melt a time-series backend when someone hits `/users/<id>` with millions of distinct IDs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you record to distinguish app time from upstream dependency time on a slow Flask endpoint?"
+   },
+   {
+    "question": "What are the gotchas around using async views or async libraries in Flask today?",
+    "answer": "The main gotcha is mixing concurrency models and assuming `async def` alone gives event-loop scale. If your deployment path is still WSGI and your database or HTTP clients are blocking, the request still blocks a worker even if the view is declared async. Context handling, extension compatibility, and background task assumptions can also break because many Flask extensions were written for synchronous request lifecycles. If you truly need large numbers of concurrent in-flight I/O operations, it may be cleaner to use an ASGI-native stack or isolate that part of the system.",
+    "real_world": "Teams sometimes convert a few routes to `async def`, see no throughput gain, and only later realize their ORM and cache client are still fully synchronous.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you evaluate whether to keep Flask and isolate async-heavy work elsewhere versus moving the whole service to an ASGI-native framework?"
+   },
+   {
+    "question": "Suppose a Flask API occasionally returns partial success or inconsistent state after downstream timeouts; how would you design for failure and recovery?",
+    "answer": "First make the failure boundaries explicit: know which side effects may already have happened when a timeout occurs. Then use idempotency keys for retried write operations, transactional boundaries where possible, and durable outbox or queue patterns when work spans systems that cannot commit atomically. Return errors that let callers retry safely only when the operation is actually retry-safe, and log enough correlation data to reconcile ambiguous outcomes. The trade-off is between stronger consistency and higher latency or complexity; cross-system writes rarely stay simple in production.",
+    "real_world": "A payment-like endpoint can time out calling a downstream service, the client retries, and without idempotency the same business action is applied twice even though the first request looked like a failure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If the database commit succeeds but publishing an event fails, how would you prevent the system from silently diverging?"
+   },
+   {
+    "question": "How does Flask’s request dispatch pipeline actually run from WSGI entrypoint to your view, and where are the expensive points?",
+    "answer": "A WSGI server calls the Flask app with `environ` and `start_response`; Flask builds a request context, matches the URL, runs preprocessors, calls the view, converts the return value into a response, then runs teardown and response hooks. The expensive parts are usually request parsing, routing on very large rule sets, template rendering, JSON serialization, and any I/O your view does. Flask’s own dispatch overhead is usually small compared with database or network calls, but at high QPS it still matters because every request pays for context setup and object creation. Understanding the pipeline helps you place instrumentation and avoid doing unnecessary work in hooks that run for every request.",
+    "real_world": "Teams often add auth, tracing, localization, and DB session setup in hooks, then discover that even cheap per-request work becomes noticeable at tens of thousands of requests per minute.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you put cross-cutting logic if you needed it to apply to every request but remain easy to benchmark and disable?"
+   },
+   {
+    "question": "What’s the difference between a 500 raised in the view, an exception in `after_request`, and an exception in `teardown_request` in Flask?",
+    "answer": "An exception in the view normally goes through Flask’s error handling and can become a custom 500 response. An exception in `after_request` happens after a response object exists, but it can still break the response and typically becomes an error path. `teardown_request` is for cleanup and runs even when earlier code failed; it receives the exception, and raising from teardown is risky because cleanup should not mask the original failure. The key rule is to keep teardown idempotent and defensive.",
+    "real_world": "A common incident is a harmless-looking metrics or logging call in `after_request` raising unexpectedly and turning successful requests into 500s under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is database session cleanup usually done in teardown instead of after_request?"
+   },
+   {
+    "question": "If you use Gunicorn with preloaded app state, what copy-on-write benefits do you get, and what can still go wrong?",
+    "answer": "Preloading imports the app once in the master before forking workers, so read-only memory pages such as imported code and some initialized data can be shared across workers via copy-on-write. That reduces startup cost and memory footprint, especially with many workers. It can go wrong if preload opens DB connections, sockets, threads, or process-unsafe clients before fork, because children inherit broken or duplicated state. Large mutable caches also lose the memory benefit once workers start modifying them.",
+    "real_world": "Teams sometimes preload a big ML model or lookup table to save hundreds of MB per worker, then hit strange database failures because the connection pool was created before fork.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which kinds of objects are safe to initialize before fork, and which should be created lazily per worker?"
+   },
+   {
+    "question": "How would you serve very large request bodies or file-like uploads through Flask without blowing up memory, and what are the hidden bottlenecks?",
+    "answer": "You want to avoid reading the entire body into memory and instead stream or spool it, while enforcing size limits and timeouts at the proxy and app layers. Flask sits on Werkzeug’s request parsing, so whether data is buffered in memory or spilled to disk depends on how the multipart/form-data parser handles it and how your server feeds the body. Hidden bottlenecks include temporary disk I/O, slow clients tying up workers, proxy buffering, and antivirus or checksum steps that accidentally force a full read. The app code should process chunks or hand off storage work rather than building giant byte strings.",
+    "real_world": "A service can look fine in testing, then OOM in production when several users upload multi-GB files at once or when slow clients hold workers for minutes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes if the reverse proxy buffers uploads before forwarding them to Flask?"
+   },
+   {
+    "question": "When would you mount multiple Flask apps with `DispatcherMiddleware` or separate services instead of one big application instance?",
+    "answer": "Mounting multiple Flask apps can give you isolation of config, dependencies, auth rules, and release cadence while still sharing one WSGI entrypoint. It’s useful when parts of the system have genuinely different lifecycles or middleware needs, but you still want simple deployment. The trade-off is operational and architectural complexity: separate error handling, duplicated extensions, and trickier observability and URL generation across app boundaries. If the domains are strongly independent or need separate scaling, split into separate services instead.",
+    "real_world": "This comes up when an internal admin app, a public API, and a legacy monolith share infrastructure but need different security posture and deployment frequency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems show up with shared database models or auth when you split one Flask app into several mounted apps?"
+   },
+   {
+    "question": "What’s the real purpose of Werkzeug’s `LocalProxy`, and what can surprise you when you pass `request` or `current_app` around?",
+    "answer": "`LocalProxy` delays lookup of the real object until access time, so `request`, `session`, `g`, and `current_app` resolve to the object bound to the active context. That makes globals feel convenient without being truly global. The surprise is that the proxy only works while the relevant context is active; if you capture it and use it later in a thread, callback, or background task, resolution can fail or point at the wrong thing. It can also confuse type checks, serialization, and debugging because you are not holding the underlying object directly.",
+    "real_world": "A common production bug is passing `request.headers` access into a retry callback or thread pool and then getting context errors only under load.",
+    "code_lang": "python",
+    "code": "from flask import request\n\n@app.get(\"/x\")\ndef x():\n    f = lambda: request.headers.get(\"X-Id\")\n    return {\"id\": f()}  # works here, same context\n\n# calling f later in a background thread can fail: no request context\n",
+    "follow_up": "How would you safely pass request-derived data into a background job?"
+   },
+   {
+    "question": "How do you reason about connection pooling for databases or HTTP clients in Flask when you have multiple workers and threads?",
+    "answer": "Pools are per process unless the client explicitly supports something else, so total open connections are roughly pool size times worker count, and sometimes times threads depending on the client. That means a configuration that looks small in one process can overwhelm a database once multiplied across your deployment. You generally want long-lived clients created once per worker, request-scoped transactions or sessions, and explicit timeouts so stuck backends do not exhaust the pool. The right numbers depend on downstream limits and your latency profile, not just Flask.",
+    "real_world": "A service with 8 workers and a pool of 20 can unintentionally create 160 database connections, enough to starve other apps or exceed managed DB limits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you watch to know whether your pool is too small, too large, or leaking connections?"
+   },
+   {
+    "question": "What are the trade-offs between doing cross-cutting work in Flask hooks versus pure WSGI middleware versus your reverse proxy?",
+    "answer": "Flask hooks have access to Flask abstractions like `request`, `g`, and endpoint info, which makes them convenient for auth, DB lifecycle, and app-specific logging. WSGI middleware is framework-agnostic and can wrap multiple apps, but it only sees the lower-level request/response interface unless it reconstructs more context. A reverse proxy is better for concerns like TLS termination, buffering, compression, request size limits, and some auth, because it can reject or shape traffic before Python sees it. The trade-off is visibility versus efficiency: the earlier the layer, the cheaper it is, but the less application context it has.",
+    "real_world": "Teams often move gzip, static file serving, and request body limits out of Flask after discovering Python was spending CPU on work the proxy handles more efficiently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Give an example of something that seems like middleware but should stay in Flask because it needs endpoint-aware behavior."
+   },
+   {
+    "question": "How would you prevent duplicate background work when a Flask endpoint triggers an external side effect and clients retry aggressively?",
+    "answer": "Treat the HTTP request and the side effect as separate reliability domains. Use an idempotency key or deduplication key persisted in durable storage, record the intended operation before doing the side effect, and make retries consult that record instead of blindly re-running the work. If the side effect is asynchronous, enqueue a job with a stable key and let the worker enforce uniqueness and state transitions. The trade-off is extra storage and complexity for much safer retries and recovery.",
+    "real_world": "Without deduplication, payment captures, emails, or provisioning jobs can run twice when mobile clients retry on timeouts or when a load balancer retransmits after a broken connection.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the state machine so a crashed worker can resume safely without losing exactly-once behavior at the business level?"
+   },
+   {
+    "question": "If you see intermittent ‘working outside of request context’ errors in production but not locally, what root causes would you investigate first?",
+    "answer": "First look for work escaping the request lifetime: background threads, thread pools, greenlets, callbacks, generators used after the response, or lazy logging and metrics code that accesses `request` later. Then check test or dev differences, because the debugger, single-worker execution, or synchronous local traffic can hide timing issues. Also inspect streaming responses and teardown code, where context lifetime is less intuitive. The bug is usually not Flask losing state; it’s application code using context-bound proxies after the context was popped.",
+    "real_world": "These bugs often appear only under concurrency, when a request finishes quickly but deferred logging or an executor task tries to read headers or `g` afterward.",
+    "code_lang": "python",
+    "code": "from flask import copy_current_request_context\n\n@app.post(\"/work\")\ndef work():\n    @copy_current_request_context\n    def log_later():\n        use_request_data()\n    executor.submit(log_later)\n    return \"queued\", 202\n",
+    "follow_up": "What are the limitations of copying request context into background work, and when would you avoid it entirely?"
+   }
+  ]
+ }
+}

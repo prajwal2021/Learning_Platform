@@ -1,0 +1,493 @@
+{
+ "slug": "observability",
+ "name": "Monitoring, logging and observability",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between logging, metrics, and tracing?",
+    "answer": "Logging records discrete events with context, metrics track numeric values over time, and tracing follows a single request as it moves through services. Logs are best for detailed investigation, metrics for alerting and trends, and traces for finding where latency or failures happen in a distributed system. Good observability usually uses all three together.",
+    "real_world": "A service may show high latency in metrics, but traces reveal that one downstream database call is slow, and logs provide the exact query or error message.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a metric over a log, and why?"
+   },
+   {
+    "question": "Why should logs be structured instead of plain text?",
+    "answer": "Structured logs use consistent fields like level, timestamp, request_id, and message, which makes them easier to search, filter, and analyze automatically. Plain text is harder for tools to parse reliably, especially across many services. Structured logging also makes it much easier to correlate events for one request.",
+    "real_world": "During an outage, a team can quickly filter all error logs for one request ID instead of manually reading thousands of text lines.",
+    "code_lang": "json",
+    "code": "{\"level\":\"error\",\"request_id\":\"abc123\",\"service\":\"payments\",\"message\":\"card charge failed\"}",
+    "follow_up": "What fields would you include in every application log line?"
+   },
+   {
+    "question": "What is the purpose of log levels like debug, info, warning, and error?",
+    "answer": "Log levels help you control how much information is recorded and how serious an event is. Debug is usually for detailed troubleshooting, info for normal application events, warning for unexpected but non-fatal conditions, and error for failures that need attention. Using the right level keeps logs useful without making them too noisy.",
+    "real_world": "If everything is logged as error, alerting becomes noisy and real incidents are easier to miss. If everything is debug, production logs can become expensive and hard to search.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide whether something should be a warning or an error?"
+   },
+   {
+    "question": "What is an alert, and how is it different from a dashboard?",
+    "answer": "An alert is a notification triggered when a metric or condition crosses a threshold or matches a rule. A dashboard is a visual view of system health over time, used for monitoring and investigation. Alerts are for getting attention quickly; dashboards are for understanding behavior and trends.",
+    "real_world": "A dashboard might show memory use slowly rising for days, while an alert fires only when it crosses a risky limit so someone can act.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a good alert versus a noisy one?"
+   },
+   {
+    "question": "What does it mean to correlate logs across multiple services?",
+    "answer": "Correlation means being able to connect events from one user request or job as it passes through different services. The usual way is to propagate a request ID or trace ID and include it in every log line. Without correlation, debugging distributed systems becomes much slower because each service only shows part of the story.",
+    "real_world": "A checkout request may hit an API, payment service, and inventory service; a shared request ID lets you follow all of its logs end to end.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you add a request ID to logs in a web application?"
+   },
+   {
+    "question": "What is a health check, and why is it used?",
+    "answer": "A health check is a simple endpoint or probe that tells whether a service is ready or alive. Liveness checks help detect when a process is stuck and needs restarting, while readiness checks tell whether the service can receive traffic. They are important for orchestrators like Kubernetes and load balancers.",
+    "real_world": "A service may be running but not ready because it has not connected to its database yet. Readiness checks prevent traffic from being sent too early.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between liveness and readiness checks?"
+   },
+   {
+    "question": "Why is timestamping important in logs and metrics?",
+    "answer": "Timestamps let you reconstruct what happened in order and compare events across systems. They are essential for finding root cause, especially when multiple services and machines are involved. Without accurate timestamps, it is hard to match an error spike to a deployment or another event.",
+    "real_world": "If server clocks are off, one service may appear to fail before the request even arrived, which makes debugging confusing and slow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why do teams care about clock synchronization on servers?"
+   },
+   {
+    "question": "What is the difference between monitoring and observability?",
+    "answer": "Monitoring is watching known signals and checking whether expected thresholds are met. Observability is the ability to ask new questions about a system using the data it emits, usually logs, metrics, and traces. Monitoring tells you something is wrong; observability helps you understand why.",
+    "real_world": "A team might monitor CPU and error rate, but when a new bug appears, observability data lets them investigate a failure pattern they did not predict in advance.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can a system be observable but still poorly monitored?"
+   },
+   {
+    "question": "What is a common mistake when setting up alerts?",
+    "answer": "A common mistake is alerting on every symptom instead of on user impact or actionable issues. That creates alert fatigue, so people start ignoring notifications. Good alerts are specific, rare, and tied to something a person can fix.",
+    "real_world": "If a service sends alerts every time one instance restarts, engineers may get dozens of pages for harmless restarts and miss the real outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you reduce noisy alerts without missing important incidents?"
+   },
+   {
+    "question": "What is the purpose of a centralized logging system?",
+    "answer": "A centralized logging system collects logs from many machines and services into one place for search, retention, and analysis. It is much easier than SSHing into individual servers and manually checking files. Centralization also helps with access control and keeping logs when instances are short-lived.",
+    "real_world": "In cloud environments, containers may disappear after a crash, so local logs can be lost unless they are shipped to a central store.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can happen if logs are only stored on the application server?"
+   },
+   {
+    "question": "What is a metric in monitoring, and can you give examples of useful ones?",
+    "answer": "A metric is a numeric measurement collected over time, such as request rate, error rate, latency, CPU usage, or memory usage. Metrics are useful because they are cheap to store and easy to graph, alert on, and compare over time. Good metrics usually describe system behavior or user experience, not just internal implementation details.",
+    "real_world": "A team watches p95 latency and 5xx rate on an API so they can spot slowdowns before customers complain. CPU alone might look fine while latency is already getting worse.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose between a counter, gauge, and histogram?"
+   },
+   {
+    "question": "What is a log, and when would you use logging instead of metrics?",
+    "answer": "A log is a discrete event record, usually with context about something that happened at a specific moment. You use logging when you need detail: debugging a failure, understanding a specific request, or seeing the sequence of steps that led to an issue. Metrics are better for trends and alerting, while logs are better for diagnosis.",
+    "real_world": "If an order checkout fails, metrics may tell you that failures increased, but logs can show the exact validation error or downstream timeout for one request.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What information should you include in a useful application log?"
+   },
+   {
+    "question": "What is tracing, and why is it useful in a microservices system?",
+    "answer": "Tracing follows one request as it moves through multiple services and records the time spent in each step. It is useful when a slow response is caused by several services or by one downstream dependency that is hard to see from a single service’s logs. Tracing helps answer where the time went.",
+    "real_world": "In a checkout flow, a user complaint about slowness may turn out to be a payment service retrying several times after a database call. A trace shows the full path instead of forcing you to piece it together from separate logs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a trace and a span?"
+   },
+   {
+    "question": "What is the difference between a counter and a gauge?",
+    "answer": "A counter only goes up, except when it resets, so it is good for things like total requests or total errors. A gauge can go up and down, so it is good for values like current memory usage, queue depth, or number of active connections. Choosing the right type matters because it affects how the metric is interpreted and graphed.",
+    "real_world": "If you track active sessions with a counter, you cannot tell how many users are connected right now. A gauge shows the current state directly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use a histogram instead of a gauge?"
+   },
+   {
+    "question": "What is a dashboard used for in operations work?",
+    "answer": "A dashboard is a visual view of metrics and other signals that helps you understand system health at a glance. It is useful for spotting trends, comparing services, and checking whether something changed after a deployment. A good dashboard answers a small set of questions quickly rather than showing everything possible.",
+    "real_world": "During an incident, engineers open a dashboard to see whether latency, error rate, and traffic changed at the same time. That helps narrow down whether the issue is load, a deployment, or an external dependency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you put on a dashboard for an API service?"
+   },
+   {
+    "question": "What is log rotation, and why do we need it?",
+    "answer": "Log rotation is the process of closing an old log file and starting a new one when the file gets too large or too old. We need it so logs do not fill up disk space and so old files stay manageable for searching and shipping. Rotation is usually paired with retention rules to remove old logs after a period of time.",
+    "real_world": "A server can run out of disk if it keeps writing to one giant log file. That can cause the application or even the whole host to fail.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between log rotation and log retention?"
+   },
+   {
+    "question": "What is an SLA or SLO, and how does it relate to monitoring?",
+    "answer": "An SLO is a target for service reliability, such as a response-time or availability goal, and an SLA is a formal commitment often tied to penalties. Monitoring measures whether the system is meeting those goals. In practice, the metrics and alerts should be based on the user-facing behavior that the SLO cares about.",
+    "real_world": "A company may promise 99.9% availability in an SLA, so they monitor uptime and error rate carefully. If they miss the target, they may owe credits or need to explain the outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is an error budget?"
+   },
+   {
+    "question": "What does it mean to have high-cardinality data, and why can it be a problem?",
+    "answer": "High-cardinality data has many distinct values, like user IDs, request IDs, or full URL paths with unique parameters. It can be a problem because it makes metrics expensive, hard to aggregate, and sometimes impossible to query efficiently. For monitoring, you usually want low-cardinality labels like service name, endpoint group, or status code class.",
+    "real_world": "If you attach a unique user ID to every metric series, the monitoring system can explode in size and become slow or costly. The same issue can make dashboards unusable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is it appropriate to use labels on a metric?"
+   },
+   {
+    "question": "What is the difference between a warning and an alert in an operations context?",
+    "answer": "A warning is usually a signal that something looks wrong or is approaching a threshold, but it may not need immediate action. An alert is an actionable notification sent to the people responsible for responding. The key difference is whether someone should be interrupted and expected to act.",
+    "real_world": "A disk at 80% full might show a warning on a dashboard, while a disk at 95% full might page an on-call engineer. That avoids waking people up for every small issue.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide whether an alert should page someone or just create a ticket?"
+   },
+   {
+    "question": "What is the purpose of retention in logging and monitoring?",
+    "answer": "Retention is how long you keep logs, metrics, or traces before deleting them. It matters because storage costs money, but keeping enough history is useful for debugging recurring issues, audits, and trend analysis. The right retention period depends on how often you need to investigate old incidents and any compliance rules.",
+    "real_world": "A production bug may only be discovered after a customer reports it days later, so keeping logs for only a few hours can make debugging impossible. On the other hand, storing everything forever can become very expensive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide different retention periods for logs, metrics, and traces?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide what to instrument first when you start monitoring a new service?",
+    "answer": "Start with the user journey and the failure modes that matter most: request rate, latency, errors, and saturation for the critical dependencies. Add business metrics only where they help you tell whether the service is healthy from the user’s point of view. Avoid instrumenting everything upfront, because noisy or expensive signals are harder to maintain than a smaller set of useful ones.",
+    "real_world": "A team launching a checkout service often begins with p95 latency, payment failures, and queue depth before adding dozens of internal counters. That usually catches the regressions that actually affect revenue.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you tell whether a metric is actionable or just interesting?"
+   },
+   {
+    "question": "What is the difference between an event log and a metric sample, and when would you choose one over the other?",
+    "answer": "An event log records discrete occurrences with context, while a metric sample summarizes a value at a point in time or over an interval. Use logs when you need detail for debugging individual requests or rare failures, and use metrics when you need trends, rates, or alerts over time. A common trade-off is volume versus fidelity: logs are richer but more expensive to store and query.",
+    "real_world": "If a payment gateway returns intermittent 502s, logs help you see the exact request and response, while metrics show whether the error rate is rising across the whole fleet.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you add a metric derived from logs instead of querying the logs directly?"
+   },
+   {
+    "question": "How would you reduce noisy alerts without missing real incidents?",
+    "answer": "Group alerts by symptom and severity, and alert on user impact or clear SLO burn rather than every local fluctuation. Use thresholds with some time window or rate of change so brief spikes do not page people. Also make sure alerts are actionable, because if the responder cannot do anything, the alert is probably too low-value.",
+    "real_world": "In production, teams often get paged every time CPU briefly spikes during deploys. Moving to sustained-error or SLO-based alerts usually reduces false alarms while still catching real outages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you use to detect a slow memory leak before it causes an outage?"
+   },
+   {
+    "question": "What is distributed tracing sampling, and what trade-off does it involve?",
+    "answer": "Sampling means only collecting a subset of traces instead of every request. It reduces overhead and storage cost, but you may miss rare failures or not capture enough examples of a specific path. A good approach is to sample more aggressively for errors or slow requests and less for healthy traffic.",
+    "real_world": "At high traffic, storing every trace can become too expensive. Teams often keep all error traces but sample successful requests to preserve enough data for debugging.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose between head-based and tail-based sampling?"
+   },
+   {
+    "question": "How do you troubleshoot a service that looks healthy on dashboards but users still report slowness?",
+    "answer": "Check whether the dashboards are hiding tail latency, partial outages, or a dependency problem that the aggregate metrics smooth over. Then inspect recent deploys, per-endpoint metrics, and traces for slow requests to see where time is spent. It is common for averages to look fine while p95 or p99 latency is bad enough to hurt users.",
+    "real_world": "A web app may show normal average response time, but a single slow database query can make some requests time out. Users feel that immediately even though the dashboard looks mostly green.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which percentile would you prioritize for a user-facing API, and why?"
+   },
+   {
+    "question": "What are the pros and cons of shipping logs directly to a central system versus buffering them locally first?",
+    "answer": "Direct shipping is simpler, but it can block or drop logs when the network or log backend is unhealthy. Buffering locally improves resilience and can smooth bursts, but it adds complexity and local disk pressure. The choice depends on how much log loss you can tolerate and whether logging must stay non-blocking under failure.",
+    "real_world": "During an incident, a direct log pipeline can fail at the same time as the service, making debugging harder. Local buffering often preserves enough evidence to reconstruct what happened afterward.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do to avoid the logging pipeline causing backpressure on the application?"
+   },
+   {
+    "question": "How do you test that your monitoring is actually working before production incidents happen?",
+    "answer": "Inject known failures in staging or a small production canary and verify that metrics, logs, traces, and alerts change as expected. You can also run alert simulations or compare dashboards against synthetic traffic. The goal is to prove both signal generation and the notification path, not just that the collector is running.",
+    "real_world": "A team may discover during an outage that an alert rule existed but the paging integration was broken. Regular tests catch that before it matters.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test an alert that is supposed to fire only after a sustained issue?"
+   },
+   {
+    "question": "What is the value of adding request IDs or trace IDs to application logs?",
+    "answer": "They let you follow one request across multiple log lines and services without relying on timestamp guesses. That makes debugging much faster when a request fans out across a microservice chain. The trade-off is that you need consistent propagation through every hop, or the correlation breaks.",
+    "real_world": "When a customer reports a failed checkout, a request ID lets support and engineers find the exact path through API, inventory, and payment logs. Without it, you may have to sift through huge volumes of unrelated logs.",
+    "code_lang": "python",
+    "code": "import logging\nlogger = logging.getLogger(__name__)\n\ndef handle(req):\n    rid = req.headers.get('X-Request-ID')\n    logger.info('checkout started', extra={'request_id': rid})",
+    "follow_up": "How do you propagate that ID across async jobs or message queues?"
+   },
+   {
+    "question": "When would you prefer synthetic monitoring over relying only on production telemetry?",
+    "answer": "Synthetic monitoring is useful when you want an external, repeatable check of a user flow from a known location or schedule. It can detect problems before real users hit them, especially for login, checkout, or DNS issues. It does not replace production telemetry because it covers only a narrow path and can miss real-world variability.",
+    "real_world": "A company might run a synthetic checkout every minute to catch payment or CDN problems early. If the synthetic path fails but internal metrics still look normal, that signals an external or integration issue.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main limitations of synthetic tests compared with real-user monitoring?"
+   },
+   {
+    "question": "How do you decide which logs to keep at debug level in a production system?",
+    "answer": "Keep debug logging off by default in production and enable it selectively for specific components, users, or time windows when investigating an issue. Debug logs should be detailed enough to help diagnosis but not so verbose that they overwhelm storage, cost, or sensitive data handling. A common pattern is to make debug logging temporary and targeted, then revert it after the incident.",
+    "real_world": "Turning on debug logs globally during an incident can flood the log system and make the real signal harder to find. Scoped debug logging helps you inspect one problem without degrading the whole fleet.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you enable more detail for one request without changing a global log level?"
+   },
+   {
+    "question": "How would you choose good alert thresholds for a latency metric without making the system too sensitive or too blind?",
+    "answer": "Start from the user impact you care about, not from an arbitrary percentile or number. Use a threshold that reflects a real SLO breach or a strong leading indicator, then validate it against historical data to see how often it would fire during normal load, deploys, and known incidents. If one threshold is too noisy, consider multi-window or burn-rate style alerts so you catch sustained problems without paging on short spikes.",
+    "real_world": "A team sets a p95 latency alert at a fixed number and gets paged every time traffic shifts or a batch job runs. After switching to an SLO-based threshold, they cut false pages and still catch real regressions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tune that threshold differently for an API used interactively versus a background job?"
+   },
+   {
+    "question": "What is log sampling, and when can it hurt you more than it helps?",
+    "answer": "Log sampling keeps only a subset of logs to reduce cost and volume, but it can hide rare failures if the sampling is uniform and the interesting event is infrequent. It works best for very high-volume, low-value logs where you only need a statistical picture, not a complete audit trail. For errors or security events, you usually want full capture or a much smarter sampling rule.",
+    "real_world": "A service samples all logs at 10% and later misses the one error pattern that caused a payment failure. The team then keeps all error logs but samples only routine request logs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you never sample, and why?"
+   },
+   {
+    "question": "How do you make logs useful for debugging across a request that fans out into several services?",
+    "answer": "You need a shared request identifier, consistent fields, and enough context in each hop to reconstruct the path. The goal is to answer which service handled the request, where time was spent, and which failure propagated, without searching by free-text messages. Good propagation of IDs matters more than verbose logs because it lets you join events across boundaries.",
+    "real_world": "In a checkout flow, a timeout appears only in one downstream service. With the same request ID in every service, the team can trace the exact path and find the slow dependency quickly.",
+    "code_lang": "python",
+    "code": "import logging\nlogging.info(\"payment failed\", extra={\"request_id\": rid, \"user_id\": uid})\nlogging.info(\"calling inventory\", extra={\"request_id\": rid, \"service\": \"inventory\"})",
+    "follow_up": "What breaks when one service forgets to propagate that identifier?"
+   },
+   {
+    "question": "When should you use metrics instead of logs for troubleshooting a production issue?",
+    "answer": "Use metrics when you need to see trends, rates, or system-wide behavior over time, especially under load. Metrics are cheaper to query and easier to alert on than logs, so they are better for spotting whether something is broadly wrong and how widespread it is. Logs are better once you already know the failure mode and need the detailed context for a specific request or event.",
+    "real_world": "During an outage, engineers first look at error-rate and latency metrics to confirm the scope of the problem. Only after that do they dive into logs for the failing requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you think of a case where logs are still the first thing you would check?"
+   },
+   {
+    "question": "What is the trade-off between keeping more detailed telemetry and the performance overhead it adds?",
+    "answer": "More telemetry improves diagnosis but costs CPU, memory, network bandwidth, and storage, and it can also increase latency if logging is synchronous. The practical trade-off is to collect enough detail to answer likely questions, but not so much that observability itself becomes a bottleneck or a major expense. This is why teams often reserve expensive detail for errors, sampled traffic, or temporary incident mode.",
+    "real_world": "A service starts timing out after verbose debug logging is enabled globally. The extra I/O and serialization overhead becomes part of the incident, so the team limits detailed logging to a subset of requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide what to turn on temporarily during an incident?"
+   },
+   {
+    "question": "How do you handle metrics or logs in a batch job where there is no request-response traffic?",
+    "answer": "You still track progress, success/failure counts, duration, and item-level outcomes, but the units of work are batches, files, records, or partitions instead of requests. Alerting should focus on missed schedules, stalled progress, repeated retries, or divergence from expected throughput. A batch system often needs business-level metrics too, because technical success alone may not mean the data was processed correctly.",
+    "real_world": "An overnight ETL job can exit successfully while silently skipping a partition. Progress and record-count metrics catch the issue before downstream reports are wrong all morning.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you alert on if the job is expected to run for hours and its runtime varies a lot?"
+   },
+   {
+    "question": "What is the difference between golden signals and arbitrary service metrics?",
+    "answer": "Golden signals are a small set of user-facing indicators such as latency, traffic, errors, and saturation that usually tell you whether a service is healthy. Arbitrary metrics can be useful, but they are often too many and too specific to guide incident response. Golden signals help teams stay focused on symptoms that matter to users before drilling into implementation details.",
+    "real_world": "An on-call engineer sees CPU graphs and queue depth, but the real issue is that error rate is climbing only for one endpoint. Golden signals point them to the user-visible problem faster than a long metric list.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you add beyond golden signals for a database-backed service?"
+   },
+   {
+    "question": "How would you debug a spike in error logs after a deployment if metrics look mostly normal?",
+    "answer": "First verify whether the spike is concentrated in one instance, one endpoint, one region, or one customer segment, because that often reveals a partial rollout or config issue. Then compare the new version’s logs with the previous version and look for changed request paths, downstream calls, or exception types. If metrics are normal, the problem may be low-volume but high-impact, such as a specific feature path failing for a subset of users.",
+    "real_world": "After a deploy, overall error rate stays flat but support tickets increase. Logs show only one feature flag path is throwing exceptions, affecting a small percentage of users.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What if the error logs are missing the context you need to separate old and new behavior?"
+   },
+   {
+    "question": "Why is it risky to rely only on application logs for alerting?",
+    "answer": "Logs are high-volume and noisy, and they usually describe events after they happened rather than giving a stable signal of system health. Alerting directly on logs can create flapping pages, miss aggregated trends, and make it hard to distinguish one bad request from a real outage. Metrics and derived signals are better for alerting because they summarize behavior and are easier to reason about over time.",
+    "real_world": "A team pages whenever a specific error string appears, but that string shows up occasionally during normal retries. They replace it with an error-rate metric and keep the log pattern for investigation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would a log-based alert still be appropriate?"
+   },
+   {
+    "question": "How do you validate that an instrumentation change did not break observability itself?",
+    "answer": "Treat observability code like product code: verify the data still arrives, looks sane, and matches known behavior after the change. Check for missing labels, broken parsing, duplicate series, or sudden drops in volume, and compare against a known-good environment or baseline. If possible, deploy the change gradually and watch both the service and the telemetry pipeline, because bad instrumentation can hide real incidents.",
+    "real_world": "A release adds a new tag to a metric and suddenly the dashboard goes blank because the label exploded cardinality. The team catches it in staging by comparing series counts before production rollout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What automated checks would you add to prevent that kind of failure in CI?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how histogram metrics actually work under the hood, and when you would choose classic bucket histograms versus summaries or native histograms?",
+    "answer": "A classic histogram increments cumulative counters for configured buckets plus count and sum, so percentile-like views are computed later from bucket populations. That makes aggregation across instances possible, but bucket choice controls accuracy and storage cost. Summaries calculate quantiles in-process, which avoids bucket tuning but usually cannot be aggregated meaningfully across replicas. Native histograms compress bucket data dynamically and can improve tail-latency fidelity, but support and cost characteristics depend on the backend.",
+    "real_world": "Teams often discover too late that they cannot aggregate p99 across hundreds of pods because they chose client-side summaries. Bad bucket boundaries also hide latency regressions by putting most requests into one wide bucket.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you pick bucket boundaries for an API with a 200 ms latency SLO and occasional 10 second outliers?"
+   },
+   {
+    "question": "What causes gaps or spikes in time-series data during scrape-based monitoring, and how do you reason about whether the problem is in the target, the collector, or the query?",
+    "answer": "Spikes often come from counter resets, duplicate scrapes, or bad rate windows; gaps usually come from failed scrapes, target timeouts, relabel drops, or remote-write lag. I first separate collection-time problems from query artifacts by checking raw samples, scrape health, and whether the issue appears before aggregation. Then I look for restart events, target cardinality churn, and clock skew or delayed ingestion. The key is that many scary graphs are query math over imperfect samples, not real workload changes.",
+    "real_world": "A common incident is CPU or request rate appearing to drop to zero during autoscaling, when in reality pods were replaced and the query window was too short around counter resets.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does using irate versus rate change how restart-related spikes show up?"
+   },
+   {
+    "question": "How would you design a telemetry pipeline so that a collector outage or backend slowdown does not take down production services?",
+    "answer": "Application paths should treat telemetry export as lossy and bounded: non-blocking queues, memory limits, backpressure, and dropping lower-priority data before impacting request handling. Collectors should buffer, batch, and isolate destinations so one slow backend does not stall all signals. I also separate control planes and failure domains, for example local agents per node with retry limits instead of synchronous direct exports from apps. The trade-off is between durability and blast radius: stronger delivery guarantees cost memory, disk, latency, and operational complexity.",
+    "real_world": "In real incidents, synchronous log appenders or exporters have caused request threads to block when Elasticsearch or an OTLP gateway slowed down, turning an observability failure into a user-facing outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you monitor on the collector itself to know it is dropping or backpressuring data?"
+   },
+   {
+    "question": "What are the main clock-related failure modes in observability systems, and how do they affect logs, metrics, and traces differently?",
+    "answer": "Clock skew changes event ordering, makes cross-host log timelines misleading, and can distort span durations if start and end timestamps come from different machines. In metrics, scrape time often matters more than target time, so skew can be masked until recording rules or joins compare mismatched series. In tracing, skew can create impossible parent-child relationships or negative durations unless the backend normalizes them. You cannot eliminate all skew, so systems should tolerate it and operators should know which timestamps are source-generated versus collector-assigned.",
+    "real_world": "During multi-region incidents, teams sometimes chase the wrong root cause because logs from one region appear to happen before the triggering event in another due to NTP drift or ingestion timestamp confusion.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you investigate a trace that shows a child span starting before its parent?"
+   },
+   {
+    "question": "If you had to control observability cost at large scale without losing incident response capability, what levers would you use first?",
+    "answer": "I would start with label and field discipline, because uncontrolled cardinality usually dominates cost and query latency. Then I would tier the data: high-resolution recent metrics, sampled traces with tail or error bias, and shorter retention for verbose logs than for aggregated signals. I would also push common aggregations into recording rules or downsampling rather than querying raw high-cardinality series repeatedly. The goal is to preserve fast answers for common operational questions while making expensive forensic detail selective instead of default.",
+    "real_world": "A platform team may cut monitoring spend dramatically just by removing user IDs and request paths from labels, while keeping those values only in sampled traces or searchable logs for exceptions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which telemetry dimensions are most dangerous to allow as labels, and what alternatives would you offer developers?"
+   },
+   {
+    "question": "What is tail-based trace sampling, and why can it give better production visibility than head-based sampling despite being more expensive?",
+    "answer": "Head-based sampling decides at span start, before you know whether the request will be slow, erroring, or unusual, so it can miss rare but important traces. Tail-based sampling buffers spans until enough of the trace is observed to make a policy decision based on latency, status, or attributes. That improves capture of rare failures and tail behavior, but it needs memory, coordination, and delayed decisions, and it can struggle with very long or incomplete traces. It is a classic accuracy-versus-pipeline-complexity trade-off.",
+    "real_world": "On busy APIs, a 1% head sample can completely miss a short-lived dependency failure, while tail sampling that keeps all error traces preserves exactly the traces you need during an incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure modes appear in a tail-sampling collector when traces arrive out of order or some spans never arrive?"
+   },
+   {
+    "question": "How do you instrument asynchronous work correctly so trace context survives queues, retries, and fan-out without creating misleading traces?",
+    "answer": "You need to propagate context explicitly in message metadata and model each consume or worker step as a new span linked to the producer context, not pretend it is one continuous synchronous call. For retries, I usually keep the same logical operation identifiers but create separate attempt spans so failures and retry inflation stay visible. In fan-out systems, span links are often better than strict parent-child trees because one message may derive from multiple upstream events. The main risk is creating traces that look neat but lie about causality or latency.",
+    "real_world": "In event-driven systems, missing or wrong context propagation makes traces stop at the queue boundary, while incorrect parent-child relationships can make queue delay look like service execution time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use span links instead of parent-child relationships in a messaging workflow?"
+   },
+   {
+    "question": "What is exemplars support in metrics systems, and how does it help bridge from an alerting graph to a concrete request-level investigation?",
+    "answer": "An exemplar attaches a specific trace or request reference to an individual metric observation, usually for histograms or counters at collection time. When a latency or error graph spikes, you can jump from the affected bucket or sample to a representative trace instead of searching blindly through millions of logs. It is especially useful for tail latency because averages hide the exact slow requests. The trade-off is extra storage and plumbing, and not every backend or query path supports exemplars equally well.",
+    "real_world": "During p99 regressions, exemplars let an on-call engineer click from the hot latency bucket straight into traces showing that one downstream call added 800 ms, cutting triage time significantly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why are exemplars usually more useful with histograms than with simple gauges?"
+   },
+   {
+    "question": "How would you detect and diagnose telemetry loss itself, especially when the monitoring stack is partially failing and may be hiding its own problems?",
+    "answer": "I treat observability as a production system with its own SLIs: scrape success, ingest lag, dropped samples, queue depth, export error rate, query latency, and end-to-end canary signals. You also need out-of-band checks, such as synthetic emitters whose expected logs, metrics, and traces are verified independently, because a failing backend may make its own health dashboards look fine or disappear. Cross-validating signals helps: if request traffic is stable but all application log volume suddenly halves, that is suspicious. The hard part is avoiding circular dependencies where the only evidence of failure lives in the failed system.",
+    "real_world": "A remote-write queue can silently fall behind for hours, so dashboards look normal until someone notices that all graphs stop near the same timestamp. Synthetic telemetry can catch that much earlier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you build as an end-to-end observability canary for a multi-cluster platform?"
+   },
+   {
+    "question": "What are the main differences between push- and pull-based metrics collection at scale, and how do those choices affect security, service discovery, and failure handling?",
+    "answer": "Pull gives the collector control over scrape cadence, timeout, and label attachment, and it works well when targets are discoverable and reachable from the monitoring plane. Push fits short-lived jobs, edge networks, or isolated environments where central scrapers cannot reach targets, but it makes freshness, deduplication, and backpressure harder. With pull, missing data often means scrape failure; with push, stale data may look deceptively healthy unless expiry is handled carefully. Security also differs: pull centralizes credentials and network paths, while push distributes trust to many emitters.",
+    "real_world": "Kubernetes clusters often favor pull for long-running services because service discovery is strong, while CI jobs or batch workers need push or gateway patterns because they may finish before any scraper sees them.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you monitor a short-lived batch job so its success metrics are not lost when the process exits?"
+   },
+   {
+    "question": "How would you design alerting around multi-window burn-rate for an error budget instead of a single threshold on error rate?",
+    "answer": "Multi-window burn-rate alerting checks whether you're consuming error budget too fast over both a short and a long window. The short window catches fast outages, and the long window avoids paging on brief noise that would self-heal. The key is to alert on user-impacting SLI failure relative to the SLO, not raw error percentage in isolation. The trade-off is more query complexity, but it maps much better to whether you're actually endangering the objective.",
+    "real_world": "Teams often use a fast page for severe incidents and a slower ticket or page for sustained degradation. It prevents both missing a major outage and waking people up for a two-minute blip.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of SLIs are hard to use with burn-rate alerts, and how would you handle them?"
+   },
+   {
+    "question": "What happens inside a log ingestion pipeline when the input rate exceeds indexing capacity, and how would you keep the system from failing badly?",
+    "answer": "If ingestion outruns indexing, queues grow, memory pressure rises, disk buffers fill, and eventually producers or collectors start dropping or blocking. A good design makes backpressure explicit: bounded queues, durable local buffering, rate limits, and clear drop policies by log class. You also separate ingest from indexing so a slow search backend doesn't immediately stall application paths. The trade-off is between durability, latency, and cost, especially when bursts are much higher than the steady-state rate.",
+    "real_world": "A common incident is debug logging enabled on many nodes, which saturates collectors and then causes either app slowdown from blocking writes or silent log loss during the exact period you need evidence.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which logs would you drop first under pressure, and how would you make that decision visible to operators?"
+   },
+   {
+    "question": "How do cardinality explosions actually happen in metrics systems, and what controls would you put in place to prevent them before they take down the backend?",
+    "answer": "Cardinality explodes when labels include unbounded values like user IDs, full URLs, request IDs, or dynamic error messages, creating huge numbers of time series. The damage is multiplicative across labels and replicas, so memory, index size, and query cost can rise far faster than traffic. Prevention is mostly governance and guardrails: schema review, label allowlists, relabeling or dropping at the collector, and quotas per tenant or service. Detection should include top-N series creators and churn metrics, because short-lived series can hurt as much as stable ones.",
+    "real_world": "A single bad release that adds session_id as a metric label can overwhelm a shared Prometheus-compatible backend within minutes, causing query failures for unrelated teams.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is high churn in time series often as dangerous as high steady-state cardinality?"
+   },
+   {
+    "question": "If your traces show parent-child relationships that look wrong or spans appear duplicated, what are the usual root causes?",
+    "answer": "The common causes are broken context propagation, retries modeled as duplicate spans, concurrent work reusing mutable context incorrectly, and collectors or exporters retrying after partial success. Async frameworks can also create orphaned spans if context is stored in thread-local state that doesn't survive task handoff. I would first verify whether the bad topology is created in the app or introduced later by processing, sampling, or span transforms. The fix is usually consistent propagation, idempotent export handling, and careful modeling of retries versus attempts.",
+    "real_world": "In production this leads to misleading critical-path analysis, where a database looks slow only because child spans were attached to the wrong request or reported twice.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you model retries in traces so operators can distinguish one logical request from multiple attempts?"
+   },
+   {
+    "question": "What are the trade-offs between RED-style instrumentation and USE-style instrumentation, and why do mature systems usually need both?",
+    "answer": "RED focuses on request rate, errors, and duration at the service interface, so it's good for user-visible behavior and alerting. USE focuses on utilization, saturation, and errors of resources like CPU, disks, queues, and pools, so it's better for finding the bottleneck behind bad RED signals. If you only have RED, you know users are hurt but not why; if you only have USE, you can miss that a busy resource isn't actually affecting customers. Mature systems use RED for symptom detection and USE for causal diagnosis.",
+    "real_world": "An API can show rising latency while CPU stays low; USE on connection pools or downstream queue depth often reveals the real limit that RED alone cannot explain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where USE looks alarming but RED says the service is still healthy?"
+   },
+   {
+    "question": "How would you monitor and debug long-lived streaming connections like WebSockets or gRPC streams, where request-per-request metrics are a poor fit?",
+    "answer": "For streams, I would track connection lifecycle metrics, active streams, stream duration distributions, reconnect rate, bytes in and out, heartbeat failures, and application-level lag or backlog. Request latency is often meaningless because a stream may last minutes or hours, so you need telemetry on freshness, message delivery delay, and per-connection resource consumption. Logging also needs care because per-message logs can explode volume quickly. The trade-off is that you often need custom semantics for success and failure instead of standard HTTP-style metrics.",
+    "real_world": "A streaming service may look fine on success-rate graphs while users see stale data because heartbeats succeed but messages are delayed behind a growing fan-out backlog.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What SLI would you choose for a real-time stream where freshness matters more than connection success?"
+   },
+   {
+    "question": "Can you explain the difference between white-box and black-box telemetry for incident response, and how you'd use disagreements between them?",
+    "answer": "White-box telemetry comes from inside the system, like app metrics, traces, and internal logs; black-box telemetry measures behavior from the outside, like synthetic checks or client-side RUM. When they disagree, that's a clue: green internal metrics with failing black-box checks often means an edge, dependency, DNS, auth, or network-path problem rather than core business logic. The reverse can mean synthetic coverage is incomplete or internal instrumentation is overreporting issues that users do not feel. The operational value is in treating disagreement as a signal, not as a reason to trust one source blindly.",
+    "real_world": "A load balancer, CDN rule, or expired certificate can break users globally while service-level dashboards still look healthy because the application never sees the failing traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to page on black-box failure if white-box signals remain healthy?"
+   },
+   {
+    "question": "What makes percentiles hard to aggregate correctly across instances or regions, and how do you avoid drawing the wrong conclusion from latency data?",
+    "answer": "Percentiles are not generally composable, so averaging p95 from many instances does not give the fleet-wide p95. To aggregate correctly, you need distribution data such as histograms that can be merged before quantile estimation, or you compute percentiles at the backend from raw events if volume allows. You also need to watch traffic weighting, because a lightly loaded slow instance should not count the same as a heavily loaded fast one. The trade-off is accuracy versus storage and query cost.",
+    "real_world": "Teams often misread regional latency by averaging precomputed p99s, which can hide that one busy region is badly degraded while small quiet regions dominate the arithmetic.",
+    "code_lang": "sql",
+    "code": "-- wrong: avg of precomputed percentiles\nSELECT AVG(p95_ms) FROM instance_latency;\n\n-- better: aggregate from mergeable buckets/events,\n-- then compute percentile in the backend",
+    "follow_up": "How would you compare latency across endpoints when one endpoint has tiny traffic but very high variance?"
+   },
+   {
+    "question": "How do you approach observability in highly ephemeral environments like autoscaled containers or serverless, where instances may disappear before you can inspect them?",
+    "answer": "You have to treat telemetry as near-real-time exhaust, not something you'll collect later from the host. That means shipping logs and spans immediately, using labels that identify workload revision and runtime context, and avoiding dependency on local state that dies with the instance. For metrics, scrape intervals and export latency matter more because short-lived tasks can start and finish between collections. The trade-off is higher pipeline pressure and more series churn, so metadata discipline becomes critical.",
+    "real_world": "In serverless incidents, the failing function instance often no longer exists by the time someone starts debugging, so missing startup logs or cold-start traces can make the issue effectively invisible.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What telemetry tends to be lost first in very short-lived jobs, and how would you mitigate that?"
+   },
+   {
+    "question": "What would you look for when an observability backend itself becomes the bottleneck during an incident, and how do you keep investigations possible while it is degraded?",
+    "answer": "I would check ingest queue depth, write amplification, compaction or index pressure, query fan-out, hot tenants, and whether expensive ad hoc queries are starving ingestion. During the incident, the priority is to preserve high-value telemetry and backend stability: limit costly queries, reduce retention of low-value streams, sample or drop noisy sources, and keep a minimal path for core alerting and recent logs. Architecturally, you want isolation between tenants and between ingest and query so one failure mode doesn't collapse everything. The trade-off is degraded detail now in exchange for keeping enough visibility to restore service.",
+    "real_world": "A backend under stress often fails in the worst way: dashboards time out right when everyone starts running broad searches, turning an application incident into an observability incident too.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you define a minimum viable observability mode that the system can fall back to automatically?"
+   }
+  ]
+ }
+}

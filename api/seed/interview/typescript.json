@@ -1,0 +1,469 @@
+{
+ "slug": "typescript",
+ "name": "TypeScript",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is TypeScript, and how is it different from JavaScript?",
+    "answer": "TypeScript is a superset of JavaScript that adds static types and compiles to plain JavaScript. The main difference is that TypeScript lets you catch many type-related mistakes before runtime, while JavaScript does not. It also adds language features like interfaces and type annotations, but the output still runs as normal JavaScript.",
+    "real_world": "Teams use TypeScript to reduce bugs in large codebases and make refactoring safer. It helps new developers understand the shape of data passed between functions and components.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does the TypeScript compiler do with your code?"
+   },
+   {
+    "question": "When would you use an interface instead of a type alias in TypeScript?",
+    "answer": "Use an interface when you want to describe the shape of an object, especially if you may want declaration merging or extending it in an object-oriented style. Use a type alias when you need unions, intersections, primitives, tuples, or more complex compositions. In everyday code, both can describe object shapes, so the choice often comes down to style and the features you need.",
+    "real_world": "A team might use interfaces for public object contracts in a library and type aliases for union types like request states or API responses. This keeps data models easy to extend while still allowing expressive type composition.",
+    "code_lang": "typescript",
+    "code": "interface User {\n  id: string;\n  name: string;\n}\n\ntype Status = 'idle' | 'loading' | 'error';",
+    "follow_up": "Can interfaces extend each other, and how does that compare to type intersections?"
+   },
+   {
+    "question": "What does type inference mean in TypeScript?",
+    "answer": "Type inference means TypeScript can figure out a value’s type without you writing it explicitly. For example, if you assign a string to a variable, TypeScript knows it is a string and checks later uses accordingly. This matters because it keeps code shorter while still giving type safety where the compiler has enough information.",
+    "real_world": "In practice, developers rely on inference for local variables and return values to avoid noisy annotations. It becomes especially helpful in well-structured code where the compiler can track types through function calls.",
+    "code_lang": "typescript",
+    "code": "const message = 'hello';\n// message is inferred as string\n\nfunction add(a: number, b: number) {\n  return a + b;\n}\n// return type is inferred as number",
+    "follow_up": "When would you still annotate a type even if inference works?"
+   },
+   {
+    "question": "What is the difference between `any` and `unknown`?",
+    "answer": "`any` turns off type checking for a value, so you can do almost anything with it and TypeScript will not complain. `unknown` is safer because you must narrow it before using it, which forces you to verify what the value actually is. In most cases, `unknown` is the better choice for values coming from external sources.",
+    "real_world": "This comes up when parsing JSON, handling user input, or integrating with untyped libraries. Using `any` there can hide bugs until production, while `unknown` makes you validate the data first.",
+    "code_lang": "typescript",
+    "code": "function handle(value: unknown) {\n  if (typeof value === 'string') {\n    console.log(value.toUpperCase());\n  }\n}",
+    "follow_up": "How do you narrow an `unknown` value safely?"
+   },
+   {
+    "question": "What is a union type in TypeScript, and when is it useful?",
+    "answer": "A union type allows a value to be one of several types, written with `|`. It is useful when data can validly come in different forms, such as a result that may be a success or an error, or a parameter that accepts string or number. Union types work best when you narrow them before using members that are not shared by all options.",
+    "real_world": "APIs often return different shapes depending on success or failure, and unions model that accurately. They also help UI code represent states like loading, empty, and error without using separate variables everywhere.",
+    "code_lang": "typescript",
+    "code": "function printId(id: string | number) {\n  if (typeof id === 'string') {\n    console.log(id.toUpperCase());\n  } else {\n    console.log(id.toFixed(0));\n  }\n}",
+    "follow_up": "What is a discriminated union?"
+   },
+   {
+    "question": "What is the purpose of optional properties in an interface or type?",
+    "answer": "Optional properties mark fields that may be missing, using `?`. They are useful when an object does not always include every field, such as partial form data or an API response with optional metadata. The key point is that missing is different from present with an `undefined` value in many real cases, so you should check before using the property.",
+    "real_world": "This matters in forms and patch requests, where only some fields are sent or filled in. It helps avoid forcing callers to provide data that is not always available.",
+    "code_lang": "typescript",
+    "code": "type User = {\n  id: string;\n  nickname?: string;\n};\n\nfunction greet(user: User) {\n  return user.nickname ? user.nickname : 'guest';\n}",
+    "follow_up": "How would you make all properties optional for a partial update?"
+   },
+   {
+    "question": "What is the difference between `null` and `undefined` in TypeScript?",
+    "answer": "`undefined` usually means a value was not assigned or a property does not exist, while `null` usually means an explicit empty value. TypeScript treats them as distinct values, and whether they are allowed depends on your compiler settings and the type you declared. In practice, teams should be consistent about which one they use to represent absence.",
+    "real_world": "This shows up in API payloads and database results, where one system may omit a field and another may send it as null. Confusing the two can cause subtle bugs in UI rendering or data mapping.",
+    "code_lang": "typescript",
+    "code": "let a: string | undefined;\nlet b: string | null = null;\n\nif (a !== undefined) {\n  console.log(a.length);\n}",
+    "follow_up": "How do you check for both `null` and `undefined` safely?"
+   },
+   {
+    "question": "What does a generic type parameter do in TypeScript?",
+    "answer": "A generic lets you write reusable code that works with different types while preserving type information. Instead of hardcoding one type, you pass the type in as a parameter, such as `T`, so the function or container stays type-safe for whatever it handles. This is common in helpers, data structures, and API wrappers.",
+    "real_world": "Without generics, a utility like a list, cache, or response wrapper often falls back to `any` or repeated overloads. Generics keep those helpers reusable without losing type safety.",
+    "code_lang": "typescript",
+    "code": "function identity<T>(value: T): T {\n  return value;\n}\n\nconst n = identity(42);\nconst s = identity('hi');",
+    "follow_up": "Can TypeScript infer generic types automatically?"
+   },
+   {
+    "question": "What is type narrowing in TypeScript?",
+    "answer": "Type narrowing is when TypeScript refines a broader type to a more specific one based on checks in your code. Common narrowing uses `typeof`, `instanceof`, equality checks, and property checks. It matters because you can safely use members that only exist on one branch of a union after the compiler understands which branch you are in.",
+    "real_world": "Narrowing is essential when handling API responses, form values, or event objects that can have multiple shapes. It reduces runtime errors by forcing you to prove which case you have before using it.",
+    "code_lang": "typescript",
+    "code": "function format(value: string | number) {\n  if (typeof value === 'number') {\n    return value.toFixed(2);\n  }\n  return value.trim();\n}",
+    "follow_up": "What is the difference between narrowing and type assertion?"
+   },
+   {
+    "question": "Why is `as` type assertion considered risky, and when should you use it?",
+    "answer": "A type assertion tells TypeScript to trust you about a value’s type instead of checking it, so it can hide real mistakes. It should be used sparingly, usually when you know more than the compiler does, such as working with a DOM API or a parsed value after validation. If you can express the check with narrowing instead, that is usually safer.",
+    "real_world": "Beginners often use assertions to silence errors from bad data shapes, which can move bugs from compile time to production. In mature codebases, assertions are limited to narrow boundary points after validation.",
+    "code_lang": "typescript",
+    "code": "const input = document.getElementById('name') as HTMLInputElement;\nconsole.log(input.value);",
+    "follow_up": "What is the safer alternative to an assertion when dealing with external data?"
+   },
+   {
+    "question": "How do you add an explicit type annotation to a variable in TypeScript?",
+    "answer": "You write the type after a colon when you declare the variable, like `let count: number = 0;`. This makes the intended type clear and catches assignments of the wrong type at compile time. Often you can omit it when TypeScript can infer the type, but explicit annotations are useful at boundaries or when the inferred type is too broad.",
+    "real_world": "This is common when reading data from APIs or environment variables, where you want to make the expected shape obvious and fail early if the code changes.",
+    "code_lang": "typescript",
+    "code": "let count: number = 0;\ncount = 5;\n// count = \"5\"; // error",
+    "follow_up": "When would you let TypeScript infer the type instead of writing it explicitly?"
+   },
+   {
+    "question": "What is the difference between a tuple and a normal array in TypeScript?",
+    "answer": "A tuple is an array with a fixed number of elements and specific types at each position, while a normal array has one element type for all items. Tuples are useful when the order and meaning of each slot matter, such as `[string, number]` for a label and value. Arrays are better when you have many items of the same kind and do not care about positions. The trade-off is that tuples are more precise but less flexible.",
+    "real_world": "Teams use tuples for return values like `[error, result]` or coordinate pairs, where mixing up the order would create bugs.",
+    "code_lang": "typescript",
+    "code": "let pair: [string, number] = [\"age\", 42];\nlet list: number[] = [1, 2, 3];\n// pair = [42, \"age\"]; // error",
+    "follow_up": "What problems can happen if you use a tuple when an object would be clearer?"
+   },
+   {
+    "question": "What does an enum do in TypeScript, and when would you use one?",
+    "answer": "An enum defines a named set of related values, usually to represent a small fixed group like statuses or directions. It can make code easier to read because you use descriptive names instead of raw strings or numbers. For many cases, a union of string literals is a simpler alternative, but enums can still be useful when you want a centralized set of named constants. The main trade-off is convenience versus added runtime output and less direct JavaScript behavior.",
+    "real_world": "A common use is status codes in a workflow, where a team wants a single shared source of truth instead of repeating string literals across files.",
+    "code_lang": "typescript",
+    "code": "enum Status {\n  Draft,\n  Published,\n}\n\nlet s: Status = Status.Draft;",
+    "follow_up": "How would you represent the same idea without an enum?"
+   },
+   {
+    "question": "What is the purpose of a function return type annotation in TypeScript?",
+    "answer": "A return type annotation tells TypeScript what the function should return, such as `: string` or `: void`. It helps catch mistakes when a function returns the wrong kind of value and makes the function contract easier to read. TypeScript can often infer the return type, but explicit annotations are helpful for public functions and for preventing accidental changes over time. If a function does not return anything, `void` is the usual annotation.",
+    "real_world": "This matters in shared utility code, where someone might change a function and accidentally return the wrong value shape without noticing immediately.",
+    "code_lang": "typescript",
+    "code": "function greet(name: string): string {\n  return `Hello, ${name}`;\n}\n\nfunction logMessage(msg: string): void {\n  console.log(msg);\n}",
+    "follow_up": "What happens if the function sometimes returns a value and sometimes does not?"
+   },
+   {
+    "question": "What does the `readonly` modifier do in TypeScript?",
+    "answer": "`readonly` prevents a property from being reassigned after initialization. It is useful when you want to model data that should not change, such as IDs or configuration objects. This is a compile-time check for TypeScript code, so it helps catch accidental mutation early. It does not make nested objects deeply immutable by itself, so deeper structures may still be changed unless you protect them too.",
+    "real_world": "Teams often use it for domain objects like user IDs, where changing the value later would break lookups or create subtle bugs.",
+    "code_lang": "typescript",
+    "code": "type User = {\n  readonly id: string;\n  name: string;\n};\n\nconst u: User = { id: \"a1\", name: \"Sam\" };\n// u.id = \"b2\"; // error",
+    "follow_up": "How is `readonly` different from making a value constant with `const`?"
+   },
+   {
+    "question": "What does `strictNullChecks` change in TypeScript?",
+    "answer": "With `strictNullChecks` enabled, `null` and `undefined` are not assignable to other types unless the type explicitly allows them. This forces you to handle missing values instead of assuming they are safe, which prevents a lot of runtime errors. Without it, TypeScript is much looser and can let invalid code compile. It is one of the most important compiler options for catching bugs early.",
+    "real_world": "This often finds production crashes around optional API fields, database records that are missing data, or DOM queries that return nothing.",
+    "code_lang": "typescript",
+    "code": "let name: string | null = null;\n// let title: string = null; // error with strictNullChecks\n\nif (name !== null) {\n  console.log(name.toUpperCase());\n}",
+    "follow_up": "How do you handle a value that might be `null` or `undefined` safely?"
+   },
+   {
+    "question": "What is the difference between a type alias and a runtime JavaScript value?",
+    "answer": "A TypeScript type exists only at compile time, while a JavaScript value exists at runtime and can be used in code execution. That means you cannot inspect or use a type alias the way you use an object or variable after the code is compiled. This distinction matters because TypeScript types help the compiler, but they do not produce runtime checks unless you write them yourself. A common mistake is expecting types to validate data coming from the network automatically.",
+    "real_world": "This matters when handling JSON from an API: the TypeScript type may say a field exists, but the runtime data can still be wrong or missing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you validate runtime data before trusting its TypeScript type?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide between using an intersection type and a union type?",
+    "answer": "Use a union when a value can be one of several alternatives, and an intersection when a value must satisfy all of several shapes at once. Unions are common for inputs and state machines, while intersections are common when combining capabilities like a base object plus mixins. The trade-off is that unions force you to narrow before using members, while intersections can become hard to read if you overcompose too many types.",
+    "real_world": "This comes up when modeling API responses or feature flags. A union helps represent mutually exclusive outcomes, while an intersection is useful when composing shared request metadata with endpoint-specific fields.",
+    "code_lang": "typescript",
+    "code": "type A = { a: string };\ntype B = { b: number };\n\ntype U = A | B;\ntype I = A & B;\n\nfunction f(x: U) {\n  if ('a' in x) x.a;\n}\n",
+    "follow_up": "How do discriminated unions make unions easier to work with?"
+   },
+   {
+    "question": "What problem do discriminated unions solve, and how do you use them safely?",
+    "answer": "Discriminated unions make it easy to model a set of related variants with a shared tag field, so TypeScript can narrow precisely in each branch. They are safer than checking random properties because the tag is intentional and stable. This pattern is especially useful for UI state, async workflows, and reducers, because it makes impossible states harder to represent.",
+    "real_world": "A team might use this for loading states instead of separate booleans like `isLoading` and `error`, which can conflict. It also makes it easier to handle every case when the shape changes over time.",
+    "code_lang": "typescript",
+    "code": "type State =\n  | { kind: 'loading' }\n  | { kind: 'success'; data: string }\n  | { kind: 'error'; message: string };\n\nfunction render(state: State) {\n  if (state.kind === 'success') return state.data;\n  return state.kind;\n}\n",
+    "follow_up": "How would you make the compiler warn you if you forget one of the union cases?"
+   },
+   {
+    "question": "What is an index signature, and what trade-offs does it introduce?",
+    "answer": "An index signature says an object may have arbitrary keys of a given type, such as strings, with values of a given type. It is useful for dictionaries and lookup tables, but it weakens checking because every property must fit that value type. A common trade-off is choosing between flexibility and catching misspelled keys or inconsistent value shapes earlier.",
+    "real_world": "This matters for config maps, cache objects, and i18n dictionaries. If used too broadly, it can hide bugs where a typo creates a new property instead of failing fast.",
+    "code_lang": "typescript",
+    "code": "type Scores = {\n  [name: string]: number;\n};\n\nconst scores: Scores = { alice: 10, bob: 12 };\nconst x = scores['carol'];\n",
+    "follow_up": "How would you model a map with a fixed set of keys instead of arbitrary strings?"
+   },
+   {
+    "question": "When should you use `keyof` and indexed access types in real code?",
+    "answer": "Use `keyof` when you want to restrict a value to valid property names of a type, and indexed access types when you want to reuse the type of a property or element. This helps keep related types in sync and avoids duplicating property shapes by hand. It is especially useful in helpers, form logic, and API clients where the allowed keys or field types must stay aligned with a source model.",
+    "real_world": "This often prevents bugs in generic utilities like sorters, serializers, or form builders. If a property changes type later, the helper updates automatically instead of silently drifting out of sync.",
+    "code_lang": "typescript",
+    "code": "type User = { id: string; age: number };\n\ntype UserKey = keyof User;\ntype AgeType = User['age'];\n\nfunction getProp<T, K extends keyof T>(obj: T, key: K): T[K] {\n  return obj[key];\n}\n",
+    "follow_up": "How do mapped types build on `keyof` to transform an existing type?"
+   },
+   {
+    "question": "What is a mapped type, and where would you use one?",
+    "answer": "A mapped type iterates over the keys of another type and produces a new type, often changing modifiers or property value types. It is a common way to create read-only, optional, or nullable variants without repeating the original shape. The main benefit is consistency; the downside is that heavy type transformations can be harder to read for teammates unfamiliar with the pattern.",
+    "real_world": "Teams use mapped types for partial update payloads, DTO transformations, and internal utility types. They are also useful when one domain object needs several closely related views.",
+    "code_lang": "typescript",
+    "code": "type Flags<T> = {\n  [K in keyof T]: boolean;\n};\n\ntype User = { name: string; active: number };\ntype UserFlags = Flags<User>;\n",
+    "follow_up": "How do utility types like `Partial` and `Readonly` relate to mapped types?"
+   },
+   {
+    "question": "How do you type a function that takes a callback, and what should you watch out for?",
+    "answer": "Type the callback’s parameter and return types explicitly so callers know what to pass and what they get back. The main thing to watch is variance: a callback may accept a broader or narrower type than you expect depending on how it is used, so the function signature should match the real contract. In practice, this is important for event handlers, array utilities, and async helpers because bad callback typing can produce confusing compile errors or unsafe assumptions.",
+    "real_world": "This often appears in shared utility libraries, where a too-loose callback type lets bad code compile and fail later at runtime. It also helps when wrapping browser or framework APIs so the wrapper preserves the original behavior.",
+    "code_lang": "typescript",
+    "code": "function mapValues<T, U>(arr: T[], fn: (item: T) => U): U[] {\n  return arr.map(fn);\n}\n\nconst lengths = mapValues(['a', 'bb'], s => s.length);\n",
+    "follow_up": "What happens if the callback can return either a value or a promise?"
+   },
+   {
+    "question": "How do you type asynchronous functions and handle their errors in TypeScript?",
+    "answer": "An async function always returns a promise, so the return type should reflect the resolved value, not the promise itself. In `try/catch`, TypeScript does not assume the caught value is an `Error`, so you often need a runtime check before reading error properties. This matters because correct typing makes it easier to compose async code and avoid mishandling rejected promises.",
+    "real_world": "In production services, a mistaken sync return type or a loose error handler can hide failures until they surface as bad UI or missing logs. Clear async typing also improves test code that waits on promises.",
+    "code_lang": "typescript",
+    "code": "async function loadUser(id: string): Promise<{ id: string }> {\n  const res = await fetch(`/users/${id}`);\n  return res.json();\n}\n\ntry {\n  await loadUser('1');\n} catch (e) {}\n",
+    "follow_up": "How do you type a function that may return either a value or a promise of that value?"
+   },
+   {
+    "question": "What is the `satisfies` operator for, and how is it different from a type annotation?",
+    "answer": "`satisfies` checks that an expression conforms to a target type without changing the expression’s inferred type. That is useful when you want validation plus precise inference, such as preserving literal types in configuration objects. Compared with a normal annotation, it reduces accidental widening while still catching missing or invalid fields.",
+    "real_world": "This is common in app config, route definitions, and design token maps. It helps teams validate large objects without losing specific literal information needed later by the code.",
+    "code_lang": "typescript",
+    "code": "const routes = {\n  home: '/',\n  about: '/about',\n} satisfies Record<string, string>;\n\ntype Home = typeof routes.home;\n",
+    "follow_up": "When would a plain type annotation be better than `satisfies`?"
+   },
+   {
+    "question": "How do you approach typing a third-party library that has weak or missing definitions?",
+    "answer": "Start by isolating the unsafe surface area and writing the smallest accurate type definitions you can, rather than sprinkling `any` across the codebase. If the library is partially typed, add local wrapper types or module declarations for the specific APIs you use. The trade-off is effort versus safety: a small amount of typing around the boundary often prevents a lot of downstream uncertainty.",
+    "real_world": "This happens often with older packages, niche SDKs, or internal utilities that were never typed. Teams usually wrap the library once and expose a safer internal API to the rest of the app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test that your local typings still match the runtime behavior?"
+   },
+   {
+    "question": "What practical benefits do TypeScript compiler settings like `noImplicitAny` and `strict` give you?",
+    "answer": "They force the compiler to flag places where types are missing or too permissive, which usually surfaces real bugs early. `strict` is valuable because it turns on a group of checks that make the type system more dependable, especially in refactors and shared libraries. The main trade-off is a higher upfront cost in legacy code, but the payoff is more predictable behavior and fewer runtime surprises.",
+    "real_world": "Teams often adopt these settings gradually in older projects because they expose hidden assumptions in event handlers, API parsing, and null handling. In greenfield code, they reduce the chance that unsafe patterns become the default.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you migrate an existing codebase to stricter settings without blocking delivery?"
+   },
+   {
+    "question": "How do you type an object literal so that extra properties are caught without losing good inference?",
+    "answer": "Use a type annotation or, more often, the `satisfies` operator when you want the object checked against a shape but still keep its inferred literal types. A plain annotation can widen values, while `satisfies` validates the contract without changing the object’s own type. This is useful for config objects and lookup tables where you want both safety and precise inference.",
+    "real_world": "Teams use this for route maps, feature flags, or styling tokens so a typo in a key fails at compile time instead of breaking a screen in production.",
+    "code_lang": "typescript",
+    "code": "type Routes = Record<string, `/${string}`>;\nconst routes = {\n  home: \"/\",\n  settings: \"/settings\",\n} satisfies Routes;\n",
+    "follow_up": "When would you prefer `as const` instead of `satisfies`?"
+   },
+   {
+    "question": "What happens when you pass a wider object type to a function that only needs part of it?",
+    "answer": "TypeScript is structurally typed, so an object with extra fields is usually assignable to a type that requires only a subset of those fields. That makes APIs flexible, but it can also hide mistakes if you expected exact matching. If you need to reject extras, you usually enforce that at the boundary with a helper type or runtime validation.",
+    "real_world": "This matters when passing database models or API responses into UI components; the component should depend on a small contract, not the whole backend shape.",
+    "code_lang": "typescript",
+    "code": "type UserView = { id: string; name: string };\nfunction renderUser(u: UserView) {}\n\nconst fullUser = { id: \"1\", name: \"Ada\", email: \"a@x.com\" };\nrenderUser(fullUser);\n",
+    "follow_up": "How do you enforce exact object shapes when you really need that?"
+   },
+   {
+    "question": "How do you type a function that accepts either one value or an array of values, and what trade-off does that create?",
+    "answer": "A common approach is a union like `T | T[]`, then normalize inside the function. The trade-off is that callers get flexibility, but the implementation must handle both shapes carefully. If the branching logic gets large, it can be cleaner to expose two separate functions or normalize at the call site.",
+    "real_world": "This comes up in helpers that accept either a single ID or a batch of IDs, especially in API client code and data-fetching utilities.",
+    "code_lang": "typescript",
+    "code": "function toArray<T>(value: T | T[]): T[] {\n  return Array.isArray(value) ? value : [value];\n}\n",
+    "follow_up": "How would you preserve the return type when the input is already an array?"
+   },
+   {
+    "question": "What is the difference between `unknown` narrowing and using a custom type guard?",
+    "answer": "Both start from an unsafe value and move toward a specific type, but a type guard packages the check into a reusable function. That keeps validation logic centralized and makes complex checks easier to read. The key is that the guard must actually prove the shape at runtime; otherwise you just moved the unsafe cast into a helper.",
+    "real_world": "This is common when parsing JSON from an API or reading untrusted data from local storage, where you cannot trust the input shape.",
+    "code_lang": "typescript",
+    "code": "function isStringArray(value: unknown): value is string[] {\n  return Array.isArray(value) && value.every(v => typeof v === \"string\");\n}\n",
+    "follow_up": "How do you test a custom type guard so it does not become a source of bugs?"
+   },
+   {
+    "question": "How do you type a React-style event handler or DOM callback without overusing `any`?",
+    "answer": "Use the library-provided event type for the exact element and event you handle, because those types capture the event target and available properties. If you annotate too loosely, you lose useful safety; if you annotate too narrowly, the handler becomes hard to reuse. In many cases, letting the editor infer the handler type from JSX is the simplest and safest approach.",
+    "real_world": "This prevents bugs like reading `value` from the wrong target or assuming a click event came from an input when it came from a parent element.",
+    "code_lang": "typescript",
+    "code": "function onChange(e: React.ChangeEvent<HTMLInputElement>) {\n  console.log(e.target.value);\n}\n",
+    "follow_up": "What do you do when a handler must work for multiple element types?"
+   },
+   {
+    "question": "What happens if you make a property optional and then spread or merge objects with that type?",
+    "answer": "Optional properties can disappear during merges, so the resulting object may not satisfy code that assumes the field is present. TypeScript often preserves the possibility of `undefined`, which is correct but can be surprising after object spreads. In real code, you may need a default value or a normalization step before passing the object onward.",
+    "real_world": "This shows up in configuration layering, where user overrides are merged with defaults and a missing field later causes a runtime branch to misbehave.",
+    "code_lang": "typescript",
+    "code": "type Cfg = { retries?: number };\nconst base: Cfg = {};\nconst merged = { ...base, retries: 3 };\n",
+    "follow_up": "How would you model required-after-normalization versus optional-at-input types?"
+   },
+   {
+    "question": "How do you type a record of handlers keyed by string literals so missing keys are caught?",
+    "answer": "Use a mapped type over a union of allowed keys, not a broad string index signature. That way TypeScript checks that every required key exists and no unsupported keys sneak in. This is better than `Record<string, ...>` when the set of keys is known and finite.",
+    "real_world": "This is common for event dispatch tables, state machine transitions, and per-page configuration where missing a case should fail fast during development.",
+    "code_lang": "typescript",
+    "code": "type Action = \"create\" | \"update\";\ntype Handlers = { [K in Action]: () => void };\nconst handlers: Handlers = { create: () => {}, update: () => {} };\n",
+    "follow_up": "How would you make some of those keys optional while still checking the rest?"
+   },
+   {
+    "question": "Why can generic type parameters sometimes be inferred poorly, and how do you fix that?",
+    "answer": "Inference gets weak when the type parameter appears only in a return position, or when multiple arguments provide conflicting clues. In those cases, TypeScript may fall back to a broader type than you want, so you either give an explicit type argument or redesign the function signature to expose more information. Good API design often means putting the generic where the compiler can infer it from inputs.",
+    "real_world": "This matters in helper libraries and data utilities where a poorly inferred generic turns precise types into `unknown` or overly broad unions downstream.",
+    "code_lang": "typescript",
+    "code": "function first<T>(items: T[]): T | undefined {\n  return items[0];\n}\nconst x = first([1, 2, 3]);\n",
+    "follow_up": "When would you add a second generic parameter to improve inference?"
+   },
+   {
+    "question": "How do you model a function whose return type depends on a literal input value?",
+    "answer": "Use overloads or a generic constrained to literal inputs, depending on how many cases you have. The idea is to preserve the relationship between input and output so callers get the right type without casts. This is especially useful in factories, parsers, and APIs that return different shapes for different modes.",
+    "real_world": "A common example is a helper that returns different result types for `\"json\"` and `\"text\"`, which avoids later unsafe property access.",
+    "code_lang": "typescript",
+    "code": "function parse(mode: \"json\", input: string): unknown;\nfunction parse(mode: \"text\", input: string): string;\nfunction parse(mode: \"json\" | \"text\", input: string) {\n  return mode === \"json\" ? JSON.parse(input) : input;\n}\n",
+    "follow_up": "What are the downsides of overloads compared with a single generic signature?"
+   },
+   {
+    "question": "How do you keep TypeScript fast enough in a large project without weakening the type system too much?",
+    "answer": "The biggest wins usually come from avoiding very deep conditional or recursive types, trimming unnecessary project-wide type checking, and keeping modules well-structured so changes do not cascade everywhere. You can also split build and type-check steps so development stays responsive. The trade-off is that some advanced types are elegant but expensive, so you should measure before adopting them broadly.",
+    "real_world": "Large monorepos often hit slow editor feedback or long CI type-check times because a few shared utility types ripple through thousands of files.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of type patterns have you seen cause the worst compile-time slowdowns?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain structural typing in TypeScript and one place where it becomes unsound in practice?",
+    "answer": "TypeScript is structurally typed, so assignability is based on shape rather than nominal declarations. That makes composition ergonomic, but it also means some APIs accept values that only coincidentally match the required shape. A common unsound corner is function parameter checking and mutable containers, where the compiler allows assignments that can break assumptions at runtime. The trade-off is usability over full soundness; TypeScript intentionally accepts some programs that can fail in JavaScript.",
+    "real_world": "This shows up in shared library APIs where two domain types happen to have the same fields and get mixed accidentally. Teams often add branded types for IDs or opaque values to stop cross-service identifiers from being swapped.",
+    "code_lang": "typescript",
+    "code": "type UserId = string & { __brand: 'UserId' }\ntype OrderId = string & { __brand: 'OrderId' }\n\nconst userId = 'u1' as UserId\nconst orderId = 'o1' as OrderId\n\nfunction loadUser(id: UserId) {}\nloadUser(userId)\n// loadUser(orderId) // rejected",
+    "follow_up": "Where else does TypeScript deliberately choose unsoundness, and why?"
+   },
+   {
+    "question": "How do variance rules work in TypeScript, and why do they matter when designing generic APIs?",
+    "answer": "Variance describes whether `Container<Child>` can be used where `Container<Parent>` is expected. In TypeScript, mutable positions tend to force invariance, output-only positions are usually covariant, and callback parameter positions are the tricky part because they interact with historical compatibility choices. This matters because a generic API that both reads and writes `T` is much harder to substitute safely than one that only returns `T`. Good API design often splits producer and consumer roles into separate types to preserve safe assignability.",
+    "real_world": "Event systems and repository abstractions often get this wrong: a handler typed too loosely compiles, then reads fields that are missing at runtime. Teams usually discover it when refactoring shared SDKs used by many services.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does `strictFunctionTypes` change callback assignability?"
+   },
+   {
+    "question": "What are conditional types, and what should you watch for when they distribute over unions?",
+    "answer": "A conditional type `T extends U ? X : Y` can branch on types at compile time. When `T` is a naked type parameter, the conditional distributes across union members, which is powerful but easy to misuse because results can explode into large unions. That can hurt readability and compiler performance, especially in library code with deeply composed utility types. If you want to avoid distribution, wrap the type parameter, for example in a tuple.",
+    "real_world": "This matters in SDKs that derive response or event payload types from many unioned operations. A small utility type can turn a fast compile into a noticeably slower one once it touches hundreds of generated endpoint types.",
+    "code_lang": "typescript",
+    "code": "type ToArray<T> = T extends any ? T[] : never\ntype A = ToArray<string | number> // string[] | number[]\n\ntype ToArrayNonDist<T> = [T] extends [any] ? T[] : never\ntype B = ToArrayNonDist<string | number> // (string | number)[]",
+    "follow_up": "What techniques do you use when a conditional type is causing type instantiation blowups?"
+   },
+   {
+    "question": "What is the difference between overloads and unions for function signatures, and how do you choose between them?",
+    "answer": "Use unions when the implementation and return type are mostly uniform, because they keep the surface area smaller and are easier to maintain. Use overloads when the return type or parameter relationships depend on distinct call shapes that unions cannot express cleanly. Overloads improve call-site precision, but too many of them become brittle and slow to maintain. For public APIs, I prefer the smallest set of overloads that captures real behavior, then a single implementation signature underneath.",
+    "real_world": "This comes up in internal utility libraries that start with one flexible union signature and later need different return shapes. If that evolution is handled poorly, consumers end up adding unsafe assertions all over the codebase.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you replace a long overload list with a generic plus conditional return type?"
+   },
+   {
+    "question": "How do template literal types help in advanced TypeScript, and what are their limits?",
+    "answer": "Template literal types let you compute string literal unions such as event names, route keys, or object-path conventions from other types. They are great for keeping stringly-typed APIs aligned with source data, but they can produce huge unions and expensive type computations if you cross-product several large unions. They also only improve compile-time guarantees; they do not validate arbitrary runtime strings without matching runtime logic. I use them sparingly for stable patterns, not as a general parser.",
+    "real_world": "Teams use them for event buses like `user.created` or feature-flag keys derived from modules. Problems start when generated schemas or large locale key sets create tens of thousands of literal combinations and editor responsiveness drops.",
+    "code_lang": "typescript",
+    "code": "type Entity = 'user' | 'order'\ntype Action = 'created' | 'deleted'\ntype Topic = `${Entity}.${Action}`\n\nconst t: Topic = 'user.created'\n// const bad: Topic = 'invoice.paid'",
+    "follow_up": "How would you connect a template-literal event name to the payload type for that event?"
+   },
+   {
+    "question": "What are assertion functions in TypeScript, and how are they different from boolean-returning type guards?",
+    "answer": "Assertion functions tell the compiler that if the function returns normally, some condition holds, using signatures like `asserts value is T` or `asserts condition`. Unlike a boolean-returning type guard, they are meant to throw or terminate on failure and they narrow unconditionally after the call. They are useful at trust boundaries because they encode validation plus control flow in one place. The risk is lying to the compiler if the runtime check is incomplete.",
+    "real_world": "This is common when validating config, environment variables, or decoded JSON at startup. A bad assertion function can turn a clean startup failure into a latent production bug because the rest of the program assumes the impossible state cannot happen.",
+    "code_lang": "typescript",
+    "code": "function assertString(x: unknown): asserts x is string {\n  if (typeof x !== 'string') throw new Error('not string')\n}\n\nlet v: unknown = JSON.parse('\"ok\"')\nassertString(v)\nv.toUpperCase()",
+    "follow_up": "When would you use a schema validator instead of handwritten assertion functions?"
+   },
+   {
+    "question": "How do `never` and exhaustiveness checks help in large TypeScript systems?",
+    "answer": "`never` represents impossible states, so it is useful for proving all cases in a union were handled. In a `switch` or branching flow, assigning the remaining value to `never` makes missing cases a compile-time error when the union evolves. That matters in large systems because new variants are added over time and silent fallthrough is easy to miss in review. It turns a maintenance problem into a type error close to the logic that needs updating.",
+    "real_world": "Message processors and workflow state machines benefit from this a lot. A new event kind added by one team can otherwise be ignored by another service until production traffic hits the unhandled branch.",
+    "code_lang": "typescript",
+    "code": "type Msg = { kind: 'a'; x: number } | { kind: 'b'; y: string }\n\nfunction handle(m: Msg) {\n  switch (m.kind) {\n    case 'a': return m.x\n    case 'b': return m.y.length\n    default: {\n      const _exhaustive: never = m\n      return _exhaustive\n    }\n  }\n}",
+    "follow_up": "How do exhaustiveness checks interact with external data that may include unknown variants?"
+   },
+   {
+    "question": "What is declaration merging in TypeScript, and when is it helpful versus dangerous?",
+    "answer": "Declaration merging lets TypeScript combine multiple declarations with the same name, such as interfaces or namespaces, into a single type view. It is helpful for extending third-party typings, adding fields to framework request objects, or modeling APIs designed around augmentation. It becomes dangerous when the merge is implicit, global, or spread across packages, because changes in one place silently alter types elsewhere. I treat it as a targeted interop tool, not a default design pattern.",
+    "real_world": "Express-style request augmentation is a classic use case, but it can become a source of hidden coupling in monorepos. A package upgrade or duplicated ambient declaration can suddenly change what every service thinks is on `req` or `window`.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What precautions do you take when using module augmentation in a shared codebase?"
+   },
+   {
+    "question": "How do ambient declarations and global `.d.ts` files actually affect a build, and what failure modes do they introduce?",
+    "answer": "Ambient declarations provide types for code that exists at runtime elsewhere, and global `.d.ts` files are included by the compiler based on your project configuration and module resolution. Because they add names without imports, they can pollute the global scope, shadow intended types, or make code compile even though the runtime object is missing. They also create version-coupling problems when multiple packages contribute overlapping declarations. Keeping them minimal and scoped is important for predictable builds.",
+    "real_world": "A common production issue is code compiling against a globally declared variable or patched library method that is only initialized in one app entrypoint. Another is two test tools both adding globals, causing CI-only type conflicts after dependency updates.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you isolate or constrain global typings in a monorepo?"
+   },
+   {
+    "question": "What does `isolatedModules` protect you from, and why can code pass `tsc` but fail when transpiled by Babel or esbuild?",
+    "answer": "`isolatedModules` enforces that each file can be transpiled correctly without cross-file type information. Some TypeScript features rely on whole-program analysis or type-only knowledge, so code may type-check under `tsc` but be miscompiled or rejected by single-file transpilers like Babel, SWC, or esbuild. This setting catches patterns that are unsafe in those toolchains, especially around import elision, const enums, and re-exports that only exist in the type system. It matters whenever type-checking and transpilation are done by different tools.",
+    "real_world": "This often appears in large frontend builds where Babel or esbuild handles emit for speed while `tsc --noEmit` does checking. A change can pass local type-checks yet ship broken JavaScript because a type-only symbol was emitted or a transform needed information unavailable per file.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What project setup do you prefer when using a fast transpiler plus TypeScript type-checking separately?"
+   },
+   {
+    "question": "How does TypeScript resolve overloaded and generic call signatures during inference, and where do senior engineers get surprised by the result?",
+    "answer": "TypeScript tries to infer type arguments from the actual arguments, then matches the call against available signatures. In overloaded functions, callers are checked against the overload list, but the implementation signature is not visible to them, which is why a seemingly valid call can still fail. Inference also tends to widen literals unless you preserve them, so generic APIs can accidentally lose precision. The surprise is usually that small signature ordering changes can affect which overload is picked and therefore the inferred result type.",
+    "real_world": "This shows up in internal SDKs where one broad overload starts swallowing more specific ones, and downstream teams suddenly lose autocomplete or get weaker return types after a minor release.",
+    "code_lang": "typescript",
+    "code": "function f(x: 'a'): 1;\nfunction f(x: string): 2;\nfunction f(x: string) {\n  return x === 'a' ? 1 : 2;\n}\nconst r1 = f('a'); // 1\nconst r2 = f('b'); // 2",
+    "follow_up": "When would you replace overloads with a single generic conditional signature?"
+   },
+   {
+    "question": "What are the practical differences between `type`, `interface`, and `namespace` once you get into large library design?",
+    "answer": "`type` and `interface` are both erased at runtime, but they differ in composition and extensibility: interfaces support declaration merging, while type aliases are better for unions, mapped types, and more complex transformations. `namespace` creates a real JavaScript object in some emit modes and also contributes a type namespace, so it has runtime implications that `type` and `interface` do not. In library design, the key decision is whether you want open extension points or closed, composable aliases. Open extension is useful, but it can also make APIs harder to reason about when consumers augment them globally.",
+    "real_world": "Plugin ecosystems often use interface augmentation so plugins can add fields to shared request or context types. That flexibility is powerful, but one bad augmentation can pollute the whole program and create hard-to-debug conflicts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design an extension point for plugins without relying on global augmentation?"
+   },
+   {
+    "question": "What does `exactOptionalPropertyTypes` change, and why does it matter for API boundaries?",
+    "answer": "Without it, an optional property often behaves like the property can be omitted or set to `undefined`, which blurs an important distinction. With `exactOptionalPropertyTypes`, `foo?: T` means omission is allowed, but explicitly writing `foo: undefined` is not automatically treated the same way unless the type includes `undefined`. That matters at boundaries where patch semantics or JSON encoding treat missing and undefined differently. It forces you to model intent more accurately instead of relying on loose optional behavior.",
+    "real_world": "In partial update APIs, omitting a field might mean 'leave unchanged' while sending `undefined` might be rejected, stripped, or interpreted inconsistently by serializers and validators.",
+    "code_lang": "typescript",
+    "code": "type Patch = { name?: string };\n\nconst a: Patch = {};           // ok\nconst b: Patch = { name: 'x' };// ok\n// with exactOptionalPropertyTypes:\nconst c: Patch = { name: undefined }; // error",
+    "follow_up": "How would you model a patch object where 'clear this value' is different from 'leave it alone'?"
+   },
+   {
+    "question": "Why do recursive and deeply composed utility types sometimes make the compiler slow or unstable, and how do you redesign them?",
+    "answer": "TypeScript's checker expands conditional, mapped, and recursive types, and that expansion can blow up when it distributes over large unions or repeatedly instantiates similar shapes. The cost is often nonlinear, so a type that looks elegant can dramatically increase editor latency and build times. The usual fix is to cap recursion depth, avoid unnecessary distributive conditionals, split giant unions, or move complexity from the type level into runtime validation. Senior engineers treat type-level programming as a performance budget, not just a correctness tool.",
+    "real_world": "Teams hit this with deep `DeepPartial`, schema-derived API clients, or heavily generic state libraries where one shared utility can make completion lag across the entire monorepo.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you use to prove a type utility is the source of a compile-time performance issue?"
+   },
+   {
+    "question": "How do private fields and nominal behavior actually work in TypeScript, and where can structural typing no longer assign two similar classes?",
+    "answer": "TypeScript is mostly structural, but classes with private or protected members are compared in a nominal-like way. Two classes with the same public shape are not assignable if their private or protected members originate from different declarations, because those members carry identity from their declaring class. ECMAScript `#private` fields also create real runtime privacy, while TypeScript `private` is mainly a compile-time restriction unless downlevel emit changes the output pattern. This matters when you expect shape compatibility between independently defined classes and it fails.",
+    "real_world": "This bites teams during package duplication: two versions of the same class can look identical yet become incompatible because their private members come from different declarations.",
+    "code_lang": "typescript",
+    "code": "class A { private x = 1; }\nclass B { private x = 1; }\n\nlet a: A = new A();\n// a = new B(); // error: separate private declarations",
+    "follow_up": "How does this interact with dependency version skew in a monorepo or plugin system?"
+   },
+   {
+    "question": "How do `const` assertions and const type parameters change inference, and what trade-offs do they introduce in API design?",
+    "answer": "`as const` freezes widening for literals and makes object properties readonly, which preserves exact values for later inference. Const type parameters let a generic function capture literal shapes more precisely without forcing callers to manually annotate everything. The trade-off is that highly specific inference can leak readonly tuples and literal types into places where callers expected looser, mutable types, so APIs can become harder to use. Good API design chooses where exactness is valuable and where widening is a better default.",
+    "real_world": "This matters in config-driven systems, router definitions, and action creators where exact strings enable safer derived types, but over-precise inference can make ordinary mutation or array operations awkward.",
+    "code_lang": "typescript",
+    "code": "function tuple<const T extends readonly unknown[]>(t: T): T {\n  return t;\n}\n\nconst x = tuple(['a', 'b']);\n// type is readonly ['a', 'b']",
+    "follow_up": "When would you intentionally avoid const-preserving inference even if it gives a more precise type?"
+   },
+   {
+    "question": "What is the difference between compile-time immutability like `readonly` and runtime immutability, and how does that fail in production?",
+    "answer": "`readonly` only prevents assignment through a particular type view at compile time; it does not freeze the runtime object. If another alias has a mutable type, JavaScript code can still mutate the same object, and TypeScript will not stop it. Runtime immutability requires mechanisms like copying, freezing, or disciplined ownership patterns. The failure mode is believing a type-level guarantee protects shared state when the actual object can still change under concurrency-like interleavings of async tasks.",
+    "real_world": "A cache entry typed as readonly can still be mutated by a lower-level library, leading to stale memoization keys, inconsistent logs, or request cross-talk in Node services.",
+    "code_lang": "typescript",
+    "code": "type User = { readonly name: string };\nconst u: User = { name: 'A' };\nconst alias = u as { name: string };\nalias.name = 'B';\nconsole.log(u.name); // B",
+    "follow_up": "How would you enforce stronger immutability for data shared across async request handlers?"
+   },
+   {
+    "question": "How do project references actually change large TypeScript builds, and what are the main failure modes when teams adopt them?",
+    "answer": "Project references split a codebase into compilable units with explicit dependency edges, allowing incremental builds and reuse of emitted declaration information. They help `tsc --build` avoid rechecking everything on every change, which is critical in large monorepos. The trade-off is stricter boundaries: cross-project imports, path mapping mistakes, and inconsistent emit settings can cause stale declarations, circular reference problems, or builds that pass locally but fail in CI. Adoption works best when package boundaries already reflect real architecture.",
+    "real_world": "This is often the difference between minute-long and much shorter incremental feedback loops in monorepos, but misconfigured references can produce confusing 'works in editor, fails in build' incidents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you check first if editors show no error but the build graph fails with declaration or reference issues?"
+   },
+   {
+    "question": "How do user-defined type guards become unsound, and what practices keep them trustworthy in large codebases?",
+    "answer": "A type guard is just a function that promises a narrowing shape to the compiler; TypeScript does not verify that the runtime checks are sufficient. If the guard checks only part of the structure, ignores nullish cases, or drifts from the real schema over time, the compiler will still trust it and allow unsafe property access. In large systems, guards should be small, schema-backed where possible, and tested with bad inputs, because they are effectively trusted boundaries. They are safer when they validate exactly what later code relies on, not more and not less.",
+    "real_world": "Production bugs often come from API response guards that only verify one discriminator field, then later code assumes nested data exists and crashes on rare malformed payloads.",
+    "code_lang": "typescript",
+    "code": "function isUser(x: unknown): x is { id: string } {\n  return typeof x === 'object' && x !== null && 'id' in x;\n}\n\nconst v: unknown = { id: 123 };\nif (isUser(v)) {\n  v.id.toUpperCase(); // runtime crash\n}",
+    "follow_up": "When would you use a full runtime schema library instead of handwritten guards?"
+   },
+   {
+    "question": "How do module resolution choices in TypeScript affect correctness at runtime, especially around ESM, CommonJS, and package exports?",
+    "answer": "TypeScript can successfully type-check an import path that your runtime or bundler resolves differently, so module resolution is not just a compiler detail. The chosen resolution mode affects how `package.json` exports, file extensions, synthetic defaults, and type declarations are interpreted, especially in mixed ESM/CommonJS environments. A common trap is code that compiles because the types line up but fails at runtime due to a different entry point or interop shape. Senior teams align `tsconfig`, Node or bundler behavior, and package publishing conventions to avoid that split-brain state.",
+    "real_world": "This causes incidents when a library upgrade changes its exports map: local type-checking stays green, but production crashes with import errors or undefined default imports after deployment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What checks would you add in CI to catch resolution mismatches before runtime?"
+   }
+  ]
+ }
+}

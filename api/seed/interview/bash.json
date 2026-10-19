@@ -1,0 +1,469 @@
+{
+ "slug": "bash",
+ "name": "Bash and shell scripting",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What’s the difference between a shell and Bash?",
+    "answer": "A shell is the command interpreter that reads your commands and runs programs. Bash is one specific shell, and it adds its own syntax, built-ins, and scripting features. When people say “shell script,” they often mean a script written for Bash, but not every shell supports the same features.",
+    "real_world": "This matters when a script works on your laptop but fails on a server because the server uses a different shell. Teams also hit this when writing startup scripts or Docker entrypoints.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How can you tell which shell a script will run under?"
+   },
+   {
+    "question": "What does the shebang line do in a Bash script?",
+    "answer": "The shebang tells the operating system which interpreter to use when the file is executed directly. For Bash scripts, it commonly points to Bash so the script runs with Bash features rather than whatever shell happens to be current. Without it, execution can depend on how the script is launched.",
+    "real_world": "A missing or wrong shebang is a common reason a script behaves differently in CI than on a developer machine. It can also break scripts that use Bash-only syntax.",
+    "code_lang": "bash",
+    "code": "#!/usr/bin/env bash\nprintf 'Hello\\n'",
+    "follow_up": "Why might someone use /usr/bin/env bash instead of a fixed path?"
+   },
+   {
+    "question": "What is the difference between single quotes and double quotes in Bash?",
+    "answer": "Single quotes preserve the text literally, so variables and command substitutions are not expanded. Double quotes still allow expansion of variables and substitutions, but they prevent word splitting and globbing on the result in most cases. Quoting matters because unquoted values often break scripts in surprising ways.",
+    "real_world": "This comes up when filenames or user input contain spaces, apostrophes, or wildcard characters. Bad quoting is a common source of bugs and even security issues in scripts.",
+    "code_lang": "bash",
+    "code": "name='world'\necho '$name'\necho \"$name\"",
+    "follow_up": "When would you use braces like ${var} instead of just $var?"
+   },
+   {
+    "question": "How do positional parameters like $1 and $@ work in a Bash script?",
+    "answer": "Positional parameters hold the arguments passed to a script or function. $1, $2, and so on refer to individual arguments, while \"$@\" expands to each argument separately, which is usually what you want when forwarding arguments. \"$*\" joins arguments differently and is less commonly the right choice.",
+    "real_world": "This matters when writing wrapper scripts that pass arguments to another command. Using the wrong expansion can merge arguments or split them incorrectly.",
+    "code_lang": "bash",
+    "code": "for arg in \"$@\"; do\n  echo \"$arg\"\ndone",
+    "follow_up": "What happens if you write for arg in $@ without quotes?"
+   },
+   {
+    "question": "How does exit status work in Bash?",
+    "answer": "Commands return an exit status, where zero usually means success and nonzero means some kind of failure. Bash uses that status in conditionals, `&&`, `||`, and the special variable `$?` for the most recent command. A script often ends with the status of its last command unless you handle errors explicitly.",
+    "real_world": "This is critical in CI pipelines, deployment scripts, and automation where one failed command should stop the process. If you ignore exit codes, a script may look successful even though a step failed.",
+    "code_lang": "bash",
+    "code": "false\necho $?\ntrue\necho $?",
+    "follow_up": "How do && and || use exit status to control flow?"
+   },
+   {
+    "question": "What does set -e do in a Bash script, and what should you be careful about?",
+    "answer": "`set -e` tells Bash to exit when a command fails, which can help catch errors early. However, its behavior has exceptions and can be surprising in compound commands, conditionals, and pipelines. It improves safety, but you still need to understand where it does and does not stop execution.",
+    "real_world": "Teams often enable it in deployment scripts to avoid continuing after a failed command. It can also cause confusing behavior if someone assumes every nonzero status will immediately abort the script.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does set -e interact with pipelines and if statements?"
+   },
+   {
+    "question": "What is a pipe in Bash, and when would you use one?",
+    "answer": "A pipe sends the output of one command to the input of another command. It is useful for chaining small tools together, such as filtering text, transforming data, or counting results. Pipes keep scripts composable and readable when the task fits a stream-processing model.",
+    "real_world": "This is common in log analysis, build tooling, and one-off automation. A typical failure is assuming a later command will see the output of the first when the data was never piped or redirected correctly.",
+    "code_lang": "bash",
+    "code": "grep error app.log | wc -l",
+    "follow_up": "What is the main limitation of pipelines when you need variables from the right-hand command?"
+   },
+   {
+    "question": "What is command substitution in Bash?",
+    "answer": "Command substitution runs a command and replaces it with the command’s output. In Bash, `$(...)` is the modern, preferred form because it is easier to read and nest than backticks. It is useful when you need a command’s result as part of another command or assignment.",
+    "real_world": "This shows up when scripts need to capture a filename, date string, or computed value. A common mistake is forgetting that command output may include a trailing newline or multiple lines.",
+    "code_lang": "bash",
+    "code": "today=$(date +%F)\necho \"Backup for $today\"",
+    "follow_up": "Why is $(...) preferred over backticks?"
+   },
+   {
+    "question": "What is the difference between a variable assignment and exporting a variable in Bash?",
+    "answer": "A variable assignment makes the value available in the current shell or script. Exporting a variable adds it to the environment so child processes inherit it. Export matters when a script needs to pass configuration to commands it launches.",
+    "real_world": "This often matters for tools that read environment variables like API keys, proxy settings, or feature flags. Without export, the value may exist in the script but not in the program it starts.",
+    "code_lang": "bash",
+    "code": "NAME=alice\nexport NAME\npython3 -c 'import os; print(os.environ[\"NAME\"])'",
+    "follow_up": "When would you choose a command-line flag instead of an environment variable?"
+   },
+   {
+    "question": "What does `read` do in Bash, and what are common mistakes when using it?",
+    "answer": "`read` reads a line from standard input and stores it in one or more variables. A common mistake is forgetting `-r`, which prevents backslashes from being treated as escape characters. Another common issue is using `read` in a pipeline and then expecting variables to remain set in the current shell, because the pipeline may run in a subshell.",
+    "real_world": "This comes up in scripts that prompt for input or parse lines from a file. Without `-r`, paths like `C:\\temp\\file` or text with backslashes can be mangled.",
+    "code_lang": "bash",
+    "code": "while IFS= read -r line; do\n  printf '%s\\n' \"$line\"\ndone < input.txt",
+    "follow_up": "Why do people often set IFS before read?"
+   },
+   {
+    "question": "What does `test` or `[ ... ]` do in Bash?",
+    "answer": "`test` and `[ ... ]` evaluate a condition and return an exit status that can be used in `if`, `while`, or `&&`/`||` lists. They are not the same as arithmetic or string formatting; they are just condition checks. A common mistake is forgetting spaces around the brackets or using the wrong operator for numeric versus string comparisons.",
+    "real_world": "You use this constantly for checking files, variables, and exit conditions in scripts. Small syntax mistakes here often become hard-to-find production bugs because the condition silently behaves differently than intended.",
+    "code_lang": "bash",
+    "code": "if [ -f \"$file\" ]; then\n  echo \"exists\"\nfi",
+    "follow_up": "When would you use `[[ ... ]]` instead of `[ ... ]`?"
+   },
+   {
+    "question": "What does `case` do in Bash, and why would you use it instead of a long `if` chain?",
+    "answer": "`case` matches one value against several patterns and runs the first matching branch. It is cleaner than a long chain of `if`/`elif` when you are dispatching on a command, mode, or file extension. It also reads better when multiple patterns map to the same action.",
+    "real_world": "This is common in CLI tools that accept subcommands like `start`, `stop`, or `status`. It keeps argument handling understandable as the script grows.",
+    "code_lang": "bash",
+    "code": "case \"$1\" in\n  start|run) echo \"starting\" ;;\n  stop) echo \"stopping\" ;;\n  *) echo \"usage: ...\" ;;\nesac",
+    "follow_up": "What kinds of pattern matching does `case` support?"
+   },
+   {
+    "question": "What does a subshell mean in Bash?",
+    "answer": "A subshell is a separate shell process created to run part of a script. Changes to variables, working directory, or shell options inside a subshell do not affect the parent shell. You often get a subshell with parentheses, command substitution, or some pipeline segments.",
+    "real_world": "This matters when a script changes directories or updates state in a loop and the changes seem to disappear afterward. It is a common source of confusion for beginners debugging why variables stay unset.",
+    "code_lang": "bash",
+    "code": "x=1\n( x=2; cd /tmp )\necho \"$x\"\npwd",
+    "follow_up": "Why can a `while` loop in a pipeline surprise you?"
+   },
+   {
+    "question": "What’s the difference between `for name in ...` and `while read ...` in Bash?",
+    "answer": "`for name in ...` iterates over words produced by shell expansion, so it is simple but breaks on spaces unless you are very careful. `while read ...` processes input line by line and is better for reading file content. For text files, `while read` is usually safer; for a known list of arguments, `for` is fine.",
+    "real_world": "This matters when processing filenames or log lines. A `for` loop over `$(cat file)` style input often breaks on spaces, tabs, and empty lines.",
+    "code_lang": "bash",
+    "code": "while IFS= read -r line; do\n  echo \"$line\"\ndone < names.txt",
+    "follow_up": "Why is `for x in $(cat file)` usually a bad idea?"
+   },
+   {
+    "question": "What does `chmod +x` do, and why might a script still not run after that?",
+    "answer": "`chmod +x` adds execute permission to a file so the kernel can run it as a program. A script may still fail if it has the wrong shebang, Windows line endings, or if you are trying to execute a file on a filesystem mounted without execute permission. You can also run a script by passing it to the shell directly, even without execute permission.",
+    "real_world": "This comes up when a script works on one machine but not in CI or on a teammate’s laptop. Missing execute bits and bad line endings are very common causes.",
+    "code_lang": "bash",
+    "code": "chmod +x deploy.sh\n./deploy.sh\nbash deploy.sh",
+    "follow_up": "What problems can CRLF line endings cause in shell scripts?"
+   },
+   {
+    "question": "What is `trap` used for in Bash?",
+    "answer": "`trap` lets you run cleanup or handling code when the shell receives a signal or exits. It is commonly used to remove temporary files, restore terminal state, or stop background jobs. The key idea is to make scripts safer when they fail or are interrupted.",
+    "real_world": "This matters in deployment and automation scripts that create temp files or lock files. Without cleanup, failed runs can leave stale state behind and break later runs.",
+    "code_lang": "bash",
+    "code": "tmp=$(mktemp)\ntrap 'rm -f \"$tmp\"' EXIT\nprintf 'data' > \"$tmp\"",
+    "follow_up": "Which signals would you usually trap in a script?"
+   },
+   {
+    "question": "What are positional parameters in shell functions, and how do they differ from variables?",
+    "answer": "Inside a Bash function, `$1`, `$2`, and so on refer to that function’s arguments, not global variables. They behave much like script positional parameters, and `shift` can move them down. This is useful for writing reusable helpers that accept input cleanly without relying on global state.",
+    "real_world": "This matters when you build small utility functions in larger scripts. If a function accidentally depends on global variables, it becomes harder to reuse and debug.",
+    "code_lang": "bash",
+    "code": "greet() {\n  echo \"Hello, $1\"\n}\ngreet world",
+    "follow_up": "What does `shift` do inside a function?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you safely iterate over filenames in Bash when names may contain spaces or newlines?",
+    "answer": "Use null-delimited data when possible, because line-based loops break on filenames containing newlines, and unquoted expansion breaks on spaces. A common pattern is `find ... -print0` piped into `while IFS= read -r -d '' file; do ...; done`. In Bash, always quote variable expansions unless you intentionally want word splitting and globbing. This matters because file handling bugs are subtle and can delete or process the wrong paths.",
+    "real_world": "This comes up in backup, cleanup, and deployment scripts where a single unusual filename can cause data loss or skipped files. Teams often only discover the bug when production contains user-uploaded paths with spaces or Unicode.",
+    "code_lang": "bash",
+    "code": "find . -type f -print0 |\nwhile IFS= read -r -d '' file; do\n  printf '%s\\n' \"$file\"\ndone",
+    "follow_up": "When would you prefer `xargs -0` over a shell loop?"
+   },
+   {
+    "question": "What is the practical difference between using `$(...)` and backticks for command substitution?",
+    "answer": "`$(...)` is easier to read, nests cleanly, and is the modern form. Backticks are harder to escape when nested because you have to backslash internal backticks, which makes complex scripts brittle. Both substitute command output, but `$(...)` is usually preferred for maintainability. If the output may contain multiple lines, you still need to quote the substitution carefully when assigning or passing it along.",
+    "real_world": "This matters in scripts that assemble commands or parse tool output, where nested substitutions are common and backtick-heavy code becomes error-prone. Refactoring old shell scripts often starts by replacing backticks with `$(...)` to reduce bugs.",
+    "code_lang": "bash",
+    "code": "name=$(git rev-parse --short HEAD)\nprintf 'build-%s\\n' \"$name\"",
+    "follow_up": "What problems can happen if you store command output in a variable and later expand it unquoted?"
+   },
+   {
+    "question": "How do `set -u` and `set -o pipefail` change script behavior, and why would you use them?",
+    "answer": "`set -u` makes expansion of unset variables an error, which catches typos and missing inputs early. `set -o pipefail` makes a pipeline fail if any command in it fails, not just the last one. They improve robustness, but they can also make scripts fail on legitimate optional variables or on pipelines where a later command masks an earlier error. In real scripts, you usually combine them with careful parameter expansion and explicit error handling.",
+    "real_world": "These options help in CI and deployment scripts where silent failures are expensive. Without `pipefail`, a broken producer in a pipeline can still look successful if the last command exits 0.",
+    "code_lang": "bash",
+    "code": "set -u\nset -o pipefail\ncat missing.txt | grep foo | wc -l",
+    "follow_up": "How do you handle an optional variable safely when `set -u` is enabled?"
+   },
+   {
+    "question": "When should you prefer a Bash loop over `xargs`, and when is `xargs` better?",
+    "answer": "Use a shell loop when you need per-item logic, state, or careful error handling inside Bash. Use `xargs` when you want to batch many arguments efficiently into fewer command invocations, especially for simple one-command processing. `xargs` can be faster, but the shell loop is often easier to make correct for edge cases like filenames with spaces, which is why null-delimited input is important. The best choice depends on whether you need control or throughput.",
+    "real_world": "Bulk maintenance jobs often use `xargs` to reduce process startup overhead, while admin scripts use loops when they need retries, logging, or branching per item. A team may switch from a loop to `xargs` after profiling a slow tree-walk job.",
+    "code_lang": "bash",
+    "code": "find . -type f -print0 | xargs -0 grep -nH 'TODO'",
+    "follow_up": "How would you preserve failures from the command run by `xargs`?"
+   },
+   {
+    "question": "How do arrays work in Bash, and what problems do they solve compared with space-separated strings?",
+    "answer": "Arrays let you store multiple values without relying on whitespace splitting, so they are safer for arguments and lists of paths. You can expand them as separate words with `\"${array[@]}\"`, which preserves each element exactly. Space-separated strings are fragile because they lose boundaries and break on spaces or glob characters. Arrays are especially useful when building commands programmatically.",
+    "real_world": "This matters when a script assembles arguments for tools like `tar`, `rsync`, or `ssh`, where filenames and flags must stay distinct. Many quoting bugs in shell scripts come from trying to use a string where an array should have been used.",
+    "code_lang": "bash",
+    "code": "files=(\"a.txt\" \"b c.txt\")\nfor f in \"${files[@]}\"; do\n  printf '%s\\n' \"$f\"\ndone",
+    "follow_up": "What is the difference between `${array[*]}` and `${array[@]}`?"
+   },
+   {
+    "question": "How do you write a function in Bash that returns a meaningful result, and what are the limits of `return`?",
+    "answer": "In Bash, `return` is only for exit status, not for returning a string or number as data. To communicate a value, you usually print to stdout and capture it with command substitution, or set a variable by reference-style convention. `return` should be used to signal success or failure. This distinction matters because confusing output with status often creates hard-to-debug scripts.",
+    "real_world": "This comes up when writing reusable shell libraries for build or release automation. A function that prints data and also uses stdout for logging becomes difficult to consume reliably.",
+    "code_lang": "bash",
+    "code": "get_branch() {\n  git rev-parse --abbrev-ref HEAD\n}\nbranch=$(get_branch)",
+    "follow_up": "How do you prevent debug logging from interfering with command substitution?"
+   },
+   {
+    "question": "What is the difference between sourcing a script and executing it, and when would you use each?",
+    "answer": "Executing a script runs it in a separate process, so its variable changes and function definitions do not affect the current shell. Sourcing with `.` or `source` runs the file in the current shell, so it can set variables, functions, or environment state for later commands. You source configuration and helper files, and you execute standalone programs. The trade-off is convenience versus isolation, because sourcing can also accidentally overwrite your current shell state.",
+    "real_world": "This matters for environment setup scripts, CI helper files, and local developer tooling. A common bug is running a script instead of sourcing it and then wondering why exports or functions seem to disappear.",
+    "code_lang": "bash",
+    "code": ". ./env.sh\n# variables from env.sh are now available",
+    "follow_up": "What risks do you need to watch for when sourcing user-provided files?"
+   },
+   {
+    "question": "How would you make a Bash script testable without running the real external commands every time?",
+    "answer": "A common approach is to separate logic from side effects and make command paths or helper functions injectable. Then tests can replace real commands with stubs earlier in `PATH`, or source the script and call functions directly with mocked inputs. This makes unit-style tests possible even in shell, while end-to-end tests still cover the real command behavior. The key trade-off is between fast deterministic tests and confidence in the full integration path.",
+    "real_world": "Teams often test deploy or release scripts this way so they can validate branching logic without touching production systems. A stubbed `git`, `aws`, or `kubectl` command can reveal argument-building bugs before a real run.",
+    "code_lang": "bash",
+    "code": "run_backup() {\n  tar -czf \"$1\" \"$2\"\n}\n# tests can stub tar in PATH before calling run_backup",
+    "follow_up": "How would you test a script that depends on the current working directory?"
+   },
+   {
+    "question": "Why can a pipeline hide errors, and how do you debug which command actually failed?",
+    "answer": "By default, a pipeline’s exit status is usually the status of the last command, so an earlier failure can be hidden. `pipefail` helps, but when debugging you still often need to inspect each stage separately or add temporary logging and `tee`. Another useful technique is to run the commands one by one to see where the data or exit status changes. The main idea is to avoid assuming the pipeline as a whole tells you which component broke.",
+    "real_world": "This is common in log-processing scripts where `grep`, `awk`, and `sort` are chained together. A failure in the first stage can be masked for a long time if the final stage still exits successfully.",
+    "code_lang": "bash",
+    "code": "set -o pipefail\ncmd1 | cmd2 | cmd3\nstatus=$?\necho \"pipeline failed with $status\"",
+    "follow_up": "How would you debug a pipeline where one stage consumes all input and appears to succeed?"
+   },
+   {
+    "question": "What are the main ways Bash scripts break under different environments, and how do you reduce that risk?",
+    "answer": "Scripts often break because they assume a specific shell, locale, PATH, working directory, or set of installed tools. You reduce risk by using an explicit shebang, quoting carefully, avoiding Bash-only features if the script needs portability, and checking required commands early. It also helps to fail fast on missing inputs and to document assumptions about the runtime environment. The trade-off is stricter setup versus fewer surprise failures in production.",
+    "real_world": "This shows up when a script works on a developer laptop but fails in CI or on a minimal server image. Differences in PATH or tool versions can change behavior even when the script itself is unchanged.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide whether a script should be Bash-specific or POSIX sh-compatible?"
+   },
+   {
+    "question": "How do you safely handle file paths in Bash when you need to pass them to commands like rm, cp, or mv?",
+    "answer": "Always quote expansions that may contain spaces or glob characters, and prefer passing one path per argument instead of building a command string. Use arrays when you need to accumulate arguments, and use `--` before paths if the command treats leading dashes as options. The main risk is word splitting or glob expansion turning one path into many arguments, or a filename starting with `-` being parsed as a flag.",
+    "real_world": "This comes up in cleanup scripts, deploy scripts, and cron jobs where a bad filename can delete or overwrite the wrong file. Teams usually discover it after a path with spaces or a leading dash breaks a release.",
+    "code_lang": "bash",
+    "code": "src='my file.txt'\ndst='backup/'\ncp -- \"$src\" \"$dst\"",
+    "follow_up": "How would you handle many file paths collected from `find` without breaking on unusual filenames?"
+   },
+   {
+    "question": "What is word splitting and glob expansion in Bash, and why do they cause bugs?",
+    "answer": "After parameter expansion, Bash splits unquoted results on characters in `IFS`, then performs filename globbing on the pieces. That means an unquoted variable can turn into multiple arguments or match files in the current directory unexpectedly. Quoting prevents both, which is why `\"$var\"` is usually the safe default.",
+    "real_world": "A common production bug is a script that works in an empty directory but fails when unrelated files happen to match a pattern. Another is a CSV field with spaces being split into several arguments.",
+    "code_lang": "bash",
+    "code": "pattern='*.log'\necho $pattern   # may expand\n\necho \"$pattern\" # prints literally *.log",
+    "follow_up": "When is unquoted expansion intentional, and how can you do it safely?"
+   },
+   {
+    "question": "When would you use a here-doc versus a here-string in Bash?",
+    "answer": "A here-doc feeds a block of text to a command through standard input, while a here-string feeds a single string. Use a here-doc for multi-line templates, generated config, or SQL blocks; use a here-string for small one-line input. The trade-off is readability versus flexibility, and here-docs can preserve multiple lines more naturally.",
+    "real_world": "This is common when a script generates a config file or sends a multi-line payload to a CLI. It avoids temporary files and makes the script easier to review.",
+    "code_lang": "bash",
+    "code": "cat <<'EOF' > config.txt\nname=app\nmode=prod\nEOF\n\ngrep foo <<<\"some text\"",
+    "follow_up": "What is the difference between quoting and not quoting the here-doc delimiter?"
+   },
+   {
+    "question": "How do you read a file line by line in Bash without accidentally mangling the input?",
+    "answer": "Use `while IFS= read -r line; do ...; done < file` so leading and trailing whitespace are preserved and backslashes are not treated as escapes. Reading with `for line in $(cat file)` is unsafe because it splits on whitespace and performs glob expansion. If you need the last line even without a trailing newline, test that case separately.",
+    "real_world": "Log processors and simple ETL scripts often break because a line contains spaces, tabs, or backslashes. This pattern avoids subtle data corruption.",
+    "code_lang": "bash",
+    "code": "while IFS= read -r line; do\n  printf '%s\\n' \"$line\"\ndone < input.txt",
+    "follow_up": "How would you process two columns from a delimited file safely?"
+   },
+   {
+    "question": "What happens when a script calls a command that fails inside an `if`, `while`, or `&&` chain?",
+    "answer": "A nonzero exit status does not automatically stop the script in those control-flow contexts, because Bash uses it to decide branching. That is why `set -e` has exceptions and can be surprising: not every failure is treated as fatal. You still need to check critical commands explicitly when the control flow makes the failure non-obvious.",
+    "real_world": "This matters in deployment scripts where a failed health check inside `if` should abort the rollout, but the script keeps going because the failure was part of a conditional test.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you write explicit error handling for a command whose failure must stop the script?"
+   },
+   {
+    "question": "What is the difference between `$(< file)` and `$(cat file)` in Bash, and when does it matter?",
+    "answer": "`$(< file)` uses shell redirection to read the file content directly into command substitution, while `$(cat file)` starts an extra process. The direct redirection is usually simpler and avoids an unnecessary fork, though it only makes sense for reading a file into a variable. In many scripts the performance difference is small, but it is a cleaner pattern when the content is just data.",
+    "real_world": "This comes up in tight loops or startup scripts where many tiny external processes add overhead. It also makes code easier to audit because you are not spawning `cat` for no reason.",
+    "code_lang": "bash",
+    "code": "content=$(< version.txt)\nprintf '%s\\n' \"$content\"",
+    "follow_up": "What are the limitations of storing file contents in a shell variable?"
+   },
+   {
+    "question": "How do you create and use a Bash function that accepts arguments, and what should you avoid inside it?",
+    "answer": "A Bash function reads its arguments through the same positional parameter variables used by scripts, so you should quote `\"$1\"`, `\"$2\"`, and `\"$@\"` just as carefully. Avoid using global variables implicitly unless that is part of the design, because it makes functions hard to reuse and test. If the function needs to return data, print it to stdout and let the caller capture it.",
+    "real_world": "Teams use functions to break large build or deploy scripts into testable pieces. Bugs often come from a helper accidentally overwriting a variable defined by the caller.",
+    "code_lang": "bash",
+    "code": "copy_file() {\n  local src=\"$1\" dst=\"$2\"\n  cp -- \"$src\" \"$dst\"\n}\ncopy_file a.txt backup/",
+    "follow_up": "How would you make that function safer if the destination may or may not be a directory?"
+   },
+   {
+    "question": "What is the purpose of `local` in a Bash function, and what problems does it solve?",
+    "answer": "`local` limits a variable's scope to the function, which reduces accidental interactions with the rest of the script. Without it, a function can overwrite a global variable or another helper's temporary value, leading to hard-to-debug state bugs. It does not create true block scope, so it is a scoping tool, not a full namespace system.",
+    "real_world": "This matters in long scripts with many helpers, especially when one function suddenly changes another function's behavior through shared variable names. Using `local` makes refactoring much safer.",
+    "code_lang": "bash",
+    "code": "count_items() {\n  local count=0\n  # use count here\n  printf '%s\\n' \"$count\"\n}",
+    "follow_up": "What Bash features would you use if you need to avoid global state across many helpers?"
+   },
+   {
+    "question": "How do you debug a Bash script that behaves differently when run non-interactively from cron or CI?",
+    "answer": "First compare the environment: PATH, working directory, shell options, locale, and any variables the script expects. Then make the script explicit by using absolute paths, setting its own `PATH` if needed, and logging key values before the failure point. Non-interactive runs often expose assumptions about the current directory, interactive aliases, or profile files that are not loaded.",
+    "real_world": "This is a classic cron problem: a script works in the terminal but fails overnight because it cannot find a command or data file. CI jobs produce the same class of issue when the environment is minimal.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you reproduce the cron environment locally to debug it?"
+   },
+   {
+    "question": "When should you use `getopts` in Bash, and what does it give you over manual argument parsing?",
+    "answer": "Use `getopts` when your script has short options like `-v` or `-o file` and you want standard shell-style parsing. It handles grouped flags and missing option arguments more reliably than hand-written `case` loops, and it keeps parsing logic readable. For long options or complex subcommands, you may still need custom parsing or a different tool.",
+    "real_world": "This is useful for internal admin scripts and small CLIs where consistency matters more than rich argument syntax. It reduces bugs around shifted parameters and forgotten option values.",
+    "code_lang": "bash",
+    "code": "while getopts ':vo:' opt; do\n  case \"$opt\" in\n    v) verbose=1 ;;\n    o) outfile=$OPTARG ;;\n  esac\ndone",
+    "follow_up": "How would you add support for long options like `--output` in a Bash script?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "What actually happens during Bash expansion, and why does the order matter for correctness and security?",
+    "answer": "Bash performs several expansions in a defined sequence, including parameter expansion, command substitution, arithmetic expansion, word splitting, and pathname expansion. The important practical point is that unquoted expansions are split into words and then treated as globs, so data can turn into extra arguments or match files unexpectedly. Quoting stops word splitting and globbing but not parameter expansion itself. Senior engineers care because many shell injection and data-corruption bugs come from assuming expansion is a single step.",
+    "real_world": "A common incident is a variable containing `*` or spaces turning one intended filename into hundreds of arguments, causing a cleanup script to delete the wrong files or a deploy step to fail only in directories with matching filenames.",
+    "code_lang": "bash",
+    "code": "pattern='*.log'\nprintf '<%s>\\n' $pattern\nprintf '<%s>\\n' \"$pattern\"",
+    "follow_up": "How would you deliberately disable pathname expansion or word splitting in a narrow part of a script?"
+   },
+   {
+    "question": "Why does `while ... | read ...` often surprise people, and how would you structure it when you need state after the loop?",
+    "answer": "In Bash, each side of a pipeline usually runs in a separate process, so a `while read` fed by a pipe often executes in a subshell. Variables changed inside that loop may disappear when the loop ends. If you need to keep state, use input redirection, process substitution, or read from a dedicated file descriptor instead of piping into the loop. This is less about syntax and more about understanding process boundaries.",
+    "real_world": "Teams hit this when counting errors, accumulating arrays, or tracking the latest timestamp inside a loop, then discovering the values are empty after the loop only in production scripts that switched to pipelines.",
+    "code_lang": "bash",
+    "code": "count=0\nprintf '%s\\n' a b | while read -r _; do\n  ((count++))\ndone\necho \"$count\"   # often 0\n\nwhile read -r _; do ((count++)); done < <(printf '%s\\n' a b)\necho \"$count\"   # 2",
+    "follow_up": "What are the trade-offs between process substitution and a plain redirected file for portability and resource usage?"
+   },
+   {
+    "question": "How do file descriptors actually work in Bash, and when would you use custom descriptors instead of stdin and stdout?",
+    "answer": "Bash inherits Unix file descriptors, where 0, 1, and 2 are just open file handles for input, output, and errors. You can open additional descriptors to separate control input from data input, avoid consuming stdin inside helper functions, or keep a lock file open for `flock`. This matters because many shell bugs come from a command inside a loop accidentally reading from the loop’s stdin and terminating it early. Custom descriptors make the dataflow explicit.",
+    "real_world": "A classic production bug is `ssh` or `grep` inside a `while read` loop consuming the remaining input from fd 0, so only the first few records are processed and the rest are silently skipped.",
+    "code_lang": "bash",
+    "code": "exec 3< hosts.txt\nwhile IFS= read -r host <&3; do\n  ssh -n \"$host\" 'uptime' </dev/null\ndone\nexec 3<&-",
+    "follow_up": "What’s the difference between `n<&-` and redirecting from `/dev/null`, and when do you want each?"
+   },
+   {
+    "question": "When does Bash’s job control matter in scripts, and how is it different from just running commands in the background with `&`?",
+    "answer": "Job control is mainly an interactive-shell feature for tracking jobs, process groups, and terminal ownership; scripts usually run with job control disabled. Backgrounding with `&` still forks a child, but script behavior around signals, terminal access, and `%1`-style job references is different when job control is off. In production scripts, you should think in terms of PIDs, process groups, `wait`, and signal handling rather than interactive job commands. That avoids assuming terminal semantics you do not actually have.",
+    "real_world": "This shows up when a maintenance script backgrounds workers and then fails to clean them up on SIGTERM because it relied on interactive-shell behavior that does not exist under systemd or cron.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you terminate an entire tree of background workers reliably when the parent receives SIGTERM?"
+   },
+   {
+    "question": "How would you limit concurrency in Bash for hundreds or thousands of tasks, and what failure modes would you watch for?",
+    "answer": "The simplest pattern is spawning background jobs and using `wait`, but at scale you need a cap to avoid exhausting file descriptors, process table slots, network sockets, or remote rate limits. Common approaches are `xargs -P`, GNU `parallel`, or a Bash worker pool using `wait -n` where available. The hard parts are collecting per-task failures, preserving logs, and making cancellation propagate cleanly. Unlimited parallelism often looks fast in testing and then collapses under real load.",
+    "real_world": "A script that runs fine with 20 hosts can overwhelm DNS, SSH, or an API when pointed at 5,000 hosts, creating retries, thundering herds, and partial rollout states that are harder to recover than a slower bounded run.",
+    "code_lang": "bash",
+    "code": "max=8\nfor item in \"${items[@]}\"; do\n  run_task \"$item\" &\n  while (( $(jobs -pr | wc -l) >= max )); do\n    wait -n || status=1\n  done\ndone\nwait || status=1\nexit ${status:-0}",
+    "follow_up": "If you need deterministic retry and per-task exit codes, when do you stop using Bash and move orchestration to another tool?"
+   },
+   {
+    "question": "What are the performance costs of a shell script, and how do you decide whether Bash is still the right tool?",
+    "answer": "The biggest costs are usually process creation and repeated external commands, not Bash arithmetic or branching. A loop that shells out to `grep`, `cut`, `awk`, and `sed` for every line can be orders of magnitude slower than a single `awk` pass or a higher-level program that keeps data in memory. Bash is great for orchestration and glue, but weak for heavy parsing, large in-memory state, and high-throughput data processing. The decision point is often whether the script’s work is mostly launching tools or mostly transforming data.",
+    "real_world": "Teams often inherit deploy or ETL scripts that become slow only after data volume grows; the fix is usually replacing thousands of subprocesses with one streaming tool or rewriting the hot path in Python, Go, or awk.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where replacing a shell loop with one awk command changes both performance and correctness?"
+   },
+   {
+    "question": "How do `exec` and process replacement affect a script’s behavior, and when would you use them intentionally?",
+    "answer": "`exec` replaces the current shell process with another program or applies redirections to the current shell without spawning a child. Replacing the shell is useful when the script should become the long-running service, so signals, exit status, and PID tracking belong to the real process rather than a wrapper. Using `exec` for redirection can also centralize logging for the whole script. The trade-off is that once you replace the shell, no later shell cleanup code runs.",
+    "real_world": "Container entrypoint scripts commonly break signal handling by launching the app as a child instead of using `exec`, which leaves PID 1 as the shell and causes slow or failed shutdowns during deploys.",
+    "code_lang": "bash",
+    "code": "#!/usr/bin/env bash\nexec >>/var/log/myjob.log 2>&1\nexec myserver --config /etc/myserver.conf",
+    "follow_up": "Why is PID 1 special in containers, and what additional signal-handling issues can appear there?"
+   },
+   {
+    "question": "How do command grouping with `{}` and subshell grouping with `()` differ, and when does that distinction matter operationally?",
+    "answer": "`{ ...; }` runs commands in the current shell, while `( ... )` runs them in a subshell. That means variable changes, `cd`, `umask`, and shell options inside `{}` can affect later code, but the same changes inside `()` are isolated. Operationally, subshells are useful for temporary directory changes or option changes, while braces are useful when you want one redirection applied to a whole block without losing state. The distinction becomes important when cleanup, error handling, or state persistence must be precise.",
+    "real_world": "A script may appear correct in tests but fail in production because `cd` happened in a brace group and changed the working directory for later destructive commands instead of being isolated in a subshell.",
+    "code_lang": "bash",
+    "code": "x=1\n( x=2; cd /tmp )\necho \"$x $PWD\"\n{ x=3; }\necho \"$x\"",
+    "follow_up": "How does redirection placement differ between `{ ...; } >file` and `( ... ) >file`, and why might that matter?"
+   },
+   {
+    "question": "What are the hard parts of making Bash scripts safe under signals and partial failure, especially around temp files and cleanup?",
+    "answer": "The hard part is that failures can happen between steps, signals can arrive at any time, and cleanup code itself can fail or race with concurrent work. You want temp files and directories created atomically, cleanup registered early, and operations written to be idempotent so reruns do not make things worse. Also remember that killing a parent does not automatically clean up all descendants unless you manage process groups or propagate signals. Robust shell scripts are designed for interruption, not just for the happy path.",
+    "real_world": "A deployment script that writes partial config, leaves stale lock files, or misses cleanup on SIGTERM can block future runs or roll out broken state across hosts after a CI timeout or operator cancel.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure a lock and temp-directory strategy so that rerunning after a crash is safe?"
+   },
+   {
+    "question": "How do Bash startup modes and environment hooks affect script behavior, and why do scripts sometimes work for one user but fail in automation?",
+    "answer": "Bash behaves differently depending on whether it is interactive, login, or non-interactive, and different startup files may or may not be sourced. Non-interactive shells typically do not read the same files as a developer’s terminal session, so aliases, functions, PATH changes, locale settings, and shell options may be missing. Also, environment-driven hooks can inject behavior unexpectedly if you rely on inherited settings. Production-safe scripts assume as little ambient state as possible and set the environment they need explicitly.",
+    "real_world": "A script may pass on a developer laptop because `.bashrc` exports custom PATH entries and shell options, then fail under cron, CI, or systemd where those files are not read and the environment is minimal.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What environment variables or shell state do you usually sanitize or set explicitly at the top of a production Bash script?"
+   },
+   {
+    "question": "How would you prevent two copies of the same Bash script from running at once, and what are the trade-offs between lock files and file locking?",
+    "answer": "The robust approach is kernel-backed locking with `flock`, because it ties the lock to an open file descriptor and releases it automatically if the process dies. A plain lock file created with `touch` is racy unless you use an atomic operation like `mkdir` or noclobber-based redirection, and even then you need stale-lock handling. `flock` is simpler on a local filesystem, but behavior on some network filesystems can be unreliable or depend on server semantics. For production scripts, also decide whether a second instance should fail fast, block, or exit successfully as a no-op.",
+    "real_world": "This matters in cron and systemd timers where a slow run can overlap the next run and double-process a queue, rotate logs twice, or launch duplicate deployments.",
+    "code_lang": "bash",
+    "code": "exec 9>/var/lock/myjob.lock\nif ! flock -n 9; then\n  echo \"another instance is running\" >&2\n  exit 1\nfi\n\n# critical section\nrun_job",
+    "follow_up": "What would you do if the script runs on NFS or across multiple hosts?"
+   },
+   {
+    "question": "What’s the difference between `$$`, `$BASHPID`, and `$PPID`, and when do those details actually matter?",
+    "answer": "`$$` is the PID of the shell process as originally started, so in Bash subshell contexts it can stay the same as the parent shell. `$BASHPID` is the PID of the current Bash process, so it changes in a subshell and is usually what you want for per-process temp names or logging. `$PPID` is the parent process ID of the current shell process. The distinction matters when debugging pipelines, avoiding PID-based filename collisions, or correlating logs from forks and subshells.",
+    "real_world": "Teams sometimes use `$$` in temp paths and then hit collisions when multiple subshells in one script write to the same location, especially in parallel fan-out code.",
+    "code_lang": "bash",
+    "code": "echo \"parent: $$ $BASHPID $PPID\"\n(\n  echo \"subshell: $$ $BASHPID $PPID\"\n)",
+    "follow_up": "Why is using PIDs alone for temporary filenames still a bad idea?"
+   },
+   {
+    "question": "How do process substitution and named pipes differ under the hood, and what operational issues come with process substitution?",
+    "answer": "Process substitution like `<(cmd)` gives another command something path-like to read from or write to, but under the hood Bash implements it using mechanisms available on the system, commonly FIFOs or `/dev/fd` file descriptors. That means portability and lifetime depend on the platform and filesystem support. It is convenient, but the producer runs asynchronously, so error handling can be less obvious than with a normal pipeline, and some tools expect a regular seekable file and will fail. Use it when an interface demands filenames, not as a default replacement for simpler streaming patterns.",
+    "real_world": "A common production surprise is a command that accepts a filename but internally seeks or stats it; `<(...)` works in testing, then fails on another host or with a different utility build.",
+    "code_lang": "bash",
+    "code": "diff <(sort left.txt) <(sort right.txt)\n# convenient, but the arguments are not regular files",
+    "follow_up": "How would you capture and propagate failures from the commands inside process substitution?"
+   },
+   {
+    "question": "How does Bash’s hash table for command lookup work, and when can it cause correctness or deployment problems?",
+    "answer": "Bash caches command path lookups in a hash table so repeated external commands do not search `PATH` every time. That improves performance in command-heavy scripts, but it can become stale if `PATH` changes or a binary is replaced during a long-running shell session. You can clear or refresh it with `hash -r`, and shell builtins or functions still take precedence according to normal command resolution rules. In short-lived scripts it rarely matters, but in sourced automation shells or operator sessions it can create very confusing behavior.",
+    "real_world": "After a rollout changes a symlinked tool path, an already-running maintenance shell can keep executing the old location until its hash table is refreshed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is Bash’s command resolution order when a name could be an alias, function, builtin, or external command?"
+   },
+   {
+    "question": "If a script needs to process very large text streams, what Bash patterns scale poorly, and what would you replace them with?",
+    "answer": "Patterns that spawn a process per line or store the whole stream in shell variables scale badly because process startup and string handling dominate quickly. Bash loops are fine for orchestration, but for heavy parsing or millions of records you usually want one streaming tool like `awk`, `sort`, or `grep`, or move the logic into Python, Go, or Rust if state gets complex. Also avoid command substitution for large outputs because it buffers into memory and strips trailing newlines. A good rule is: keep Bash at the boundaries and let purpose-built tools do bulk data work.",
+    "real_world": "A script that calls `sed` or `cut` inside a line-by-line loop can turn a job from seconds into hours once log volume grows by one or two orders of magnitude.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of rewriting a per-line shell loop into a single `awk` pass?"
+   },
+   {
+    "question": "How do you safely manage background workers in Bash so you don’t lose exit codes or leave orphaned processes behind?",
+    "answer": "Track child PIDs explicitly, install cleanup traps, and always `wait` for the workers you started. If you just launch jobs with `&` and exit on the first apparent failure, the remaining children may keep running, writing partial output or holding locks. In modern Bash, `wait -n` can help implement worker pools and fail-fast behavior, but you still need to decide whether to kill the remaining children and how to collect their statuses. Process groups matter too: killing only the immediate child may not stop grandchildren.",
+    "real_world": "In deployment scripts, one failed background copy can be noticed late while other copies continue, leaving a half-updated fleet and making rollback harder.",
+    "code_lang": "bash",
+    "code": "pids=()\nfor host in \"${hosts[@]}\"; do\n  deploy \"$host\" &\n  pids+=(\"$!\")\ndone\n\nstatus=0\nfor pid in \"${pids[@]}\"; do\n  wait \"$pid\" || status=1\ndone\nexit \"$status\"",
+    "follow_up": "How would you change that to fail fast and terminate the remaining workers cleanly?"
+   },
+   {
+    "question": "What are the tricky semantics of `ERR` traps in Bash, and why do they often miss failures people expect them to catch?",
+    "answer": "An `ERR` trap is not a universal exception mechanism; whether it runs depends on context, and the same kinds of contexts that weaken `set -e` also matter here. Failures in conditional tests, some command lists, and subshell or function boundaries can behave differently unless you opt into propagation features where supported. It is useful for logging and centralized cleanup, but not enough by itself for correctness. For reliable scripts, combine explicit status checks in critical paths with traps as a safety net, not as the only control flow.",
+    "real_world": "Teams add an `ERR` trap expecting every failed command to be logged, then miss exactly the failure inside a conditional or nested helper that caused the incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure error handling so cleanup and logging are centralized without depending entirely on `ERR`?"
+   },
+   {
+    "question": "What’s the difference between shell parsing and `eval`, and why is `eval` usually a security and reliability problem?",
+    "answer": "Normal shell parsing happens once on the script text, while `eval` takes a string and asks the shell to parse and execute it again. That second parse means quoting must survive multiple expansion rounds, which is hard to reason about and easy to exploit if any part of the string comes from untrusted or merely unexpected input. Most uses of `eval` are better replaced by arrays, associative arrays, indirect expansion, `case`, or calling commands directly with separate arguments. If you truly need code generation, keep the input tightly controlled and log exactly what will be executed.",
+    "real_world": "A common incident pattern is a deployment script building a command string from branch names or filenames; one unexpected character changes the meaning of the command completely.",
+    "code_lang": "bash",
+    "code": "cmd=(grep -F -- \"$pattern\" \"$file\")\n\"${cmd[@]}\"   # safer than building a string and eval'ing it",
+    "follow_up": "When, if ever, would you accept `eval` in a production shell script?"
+   },
+   {
+    "question": "How do locale settings affect Bash scripts and common text utilities, and what bugs does that create at scale?",
+    "answer": "Locale influences string comparison, character classes, sort order, and what tools consider a letter, digit, or whitespace-like class. A script that seems deterministic under `LC_ALL=C` can behave differently under a UTF-8 locale, especially with ranges like `[A-Z]`, `sort`, or case conversion. At scale this creates hard-to-reproduce data bugs because behavior changes by host, container image, or user environment. For machine-oriented processing, pin the locale explicitly; for user-facing text, choose the locale intentionally and test with representative data.",
+    "real_world": "Two hosts can produce different sorted outputs from the same input, which breaks checksums, deduplication, or any downstream step that assumes stable ordering.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which kinds of shell patterns or utility options are most likely to change behavior across locales?"
+   },
+   {
+    "question": "How would you profile or benchmark a Bash script to find the real bottleneck instead of guessing?",
+    "answer": "First separate shell overhead from external command cost, because in many scripts the shell itself is not the expensive part. Use targeted timing around phases, turn on execution tracing selectively, and inspect syscall or process-level behavior with tools like `strace`, `time`, or a system profiler when startup or I/O is suspected. Count forks: a script that spawns thousands of short-lived processes is often bottlenecked there. Benchmark with realistic input sizes and warmed caches where relevant, because tiny tests often point to the wrong optimization.",
+    "real_world": "Teams often micro-optimize parameter expansion while the real issue is an accidental process-per-record design or repeated scans of the same large file.",
+    "code_lang": "bash",
+    "code": "t0=$SECONDS\nphase_one\nprintf 'phase_one=%ss\\n' \"$((SECONDS - t0))\"\n\nt0=$SECONDS\nphase_two\nprintf 'phase_two=%ss\\n' \"$((SECONDS - t0))\"",
+    "follow_up": "What metrics would tell you the script is fork-bound versus I/O-bound?"
+   }
+  ]
+ }
+}

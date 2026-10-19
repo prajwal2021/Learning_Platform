@@ -1,0 +1,383 @@
+{
+  "slug": "celebrity-hot-shard",
+  "title": "One shard is on fire",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "sharding",
+    "hot-key",
+    "databases",
+    "caching",
+    "feed-systems"
+  ],
+  "scenario": "A social app stores posts in a table sharded by user_id across 8 database servers. One celebrity with 20 million followers publishes a post, and the database server holding that user_id reaches 100% CPU while the other seven stay near 10%. The team added more shards, but the same shard stayed overloaded during celebrity traffic.",
+  "goal": "Reduce the overloaded shard below 70% CPU while keeping new celebrity posts visible within 5 seconds.",
+  "concepts": [
+    {
+      "key": "sharding",
+      "name": "Sharding",
+      "summary": "Sharding splits data across multiple database servers so each server owns part of the data. A routing rule decides which server handles each row or query.",
+      "used_here": "Posts are assigned to one of 8 database servers based on user_id."
+    },
+    {
+      "key": "hot-key",
+      "name": "Hot key",
+      "summary": "A hot key is one identifier that receives far more traffic than the rest. Even a good hash cannot spread load if most requests ask for the same key.",
+      "used_here": "The celebrity's user_id receives much more read traffic than normal users."
+    },
+    {
+      "key": "hot-partition",
+      "name": "Hot partition",
+      "summary": "A hot partition is one shard or partition that is overloaded while others are underused. It often happens when the data distribution looks even but the traffic distribution is not.",
+      "used_here": "The shard containing the celebrity's user_id is at 100% CPU while the other seven are near 10%."
+    },
+    {
+      "key": "query-logs",
+      "name": "Query logs",
+      "summary": "Query logs record which database queries ran, how often they ran, and how expensive they were. They are useful for finding the exact query pattern causing load.",
+      "used_here": "The team can group post queries by user_id to see whether one celebrity key dominates traffic."
+    },
+    {
+      "key": "observability",
+      "name": "Observability",
+      "summary": "Observability is the use of metrics, logs, and traces to understand what a system is doing. It helps separate guesses from evidence during an incident.",
+      "used_here": "Per-shard CPU, query rate, cache hit rate, and latency show whether the fix is working."
+    },
+    {
+      "key": "database-index",
+      "name": "Database index",
+      "summary": "A database index lets the database find matching rows without scanning the whole table. Indexes reduce work per query but do not remove traffic volume.",
+      "used_here": "An index on user_id and created_at can make post lookups efficient, but it cannot by itself spread 30,000 repeated reads for one user_id."
+    },
+    {
+      "key": "cache",
+      "name": "Cache",
+      "summary": "A cache stores frequently requested data in a faster layer so the database does not answer every request. Cached data must have a freshness plan.",
+      "used_here": "The celebrity's recent posts can be served from cache instead of repeatedly querying one shard."
+    },
+    {
+      "key": "cdn",
+      "name": "CDN",
+      "summary": "A CDN is a distributed cache close to users, often used for public or mostly public content. It can absorb very large read traffic spikes.",
+      "used_here": "Public celebrity post pages can be cached at the edge to avoid hitting the database shard."
+    },
+    {
+      "key": "redis",
+      "name": "Redis",
+      "summary": "Redis is an in-memory data store often used as an application cache. It is much faster than a database for simple repeated reads.",
+      "used_here": "The app can store the celebrity's recent post list in Redis with a short expiration time."
+    },
+    {
+      "key": "ttl",
+      "name": "TTL",
+      "summary": "TTL means time to live: how long cached data is allowed to remain before it expires. Short TTLs limit staleness but increase cache refreshes.",
+      "used_here": "A 5 second TTL keeps celebrity post lists fresh enough for the incident goal."
+    },
+    {
+      "key": "cache-invalidation",
+      "name": "Cache invalidation",
+      "summary": "Cache invalidation removes or refreshes cached data when the underlying data changes. It prevents users from seeing stale results longer than intended.",
+      "used_here": "When the celebrity creates a new post, the app should refresh or delete that user's cached post list after the database write commits."
+    },
+    {
+      "key": "read-replica",
+      "name": "Read replica",
+      "summary": "A read replica is a database copy that handles read queries while the primary handles writes. Replicas increase read capacity but can lag behind the primary.",
+      "used_here": "The celebrity shard can have replicas so cache refreshes and misses do not all hit the primary database."
+    },
+    {
+      "key": "fan-out-on-write",
+      "name": "Fan-out on write",
+      "summary": "Fan-out on write pushes a new item into many users' feeds when the item is created. It makes feed reads fast but can make writes very expensive for accounts with many followers.",
+      "used_here": "Pushing one celebrity post into 20 million follower inboxes would create a huge write spike."
+    },
+    {
+      "key": "fan-out-on-read",
+      "name": "Fan-out on read",
+      "summary": "Fan-out on read fetches and merges some feed items when a user opens the feed. It avoids doing all the work at write time.",
+      "used_here": "For celebrity accounts, followers can fetch recent celebrity posts from a cached source when they read their home feed."
+    },
+    {
+      "key": "counter-sharding",
+      "name": "Counter sharding",
+      "summary": "Counter sharding splits one heavily updated counter into multiple smaller counters. Writers choose a bucket, and readers sum the buckets.",
+      "used_here": "Likes or view counts on a celebrity post can be spread across many counter rows instead of one locked row."
+    },
+    {
+      "key": "aggregation",
+      "name": "Aggregation",
+      "summary": "Aggregation combines multiple values into one result, such as summing many buckets into one count. It can happen at read time or in a background job.",
+      "used_here": "The displayed like count is produced by summing the counter buckets for the celebrity post."
+    },
+    {
+      "key": "feature-flag",
+      "name": "Feature flag",
+      "summary": "A feature flag lets engineers enable or disable behavior without redeploying code. It is commonly used to roll out risky fixes gradually.",
+      "used_here": "The celebrity-specific caching and feed path can be enabled for one account first and rolled back quickly."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Find the shape of the load",
+      "question": "The incident is active: one of 8 database servers is at 100% CPU and the other seven are near 10%. What should you inspect first to avoid guessing?",
+      "concept_keys": [
+        "sharding",
+        "query-logs",
+        "observability"
+      ],
+      "options": [
+        {
+          "text": "Compare per-shard CPU and QPS, then group posts-table query logs by user_id and endpoint.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Review the last deploy diff and start reverting code that touched the posts endpoint.",
+          "correct": false,
+          "hint": "A deploy can cause an incident, but the symptom is very uneven across shards. First find whether the traffic is uneven by key or whether every shard is doing the same new work.",
+          "id": "b"
+        },
+        {
+          "text": "Run a load test against a staging database with the same number of shards.",
+          "correct": false,
+          "hint": "A staging test may not reproduce a real celebrity traffic spike. The production logs already contain the key distribution you need.",
+          "id": "c"
+        },
+        {
+          "text": "Look only at average database CPU and average API latency across all shards.",
+          "correct": false,
+          "hint": "Averages hide this kind of failure. One shard at 100% and seven at 10% can look acceptable if you only look at a fleet-wide average.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The key question is whether the overloaded server is receiving a disproportionate share of requests for one user_id or whether all shards are doing expensive work. Grouping query logs by user_id and endpoint shows the traffic distribution directly. A deploy review is useful later, but it does not explain why only the shard containing one celebrity is saturated."
+    },
+    {
+      "title": "Explain why more shards did not help",
+      "question": "The logs show 30,000 queries per second like `SELECT ... FROM posts WHERE user_id = ? ORDER BY created_at DESC LIMIT 20`, and 92% of those queries use the celebrity's user_id. Writes for that user are below 1 per second. What is the best explanation?",
+      "concept_keys": [
+        "sharding",
+        "hot-key",
+        "hot-partition",
+        "database-index"
+      ],
+      "options": [
+        {
+          "text": "The query is missing an index, so adding an index will make the load distribute across the other shards.",
+          "correct": false,
+          "hint": "An index can reduce work per query, but it does not change which shard owns a given user_id. Ask where 30,000 reads for the same user_id must be routed.",
+          "id": "a"
+        },
+        {
+          "text": "The celebrity's user_id is a hot key, so all those reads route to the same shard no matter how many shards exist.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "The hash function is probably uneven, so rehashing all user_ids across more shards will spread this load.",
+          "correct": false,
+          "hint": "A poor hash would usually create imbalance across many user_ids. Here the logs show one user_id dominates the read traffic.",
+          "id": "c"
+        },
+        {
+          "text": "The overloaded database server is too small, so replacing only that server removes the underlying bottleneck.",
+          "correct": false,
+          "hint": "Bigger hardware can buy time, but it does not address why one key receives most of the traffic. The same pattern can return on the next celebrity spike.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Hashing by user_id sends all rows and reads for one user_id to one shard. Because 92% of the 30,000 QPS uses the celebrity's user_id, adding more shards does not split that traffic. An index might reduce per-query CPU, but it still leaves the same shard handling the same 27,600 QPS for one key."
+    },
+    {
+      "title": "Stop the immediate overload",
+      "question": "You need a mitigation within minutes. The celebrity's recent posts are read-heavy, change less than once per second, and must appear within 5 seconds. Which action best reduces database CPU while meeting the freshness target?",
+      "concept_keys": [
+        "cache",
+        "cdn",
+        "redis",
+        "ttl",
+        "cache-invalidation",
+        "database-index"
+      ],
+      "options": [
+        {
+          "text": "Create another online index for the posts query so each request uses less CPU on the same shard.",
+          "correct": false,
+          "hint": "Reducing per-query work helps, but 30,000 repeated reads for the same first page are still unnecessary database traffic. Think about serving identical responses without hitting the database each time.",
+          "id": "a"
+        },
+        {
+          "text": "Increase the app connection pool to the overloaded shard so requests spend less time waiting.",
+          "correct": false,
+          "hint": "More concurrent queries can increase pressure on a database already at 100% CPU. Lower wait time in the app is not the same as reducing database work.",
+          "id": "b"
+        },
+        {
+          "text": "Add 16 more shards and migrate the celebrity's user_id to one of the new shards during the incident.",
+          "correct": false,
+          "hint": "Moving the key changes which server is hot. It does not split 30,000 reads for that same key across servers.",
+          "id": "c"
+        },
+        {
+          "text": "Cache the celebrity's recent post list in CDN or Redis with a 5 second TTL, and refresh or delete it after a post write commits.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The traffic is dominated by repeated reads of the same small result set, so caching can remove most database queries immediately. A 5 second TTL meets the stated freshness target even if an invalidation attempt is delayed, and refreshing or deleting after commit improves freshness further. Adding an index is tempting, but it still makes the hot shard answer a huge number of identical reads."
+    },
+    {
+      "title": "Add read capacity without moving the hot key",
+      "question": "After caching, the hot shard's CPU drops, but cache misses and cache refreshes still hit the primary database for the celebrity's user_id. Which production change best reduces dependence on that one primary for reads?",
+      "concept_keys": [
+        "read-replica",
+        "cache",
+        "sharding",
+        "hot-key"
+      ],
+      "options": [
+        {
+          "text": "Reshard the posts table by follower_id so celebrity traffic is assigned by the reader instead of the author.",
+          "correct": false,
+          "hint": "The query being served is still the celebrity's recent posts. Changing the shard key can create other lookup and consistency problems without removing the need to fetch the same author data.",
+          "id": "a"
+        },
+        {
+          "text": "Add read replicas for the celebrity's shard and route cache fills and read misses to replicas while keeping writes on the primary.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Pin all celebrity requests to the largest application server so the database receives steadier traffic.",
+          "correct": false,
+          "hint": "The saturated component is the database shard, not the application server. Routing requests through one app server does not remove database work.",
+          "id": "c"
+        },
+        {
+          "text": "Copy every celebrity post row to all 8 primary shards and make each write synchronously update every copy.",
+          "correct": false,
+          "hint": "Duplicating data can spread reads, but synchronous writes to every primary create consistency and failure-handling problems. A safer read-scaling mechanism keeps one write authority.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Read replicas let multiple database servers serve read traffic for the shard while the primary remains the write authority. That is a direct fit for a workload with below 1 write per second and many reads. Copying rows to all primaries could spread reads, but it introduces multi-primary consistency and partial-write failure modes."
+    },
+    {
+      "title": "Handle celebrity posts in home feeds",
+      "question": "The app also has home timelines. Normal users' posts are pushed into follower inboxes when they write, but pushing one celebrity post into 20 million inboxes would create a huge write spike. What policy should you use for high-follower accounts?",
+      "concept_keys": [
+        "fan-out-on-write",
+        "fan-out-on-read",
+        "cache",
+        "read-replica"
+      ],
+      "options": [
+        {
+          "text": "Keep the same write path and let the background queue eventually insert the celebrity post into all 20 million inboxes.",
+          "correct": false,
+          "hint": "A queue can smooth work, but it does not remove the total amount of work. It also risks very delayed visibility during the exact traffic spike you are trying to handle.",
+          "id": "a"
+        },
+        {
+          "text": "Mark high-follower accounts specially, do not push their posts to every inbox, and merge their recent cached posts when followers read the feed.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Stop showing celebrity posts in home timelines and require users to visit the celebrity profile page.",
+          "correct": false,
+          "hint": "That avoids the load, but it changes the product behavior instead of designing a scalable delivery path. There is a middle ground that keeps the post visible without 20 million writes.",
+          "id": "c"
+        },
+        {
+          "text": "Synchronously insert the celebrity post into every follower inbox before returning success to the author.",
+          "correct": false,
+          "hint": "This makes the write path depend on 20 million inserts. It is unlikely to meet latency or reliability requirements for posting.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Very large accounts need a different feed strategy from normal accounts. For celebrities, merging recent posts at read time from a cached or replicated source avoids a 20 million-row write burst while keeping feeds correct. Simply queueing all 20 million writes may protect the request thread, but it still creates a large backlog and delayed visibility."
+    },
+    {
+      "title": "Fix a write hotspot on counters",
+      "question": "After the read fixes, likes on the celebrity's new post create another bottleneck: 8,000 writes per second all update one `like_count` row, causing lock waits. What is the safest scalable design for this counter?",
+      "concept_keys": [
+        "counter-sharding",
+        "aggregation",
+        "hot-key"
+      ],
+      "options": [
+        {
+          "text": "Send increments to an in-memory cache and flush one total to the database once per minute without a durable log.",
+          "correct": false,
+          "hint": "Batching reduces database writes, but losing the cache process could lose acknowledged likes. A production counter needs a durability story.",
+          "id": "a"
+        },
+        {
+          "text": "Update the same counter row with stricter transactions and retry failed updates until they succeed.",
+          "correct": false,
+          "hint": "Retries can preserve correctness, but they add even more writes to the same locked row. The issue is that all writers contend for one place.",
+          "id": "b"
+        },
+        {
+          "text": "Move the celebrity's whole user record to a larger database server with faster disks.",
+          "correct": false,
+          "hint": "Better hardware can delay the failure, but every like still targets one logical row. The design needs to spread concurrent updates.",
+          "id": "c"
+        },
+        {
+          "text": "Store the counter in 128 bucket rows chosen by random suffix, then sum the buckets for the displayed count.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Splitting the counter into many buckets spreads 8,000 writes per second across 128 rows, reducing lock contention sharply. Reads can sum the buckets, or a background job can maintain a derived total if exact real-time reads are too expensive. Retrying a single-row update is tempting, but under contention it often amplifies load and latency."
+    },
+    {
+      "title": "Roll out and prove it worked",
+      "question": "You have cache, replica routing, celebrity feed handling, and counter buckets ready. What rollout and verification plan is safest?",
+      "concept_keys": [
+        "feature-flag",
+        "observability",
+        "cache",
+        "read-replica",
+        "ttl"
+      ],
+      "options": [
+        {
+          "text": "Wait for the next organic celebrity post before collecting metrics, because synthetic checks may be misleading.",
+          "correct": false,
+          "hint": "Real traffic matters, but waiting removes control during validation. You can combine limited rollout, targeted tests, and live metrics.",
+          "id": "a"
+        },
+        {
+          "text": "Enable the new paths behind a feature flag for one celebrity first, and monitor per-shard CPU, top query QPS, cache hit rate, staleness, replica lag, counter errors, and p95/p99 latency.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Enable the new paths for every account immediately, and watch only average database CPU for the next hour.",
+          "correct": false,
+          "hint": "The incident was hidden by averages before. A broad rollout also makes it harder to identify and roll back a bad change.",
+          "id": "c"
+        },
+        {
+          "text": "Deploy only the cache change globally, and declare success once the first cached response is served.",
+          "correct": false,
+          "hint": "One cache hit does not prove the system is healthy. You need to know hit rate, freshness, database load, and behavior during misses.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A feature-flagged rollout limits blast radius and gives a fast rollback path. The metrics must match the failure mode: per-shard CPU and top query QPS should drop, cache staleness must stay under 5 seconds, and replica lag must remain acceptable. Watching only average CPU could miss the same hot-shard pattern that caused the incident."
+    }
+  ],
+  "takeaway": "Sharding spreads keys, not traffic for a single hot key. When one celebrity user_id dominates reads, more shards or a different hash will not fix the bottleneck by itself; use caching, replicas, and celebrity-specific feed behavior. For write hotspots like counters, split the hot logical key into multiple physical buckets and aggregate safely.",
+  "review_issues": []
+}

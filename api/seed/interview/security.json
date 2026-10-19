@@ -1,0 +1,485 @@
+{
+ "slug": "security",
+ "name": "Application security (OWASP)",
+ "category": "Computer science",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the OWASP Top 10, and why do teams use it?",
+    "answer": "The OWASP Top 10 is a widely used list of the most important web application security risks. Teams use it as a shared baseline for training, threat modeling, and prioritizing fixes, not as a complete security checklist. It helps engineers focus on common, high-impact mistakes like broken access control, injection, and security misconfiguration.",
+    "real_world": "A junior engineer might use the Top 10 to review a new API before launch and catch obvious risks early. Security teams often map findings to it so developers understand the category of problem, not just one bug.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you name a few Top 10 categories and give an example of each?"
+   },
+   {
+    "question": "What is the difference between authentication and authorization?",
+    "answer": "Authentication answers who you are; authorization answers what you are allowed to do. Logging in with a password is authentication, while checking whether that user can delete another user's record is authorization. A common bug is to authenticate correctly but forget to enforce authorization on every sensitive action.",
+    "real_world": "This matters when a user can guess or modify an object ID and access someone else’s data. Many production breaches come from broken authorization rather than weak passwords.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test that an endpoint enforces authorization correctly?"
+   },
+   {
+    "question": "What is SQL injection?",
+    "answer": "SQL injection happens when untrusted input is concatenated into a SQL query and changes its meaning. An attacker can read, modify, or delete data, and in some cases bypass login checks. The main defense is parameterized queries, not manual string escaping.",
+    "real_world": "A login form that builds `SELECT * FROM users WHERE name = '...';` from raw input can be abused to authenticate without a valid password. This is one of the most common causes of serious data leaks in older apps.",
+    "code_lang": "python",
+    "code": "cursor.execute(\n    \"SELECT * FROM users WHERE email = ? AND password_hash = ?\",\n    (email, password_hash),\n)",
+    "follow_up": "Why are parameterized queries safer than escaping quotes yourself?"
+   },
+   {
+    "question": "What is cross-site scripting, or XSS?",
+    "answer": "XSS is when attacker-controlled content is treated as executable script in a browser. It can steal session data, perform actions as the victim, or rewrite what the user sees. The core defense is output encoding based on context, plus avoiding dangerous HTML insertion unless it is sanitized.",
+    "real_world": "A comments feature that renders user input as raw HTML can let one user run JavaScript in another user's browser. That often turns a small input-validation issue into account takeover.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between stored, reflected, and DOM-based XSS?"
+   },
+   {
+    "question": "What does input validation do, and what should it not be used for by itself?",
+    "answer": "Input validation checks that data matches expected format, type, or range, such as an email shape or a positive integer. It reduces bugs and blocks some attacks, but it is not enough on its own because valid-looking data can still be malicious. Validation should be combined with authentication, authorization, output encoding, and parameterized queries.",
+    "real_world": "A team may validate that a username is short and alphanumeric, but still need to escape it before putting it into HTML or SQL. Otherwise attackers can work around the format rules.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where in the request flow do you validate input, and where do you encode output?"
+   },
+   {
+    "question": "What is a CSRF attack?",
+    "answer": "Cross-site request forgery tricks a logged-in browser into sending a request the user did not intend. It works because browsers automatically include cookies with requests to the site. Common defenses are CSRF tokens, checking the Origin or Referer header where appropriate, and using same-site cookie settings.",
+    "real_world": "If a bank transfer endpoint only checks that a user has a session cookie, an attacker can submit a hidden form that makes the victim send money. This is why state-changing actions need an anti-forgery check.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is CSRF less effective against APIs that do not use cookies?"
+   },
+   {
+    "question": "What is meant by a secure password storage scheme?",
+    "answer": "Passwords should be hashed with a password-specific one-way algorithm and a unique salt per password. The goal is to make offline cracking expensive if the database is leaked. You should never encrypt passwords for later recovery or store them with plain hashes like SHA-256 alone.",
+    "real_world": "If user credentials are dumped from production, weak password storage lets attackers recover many passwords quickly and reuse them elsewhere. Strong hashing slows that down enough to reduce damage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why do salts help, and what problem do they not solve?"
+   },
+   {
+    "question": "Why should you not trust client-side security checks?",
+    "answer": "Anything in the browser can be modified by the user, including HTML, JavaScript, and local storage. Client-side checks are useful for user experience, but the server must enforce all security rules because the client is untrusted. If the server trusts the browser, attackers can bypass restrictions with simple request tools.",
+    "real_world": "Disabling a 'premium feature' button in the UI does not prevent someone from calling the backend endpoint directly. Many beginner mistakes come from assuming front-end logic is a real control.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What security checks are safe to do only on the client, and which must be repeated on the server?"
+   },
+   {
+    "question": "What is the principle of least privilege?",
+    "answer": "Least privilege means giving a user, service, or process only the permissions it needs, and no more. This limits the damage if an account or component is compromised. It applies to database accounts, API keys, cloud roles, file access, and admin tools.",
+    "real_world": "A background job that only reads one table should not have write access to the whole database. Limiting permissions often turns a serious breach into a much smaller incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you apply least privilege to a web app’s database account?"
+   },
+   {
+    "question": "What is an insecure direct object reference, or IDOR?",
+    "answer": "IDOR is when an application exposes a direct reference to an object, like an order ID or file name, and fails to verify that the current user may access it. The issue is usually broken authorization, not the identifier itself. The fix is to check ownership or permission on every access, not rely on unguessable IDs alone.",
+    "real_world": "If `/invoice/1234` returns another user’s invoice when you change the number, that is an IDOR. These bugs are common in APIs because the object ID is easy to overlook.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design an endpoint to avoid IDOR in the first place?"
+   },
+   {
+    "question": "What is session management, and why does it matter for web security?",
+    "answer": "Session management is how a server keeps track of a user after login, usually with a session ID stored in a cookie. It matters because if an attacker steals or guesses that token, they can act as the user without knowing the password. Good session handling uses unpredictable IDs, expires them appropriately, and invalidates them on logout or privilege changes.",
+    "real_world": "This shows up when a user’s browser is hijacked through a stolen cookie on a public Wi‑Fi network or from malware. Teams also need it for admin portals, where a stolen session is often enough to take over an account.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How should cookies be configured to make session handling safer?"
+   },
+   {
+    "question": "What is transport layer security, and what does it protect against?",
+    "answer": "TLS protects data in transit between a client and server by encrypting the connection and verifying the server’s identity with certificates. It helps prevent eavesdropping and tampering on the network. It does not make the application itself safe if the server is vulnerable, and it does not stop attacks that happen after the data reaches the app.",
+    "real_world": "Without TLS, logins and session cookies can be captured on shared networks or by a malicious proxy. In production, teams use it for all authenticated traffic and often redirect plain HTTP to HTTPS.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a certificate, and how does a browser decide whether to trust it?"
+   },
+   {
+    "question": "What is a cookie flag like HttpOnly or Secure used for?",
+    "answer": "Cookie flags tell the browser how to handle a cookie to reduce exposure. Secure means the cookie is only sent over HTTPS, and HttpOnly prevents JavaScript from reading it, which helps limit damage from some XSS attacks. These flags do not fix insecure code, but they reduce the ways a stolen cookie can be exposed.",
+    "real_world": "If a session cookie lacks HttpOnly, injected script may be able to read and exfiltrate it. If it lacks Secure, it may be sent over plain HTTP on a downgraded or misconfigured connection.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What other cookie attribute is important for reducing CSRF risk?"
+   },
+   {
+    "question": "What is cross-site request forgery protection usually based on?",
+    "answer": "CSRF protection usually works by requiring a secret token that the browser sends with a form or request, and the server verifies it. The attacker’s site cannot read that token because of browser same-origin rules, so it cannot easily forge a valid request. It is often paired with same-site cookie settings and checking request origin or referer where appropriate.",
+    "real_world": "This matters for actions like changing an email address, adding an API key, or submitting a money transfer. Without CSRF defenses, a logged-in user can be tricked into making an unwanted state-changing request by visiting another site.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why don’t same-site cookies alone fully replace CSRF tokens in every application?"
+   },
+   {
+    "question": "What is the purpose of output encoding?",
+    "answer": "Output encoding converts untrusted data into a safe form for a specific context, such as HTML, attributes, JavaScript, or URLs. It matters because data that is harmless as text can become dangerous when the browser interprets it as code. The key point is that the encoding must match the context where the data is inserted.",
+    "real_world": "A username displayed on a page can become an XSS issue if it is injected into HTML without escaping. Teams use templating engines or framework helpers so they do not manually build unsafe strings.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does the right encoding differ between HTML content and a JavaScript string?"
+   },
+   {
+    "question": "What is the danger of putting secrets in source code or front-end code?",
+    "answer": "Secrets in source code are hard to keep secret because code gets copied into repos, builds, logs, and bundles. Anything shipped to the browser is effectively public, so API keys, private endpoints, and credentials should not live in front-end code. Server-side secret management, environment variables, or secret stores are safer because access can be controlled and rotated.",
+    "real_world": "A common incident is committing a cloud key to GitHub or shipping a third-party API secret in a JavaScript bundle. Attackers can scan public repos and deployed assets for exposed credentials very quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How should a team handle secret rotation after a leak?"
+   },
+   {
+    "question": "What is rate limiting, and why is it a security control?",
+    "answer": "Rate limiting restricts how many requests a client can make in a time period. It helps slow brute-force login attempts, credential stuffing, scraping, and abuse of expensive endpoints. It is not a complete defense, but it reduces impact and gives the system time to detect and respond.",
+    "real_world": "Login pages and password reset endpoints are common targets because attackers can automate many guesses. Teams also use rate limiting to protect APIs from accidental overload and simple denial-of-service traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you use to decide whether to rate limit by IP, account, or device?"
+   },
+   {
+    "question": "What is a security header, and can you name one common example?",
+    "answer": "Security headers are HTTP response headers that tell the browser to enforce safer behavior. A common example is Content-Security-Policy, which restricts where scripts and other resources can load from and can reduce XSS impact. Headers are useful because they add browser-side protections without changing every page’s logic, but they must be configured carefully.",
+    "real_world": "Teams add these headers to harden production apps after finding that a single missed template can lead to script injection. They are also useful for reducing risk in large applications where many people contribute front-end code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a Content Security Policy trying to stop, and what can it break if misconfigured?"
+   },
+   {
+    "question": "What is dependency scanning, and why do teams use it?",
+    "answer": "Dependency scanning checks third-party libraries for known vulnerabilities or risky versions. Teams use it because most applications rely on many packages, and a weakness in one transitive dependency can affect the whole app. It does not prove a package is safe, but it helps catch known issues early and supports patching discipline.",
+    "real_world": "A vulnerable library may sit unnoticed in a project until a scanner flags it during CI or after a security advisory is published. This is especially important in JavaScript and Python ecosystems, where dependency trees can grow quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a direct dependency and a transitive dependency?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How does server-side access control differ from just hiding UI controls in the frontend?",
+    "answer": "UI hiding is only a usability measure; real access control must be enforced on the server for every request that reads or changes data. If the backend trusts the client to omit a button or field, an attacker can still call the endpoint directly. Good designs check the authenticated user’s role, ownership, or policy at the boundary and fail closed. The frontend can mirror the rules, but it should never be the source of truth.",
+    "real_world": "This comes up when a user can’t see an admin button in the app but can still POST to the same endpoint with a tool like curl or Burp. Teams often discover the bug only after a penetration test or an abuse report.",
+    "code_lang": "python",
+    "code": "def delete_account(request, account_id):\n    account = db.get_account(account_id)\n    if request.user.id != account.owner_id and not request.user.is_admin:\n        raise Forbidden()\n    db.delete(account_id)",
+    "follow_up": "How would you design and test these checks so they stay consistent across many endpoints?"
+   },
+   {
+    "question": "What is command injection, and how is it different from SQL injection?",
+    "answer": "Command injection happens when untrusted input reaches a shell or system command and changes what gets executed. SQL injection targets a database query language, while command injection targets the operating system shell or command runner. The defense is similar in spirit: avoid string concatenation, use safe APIs with argument arrays, and validate against an allowlist when the input is meant to be a filename, host, or similar token. Shell injection is often worse because it can lead to full server compromise.",
+    "real_world": "This often appears in scripts that resize images, ping hosts, or call git with user-controlled parameters. A small helper endpoint can become a remote code execution issue if it builds a shell command from request data.",
+    "code_lang": "python",
+    "code": "import subprocess\nsubprocess.run([\"/usr/bin/convert\", input_path, output_path], check=True)\n# avoid: subprocess.run(f\"convert {input_path} {output_path}\", shell=True)",
+    "follow_up": "When would an allowlist be better than parameterized APIs here?"
+   },
+   {
+    "question": "How do you prevent path traversal bugs when users upload or download files?",
+    "answer": "Never trust user-supplied paths or filenames as-is. Normalize the path, resolve it against a fixed base directory, and verify the final location stays inside that directory; for downloads, prefer opaque file IDs over paths. Also treat filename extensions and MIME types as hints, not proof of content type. The main trade-off is that stricter rules may reject some legitimate filenames, but they greatly reduce the risk of reading or overwriting arbitrary files.",
+    "real_world": "A download endpoint that accepts a `?file=...` parameter can accidentally expose `/etc/passwd` or application config if it joins paths naively. This also shows up in upload systems where attackers try to overwrite templates or web roots.",
+    "code_lang": "python",
+    "code": "base = Path(\"/srv/files\").resolve()\nrequested = (base / user_name).resolve()\nif base not in requested.parents and requested != base:\n    raise Forbidden()\nreturn send_file(requested)",
+    "follow_up": "What other checks would you add for uploads besides path safety?"
+   },
+   {
+    "question": "Why are deserialization bugs dangerous, and what is the safer alternative?",
+    "answer": "Unsafe deserialization can create objects with attacker-controlled state, and in some languages or libraries that can trigger code execution or dangerous side effects. The safer alternative is to use simple data formats and explicit schemas, such as JSON into plain data objects, rather than deserializing arbitrary object graphs from untrusted input. If you must deserialize, restrict the allowed types and treat the data as untrusted until validated. The key trade-off is convenience versus attack surface.",
+    "real_world": "Teams run into this when they store session state, job messages, or cache entries using native object serialization and later accept data from another service or from clients. A vulnerability here can become a high-severity remote compromise.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you audit an existing codebase for risky deserialization use?"
+   },
+   {
+    "question": "What is the difference between storing a secret in an environment variable and storing it in a secrets manager?",
+    "answer": "Environment variables are better than hard-coding secrets, but they are still process-local configuration and can leak through logs, crash dumps, debugging tools, or misconfigured build steps. A secrets manager adds centralized access control, audit logs, rotation support, and often short-lived credentials. The trade-off is extra operational complexity and dependency on another service. In practice, sensitive production credentials are usually better managed outside the app runtime and injected just in time.",
+    "real_world": "A team might use environment variables for local development but move production database passwords and API keys into a secrets manager after a leak or an audit finding. This also helps when rotating credentials without redeploying everything.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What practices help prevent secrets from leaking during CI/CD and container builds?"
+   },
+   {
+    "question": "How should you think about CORS from a security perspective?",
+    "answer": "CORS is a browser policy that controls which cross-origin scripts can read responses; it is not an access control mechanism on its own. A permissive CORS configuration can expose data to malicious websites if the browser also sends credentials and the server allows that origin. The safe approach is to allow only known origins that truly need access, and to be precise about credentials and methods. Server-side authentication and authorization still need to protect the endpoint regardless of CORS.",
+    "real_world": "This matters for APIs used by both a web app and third-party integrations. A small mistake in allowed origins can silently turn a private API into one readable from any site.",
+    "code_lang": "javascript",
+    "code": "app.use(cors({\n  origin: [\"https://app.example.com\"],\n  credentials: true\n}))",
+    "follow_up": "What would you check if a browser can call an API but the response is blocked by CORS?"
+   },
+   {
+    "question": "What is security logging, and what should you avoid logging?",
+    "answer": "Security logging records events that help detect abuse, investigate incidents, and prove what happened, such as login failures, privilege changes, token issuance, and sensitive admin actions. You should avoid logging passwords, session tokens, API keys, full credit card data, or other secrets and sensitive personal data. Good logs are structured, time-stamped, and tied to a request or user ID without exposing dangerous payloads. The trade-off is between observability and data minimization.",
+    "real_world": "When a production account is compromised, logs are often the only way to determine whether it was credential stuffing, token theft, or an insider action. At the same time, bad logging can create a second breach by exposing secrets to everyone with log access.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design logs so they are useful for incident response but still privacy-safe?"
+   },
+   {
+    "question": "What is the purpose of multi-factor authentication, and when can it still fail to protect you?",
+    "answer": "Multi-factor authentication reduces the impact of stolen passwords by requiring a second factor such as a hardware key, app approval, or code. It can still fail through phishing proxies, session theft, push fatigue, or recovery flows that are weaker than the main login. Stronger factors like phishing-resistant authenticators are better than SMS or simple one-time codes. MFA is a major improvement, but it does not replace safe session handling and phishing-aware design.",
+    "real_world": "Companies often require MFA after a password leak from another site or a phishing incident. Teams also discover that attackers bypass it by stealing an authenticated session cookie instead of the password.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you harden account recovery so it does not undermine MFA?"
+   },
+   {
+    "question": "How do you handle file uploads securely in a web application?",
+    "answer": "Treat every uploaded file as untrusted content. Store it outside the web root or in object storage, generate a safe server-side name, enforce size and type limits, and scan or inspect it before any downstream use. Do not rely only on the filename extension or browser-reported MIME type, because both can be spoofed. If the file will later be rendered, converted, or parsed, that processing step also needs isolation and defense in depth.",
+    "real_world": "Upload endpoints are common entry points for malware, web shells, and parser exploits. In production, teams often discover that a harmless-looking PDF or image can trigger issues in preview services or antivirus pipelines.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do differently for image uploads versus document uploads?"
+   },
+   {
+    "question": "What is security testing, and how do you choose between SAST, DAST, and manual testing?",
+    "answer": "SAST analyzes source or bytecode without running the app, so it is good for finding patterns early in development. DAST attacks a running application from the outside, which helps catch runtime issues, misconfigurations, and auth problems that static tools miss. Manual testing is slower but often finds business logic flaws and chained attacks that automated tools miss. Teams usually need all three, with the mix depending on release cadence, risk, and the maturity of the codebase.",
+    "real_world": "A service may pass static scans but still be vulnerable to an IDOR or a broken workflow that only appears in an end-to-end test. Security teams often use automated scans for coverage and manual review for the highest-risk endpoints.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prioritize findings when multiple tools report similar issues?"
+   },
+   {
+    "question": "How do you think about password reset flows from a security perspective?",
+    "answer": "A password reset flow needs to be resistant to account takeover, token guessing, and user enumeration. Use short-lived, single-use reset tokens, send them to a verified channel, and avoid revealing whether an account exists based on the response. After a successful reset, invalidate existing sessions if the risk model calls for it. The trade-off is usability versus attack surface: stricter checks reduce abuse but can make recovery harder.",
+    "real_world": "Teams often leak account existence by returning different messages for “email not found” versus “reset email sent.” Attackers use that to build lists of valid users before phishing or credential-stuffing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What properties should a reset token have, and how would you store or verify it safely?"
+   },
+   {
+    "question": "What is a secure way to handle API keys or bearer tokens in a web or mobile app?",
+    "answer": "Keep secrets server-side when possible, and treat bearer tokens as credentials: short-lived, scoped, and revocable. On the client, avoid hard-coding them or storing them in places that are easy to exfiltrate, because anything shipped to the user can usually be extracted. If a token must live on the client, minimize its privilege and lifetime. The main trade-off is convenience versus blast radius if the token is stolen.",
+    "real_world": "A mobile app that embeds a third-party API key often gets scraped, and the key is then abused from outside the app. In production, that can create cost spikes or data exposure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you rotate a leaked API key without causing a service outage?"
+   },
+   {
+    "question": "How would you secure an upload feature that accepts images or documents?",
+    "answer": "Validate the file type by inspecting content, not just the extension, and store uploads outside the web root when possible. Rename files, limit size, scan for malware if the risk justifies it, and serve them with safe content types and download headers. You also want access control on retrieval so one user cannot guess another user’s file URL. The trade-off is stronger inspection and isolation versus latency and storage complexity.",
+    "real_world": "A common production issue is treating an uploaded file as inert when it can actually be executed or rendered as active content. Another is users guessing predictable file paths and downloading each other’s documents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your approach change if the application needs to preview uploaded PDFs or images in the browser?"
+   },
+   {
+    "question": "What is a content security policy, and what problem does it solve that output encoding does not?",
+    "answer": "A content security policy, or CSP, tells the browser which sources are allowed for scripts, styles, images, and other resources. Output encoding reduces injection risk in the HTML you generate, but CSP adds a browser-enforced backstop if an injection bug slips through. It is especially useful for reducing the impact of XSS and for constraining third-party code. The trade-off is that a strict CSP can break existing inline scripts or dynamic loading patterns until the app is refactored.",
+    "real_world": "Teams often add CSP after an XSS finding and discover that analytics snippets or inline event handlers stop working. That forces a cleanup of legacy front-end patterns that were previously tolerated.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts of a CSP are most useful in a modern app, and what mistakes make it ineffective?"
+   },
+   {
+    "question": "How do you prevent open redirect vulnerabilities, and why do they matter?",
+    "answer": "Avoid redirecting to arbitrary user-provided URLs. If you need a post-login or return-to flow, use an allowlist of known paths or map opaque keys to internal destinations instead of trusting a full URL. Open redirects matter because they help phishing, token leakage, and abuse of trusted domains. The trade-off is flexibility versus control over where the user can be sent.",
+    "real_world": "Attackers often send a link on a trusted domain that bounces the victim to a malicious site after login. Users see the trusted domain first and let their guard down.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a safe return-to parameter for an OAuth or login flow?"
+   },
+   {
+    "question": "What is the difference between authentication throttling and account lockout, and which is usually safer?",
+    "answer": "Authentication throttling slows repeated attempts, while account lockout disables access after too many failures. Throttling is usually safer because it reduces brute-force risk without making denial-of-service against a user account too easy. Lockout can be dangerous in public-facing systems because an attacker can intentionally lock users out. The best choice depends on your threat model and support burden.",
+    "real_world": "Help desks often get flooded when aggressive lockout policies are combined with credential stuffing attacks. Users end up unable to sign in even though the attacker never had their password.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tune throttling so it still stops automation without hurting legitimate users?"
+   },
+   {
+    "question": "What should you look for when reviewing third-party dependencies from a security angle?",
+    "answer": "Check whether the dependency is maintained, widely used, and necessary, but also whether it introduces risky transitive packages or outdated cryptography and parsing logic. Security review is not just about known CVEs; it also includes suspicious install scripts, excessive permissions, and supply-chain trust. Pinning versions and reviewing lockfiles helps keep builds reproducible. The trade-off is speed of adoption versus the operational cost of carrying untrusted code.",
+    "real_world": "A seemingly harmless library can pull in many transitive dependencies, and one compromised package can affect every service that builds from the same lockfile. This is a common source of supply-chain incidents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do when a critical dependency has a known vulnerability but no immediate replacement?"
+   },
+   {
+    "question": "How would you debug a suspected XSS issue that only appears in one browser or on one page?",
+    "answer": "Start by identifying the exact sink where untrusted data becomes HTML, script, or a URL, then reproduce with a minimal payload. Browser differences often come from parsing quirks, DOM manipulation order, or framework escape hatches like raw HTML rendering. Check whether the issue is reflected, stored, or DOM-based, because the fix differs. The key is to trace data flow end to end rather than only inspecting the visible page output.",
+    "real_world": "A bug may disappear in one browser because its parser handles malformed markup differently, but the underlying injection is still present. Teams often miss these because they test only the happy path with sanitized sample data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you confirm that a fix actually closes the XSS path and not just the specific payload you tested?"
+   },
+   {
+    "question": "What is secure error handling, and why should production errors be different from internal logs?",
+    "answer": "User-facing errors should reveal as little as possible about internals, while logs should contain enough detail for debugging and incident response. Exposing stack traces, SQL fragments, or configuration values to users helps attackers fingerprint the system. At the same time, over-redacting logs can make real incidents impossible to investigate, so the logging layer should be more detailed but access-controlled. The trade-off is observability versus information leakage.",
+    "real_world": "A production stack trace can tell an attacker what framework version, file paths, and query structure you use. Internally, the same trace may be exactly what on-call needs to fix the issue quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of data would you mask or exclude from logs, and how would you still make incidents diagnosable?"
+   },
+   {
+    "question": "How do you approach security in a CI/CD pipeline without making delivery painfully slow?",
+    "answer": "Put cheap checks early and expensive checks later, and fail fast on issues that are both high-confidence and high-impact. Typical controls include secret scanning, dependency checks, SAST, and policy checks during build, with deeper testing and approval gates for risky changes. The goal is to catch obvious problems before deployment while keeping the pipeline predictable for developers. The trade-off is coverage versus throughput, so prioritize controls by the threats most likely to hurt your system.",
+    "real_world": "If security checks only run after deployment, they become fire drills instead of guardrails. Teams usually get much better compliance when the pipeline blocks obvious secret leaks or vulnerable dependencies before merge.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide which findings should fail the build versus just create a ticket?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How do you design authorization for a distributed system so checks stay correct across services and caches?",
+    "answer": "Treat authorization as a server-side decision at every trust boundary, not something implied by a prior check in another service. The hard part is avoiding stale decisions: cached roles, replicated policy data, and long-lived tokens can all preserve access after revocation. A strong design keeps tokens short-lived, validates audience and scope per service, and uses fresh data or push invalidation for high-risk permissions. The trade-off is latency and availability versus revocation speed and consistency.",
+    "real_world": "A common incident is removing a user from an admin group and finding they still have access for minutes or hours because edge caches, JWT claims, or downstream services never re-check current policy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose opaque reference tokens with introspection over self-contained JWTs for authorization?"
+   },
+   {
+    "question": "What are the security risks of using JWTs for sessions, and what trade-offs matter in production?",
+    "answer": "JWTs are fine when you need stateless verification, but they move risk into token lifetime, revocation, and claim design. If a signed token is stolen, every service that trusts the issuer may accept it until expiry unless you add revocation state, which weakens the stateless benefit. Large JWTs also increase request size and can leak sensitive claims into logs or browser storage if handled badly. In production, short lifetimes, narrow audiences, key rotation, and avoiding sensitive payload data matter more than the token format itself.",
+    "real_world": "Teams often switch to JWTs to avoid a session store, then discover logout, emergency revocation, and permission changes are harder than with server-side sessions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle key rotation for JWT signing without breaking in-flight requests?"
+   },
+   {
+    "question": "Can you explain SSRF beyond the basic definition, including why cloud and internal-service environments make it worse?",
+    "answer": "SSRF is dangerous because the server can often reach networks and identities the attacker cannot. In cloud environments that can mean metadata endpoints, internal admin panels, service discovery, or authenticated calls using the app's own network path and credentials. Defenses need more than string filters: resolve and re-check destinations, restrict outbound traffic at the network layer, block private and link-local ranges where appropriate, and use allowlists for integrations. The edge cases are redirects, DNS rebinding, alternate IP encodings, and protocols other than plain HTTP.",
+    "real_world": "Real incidents involve image fetchers, webhook validators, or PDF renderers being abused to hit internal APIs or cloud metadata services and exfiltrate credentials.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely build a feature that fetches user-supplied URLs for previews?"
+   },
+   {
+    "question": "What is mass assignment, and why does it still show up in modern frameworks?",
+    "answer": "Mass assignment happens when a framework binds client-supplied fields directly onto a model or DTO without an explicit allowlist. The bug appears when internal fields like role, account status, owner ID, or billing flags are present in the object graph and can be set by a request body the developer did not expect. It still happens because auto-binding is convenient and code reviews focus on validation, not on which properties are actually writable. The safest pattern is explicit input models and field-level mapping, not reusing persistence models as request models.",
+    "real_world": "An API may validate that email is well formed but still let a caller set isAdmin=true because the ORM entity was bound directly from JSON.",
+    "code_lang": "json",
+    "code": "{\n  \"email\": \"user@example.com\",\n  \"displayName\": \"A\",\n  \"isAdmin\": true,\n  \"accountStatus\": \"active\"\n}",
+    "follow_up": "What code review signs tell you a controller is vulnerable to mass assignment?"
+   },
+   {
+    "question": "How do XXE vulnerabilities actually happen under the hood, and when are they still relevant today?",
+    "answer": "XXE happens when an XML parser accepts external entities or DTD processing and then resolves attacker-controlled references. That can expose local files, trigger SSRF, or amplify resource consumption depending on parser behavior and surrounding code. It is less common than before because many frameworks moved to JSON and some parsers changed defaults, but it still matters anywhere XML, SVG, office documents, or SOAP are processed. The safe approach is to disable external entity resolution and DTDs unless there is a specific, justified need.",
+    "real_world": "It often appears in document import pipelines where an upload is treated as harmless data but is parsed by a library with dangerous XML features enabled.",
+    "code_lang": "xml",
+    "code": "<!DOCTYPE x [ <!ENTITY e SYSTEM \"file:///etc/passwd\"> ]>\n<doc>&e;</doc>",
+    "follow_up": "Why can SVG uploads reintroduce XML-related risk even if your main API is JSON-only?"
+   },
+   {
+    "question": "What is insecure cryptographic randomness, and where does it become a real application security bug?",
+    "answer": "The issue is using a predictable random source for security-sensitive values like reset tokens, session IDs, API keys, CSRF secrets, or invitation links. If the generator is time-based, seeded poorly, shared incorrectly across processes, or simply not cryptographically secure, an attacker may guess future values or recover state from observed outputs. The fix is to use the platform's cryptographically secure RNG and enough entropy for the token's lifetime and exposure. This is less about encryption algorithms and more about unpredictability under observation.",
+    "real_world": "A production failure mode is generating tokens in one service with a weak PRNG during high traffic, leading to collisions or guessable identifiers that only show up under scale.",
+    "code_lang": "python",
+    "code": "import secrets\n\ndef reset_token():\n    return secrets.token_urlsafe(32)\n",
+    "follow_up": "How would you estimate whether a token length is sufficient for a public, brute-forceable endpoint?"
+   },
+   {
+    "question": "How would you compare mTLS, API gateways, and signed requests for securing service-to-service traffic?",
+    "answer": "They solve different layers of trust. mTLS authenticates peers at the transport layer and helps prevent unauthorized network clients, but it does not express fine-grained application authorization by itself. Signed requests or bearer credentials carry application identity and can survive through proxies, while a gateway centralizes policy, authn, and observability but can become a choke point or single policy domain. In practice, mature systems often use mTLS for channel identity plus application-layer auth for service permissions.",
+    "real_world": "In microservice incidents, teams sometimes assume 'it came over mTLS' means the caller is authorized, then discover any workload with a valid cert could hit sensitive endpoints.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure modes appear when certificate rotation or SPIFFE-style identity issuance breaks at scale?"
+   },
+   {
+    "question": "How do you secure webhook ingestion when the sender is outside your trust boundary and delivery is asynchronous?",
+    "answer": "Treat a webhook like an untrusted API call that happens to be initiated by the other side. Verify a signature over the raw request body, enforce a timestamp or replay window, and make processing idempotent because retries are normal. You also need to separate acknowledgment from heavy downstream work so attackers cannot tie up workers with slow deliveries or replay storms. IP allowlists can help, but they are usually weaker than per-provider signature verification and good replay handling.",
+    "real_world": "A common outage is accepting webhooks without replay protection, then double-processing orders or refunds when the provider legitimately retries after a timeout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is verifying the signature on the exact raw body important, and how can middleware break it?"
+   },
+   {
+    "question": "What does clickjacking protection actually defend against, and what are its limits in modern apps?",
+    "answer": "Clickjacking prevents your pages from being embedded and visually manipulated so a user clicks on your UI while thinking they are clicking something else. The main controls are framing restrictions such as CSP frame-ancestors and, where needed, legacy headers for older clients. Its limits are that it does not stop same-origin UI abuse, phishing on lookalike pages, or actions triggered without user awareness by other bugs. It is especially important for sensitive state-changing pages and third-party integrator surfaces.",
+    "real_world": "Administrative consoles and payment flows are frequent targets because a single hidden click can approve access, transfer funds, or change security settings.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you allow legitimate embedding by a partner without opening the page to arbitrary framing?"
+   },
+   {
+    "question": "How do race conditions create security bugs, and what patterns help prevent them?",
+    "answer": "A race condition becomes a security issue when a check and the protected action are not atomic. Examples include redeeming a one-time token twice, overspending a balance, bypassing per-user quotas, or changing ownership between authorization check and update. Prevention usually means enforcing invariants where the data lives: transactions, unique constraints, conditional updates, row-level locking, or idempotency keys, rather than trusting application timing. The trade-off is throughput and contention versus correctness under concurrent load.",
+    "real_world": "These bugs often evade testing and only appear in production when retries, parallel requests, and multiple workers hit the same account or token at once.",
+    "code_lang": "sql",
+    "code": "UPDATE coupons\nSET redeemed_by = ?\nWHERE code = ? AND redeemed_by IS NULL;",
+    "follow_up": "Why is an application-level mutex often insufficient in a horizontally scaled system?"
+   },
+   {
+    "question": "How would you design and verify object-level authorization in a GraphQL API where one request can traverse many related objects?",
+    "answer": "The risk in GraphQL is checking access only at the top-level resolver and then leaking nested fields through relation traversal. A safer design is to enforce authorization at the business or data-access layer, so every object fetch and field with sensitivity is evaluated against the caller and action. You also need query complexity and depth limits, because attackers can turn authorization work into a denial-of-service vector. In practice I look for default-deny behavior, batched policy evaluation, and tests that mix authorized and unauthorized objects in one query.",
+    "real_world": "Teams often secure queries like `user(id)` but forget nested paths such as `user.team.billingAccounts`, which becomes a production data leak. At scale, naive per-field checks can also create N+1 authorization calls and high latency under attacker-crafted queries.",
+    "code_lang": "graphql",
+    "code": "type Query { project(id: ID!): Project }\ntype Project {\n  id: ID!\n  name: String!\n  invoices: [Invoice!]!\n}\n# Don't rely only on Query.project auth;\n# invoices also needs per-object auth.",
+    "follow_up": "How would you cache authorization decisions in that setup without serving stale access after a role change?"
+   },
+   {
+    "question": "When teams say they use signed URLs for downloads or uploads, what security properties do they actually get, and what can still go wrong?",
+    "answer": "A signed URL usually gives time-limited, tamper-evident access to one operation on one resource, without exposing a broader credential. Its safety depends on what is covered by the signature: path, method, expiry, and sometimes headers or content type. Common failures are long expirations, logging or referrer leakage of the URL, signing overly broad prefixes, and assuming the URL proves user identity after it is shared. For uploads, you also still need server-side validation after the object lands, because the storage service only enforced the signature contract, not business safety.",
+    "real_world": "A common incident is support tools or CDN logs capturing signed URLs, which then remain usable until expiry. Another is letting clients upload directly to object storage and forgetting malware scanning or ownership checks before the file becomes visible to other users.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you include in the signature scope for a direct-to-storage upload to reduce abuse?"
+   },
+   {
+    "question": "How do you harden redirect-based OAuth or OIDC login flows in an application that has multiple frontends and environments?",
+    "answer": "The big controls are exact redirect URI matching, strong state handling, PKCE for public clients, and treating the identity provider response as untrusted until it is fully validated. Problems happen when teams allow wildcard redirect URIs, reuse state across tabs, or mix environments so a token meant for staging is accepted by production. You also need clear audience and issuer validation, and a safe post-login redirect mechanism on your side to avoid turning the auth flow into an open redirect. The trade-off is operational complexity: stricter registration and validation reduce flexibility but close high-impact account takeover paths.",
+    "real_world": "Real incidents often come from a forgotten callback URL on an old subdomain or mobile deep link handler, which gives an attacker a place to receive valid codes. Multi-tenant products also get into trouble when one tenant's custom domain is allowed to influence redirect handling for another tenant.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does PKCE help even if the authorization code already goes over TLS?"
+   },
+   {
+    "question": "What is broken access control through stale caches, and how do you prevent it in high-traffic systems?",
+    "answer": "Stale cache bugs happen when data or authorization decisions are cached longer than the underlying entitlement remains valid. A user loses a role, project membership, or legal hold exemption, but edge caches, application caches, or precomputed ACLs still serve content they should no longer see. The fix is to separate caching of public data from caching of user-specific decisions, use short TTLs or event-driven invalidation for entitlements, and include the right cache key dimensions like tenant and auth context. The trade-off is cost and latency versus correctness; aggressive caching is great until revocation needs to be near real time.",
+    "real_world": "This shows up after employee offboarding or emergency permission revocation, when access appears removed in the source of truth but still works for minutes through another layer. CDNs and GraphQL response caches are common places where teams accidentally cache private responses too broadly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design revocation if you need permission changes to take effect globally within seconds?"
+   },
+   {
+    "question": "How do prototype pollution bugs turn into application security issues in JavaScript services, not just weird object behavior?",
+    "answer": "Prototype pollution lets attacker-controlled keys modify shared object prototypes or assumptions made by framework code. That can become a security issue when polluted properties change authorization flags, request options, template behavior, or deserialization logic for later requests. The dangerous part is cross-request impact in long-lived processes: one malicious payload can affect unrelated users until the process restarts. Defenses are rejecting special keys like `__proto__`, `constructor`, and `prototype`, using safe merge utilities, and avoiding treating plain objects as trusted configuration.",
+    "real_world": "Production incidents have included polluted request option objects that silently disable TLS verification or flip internal-only flags. Because Node processes are reused, the blast radius is often much larger than a single request.",
+    "code_lang": "javascript",
+    "code": "const target = {};\nObject.assign(target, JSON.parse('{\"__proto__\":{\"isAdmin\":true}}'));\nconst user = {};\nconsole.log(user.isAdmin); // polluted in vulnerable patterns",
+    "follow_up": "Why can this become a cross-tenant issue in a shared process model?"
+   },
+   {
+    "question": "What is the security value of token binding to a client, such as DPoP or mTLS-bound tokens, and what operational trade-offs come with it?",
+    "answer": "Binding a token to a client makes a stolen bearer token less useful, because the attacker also needs the client's key material or certificate to use it. That reduces replay risk in cases like proxy logs, browser storage theft, or malware exfiltrating access tokens without the private key. The trade-offs are real: key management on clients, clock and nonce handling, proxy compatibility, and more complicated incident response when devices rotate or lose keys. It is most valuable when bearer-token theft is a realistic threat and you control enough of the client or network path to enforce the binding consistently.",
+    "real_world": "Financial and healthcare systems use sender-constrained tokens where simple bearer semantics are too weak. Teams often underestimate the rollout pain when mobile apps, API gateways, and backend services all need compatible validation behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "In what situations would you still choose short-lived bearer tokens over sender-constrained tokens?"
+   },
+   {
+    "question": "How do unsafe defaults in cloud storage or CDN integration become an OWASP-style application security problem?",
+    "answer": "The application often assumes object storage or a CDN is just infrastructure, but its access model becomes part of your app's authorization boundary. Bugs appear when private objects are uploaded to public buckets, signed URLs are bypassed by origin access, directory listing is enabled, or cache keys ignore authorization headers and cookies. You need explicit ownership and visibility metadata, deny-by-default bucket policies, private origins, and tests that verify the exact retrieval path users will hit in production. The subtlety is that the app can be logically correct while the serving layer exposes data anyway.",
+    "real_world": "A frequent incident is private exports or invoices being reachable through a guessed CDN URL because the origin was publicly readable. Another is a CDN caching an authenticated response once and serving it to other users due to a bad cache key.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What cache key mistakes most commonly turn authenticated content into public content at the edge?"
+   },
+   {
+    "question": "If you had to review a secrets rotation design, what failure modes would you look for beyond just whether rotation exists?",
+    "answer": "I would check whether old and new secrets can overlap safely, how clients discover updates, and what happens during partial rollout or rollback. Rotation often fails because services cache credentials too long, connection pools keep using old passwords, or a single secret is shared so broadly that coordinated cutover becomes brittle. Good designs support versioned secrets, dual-read or dual-validation windows, and clear revocation paths for emergencies. The security trade-off is between fast invalidation and operational stability; instant cutover sounds ideal until it takes down half the fleet.",
+    "real_world": "Many outages happen during database password rotation when some workers reload config and others do not, causing intermittent auth failures for hours. From a security angle, emergency rotation after a suspected leak is only useful if propagation is fast and observable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you rotate a signing key for stateless tokens without instantly logging out every user?"
+   },
+   {
+    "question": "How do you evaluate whether a WAF meaningfully reduces application risk versus just adding latency and false confidence?",
+    "answer": "A WAF is best treated as a compensating control, not a primary fix for application bugs. I look at whether it stops specific exploit classes relevant to our stack, how it handles encoded and protocol-smuggled variants, and whether we can run it in detect mode first to measure false positives. Performance matters because deep inspection can add noticeable tail latency, and brittle signatures can break normal traffic under new app releases. It is useful for buying time and reducing commodity attacks, but if teams use it to defer fixing root causes, risk usually accumulates.",
+    "real_world": "In production, WAFs often block noisy scanners and simple payloads but miss business-logic abuse or app-specific authorization bugs. They also create incidents when a new rule set suddenly rejects checkout traffic or API clients at the edge.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you use to decide whether a WAF rule should move from detect mode to block mode?"
+   },
+   {
+    "question": "What is a parser differential vulnerability, and why does it matter when multiple layers handle the same request or file?",
+    "answer": "Parser differential means two components interpret the same bytes differently, creating a security gap at trust boundaries. A classic pattern is one layer validating a request, URL, header, or file format, and a downstream layer parsing it differently and doing something dangerous with content the first layer thought was safe. This matters in chains like CDN to proxy to app, or upload scanner to image library to document converter. The fix is to normalize once, validate after normalization, minimize parser diversity, and test weird encodings and malformed inputs across the whole path.",
+    "real_world": "Request smuggling and file-type confusion are practical examples: the gateway thinks one thing is being sent, the backend sees another. These issues are hard to catch because every individual component can appear correct in isolation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give a concrete example of parser differential leading to request smuggling or file validation bypass?"
+   }
+  ]
+ }
+}

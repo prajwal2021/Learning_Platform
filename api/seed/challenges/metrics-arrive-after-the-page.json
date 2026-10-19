@@ -1,0 +1,375 @@
+{
+  "slug": "metrics-arrive-after-the-page",
+  "title": "Alerts fire twenty minutes after users start seeing errors",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "observability",
+    "alerting",
+    "metrics",
+    "incident-response",
+    "sre"
+  ],
+  "scenario": "A regional outage causes 25% 5xx responses starting at 10:03, but the first page arrives at 10:24. Services buffer metrics locally for 60 seconds, the collector is overloaded and lags by 8 minutes, and the page is based on a 15-minute rolling average of 5xx rate. Application logs show the error spike immediately, but paging depends only on the delayed metrics pipeline.",
+  "goal": "Change the alerting design so critical 5xx incidents page within the first few minutes while keeping noise controlled.",
+  "concepts": [
+    {
+      "key": "metrics",
+      "name": "Metrics",
+      "summary": "Metrics are numeric measurements collected over time, such as request rate or 5xx rate. They are usually aggregated and queried for dashboards and alerts.",
+      "used_here": "The existing page uses service 5xx metrics that arrive late because of buffering and collector lag."
+    },
+    {
+      "key": "logs",
+      "name": "Logs",
+      "summary": "Logs are timestamped records emitted by applications as individual events happen. They often show detailed evidence before aggregated systems catch up.",
+      "used_here": "The application logs show the 10:03 error spike before the metric-based page fires."
+    },
+    {
+      "key": "local-buffering",
+      "name": "Local buffering",
+      "summary": "Local buffering means a process holds telemetry briefly before sending it in batches. This lowers overhead but adds delay before data is visible elsewhere.",
+      "used_here": "Each service waits up to 60 seconds before sending metrics to the collector."
+    },
+    {
+      "key": "collector",
+      "name": "Collector",
+      "summary": "A collector receives telemetry from services and forwards or stores it for querying. If it is overloaded, new data can queue behind older data.",
+      "used_here": "The collector is 8 minutes behind, so alerting sees old metric samples."
+    },
+    {
+      "key": "ingestion-lag",
+      "name": "Ingestion lag",
+      "summary": "Ingestion lag is the age of the newest data available to a monitoring system. High lag means dashboards and alerts describe the past, not the current system.",
+      "used_here": "The metric path has about 9 minutes of delay before the 15-minute alert window even evaluates the bad data."
+    },
+    {
+      "key": "alert-evaluator",
+      "name": "Alert evaluator",
+      "summary": "An alert evaluator periodically runs alert rules against available telemetry. It can only alert on data that has already arrived and been queried.",
+      "used_here": "The evaluator fires at 10:24 after delayed metrics and the rolling window cross the rule condition."
+    },
+    {
+      "key": "rolling-average",
+      "name": "Rolling average",
+      "summary": "A rolling average smooths values over a fixed recent time window. It reduces noise but can hide sudden changes until enough bad samples fill the window.",
+      "used_here": "The existing 15-minute rolling average delays detection of the acute 25% 5xx spike."
+    },
+    {
+      "key": "black-box-probe",
+      "name": "Black-box probe",
+      "summary": "A black-box probe tests a service from the outside, the way a user would, without relying on the service's internal telemetry. It is also called synthetic monitoring.",
+      "used_here": "A probe can detect 5xx responses from critical paths even when internal metrics are delayed."
+    },
+    {
+      "key": "critical-path",
+      "name": "Critical path",
+      "summary": "A critical path is a user journey or endpoint that must work for the product to be usable. Examples include login, checkout, or API requests required by most customers.",
+      "used_here": "The fast alert should watch endpoints whose failures justify paging immediately."
+    },
+    {
+      "key": "telemetry-lag-alert",
+      "name": "Telemetry lag alert",
+      "summary": "A telemetry lag alert fires when monitoring data is too old to trust for paging. It warns that the alerting system itself is degraded.",
+      "used_here": "The metrics pipeline should page or at least notify when collector lag makes 5xx alerts stale."
+    },
+    {
+      "key": "burn-rate-alert",
+      "name": "Burn-rate alert",
+      "summary": "A burn-rate alert detects how quickly a service is consuming its allowed error budget. Short windows catch severe failures quickly, while longer windows reduce noise.",
+      "used_here": "A fast 5xx rule should page on a high short-window burn rate instead of waiting for a 15-minute average."
+    },
+    {
+      "key": "slo-error-budget",
+      "name": "SLO error budget",
+      "summary": "An SLO defines the reliability target for a service, and the error budget is the allowed amount of failure. Alerting on budget burn ties pages to user impact.",
+      "used_here": "The 5xx alert should page when the incident consumes the allowed failure budget too quickly."
+    },
+    {
+      "key": "low-latency-signal",
+      "name": "Low-latency signal",
+      "summary": "A low-latency signal is a telemetry path designed to arrive quickly, even if it has less detail. It is used for urgent detection rather than deep analysis.",
+      "used_here": "Critical paging should use a fast path that is independent of the overloaded bulk metrics pipeline."
+    },
+    {
+      "key": "bulk-analytics",
+      "name": "Bulk analytics",
+      "summary": "Bulk analytics systems store large volumes of detailed telemetry for dashboards, reports, and investigation. They often accept more delay to reduce cost and handle high cardinality.",
+      "used_here": "The existing delayed metrics path can remain useful for analysis, but it should not be the only paging source."
+    },
+    {
+      "key": "game-day",
+      "name": "Game day",
+      "summary": "A game day is a planned test where a team injects controlled failures to verify detection and response. It checks whether the system behaves as expected before a real incident.",
+      "used_here": "The final validation injects a controlled 25% 5xx failure and verifies the new alert paths fire on time."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Establish the timeline",
+      "question": "You join the incident after the late page. What is the best first check to separate a service failure from an alerting delay?",
+      "concept_keys": [
+        "logs",
+        "metrics",
+        "collector",
+        "alert-evaluator"
+      ],
+      "options": [
+        {
+          "text": "Align application log event times, metric sample timestamps, collector receive times, and alert evaluation times for 10:00-10:25.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Restart the collector and then compare the new dashboard shape with the page time after it recovers.",
+          "correct": false,
+          "hint": "A restart may help recovery, but it can also destroy the queue state you need to understand the delay. First preserve and compare the timestamps already produced by each stage.",
+          "id": "b"
+        },
+        {
+          "text": "Increase the metric dashboard resolution and inspect whether the 5xx graph has one-minute spikes hidden by the UI.",
+          "correct": false,
+          "hint": "Dashboard resolution can hide visual detail, but the page was driven by the alerting pipeline, not by what the graph displayed. You need timestamps from the pipeline stages.",
+          "id": "c"
+        },
+        {
+          "text": "Compare the page time with the deploy calendar and rollback any release that touched the affected service.",
+          "correct": false,
+          "hint": "A rollback may be needed if a deploy caused the 5xxs, but it does not explain why logs saw the failure much earlier than paging. The first question is where time was lost.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The key evidence is the time each system first knew about the 10:03 failures. Comparing log event time, metric sample time, collector receive time, and evaluator time shows whether the page was late because data arrived late or because the rule was slow. Looking only at deploys is tempting during a 5xx incident, but it does not explain a 21-minute gap between user errors and the page."
+    },
+    {
+      "title": "Interpret the delay",
+      "question": "The timeline shows logs recording 25% 5xx at 10:03, metric batches leaving services about 60 seconds later, the collector delivering those samples around 10:12, and the 15-minute rolling-average alert firing at 10:24. What does this mean?",
+      "concept_keys": [
+        "local-buffering",
+        "collector",
+        "ingestion-lag",
+        "rolling-average"
+      ],
+      "options": [
+        {
+          "text": "The 60-second service buffer alone explains the late page, because alerts cannot fire before a complete metric batch arrives.",
+          "correct": false,
+          "hint": "A one-minute buffer is real delay, but the page arrived 21 minutes after the errors began. Account for the collector queue and the alert window as well.",
+          "id": "a"
+        },
+        {
+          "text": "The metric alert was looking at stale data for about 9 minutes, and the 15-minute average then smoothed the acute spike before paging.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "The 15-minute rolling average alone explains the late page, because rolling windows always wait for a full clean window before firing.",
+          "correct": false,
+          "hint": "A rolling window can evaluate before a full new window has elapsed, using the samples available inside the window. The larger problem includes when the bad samples become available to the evaluator.",
+          "id": "c"
+        },
+        {
+          "text": "The logs and metrics disagree about the real start time, so the safer conclusion is that the outage probably began closer to 10:12.",
+          "correct": false,
+          "hint": "Application logs are direct evidence of requests failing at 10:03. Late metric arrival should not be reinterpreted as a later incident start.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The 60-second buffer plus the 8-minute collector backlog means the alert evaluator could not see the 10:03 samples until roughly 10:12. After that, a 15-minute rolling average diluted the sudden 25% 5xx rate with earlier healthy samples. Blaming only the 60-second buffer or only the rolling window misses the combined delay."
+    },
+    {
+      "title": "Name the root cause",
+      "question": "Given that the service failed at 10:03 and logs showed it immediately, what should the incident write-up name as the alerting root cause?",
+      "concept_keys": [
+        "metrics",
+        "ingestion-lag",
+        "rolling-average",
+        "alert-evaluator"
+      ],
+      "options": [
+        {
+          "text": "The collector overload was the whole alerting root cause, because removing the 8-minute queue would have made the 15-minute alert immediate.",
+          "correct": false,
+          "hint": "Removing the queue would help, but a 15-minute rolling average still slows detection of a sharp failure. The root cause spans both data freshness and rule design.",
+          "id": "a"
+        },
+        {
+          "text": "Paging depended only on a delayed metrics path and a slow rolling window, so acute user-visible failures were detected too late.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "The regional outage was the alerting root cause, because no alerting design can page before a dependency fails.",
+          "correct": false,
+          "hint": "The outage caused user impact, but the alerting incident is about why paging lagged behind that impact. Root cause should explain the detection failure, not just the service failure.",
+          "id": "c"
+        },
+        {
+          "text": "The logs were not connected to paging, because any telemetry source that sees errors first should automatically become the pager source.",
+          "correct": false,
+          "hint": "Logs can be useful evidence, but not every log stream is suitable for low-noise paging. The issue is that the only pager path was both stale and slow.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The alerting root cause is not just that a collector was slow; it is that the only paging signal had too much latency and too much smoothing for a sudden 25% 5xx incident. Even if the collector lag dropped, a 15-minute average would still be a poor first detector for acute failures. The write-up should distinguish the service outage from the detection design flaw."
+    },
+    {
+      "title": "Add a fast user-facing signal",
+      "question": "You need a paging signal that can catch the same kind of 25% regional 5xx incident within the first few minutes, even if internal metrics lag. Which design is most reliable?",
+      "concept_keys": [
+        "black-box-probe",
+        "critical-path",
+        "low-latency-signal"
+      ],
+      "options": [
+        {
+          "text": "Wait for the metrics collector to recover, then replay the delayed 5xx samples through a high-priority alert evaluator.",
+          "correct": false,
+          "hint": "Replay can help reconstruct what happened, but it still pages after the monitoring backlog clears. A first-page signal needs to observe current user-facing behavior directly.",
+          "id": "a"
+        },
+        {
+          "text": "Run 1 request per second for each critical endpoint from every customer region and load-balancer cell, and page when any cell has at least 120 attempts in 2 minutes with at least 10% 5xx.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Run one synthetic request every 10 seconds globally, and page when 3 of the last 5 requests return 5xx.",
+          "correct": false,
+          "hint": "With a 25% independent failure rate, a small sample can easily miss the problem for several windows. A single global stream also may not cover the affected region or cell.",
+          "id": "c"
+        },
+        {
+          "text": "Use browser error reports from real users only, and page when the client-side 5xx count doubles compared with yesterday.",
+          "correct": false,
+          "hint": "Real-user reports are valuable, but delivery depends on client sampling, browsers, and user traffic mix. They are not a controlled low-latency check for every critical region and path.",
+          "id": "d"
+        }
+      ],
+      "explanation": "At 1 request per second per region/cell, a 2-minute window has 120 attempts; a true 25% 5xx rate produces about 30 failures on average, well above a 10% threshold. Per-region and per-cell coverage also avoids hiding a segmented outage in a global average. The tempting 3-of-5 rule uses too few samples: at 25% independent failures it has only about a 10% chance to trip in a five-probe window and can miss the affected segment entirely."
+    },
+    {
+      "title": "Watch the watcher",
+      "question": "After adding the external paging signal, what should you add so the metrics-based alerts do not silently become stale again?",
+      "concept_keys": [
+        "collector",
+        "ingestion-lag",
+        "telemetry-lag-alert",
+        "alert-evaluator"
+      ],
+      "options": [
+        {
+          "text": "Disable metric-based paging whenever collector lag is suspected, and rely on manual log searches during those periods.",
+          "correct": false,
+          "hint": "Suppressing pages during telemetry trouble can hide real incidents. A better design tells you explicitly when the metric signal is too old to trust.",
+          "id": "a"
+        },
+        {
+          "text": "Record source event time, collector receive time, and newest sample age at evaluation time; alert when paging metrics are more than 2 minutes stale.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Add a dashboard panel for collector CPU and ask the on-call to check it whenever a service alert feels late.",
+          "correct": false,
+          "hint": "A dashboard is passive and depends on someone already looking. Staleness of paging data should be detected automatically.",
+          "id": "c"
+        },
+        {
+          "text": "Scale the collector to twice the normal peak traffic and assume alert freshness is covered by the added capacity.",
+          "correct": false,
+          "hint": "Capacity reduces the chance of lag, but it does not prove the pipeline is fresh during the next overload or partial failure. The alerting system needs its own freshness signal.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A monitoring pipeline needs freshness monitoring just like a service needs health checks. Source timestamps, receive timestamps, and evaluator sample age show whether an alert is evaluating current data or history. Extra collector capacity is useful, but without a lag alert you can still have silent stale pages during the next overload."
+    },
+    {
+      "title": "Change the metric rule",
+      "question": "You now have a separate external signal and a freshness alert for the metrics pipeline. For metric-based 5xx paging, assuming the paging metric stream is kept under 60 seconds of ingestion lag, which rule is the best replacement for the 15-minute rolling-average page?",
+      "concept_keys": [
+        "burn-rate-alert",
+        "slo-error-budget",
+        "low-latency-signal",
+        "bulk-analytics"
+      ],
+      "options": [
+        {
+          "text": "Page on the raw number of 5xx responses per minute, using the same threshold for peak traffic and overnight traffic.",
+          "correct": false,
+          "hint": "Raw counts ignore traffic volume and can be noisy at peak or blind at low traffic. A rate tied to user impact is safer for paging.",
+          "id": "a"
+        },
+        {
+          "text": "Keep the 15-minute rolling average but lower the 5xx threshold until it would have fired at 10:10 in this incident.",
+          "correct": false,
+          "hint": "Lowering a slow rule can increase noise without fixing the main timing problem. The data still arrives late, and the long window still smooths sudden failures.",
+          "id": "b"
+        },
+        {
+          "text": "Page on a high 2-minute error-budget burn rate from the low-latency metric stream, and keep longer windows for confirmation and dashboards.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Use a 30-minute rolling average so brief spikes do not page, and rely on logs to diagnose severe failures after users report them.",
+          "correct": false,
+          "hint": "This reduces noise by making detection even slower. The goal is to page while a severe incident is still unfolding.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A short burn-rate rule detects that the service is consuming its allowed failures too quickly, so it catches severe 5xx spikes without waiting for a 15-minute average. With under 60 seconds of ingestion lag and a 2-minute window, the metric page can fire in the first few minutes. Simply lowering the old threshold would make the same delayed, smoothed signal noisier rather than faster."
+    },
+    {
+      "title": "Validate the fix",
+      "question": "What game-day test best proves the new design addresses this incident without relying on the old delayed page?",
+      "concept_keys": [
+        "game-day",
+        "black-box-probe",
+        "burn-rate-alert",
+        "telemetry-lag-alert"
+      ],
+      "options": [
+        {
+          "text": "Delay the collector by 8 minutes in staging and verify dashboards eventually show old data after the backlog drains.",
+          "correct": false,
+          "hint": "Backlog recovery is not enough. You need to verify that stale paging data is detected and that user-impact paging does not wait for the backlog.",
+          "id": "a"
+        },
+        {
+          "text": "Inject a 100% outage for one endpoint and verify every alert fires, because a total outage is easier to detect consistently.",
+          "correct": false,
+          "hint": "A total outage is useful, but it does not prove the design catches the partial 25% failure from this incident. The validation should match the failure shape you are trying to fix.",
+          "id": "b"
+        },
+        {
+          "text": "Inject a controlled 25% 5xx failure in one customer region and cell for a critical path; verify the synthetic page fires within 3 minutes, the short burn-rate page meets its lag-plus-window target, and the metric-lag alert fires when collector delay is added.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Replay the 10:03 metrics through the old 15-minute alert and verify the page time matches the historical 10:24 page.",
+          "correct": false,
+          "hint": "That confirms the old failure mode, not the new detection behavior. The test should exercise the new fast paths and their timing targets.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The validation should reproduce the important shape of the incident: partial 25% 5xx, regional or cell-scoped impact, and a delayed metrics pipeline. The synthetic rule has enough samples to detect the injected 25% failure within a 2-minute window plus evaluation time, so a 3-minute target is consistent. Testing only a 100% outage or replaying old metrics would not prove the new design catches the original failure early."
+    }
+  ],
+  "takeaway": "Late pages often come from two delays stacked together: stale telemetry and slow alert windows. Keep at least one low-latency, user-facing signal separate from bulk analytics, and monitor the freshness of the telemetry pipeline itself. For acute failures, use short burn-rate or probe-based alerts with enough coverage and sample size to detect the incident you care about.",
+  "review_issues": [
+    "Step 2: The pre-step concept entry for `ingestion-lag` gives away the answer by stating that the metric path has about 9 minutes of delay before the 15-minute alert window evaluates bad data.",
+    "Step 4: The pre-step concept entries for `black-box-probe`, `critical-path`, and `low-latency-signal` point directly to the correct design: an external synthetic critical-path signal independent of delayed internal metrics.",
+    "Step 5: The pre-step concept entry for `telemetry-lag-alert` gives away the correct answer by saying the metrics pipeline should page or notify when collector lag makes 5xx alerts stale.",
+    "Step 6: The pre-step concept entry for `burn-rate-alert` gives away the correct answer by saying the fast 5xx rule should page on a high short-window burn rate instead of a 15-minute average.",
+    "Step 7: The pre-step concept entry for `game-day` gives away the correct validation by saying the final validation injects a controlled 25% 5xx failure and verifies the new alert paths fire on time."
+  ]
+}

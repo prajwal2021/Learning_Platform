@@ -1,0 +1,493 @@
+{
+ "slug": "microservices",
+ "name": "Microservices",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is a microservice, and how is it different from a monolith?",
+    "answer": "A microservice is a small, independently deployable service that owns a specific business capability. A monolith keeps most or all of the application in one codebase and usually one deployable unit. Microservices help teams deploy and scale parts of the system independently, but they add network, operational, and data consistency complexity. For small teams or simple products, a monolith is often easier to build and operate.",
+    "real_world": "A team may start with a monolith and split out one service, like payments, when that part needs separate scaling or deployment. In production, the extra complexity shows up in retries, timeouts, and tracing across services.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a monolith instead of microservices?"
+   },
+   {
+    "question": "What does it mean for a microservice to own its own data?",
+    "answer": "It means the service is responsible for its own database or data store and other services should not write to it directly. Other services interact through the service’s API or events, not by sharing tables. This reduces tight coupling and lets the service change its schema independently. The trade-off is that cross-service queries and transactions become harder.",
+    "real_world": "A common mistake is sharing one database across many services, which makes schema changes risky and creates hidden dependencies. Teams often discover this when one service’s migration breaks another service’s query.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you handle a use case that needs data from multiple services?"
+   },
+   {
+    "question": "What is an API gateway, and why would you use one?",
+    "answer": "An API gateway is a single entry point for clients that routes requests to the right backend service. It can also handle cross-cutting concerns like authentication, rate limiting, logging, and request aggregation. This simplifies clients because they do not need to know every internal service. The trade-off is that it becomes another component to run and can become a bottleneck if overused.",
+    "real_world": "Mobile apps often talk to one gateway instead of calling ten services directly. That makes client code simpler and avoids exposing internal service structure to users.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can happen if too much logic is moved into the gateway?"
+   },
+   {
+    "question": "What is service discovery?",
+    "answer": "Service discovery is how a service finds the network location of another service without hardcoding its address. In dynamic environments, instances can move, restart, or scale up and down, so static hostnames are fragile. Discovery can be done through a registry or platform features like DNS-based lookup. This matters because it makes deployments and autoscaling much easier.",
+    "real_world": "If one payment instance crashes and is replaced, callers should keep working without a config change. Without discovery, teams end up updating IP addresses manually and causing outages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between client-side and server-side service discovery?"
+   },
+   {
+    "question": "Why do microservices often use timeouts and retries?",
+    "answer": "Network calls fail or become slow, so services need timeouts to stop waiting forever and retries to recover from temporary failures. Timeouts prevent threads or connections from being tied up, and retries can smooth over brief issues. The key is to retry only when it is safe and to use backoff so failures do not amplify load. Blind retries can make an outage worse.",
+    "real_world": "If a downstream database is slow, a service without timeouts may pile up requests until it falls over. Teams often see retry storms during incidents when many callers keep hammering a failing dependency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When should you avoid retries?"
+   },
+   {
+    "question": "What is an idempotent operation?",
+    "answer": "An operation is idempotent if doing it multiple times has the same effect as doing it once. This is important in distributed systems because requests can be duplicated by retries, timeouts, or network issues. GET is typically idempotent, and some writes can be designed that way too, such as setting a value rather than incrementing it. Idempotency reduces the risk of duplicate side effects.",
+    "real_world": "A payment endpoint that charges a card twice because the client retried is a costly bug. Teams often add idempotency keys so a repeated request is recognized and only processed once.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a POST endpoint idempotent?"
+   },
+   {
+    "question": "What is eventual consistency?",
+    "answer": "Eventual consistency means that replicas or services may not agree immediately, but they will converge over time if no new updates happen. Microservices often use it when they exchange events instead of doing distributed transactions. It improves availability and decoupling, but users may briefly see stale data. The trade-off is accepting temporary inconsistency in exchange for simpler scaling and resilience.",
+    "real_world": "After an order is placed, the inventory service may update a little later than the order service. A user might briefly see old stock counts, which is expected in an eventually consistent system.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you explain stale data to product teams or users?"
+   },
+   {
+    "question": "What is the difference between synchronous and asynchronous communication between services?",
+    "answer": "Synchronous communication means the caller waits for an immediate response, usually over HTTP or gRPC. Asynchronous communication means the caller sends a message or event and continues without waiting for the receiver to finish. Synchronous calls are simpler to understand, but they create tighter runtime dependencies. Asynchronous messaging improves resilience and buffering, but it makes flow harder to trace and debug.",
+    "real_world": "Checkout might call a pricing service synchronously but publish an order-created event asynchronously. That lets downstream systems update without making the user wait on every step.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose events instead of direct service calls?"
+   },
+   {
+    "question": "What is a circuit breaker?",
+    "answer": "A circuit breaker stops a service from repeatedly calling a dependency that is already failing. After enough failures, it opens and fails fast for a while, giving the downstream service time to recover and preventing extra load. This protects the caller and the dependency during incidents. It is often used with timeouts and retries, not instead of them.",
+    "real_world": "If a recommendation service is down, a circuit breaker can let the app continue with a fallback instead of timing out every request. That keeps the rest of the site responsive during the outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a circuit breaker different from a timeout?"
+   },
+   {
+    "question": "What is a health check in a microservice system?",
+    "answer": "A health check is an endpoint or signal used to tell whether a service is running and ready to receive traffic. Liveness checks answer whether the process is alive, while readiness checks answer whether it can handle requests, such as after startup or while waiting for dependencies. Orchestrators use these signals to restart unhealthy containers or remove unready instances from load balancing. This helps avoid sending traffic to a service that cannot serve it yet.",
+    "real_world": "During deployments, a service may start before it has connected to its database. A readiness check prevents users from hitting it too early and getting errors.",
+    "code_lang": "python",
+    "code": "from flask import Flask\napp = Flask(__name__)\n\n@app.get('/ready')\ndef ready():\n    return 'ok', 200\n",
+    "follow_up": "What should a readiness check verify?"
+   },
+   {
+    "question": "When would you choose microservices instead of a monolith?",
+    "answer": "Choose microservices when you need independent scaling, separate deployments, or clear team ownership around different parts of the system. They can make sense when parts of the product change at different rates or have very different load patterns. For a small app or a small team, a monolith is often simpler and safer. The trade-off is that microservices add network calls, operational overhead, and harder debugging.",
+    "real_world": "A team might split out billing from the main app because it needs stricter change control and different scaling than the rest of the product. In contrast, an early-stage startup usually keeps one deployable until the boundaries are obvious.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main costs or risks of moving from a monolith to microservices?"
+   },
+   {
+    "question": "What is a bounded context in microservices, and why does it matter?",
+    "answer": "A bounded context is a boundary where a specific business meaning and model are consistent. It matters because different services should not share the same terms if they mean different things in different parts of the business. Good service boundaries often line up with bounded contexts, which reduces coupling and confusion. If you ignore this, you end up with services that are technically separate but still mentally tangled.",
+    "real_world": "For example, 'customer' can mean a billing account in one system and a shipping recipient in another. Treating both as the same object often creates bad APIs and awkward data sharing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you find good service boundaries in a real system?"
+   },
+   {
+    "question": "What is a service contract, and what makes a breaking change?",
+    "answer": "A service contract is the agreed behavior of an API: request shape, response shape, status codes, and semantics. A breaking change is one that causes existing clients to fail or behave incorrectly, such as removing a field they depend on or changing the meaning of a value. Backward-compatible changes let old clients keep working while new clients adopt the new behavior. This matters because services are deployed independently and clients may lag behind.",
+    "real_world": "A backend team may add a new field safely, but renaming or deleting an existing field can break mobile apps that update slowly. Teams often version or deprecate APIs to avoid that.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you evolve an API without breaking old clients?"
+   },
+   {
+    "question": "Why is versioning important for microservice APIs?",
+    "answer": "Versioning lets you change an API while keeping older clients working. It helps when you need to make incompatible changes, deprecate old behavior, or support multiple consumers at once. Common approaches are URL versioning, header versioning, or using additive changes without a formal version when possible. The trade-off is that too many versions increase maintenance, so you still want to keep changes backward compatible where you can.",
+    "real_world": "A public API often has clients you do not control, so old versions may need to run for months. Internal services also benefit when several teams release on different schedules.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you avoid creating a new API version?"
+   },
+   {
+    "question": "What is service coupling, and how do you reduce it?",
+    "answer": "Coupling is how much one service depends on another’s implementation or behavior. You reduce it by keeping APIs small, sharing only stable contracts, avoiding shared databases, and not letting one service know too much about another service’s internals. Loose coupling makes changes safer and deployments more independent. The trade-off is that you may need more careful contract design and more communication between teams.",
+    "real_world": "If one service depends on another service’s database schema, a simple schema change can break production. Keeping the dependency at the API level is much safer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a common sign that two services are too tightly coupled?"
+   },
+   {
+    "question": "What is a database transaction, and why is it harder across services?",
+    "answer": "A transaction makes a set of database changes succeed or fail together. Inside one service and one database, this is straightforward and very useful for consistency. Across multiple services, you usually cannot rely on one simple transaction, because each service owns its data and may fail independently. That is why distributed workflows often use sagas or compensation instead of one big cross-service transaction.",
+    "real_world": "An order service may create an order while a payment service charges the card. If payment fails, the system needs a way to cancel or compensate the order.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a saga, in simple terms?"
+   },
+   {
+    "question": "What is a saga in microservices?",
+    "answer": "A saga is a way to manage a business process across multiple services without a single distributed transaction. Each step commits locally, and if a later step fails, the system runs compensating actions to undo earlier steps as needed. This keeps services independent but makes the workflow more complex. It matters most for things like orders, payments, and inventory where several services must cooperate.",
+    "real_world": "For example, creating an order might reserve inventory, then charge payment. If charging fails, the system releases the inventory reservation instead of trying to roll back everything in one database transaction.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a compensating action, and when would you use one?"
+   },
+   {
+    "question": "What is distributed tracing, and why is it useful in microservices?",
+    "answer": "Distributed tracing tracks a request as it moves through multiple services. It is useful because a single user action can create several nested calls, and logs from one service often do not show the full picture. Tracing helps you find bottlenecks and failures across service boundaries. Without it, debugging production issues can become guesswork.",
+    "real_world": "If checkout is slow, tracing can show whether the delay is in the gateway, the order service, or a downstream inventory lookup. That shortens incident response time a lot.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is tracing different from logging?"
+   },
+   {
+    "question": "What is centralized logging in a microservices system?",
+    "answer": "Centralized logging means sending logs from all services to one place where you can search and correlate them. It matters because each service has its own processes, containers, and instances, so local logs are not enough when debugging a distributed request. Good logs include request IDs or trace IDs so you can connect events across services. The trade-off is added tooling and cost, but without it troubleshooting is much harder.",
+    "real_world": "During an outage, engineers often search logs by a request ID to reconstruct what happened across several services. That is much faster than SSHing into individual machines.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What information should a service include in its logs?"
+   },
+   {
+    "question": "What is an anti-corruption layer?",
+    "answer": "An anti-corruption layer is code that translates between your service’s model and an external system’s model. It protects your domain from leaking чужд concepts, awkward field names, or unstable behavior from another service or vendor API. This helps keep your own code cleaner and easier to change. The cost is extra mapping code, but that is usually better than spreading external assumptions everywhere.",
+    "real_world": "If you integrate with a payments provider that calls an authorization a different name than your system does, the adapter keeps that mismatch out of the core order logic. It also makes provider swaps less painful later.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you put translation logic in an adapter instead of directly in the service code?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide whether a capability should stay inside one service or be split into multiple services?",
+    "answer": "I look for a strong boundary in business ownership, data access, and change rate. If two parts always deploy together, share the same data model, or require frequent in-process coordination, splitting them usually adds latency and operational cost without much benefit. If one area changes independently, scales differently, or has a separate team, that is a better candidate for a service boundary. The trade-off is autonomy versus distributed complexity.",
+    "real_world": "Teams often split too early and then spend more time on RPCs and schema coordination than on product work. In production, that can show up as slower releases and harder debugging when a simple workflow crosses too many services.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals tell you that a service has been split too far?"
+   },
+   {
+    "question": "How do you handle a workflow that needs data from several services without making the request path slow and fragile?",
+    "answer": "Prefer one service as the source of the user-facing response and move the rest of the workflow to async processing when possible. If you must aggregate data synchronously, keep the fan-out small, parallelize requests, and define a clear fallback when one dependency is slow or unavailable. The main trade-off is freshness and completeness versus latency and reliability. For read-heavy cases, a denormalized projection can be better than live cross-service queries.",
+    "real_world": "A checkout page that waits on inventory, pricing, promotions, and shipping can become very slow or fail often. Many teams move some of that work to precomputed views or background updates so the page can still load quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a materialized view or projection over live service calls?"
+   },
+   {
+    "question": "What is the difference between orchestration and choreography in service-to-service workflows?",
+    "answer": "Orchestration means one component explicitly tells each service what to do and in what order. Choreography means services react to events and each service decides its own next step. Orchestration is easier to understand for complex flows and retries, but it can become a central dependency. Choreography reduces central coordination but can be harder to trace and reason about as the number of events grows.",
+    "real_world": "Order fulfillment often starts as orchestration because the business process is easy to describe in one place. As teams add more side effects, event-driven choreography can reduce coupling, but only if event contracts are kept stable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure modes are easier to handle with orchestration?"
+   },
+   {
+    "question": "How do you design a microservice to be backward compatible with older clients and consumers?",
+    "answer": "Keep existing fields and behavior stable, and only add optional fields or new endpoints when needed. Consumers should ignore unknown fields, and producers should avoid changing the meaning of existing ones. Deprecation should be explicit and measured so you know who is still using the old shape. The main trade-off is API cleanliness versus safe evolution.",
+    "real_world": "Mobile apps and external partners often update slowly, so breaking a response shape can create outages that last weeks. Teams usually need a compatibility policy plus observability to know when it is safe to remove old behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect which consumers will break before you deploy a change?"
+   },
+   {
+    "question": "How do you test microservices without relying only on end-to-end tests?",
+    "answer": "Use a mix of unit tests, contract tests, and a small number of end-to-end tests. Unit tests cover local logic, contract tests verify the API shape between a provider and consumer, and end-to-end tests catch broken integration across the full path. This pyramid keeps feedback fast while still protecting critical flows. End-to-end tests alone are usually too slow, flaky, and expensive to maintain.",
+    "real_world": "A team might have hundreds of service-to-service interactions, and full end-to-end coverage for all of them is unrealistic. Contract tests catch most breaking changes earlier, before a deployment reaches production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of bugs do contract tests miss?"
+   },
+   {
+    "question": "What do you do when one service starts causing a chain reaction of failures across the system?",
+    "answer": "First, limit blast radius with timeouts, bulkheads, rate limiting, and sensible fallback behavior. Then look for the root cause, which is often overload, an expensive dependency call, or a bad deployment that increases latency and retries. You want to stop healthy services from burning resources waiting on one failing dependency. The trade-off is that protections can hide some failures, so you still need good alerting and tracing.",
+    "real_world": "A slow downstream database can make many unrelated services pile up requests and exhaust thread pools. In practice, a small number of overloaded services can take down much more of the platform than the original fault.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell the difference between a dependency outage and resource exhaustion in the caller?"
+   },
+   {
+    "question": "How do you handle schema changes in events when multiple services consume the same stream?",
+    "answer": "Treat event schemas like public contracts and evolve them conservatively. Add new fields in a backward-compatible way, keep old fields until consumers have migrated, and avoid changing the meaning of existing fields. If you need a bigger change, publish a new event type rather than forcing every consumer to guess. The key trade-off is cleaner event design versus long-lived compatibility.",
+    "real_world": "Event streams often outlive the original team that created them, so a small schema change can break downstream jobs or analytics pipelines long after deployment. That is why teams often keep a schema registry or strict review process for events.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you migrate consumers off an old event without stopping the stream?"
+   },
+   {
+    "question": "What is the purpose of a bulkhead pattern in microservices, and where would you apply it?",
+    "answer": "A bulkhead isolates resources so one failing dependency cannot consume everything. In practice, that can mean separate thread pools, connection pools, or queues per dependency or per request type. It matters because shared pools let a slow downstream service starve unrelated traffic. The trade-off is more configuration and potentially lower utilization, but better isolation under load.",
+    "real_world": "If payment calls and profile calls share the same worker pool, a slow payment provider can delay logins or searches. Bulkheads help keep the rest of the system responsive during an incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a bulkhead different from a circuit breaker?"
+   },
+   {
+    "question": "How do you debug a microservice that works in staging but fails intermittently in production?",
+    "answer": "Start by comparing inputs, dependencies, and environment differences, not just the service code. Check whether production has different traffic patterns, missing config, feature flags, stale caches, or slower downstream dependencies. Then use traces, logs, and metrics to find the exact path and correlate failures with latency or specific request types. Intermittent production bugs are often caused by race conditions, retries, or hidden environment assumptions.",
+    "real_world": "A service may pass staging tests because the data set is small and traffic is low, but fail in production under real concurrency. The fix often involves making the behavior observable enough to reproduce and isolate the issue.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What production signals would you look at first: logs, metrics, or traces?"
+   },
+   {
+    "question": "How do you decide between sharing code through a common library and duplicating small pieces of logic across services?",
+    "answer": "Share code only when the abstraction is truly stable and the behavior must stay identical across services. A common library can reduce duplication, but it also creates hidden coupling and makes independent deployment harder if the library changes often. For small validation rules or mapping logic, duplication can be safer because each service owns its own release cycle. The trade-off is consistency versus autonomy.",
+    "real_world": "A shared library for auth or request signing can be helpful if it changes rarely and is well versioned. A shared business rules package that every service depends on can become a bottleneck for releases.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of shared code are most dangerous in a microservice architecture?"
+   },
+   {
+    "question": "How do you keep API calls between services from creating a lot of hidden dependencies and coordination overhead?",
+    "answer": "Keep the interface small, stable, and business-focused, and avoid exposing internal data shapes that force consumers to know too much. Use coarse-grained endpoints where it makes sense, but don’t overdo chatty APIs that require many round trips. I also look for clear ownership, explicit contracts, and consumer-driven tests so changes are caught before deployment. The trade-off is that simpler APIs may do more work per call, but they reduce coupling and coordination cost.",
+    "real_world": "This matters when one team keeps changing fields or endpoint behavior and three other teams have to update at the same time. Hidden coupling usually shows up as repeated release coordination and fragile integration tests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you spot hidden coupling in an existing service API?"
+   },
+   {
+    "question": "When would you use an event-driven approach instead of direct service-to-service calls?",
+    "answer": "Use events when other services need to react to something that happened, especially if they don’t need an immediate answer. It helps reduce synchronous dependencies and can improve resilience, but it makes consistency and debugging harder because the state changes are spread over time. Direct calls are better when you need a user-facing result right away and the workflow is simple. The key trade-off is immediacy versus decoupling.",
+    "real_world": "A checkout service might emit an order-created event so inventory, billing, and email services can react independently. If those were synchronous calls, one slow downstream service would slow the whole checkout path.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What delivery guarantees would you want for those events, and why?"
+   },
+   {
+    "question": "How do you handle duplicate messages or repeated event delivery in an event-driven system?",
+    "answer": "Assume duplicates can happen and make consumers safe to process the same message more than once. Common approaches are idempotent handlers, deduplication keys, or storing processed message IDs alongside the business update. The important part is to make the state transition safe even if the message arrives again after a retry or consumer restart. Exactly-once processing is hard to rely on end to end, so practical systems usually design for at-least-once delivery.",
+    "real_world": "This comes up when a consumer crashes after writing to its database but before acknowledging the message. Without deduplication, the same payment or shipment could be recorded twice.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the database write so it stays idempotent?"
+   },
+   {
+    "question": "What is the outbox pattern, and what problem does it solve?",
+    "answer": "The outbox pattern stores the business change and the message to publish in the same local database transaction, then a separate process reads the outbox and publishes the event. This avoids the gap where the database update succeeds but the message publish fails, or vice versa. It is a practical way to keep data changes and emitted events consistent without a distributed transaction. The trade-off is extra infrastructure and some delay before the event is published.",
+    "real_world": "Teams use this after losing orders because the service saved the order but crashed before sending the event to downstream systems. The outbox lets them recover reliably from partial failures.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent the outbox publisher from sending the same event twice?"
+   },
+   {
+    "question": "How do you choose between coordinating a workflow in code versus using a workflow engine or state machine?",
+    "answer": "Use code when the process is short, simple, and changes infrequently. Use a workflow engine or explicit state machine when you need visibility, retries, pauses, compensation, or long-running steps that survive restarts. The main benefit of an engine is that the workflow logic is centralized and easier to observe, but it adds operational complexity and another system to learn. If the workflow is business-critical and multi-step, the extra structure is usually worth it.",
+    "real_world": "This matters for things like loan approval, refunds, or provisioning, where a request can sit for minutes or days and may need human input. Hard-coding that in a regular service often becomes brittle and hard to resume after failures.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you keep that logic in application code instead?"
+   },
+   {
+    "question": "How do you keep a service query fast when it needs data owned by other services?",
+    "answer": "A common approach is to build a read model or cache that is optimized for the query and updated from events or replication. That avoids doing multiple network calls on the request path and reduces latency variance. The downside is stale data, so you have to decide how fresh the answer needs to be and whether that stale window is acceptable. If the request truly needs current data, direct reads may be simpler, but they will be slower and more fragile.",
+    "real_world": "This is common for customer-facing pages that need order status, shipment info, and payment state in one view. If each page load fans out to several services, response time becomes unpredictable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether eventual freshness is acceptable for that query?"
+   },
+   {
+    "question": "What does consumer-driven contract testing give you that end-to-end tests usually do not?",
+    "answer": "It checks that a provider still satisfies the specific expectations of each consumer without requiring the full system to be deployed. That catches breaking changes earlier and makes tests smaller, faster, and more focused on real integration behavior. End-to-end tests are still useful for validating the full path, but they are too slow and brittle to cover every compatibility case. Contract tests work best when you want confidence that service changes won’t surprise downstream teams.",
+    "real_world": "This helps when one team changes a response field or HTTP status and another team’s frontend or service silently breaks. Contract tests catch that before the deploy reaches production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of changes can contract tests miss?"
+   },
+   {
+    "question": "How do you roll out a breaking backend change with minimal disruption?",
+    "answer": "The safest approach is to introduce the new behavior alongside the old one, migrate consumers, and remove the old path later. That often means supporting both shapes temporarily, using feature flags, or adding new endpoints or fields instead of changing existing ones in place. You also want observability so you know which clients are still using the old behavior. The trade-off is temporary complexity, but it avoids forcing a synchronized release across teams.",
+    "real_world": "This is typical when replacing an order field format or changing how a payment service calculates totals. A hard switch usually breaks some client that was missed in testing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you know it is safe to remove the old path?"
+   },
+   {
+    "question": "What is a service mesh, and when is it useful in a microservices environment?",
+    "answer": "A service mesh is infrastructure that handles cross-cutting service-to-service concerns like traffic control, mTLS, retries, and observability outside of application code. It is useful when many services need the same networking policies and you want consistent behavior without reimplementing it in every service. The downside is operational complexity and another abstraction layer to manage. I would not add one just because it exists; it should solve a real coordination or platform problem.",
+    "real_world": "A mesh can help when a platform team needs uniform TLS and traffic policy across dozens of services owned by different teams. It can also reduce app code changes during rollout of networking standards.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What responsibilities should still stay in the application rather than in the mesh?"
+   },
+   {
+    "question": "How do you keep microservices from becoming hard to operate as their number grows?",
+    "answer": "Standardize the basics: deployment, logging, metrics, tracing, config, and health behavior, so every service is operated the same way. Keep service ownership clear and avoid creating too many tiny services unless the domain really needs them, because operational overhead grows quickly. Good dependency management, strong automation, and clear runbooks matter more than the service count itself. The trade-off is some platform investment up front, but it pays off in fewer production surprises and easier incident response.",
+    "real_world": "This matters when a company goes from a few services to dozens and on-call starts spending more time figuring out how each one works than fixing issues. In practice, operational consistency is what keeps the system manageable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you use to tell that the service count has become too high?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How do you prevent retry storms and load amplification when several microservices each have their own retry logic?",
+    "answer": "You budget retries across the whole call path instead of letting every hop retry independently. If service A calls B which calls C, naive three-times retries at each layer can multiply traffic and make an outage worse. Usually you retry at one boundary, add jittered backoff, cap concurrency, and make failures fast once the remaining deadline is too small. The key trade-off is a bit more failed work during transient blips in exchange for protecting the system under stress.",
+    "real_world": "A common incident is a dependency slowing down, then every upstream service retries at once and turns a small latency issue into a full outage. Teams often add per-request deadlines and retry budgets after seeing 10x or 20x traffic amplification in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where in the stack would you place retries for user requests versus background jobs?"
+   },
+   {
+    "question": "How would you design deadline propagation across microservices, and why is it different from just setting a timeout on each call?",
+    "answer": "A per-hop timeout can exceed the user's total latency budget because each service starts its own clock. Deadline propagation carries an absolute remaining time so downstream services can reject work early, skip optional calls, or choose a cheaper code path. Internally this means passing metadata through RPC or HTTP headers and honoring it in thread pools, DB calls, and outbound clients. The trade-off is extra plumbing and stricter discipline, but it prevents useless work and queue buildup.",
+    "real_world": "Without propagated deadlines, a frontend might give up at 2 seconds while downstream services continue working for 10 more seconds, consuming threads and DB connections for abandoned requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should a service do if the remaining deadline is already too small to complete all of its normal steps?"
+   },
+   {
+    "question": "How do you reason about exactly-once semantics in a microservices system, and what do you actually implement in practice?",
+    "answer": "Exactly-once across independent services is usually not something you get end to end; you approximate the business effect with idempotency, deduplication, and atomic local state changes. Brokers may offer stronger guarantees inside the broker, but once handlers touch databases or external APIs you still have to handle replays and partial failure. In practice I design for at-least-once delivery and make handlers safe to run multiple times, often with idempotency keys or processed-message tables. The trade-off is extra state and complexity versus much better resilience.",
+    "real_world": "Payment, email, and inventory flows often replay after consumer crashes. The production bug is not that a message was redelivered; it's that the handler wasn't written so the second delivery had the same business outcome as the first.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement deduplication without creating a hot table or unbounded storage growth?"
+   },
+   {
+    "question": "What causes head-of-line blocking in microservice communication paths, and how do you mitigate it?",
+    "answer": "Head-of-line blocking happens when one slow request or stream prevents unrelated work from making progress because they share a queue, connection, worker pool, or lock. You mitigate it by isolating traffic classes, using separate pools for expensive operations, bounding queue lengths, and sometimes using multiplexed protocols carefully so one slow consumer does not monopolize resources. Backpressure matters more than raw throughput here. The trade-off is lower utilization in steady state for much better tail latency and failure isolation.",
+    "real_world": "A single slow downstream dependency can fill a shared worker pool, and suddenly fast endpoints time out even though their own code is cheap. Teams often discover this only after looking at queue wait time rather than service execution time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would tell you the latency problem is queueing and contention rather than CPU or network?"
+   },
+   {
+    "question": "How do you do load shedding in a microservice before it falls over completely?",
+    "answer": "Load shedding means rejecting or degrading work before saturation turns into a system-wide failure. You watch signals like queue depth, in-flight requests, event loop lag, or thread pool exhaustion, then fail fast for low-priority traffic, drop optional work, or serve stale data. It works best with admission control instead of relying only on autoscaling, because scaling reacts after the spike has already hit. The trade-off is some controlled errors now versus long timeouts and broad outages later.",
+    "real_world": "A service under sudden traffic can become so overloaded that even health checks and recovery tasks can't run. Teams often add per-endpoint concurrency limits and shed expensive report-generation traffic to keep checkout or login alive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose which requests are safe to shed and which must be protected?"
+   },
+   {
+    "question": "How do you use rate limiting between services without breaking fairness or starving important callers?",
+    "answer": "You need to choose the dimension carefully: per-client, per-tenant, per-endpoint, or global limits solve different problems. Fairness usually requires partitioned budgets so one noisy caller cannot consume the whole pool, while critical traffic may need reserved capacity or priority classes. The implementation can be token bucket or leaky bucket, but the architecture decision is really about where the limit lives and what identity it keys on. The trade-off is simplicity versus stronger isolation and more predictable latency.",
+    "real_world": "A shared internal service can look healthy on average while one tenant floods it and causes other tenants' requests to queue. Teams often add tenant-aware limits after discovering that aggregate QPS limits protected infrastructure but not customer fairness.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the failure modes if you enforce rate limits only at the edge and not on internal dependencies?"
+   },
+   {
+    "question": "What is a good strategy for handling partial availability when a request fan-outs to many microservices?",
+    "answer": "You first decide which sub-results are mandatory, optional, or can be stale. Then the aggregator enforces a total deadline, runs calls in parallel with bounded concurrency, returns partial data when acceptable, and records which dependencies were missing so clients and operators can tell degraded from complete responses. This is as much product design as systems design, because the user experience has to tolerate missing pieces intentionally. The trade-off is more complexity in response semantics for much better resilience and latency.",
+    "real_world": "Homepages, search results, and account dashboards often call many services. If every widget is treated as mandatory, one weak dependency can take down the whole page instead of only disabling a recommendation or badge.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you expose partial failure to clients without making every client implement complex merge logic?"
+   },
+   {
+    "question": "How do you avoid creating a distributed monolith through shared deployment or release coordination?",
+    "answer": "The smell is when a change requires many teams to deploy together, even though the services are technically separate. To avoid that, keep interfaces additive first, support old and new behavior during transition, decouple persistence changes from API changes, and use feature flags or dark reads/writes so producers and consumers can move independently. The real metric is independent deployability, not service count. The trade-off is temporary compatibility code and migration overhead for much lower coordination cost.",
+    "real_world": "A classic failure mode is a release train where six services must upgrade in a fixed order over a weekend. That usually means contracts or data assumptions leaked across boundaries and turned the system into a distributed monolith.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you look for to prove teams are not actually deploying independently?"
+   },
+   {
+    "question": "How would you migrate a hot service boundary or split a service without causing downtime or inconsistent behavior?",
+    "answer": "I treat it as a long-running migration: define the new ownership boundary, dual-write or backfill carefully if needed, verify equivalence with shadow traffic or dark reads, then cut reads and writes gradually behind flags. The risky part is not the code move itself but keeping semantics aligned while two systems are live, especially around ordering, unique constraints, and side effects. You need observability on mismatch rates and a rollback path that does not lose writes. The trade-off is migration complexity for a safer boundary change.",
+    "real_world": "Teams often split a service because one part scales differently or changes at a different pace. Incidents usually come from assuming data copied to the new service has the same freshness, constraints, or event ordering as the original.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you choose change-data-capture, dual writes, or a one-time backfill for the migration?"
+   },
+   {
+    "question": "What does backpressure actually look like in a microservices system, and how do you make it explicit instead of accidental?",
+    "answer": "Backpressure is how a slow consumer tells upstream producers to slow down before queues, memory, or connection pools explode. In practice it shows up as bounded queues, limited in-flight requests, pull-based consumption, flow-control windows, and explicit 429 or overload responses instead of silently accepting work. If you do not design it, you still get it accidentally through timeouts, OOMs, and dropped connections, which is much worse. The trade-off is lower peak throughput for stable latency and recoverability.",
+    "real_world": "Streaming consumers, async job workers, and HTTP aggregators all need explicit limits. A common outage pattern is unbounded buffering during a downstream slowdown, followed by memory pressure, GC pauses, and then a much longer recovery after the dependency is healthy again.",
+    "code_lang": "python",
+    "code": "from queue import Queue, Full\nq = Queue(maxsize=100)\n\ndef submit(job):\n    try:\n        q.put(job, block=False)\n        return 202\n    except Full:\n        return 429\n",
+    "follow_up": "How would you tune queue sizes and worker counts so backpressure happens early enough to be useful?"
+   },
+   {
+    "question": "How do you set and use error budgets and SLOs for a microservice dependency, rather than just for the service itself?",
+    "answer": "You need SLOs on both the user-facing service and its critical dependencies, because a service can meet its own CPU and latency goals while still burning availability through downstream failures. I usually define a dependency budget in terms of allowed failed or slow calls, then use it to drive fallback behavior, retry limits, and release decisions. The key is composing SLOs across the call graph instead of pretending each service is independent. Otherwise teams optimize local metrics while the end-to-end path misses its target.",
+    "real_world": "A checkout service may look healthy on its dashboard, but if payments contributes 0.5% failures and inventory contributes another 0.5%, the combined path can miss a 99.9% goal. Teams use dependency SLOs to decide when to degrade features or block risky deploys.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you model an end-to-end availability target when one request depends on several services in parallel and some failures are tolerable?"
+   },
+   {
+    "question": "What are the main consistency and failure trade-offs when using a shared event log like Kafka as the backbone between microservices?",
+    "answer": "A shared log gives durable decoupling and replay, but it shifts complexity into ordering, consumer lag, reprocessing, and schema discipline. Ordering is usually only meaningful within a partition, so your key choice becomes a correctness decision, not just a scaling one. It also makes failures less obvious: producers can succeed while consumers are minutes behind, so user-visible state may be stale even though every component is technically up. You trade request-time coupling for operational and dataflow complexity.",
+    "real_world": "Teams often discover during incidents that no service is down, but one consumer group is lagging by millions of messages so derived views are stale. A bad partition key can also hotspot one partition and kill throughput for a single tenant or account.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose a partition key when you need both per-entity ordering and balanced throughput?"
+   },
+   {
+    "question": "If a microservice is CPU-light but still has poor tail latency under load, what internals would you inspect first?",
+    "answer": "I’d look for queueing before saturation: thread pools, connection pools, event-loop stalls, lock contention, GC pauses, and slow downstream sockets. Tail latency is often caused by a small fraction of requests waiting behind scarce resources rather than doing actual work. I’d compare service time versus wait time and inspect p95 or p99 queue depth, not just average CPU. If the service fans out, one slow branch can dominate the whole request even when aggregate utilization looks low.",
+    "real_world": "A service can sit at 35% CPU yet hit multi-second p99 because its DB pool is exhausted and requests spend most of their time waiting. Teams often only notice this after a traffic spike because average latency still looks acceptable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether the bottleneck is in the service itself, the runtime, or a downstream dependency?"
+   },
+   {
+    "question": "How do you approach multi-region active-active microservices when writes can happen in more than one region?",
+    "answer": "The first question is whether every write truly needs multi-region acceptance, because conflict resolution is expensive and often changes the business semantics. For state that must be writable in multiple regions, you need a conflict strategy per entity type: reject, merge, last-write-wins, or route ownership to one region. You also need to think about idempotency keys, clock skew, and how clients observe stale or divergent reads during replication. Active-active improves regional resilience, but it can easily trade outages for subtle data corruption.",
+    "real_world": "Orders or payments are often still single-writer by design, while profiles or preferences may accept mergeable updates. Incidents happen when teams replicate mutable counters or inventory naively and oversell during a partition.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of domain data are usually safe for active-active writes, and which are not?"
+   },
+   {
+    "question": "How would you design safe request hedging in a microservice system, and when does it make things worse?",
+    "answer": "Hedging means sending a second copy of a slow request after a delay, usually only for idempotent reads and only when latency percentiles justify it. The delay should be based on tail behavior so you only duplicate the small fraction of stragglers, and the service must cancel or ignore the loser to avoid wasted work. It gets dangerous when the underlying issue is overload, because duplicate requests raise concurrency and can push the dependency further into saturation. So hedging needs strict caps, good observability, and often a load check before enabling it.",
+    "real_world": "It can cut p99 for cacheable reads or search queries, but during a DB slowdown it may double query pressure and worsen the incident. Teams usually enable it only for specific endpoints with proven straggler patterns.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose the hedge delay without just guessing?"
+   },
+   {
+    "question": "What is the difference between at-least-once and effectively-once behavior at the business level, and how do you implement the latter?",
+    "answer": "At-least-once is a transport property: the message may be delivered more than once. Effectively-once is a business outcome: duplicate deliveries do not create duplicate business effects because the handler is deduplicated or naturally idempotent. In practice you implement it with a stable operation key, a dedupe store or unique constraint, and state transitions that can be safely retried. That is usually enough; chasing true exactly-once across storage and messaging boundaries is rarely worth the complexity.",
+    "real_world": "Charging a card, issuing a refund, or granting a coupon are all cases where duplicates are costly even if the broker is working as designed. Teams often store a request or event ID alongside the side effect so retries become safe.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE processed_ops (\n  op_id TEXT PRIMARY KEY,\n  processed_at TIMESTAMP NOT NULL\n);\n\n-- Insert op_id in the same transaction as the business write.\n-- If op_id already exists, treat it as a duplicate and skip.",
+    "follow_up": "What are the failure cases if the deduplication record and the business side effect are not written atomically?"
+   },
+   {
+    "question": "How do you reason about connection management between microservices at high scale, especially with HTTP/2 or gRPC?",
+    "answer": "At scale, connection count, pool sizing, and stream concurrency become capacity decisions, not just client defaults. HTTP/2 and gRPC reduce connection churn through multiplexing, but one overloaded connection or proxy can still create contention, and a single bad pool policy can concentrate traffic unevenly. I watch handshake costs, keepalive settings, max concurrent streams, connection reuse across pods, and what intermediaries do under load. The goal is to avoid both connection storms and hidden bottlenecks inside a few hot channels.",
+    "real_world": "After a deploy or node failure, thousands of pods reconnecting at once can overwhelm proxies or TLS termination. Teams also hit cases where one long-lived connection carries too much traffic and creates latency spikes despite low average utilization.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What symptoms would tell you your problem is connection churn versus per-connection saturation?"
+   },
+   {
+    "question": "How do you handle noisy neighbors in a multi-tenant microservice so one tenant cannot dominate latency or throughput?",
+    "answer": "You need isolation at the resource and scheduling level, not just authentication. Common tools are per-tenant quotas, weighted fair queuing, bounded concurrency, partitioning hot tenants, and separate caches or pool limits for expensive tenants. The trade-off is efficiency versus fairness: strict isolation can leave capacity unused, while shared pools maximize utilization but let heavy tenants damage everyone else. Good designs also decide what gets degraded first for over-budget tenants.",
+    "real_world": "A single tenant running a bulk export or backfill can fill worker queues, evict cache entries, and push p99 up for all tenants. Production fixes often involve carving out dedicated worker pools or applying tenant-aware rate limits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement fairness if some tenants pay for higher priority but you still need starvation protection?"
+   },
+   {
+    "question": "What deployment patterns do you use to detect microservice problems that only appear with real traffic shape, not synthetic checks?",
+    "answer": "I like progressive delivery with canaries or shadow traffic, because many failures only show up with production cardinality, payload skew, and concurrency patterns. The important part is comparing the candidate against baseline on a small slice using business metrics, saturation signals, and high-percentile latency, not just container health. Shadowing is useful for read paths and validation, while canaries are stronger because they exercise real side effects. You also need fast rollback and enough request volume to make the comparison meaningful.",
+    "real_world": "A new release may pass smoke tests but blow up on one large customer payload or a rare header combination. Teams catch this by shipping to 1% of traffic first and watching error rate, p99, and downstream amplification before going wider.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose shadow traffic over a canary, and what classes of bugs can shadowing miss?"
+   },
+   {
+    "question": "When a microservice calls a database through an ORM, what hidden costs show up at scale and how do you keep them from dominating latency?",
+    "answer": "The common hidden costs are N+1 queries, chatty lazy loading, oversized object graphs, unnecessary serialization, and ORM-generated SQL that prevents efficient indexes or batching. At small scale the code looks clean, but under load the service spends time on many round trips and object mapping rather than business logic. I usually inspect the actual SQL, query counts per request, allocation rate, and how much of the response really needs to be hydrated. For hot paths, hand-tuned queries or read models are often worth the loss of abstraction.",
+    "real_world": "A seemingly simple endpoint can issue dozens of queries because each related entity loads lazily, turning a 20 ms path into hundreds of milliseconds. Teams often only discover it after traffic growth because local datasets are too small to expose the pattern.",
+    "code_lang": "python",
+    "code": "# Bad: one query for orders, then one per order for items\norders = repo.list_orders(user_id)\nfor o in orders:\n    o.items = repo.list_items(o.id)\n\n# Better: fetch items in one batch query by order_ids\nitems_by_order = repo.list_items_for_orders([o.id for o in orders])",
+    "follow_up": "How would you detect an N+1 problem in production without turning on very expensive query logging for everything?"
+   }
+  ]
+ }
+}

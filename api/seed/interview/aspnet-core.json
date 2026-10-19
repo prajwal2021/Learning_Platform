@@ -1,0 +1,453 @@
+{
+ "slug": "aspnet-core",
+ "name": "ASP.NET Core",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is ASP.NET Core, and how is it different from classic ASP.NET?",
+    "answer": "ASP.NET Core is Microsoft’s cross-platform framework for building web apps, APIs, and services. Compared with classic ASP.NET, it runs on Windows, Linux, and macOS, has a more modular design, and uses a unified hosting model for web apps and APIs. A junior should know it is the modern platform for new .NET web development.",
+    "real_world": "A team moving an old Windows-only web app to Linux containers will usually choose ASP.NET Core for the new version. New services in a .NET shop are also commonly started in ASP.NET Core instead of classic ASP.NET.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main types of ASP.NET Core projects you would build with it?"
+   },
+   {
+    "question": "What is middleware in ASP.NET Core?",
+    "answer": "Middleware is code that runs as part of the HTTP request pipeline. Each component can inspect the request, do work, pass control to the next component, and then run code on the way back out. It matters because ordering is important, and many features like routing, authentication, and static files are implemented as middleware.",
+    "real_world": "If authentication middleware is added in the wrong place, requests may reach endpoints before the user is authenticated. That can cause security bugs that are hard to spot in testing.",
+    "code_lang": "csharp",
+    "code": "app.UseRouting();\napp.UseAuthentication();\napp.UseAuthorization();\napp.MapControllers();",
+    "follow_up": "Why does middleware order matter, and what can break if it is wrong?"
+   },
+   {
+    "question": "What is dependency injection in ASP.NET Core, and why do people use it?",
+    "answer": "Dependency injection is a way to provide a class with the services it needs instead of creating them itself. ASP.NET Core has built-in support for registering services and resolving them through constructors. It makes code easier to test, reduces tight coupling, and is the normal way to wire up app components.",
+    "real_world": "In a payment or email service, you often inject an interface so you can replace the real implementation with a fake in tests. That lets you test business logic without sending actual emails or charging cards.",
+    "code_lang": "csharp",
+    "code": "builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();\n\npublic class WelcomeController : ControllerBase\n{\n    public WelcomeController(IEmailSender emailSender) { }\n}",
+    "follow_up": "What is the difference between transient, scoped, and singleton lifetimes?"
+   },
+   {
+    "question": "What does routing do in ASP.NET Core?",
+    "answer": "Routing matches an incoming URL and HTTP method to the code that should handle the request. In ASP.NET Core, it can work with controllers, minimal APIs, or Razor Pages. It matters because it decides which endpoint runs and often influences how URLs are designed.",
+    "real_world": "If two endpoints match the same route pattern, the app may behave unexpectedly or return the wrong action. Teams often catch routing mistakes only after a deployment when a URL starts returning 404s.",
+    "code_lang": "csharp",
+    "code": "app.MapGet(\"/health\", () => \"OK\");\napp.MapGet(\"/users/{id}\", (int id) => id);",
+    "follow_up": "How does route parameter binding work when the URL contains an integer or string?"
+   },
+   {
+    "question": "What is the difference between `IActionResult` and returning a concrete type from a controller action?",
+    "answer": "`IActionResult` lets an action return different HTTP responses, such as 200, 400, or 404, depending on the situation. Returning a concrete type is simpler when the endpoint always returns the same shape and status. Use `IActionResult` when the response can vary and you want to communicate HTTP semantics clearly.",
+    "real_world": "A lookup endpoint may return a user when found or a 404 when not found. In that case, `IActionResult` is a better fit than always returning a user object.",
+    "code_lang": "csharp",
+    "code": "[HttpGet(\"{id}\")]\npublic IActionResult Get(int id)\n{\n    if (id <= 0) return BadRequest();\n    return Ok(new { Id = id });\n}",
+    "follow_up": "When would you prefer `ActionResult<T>` instead?"
+   },
+   {
+    "question": "What is the purpose of `appsettings.json` in ASP.NET Core?",
+    "answer": "`appsettings.json` is a common place to store application configuration such as connection strings, logging settings, and feature options. ASP.NET Core can combine values from multiple configuration sources, including environment variables and user secrets. It matters because configuration should be separate from code and changeable per environment.",
+    "real_world": "A team may use one configuration for local development and another for staging or production. If secrets are accidentally committed to `appsettings.json`, they can leak into source control and deployments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle different settings for development and production?"
+   },
+   {
+    "question": "What are controllers in ASP.NET Core, and when would you use them?",
+    "answer": "Controllers are classes that group related request-handling actions, usually for APIs or server-rendered web apps. They work well when you want attributes, model binding, filters, and a structured way to organize many endpoints. For very small APIs, minimal APIs can be simpler, but controllers are still common in larger apps.",
+    "real_world": "A backend with dozens of endpoints often becomes easier to maintain when grouped into controllers by feature area. That also helps with validation, versioning, and shared filters.",
+    "code_lang": "csharp",
+    "code": "[ApiController]\n[Route(\"api/[controller]\")]\npublic class ProductsController : ControllerBase\n{\n    [HttpGet]\n    public IActionResult Get() => Ok();\n}",
+    "follow_up": "What does the `[ApiController]` attribute change?"
+   },
+   {
+    "question": "What is the difference between `AddSingleton`, `AddScoped`, and `AddTransient`?",
+    "answer": "These are service lifetimes in the dependency injection container. Singleton creates one instance for the whole app, scoped creates one per request, and transient creates a new instance each time it is requested. The main trade-off is lifetime and shared state: singleton is efficient, scoped fits request-specific work, and transient is good for lightweight stateless services.",
+    "real_world": "Using a singleton service that stores per-request user data can cause users to see each other’s information. Using the wrong lifetime can also lead to thread-safety issues or unnecessary object creation.",
+    "code_lang": "csharp",
+    "code": "builder.Services.AddSingleton<CacheService>();\nbuilder.Services.AddScoped<UserContext>();\nbuilder.Services.AddTransient<Formatter>();",
+    "follow_up": "Why can’t a singleton safely depend on a scoped service?"
+   },
+   {
+    "question": "What is the most common way to return validation errors from an ASP.NET Core API?",
+    "answer": "A common approach is to use model validation and return a 400 Bad Request when the input is invalid. With `[ApiController]`, ASP.NET Core can automatically validate the model state and send validation errors without extra code. This matters because APIs should fail fast and clearly when clients send bad input.",
+    "real_world": "If a client sends an empty required field, the API should return a useful validation response instead of throwing later in the business logic. That makes debugging much easier for frontend and mobile teams.",
+    "code_lang": "csharp",
+    "code": "[HttpPost]\npublic IActionResult Create([FromBody] CreateUserDto dto)\n{\n    return Ok();\n}",
+    "follow_up": "How do data annotation attributes like `[Required]` participate in validation?"
+   },
+   {
+    "question": "What is the difference between `MapControllers()` and `UseEndpoints(...)` in an ASP.NET Core app?",
+    "answer": "`MapControllers()` is the simple, modern way to register attribute-routed controllers in the endpoint pipeline. `UseEndpoints(...)` is the older pattern where you explicitly configure endpoint mappings inside a callback. In basic apps, you usually call `app.MapControllers()` after `app.UseRouting()` and any auth middleware. The key idea is that controllers are exposed as endpoints, and this method is what makes them reachable.",
+    "real_world": "A junior often copies startup code from an older project and wonders why controllers are not hit. Knowing the difference helps when moving between .NET versions or reading legacy code.",
+    "code_lang": "csharp",
+    "code": "var builder = WebApplication.CreateBuilder(args);\nbuilder.Services.AddControllers();\nvar app = builder.Build();\napp.UseRouting();\napp.MapControllers();\napp.Run();",
+    "follow_up": "When would you use conventional routing instead of attribute routing?"
+   },
+   {
+    "question": "What is the difference between `IEnumerable<T>` and `IAsyncEnumerable<T>` in ASP.NET Core APIs?",
+    "answer": "`IEnumerable<T>` represents a synchronous sequence, while `IAsyncEnumerable<T>` lets items be produced asynchronously one at a time. In APIs, `IAsyncEnumerable<T>` is useful when data arrives gradually or when you want to avoid blocking while streaming results. It can reduce memory use for large result sets, but it is more complex to consume and not needed for most simple endpoints. The trade-off is streaming and scalability versus simpler code.",
+    "real_world": "A team may switch a large export endpoint from buffering everything in memory to streaming results to the client. That can prevent timeouts and reduce memory pressure on busy servers.",
+    "code_lang": "csharp",
+    "code": "[HttpGet(\"numbers\")]\npublic async IAsyncEnumerable<int> GetNumbers()\n{\n    for (var i = 1; i <= 3; i++)\n    {\n        await Task.Delay(10);\n        yield return i;\n    }\n}",
+    "follow_up": "When would you prefer returning `Task<List<T>>` instead?"
+   },
+   {
+    "question": "What is `IConfiguration` used for in ASP.NET Core?",
+    "answer": "`IConfiguration` is the abstraction for reading application settings from configuration providers such as JSON files, environment variables, and command-line arguments. You use it when an app needs values like connection strings, feature flags, or external service URLs. It is flexible because different environments can supply different values without changing code. A common mistake is reading configuration everywhere instead of binding it once to a strongly typed options class.",
+    "real_world": "This matters when the same app runs locally, in staging, and in production with different settings. Teams often use configuration to avoid hardcoding secrets or environment-specific URLs.",
+    "code_lang": "csharp",
+    "code": "var builder = WebApplication.CreateBuilder(args);\nvar conn = builder.Configuration.GetConnectionString(\"Default\");\nConsole.WriteLine(conn);",
+    "follow_up": "What is the options pattern, and why is it usually better than calling `IConfiguration` directly?"
+   },
+   {
+    "question": "What does `[ApiController]` do on a controller?",
+    "answer": "`[ApiController]` enables API-focused conventions such as automatic 400 responses for invalid model state and more sensible binding behavior for common API scenarios. It also improves inference for parameter binding and makes the controller behave more like a web API than an MVC page controller. This is useful because it removes repetitive boilerplate from simple APIs. The trade-off is that you need to understand the automatic behavior so you are not surprised by responses you never explicitly wrote.",
+    "real_world": "A junior may add validation attributes and wonder why the action never runs when the input is bad. With `[ApiController]`, ASP.NET Core can short-circuit before your action executes.",
+    "code_lang": "csharp",
+    "code": "[ApiController]\n[Route(\"api/[controller]\")]\npublic class UsersController : ControllerBase\n{\n    [HttpPost]\n    public IActionResult Create(UserDto dto) => Ok();\n}",
+    "follow_up": "How does `[ApiController]` change the way missing or invalid parameters are handled?"
+   },
+   {
+    "question": "What is the difference between `app.UseAuthentication()` and `app.UseAuthorization()`?",
+    "answer": "`UseAuthentication()` reads the request and populates the current user if credentials are present and valid. `UseAuthorization()` then checks whether that user is allowed to access the endpoint based on policies or attributes like `[Authorize]`. Authentication answers who you are; authorization answers what you can do. The order matters because authorization depends on the authenticated user being available.",
+    "real_world": "This often causes confusion when every secured endpoint returns 401 or 403 after a startup change. The middleware order or missing registration is usually the reason.",
+    "code_lang": "csharp",
+    "code": "app.UseRouting();\napp.UseAuthentication();\napp.UseAuthorization();\napp.MapControllers();",
+    "follow_up": "What is the difference between 401 and 403 in an API?"
+   },
+   {
+    "question": "What is the difference between `UseStaticFiles()` and serving files from a controller?",
+    "answer": "`UseStaticFiles()` serves files directly from the web root or a configured file source without controller logic. A controller is better when you need authentication, authorization, logging, or to build the file response dynamically. Static files are faster and simpler for public assets like images, CSS, and JavaScript. Controllers are the better choice when file access depends on business rules.",
+    "real_world": "Teams often use static file hosting for front-end assets but switch to controller-based file downloads for private PDFs or reports. That avoids exposing sensitive files by accident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you protect a file download endpoint so only authorized users can access it?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do `IOptions<T>`, `IOptionsSnapshot<T>`, and `IOptionsMonitor<T>` differ, and when would you choose each one?",
+    "answer": "`IOptions<T>` gives you a singleton-style snapshot of the configuration values. `IOptionsSnapshot<T>` is scoped, so it rebinds per request and is useful when options can change between requests. `IOptionsMonitor<T>` supports change notifications and is the usual choice when you need to react to reloadable config without waiting for a new request. The trade-off is simplicity versus freshness and callback support.",
+    "real_world": "This matters when a feature flag or downstream endpoint changes in configuration and the app needs to pick it up without a restart. Teams often use `IOptionsMonitor<T>` for cache expiration settings or external service URLs in long-running services.",
+    "code_lang": "csharp",
+    "code": "public class MyService\n{\n    public MyService(IOptionsMonitor<MyOptions> options) {\n        var current = options.CurrentValue;\n    }\n}",
+    "follow_up": "What can go wrong if you inject `IOptionsSnapshot<T>` into a singleton service?"
+   },
+   {
+    "question": "How does model binding work in ASP.NET Core when a request has route values, query string, form data, and JSON body at the same time?",
+    "answer": "Model binding tries to populate action parameters and model properties from multiple value providers. For simple types, route and query string are common sources; for complex types in APIs, the body is usually bound from JSON. If multiple sources provide a value, binding order and parameter attributes like `[FromRoute]` or `[FromQuery]` decide the winner. The main issue is being explicit so you do not get surprising values or binding failures.",
+    "real_world": "This comes up when an endpoint behaves differently in Swagger versus production because a parameter is being read from the wrong source. It also shows up in bug reports where a body property seems ignored because the action parameter was never annotated correctly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you force a parameter to come only from the request body or only from the query string?"
+   },
+   {
+    "question": "What is the practical difference between endpoint routing with minimal APIs and controller actions, and how do you decide between them in a real project?",
+    "answer": "Minimal APIs are lighter and reduce ceremony, which is good for small services, thin CRUD endpoints, or highly focused handlers. Controllers give you a clearer home for filters, conventions, grouped API structure, and larger application patterns. In practice, the choice is about complexity: if you expect shared behaviors, versioning, or lots of actions per resource, controllers can stay easier to maintain. If the app is small or endpoint-centric, minimal APIs are often simpler and faster to read.",
+    "real_world": "Teams often start with minimal APIs for a small service and later switch some parts to controllers when cross-cutting concerns pile up. The opposite also happens when a large API has one or two simple health or webhook endpoints that are cleaner as minimal APIs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What trade-offs would you watch for if you mixed minimal APIs and controllers in the same app?"
+   },
+   {
+    "question": "How do you implement global exception handling in ASP.NET Core, and why is it better than catching exceptions in every action?",
+    "answer": "A global exception handler centralizes translation of unexpected failures into consistent HTTP responses and logging. It keeps controller code focused on business logic and avoids duplicated try/catch blocks that often miss edge cases. You still handle expected errors close to where they occur, but unhandled exceptions should be normalized once in middleware or an exception handler. The main trade-off is making sure you do not hide programming bugs while still returning safe error details to clients.",
+    "real_world": "In production, this prevents random stack traces and inconsistent error formats across endpoints. It is also important when different teams own different controllers but need the same error contract and correlation logging.",
+    "code_lang": "csharp",
+    "code": "app.UseExceptionHandler(appErr =>\n{\n    appErr.Run(async ctx =>\n    {\n        ctx.Response.StatusCode = 500;\n        await ctx.Response.WriteAsync(\"An error occurred.\");\n    });\n});",
+    "follow_up": "How would you return different status codes for domain exceptions versus unexpected exceptions?"
+   },
+   {
+    "question": "What is the difference between authorization policies and roles, and when would you prefer one over the other?",
+    "answer": "Roles are a simple coarse-grained check: does the user belong to a named role? Policies are more flexible because they can combine roles, claims, custom requirements, and application rules. In real systems, policies scale better when access depends on business conditions rather than static role names. Roles are fine for straightforward admin/user splits, but policies are usually the better abstraction for anything richer.",
+    "real_world": "A team might start with roles, then discover they need rules like tenant membership, subscription state, or document ownership. Policies let them express those checks consistently across controllers and endpoints.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement a policy that allows access only when the user is both in a role and owns the resource?"
+   },
+   {
+    "question": "How do you avoid lifetime or threading problems when using `HttpClient` in ASP.NET Core?",
+    "answer": "The common mistake is creating and disposing `HttpClient` per request, which can hurt performance and lead to socket exhaustion. The usual fix is to use `IHttpClientFactory`, which manages handlers and promotes safe reuse. You can still configure named or typed clients for different APIs and settings. The trade-off is a little setup for much better reliability and connection management.",
+    "real_world": "This shows up when a service starts timing out under load even though the downstream API is healthy. Teams often trace it back to naive `new HttpClient()` usage in every controller action or background job.",
+    "code_lang": "csharp",
+    "code": "services.AddHttpClient(\"catalog\", client =>\n{\n    client.BaseAddress = new Uri(\"https://api.example.com/\");\n});",
+    "follow_up": "What would you do if one downstream API needs a much shorter timeout than the rest?"
+   },
+   {
+    "question": "What does response compression do in ASP.NET Core, and when is it worth enabling?",
+    "answer": "Response compression reduces payload size for compressible content like JSON, which can improve latency and bandwidth usage. It is most useful for larger responses or slower networks, but it adds CPU overhead and may be wasteful for already compressed formats like images or zip files. In production, you enable it selectively and verify it does not interfere with proxies or cached responses. The key trade-off is server CPU versus network savings.",
+    "real_world": "This matters when mobile clients or cross-region traffic make JSON responses expensive. It can also help when an endpoint returns large lists that are read often but change infrequently.",
+    "code_lang": "csharp",
+    "code": "services.AddResponseCompression();\napp.UseResponseCompression();",
+    "follow_up": "How would you decide whether to compress at the app level or let a reverse proxy handle it?"
+   },
+   {
+    "question": "How do you test an ASP.NET Core endpoint without mocking the entire framework, and what does an integration test give you that a unit test does not?",
+    "answer": "Integration tests run the app through its real middleware, routing, model binding, filters, and dependency injection, usually with a test server. That catches configuration and wiring issues that unit tests miss, such as missing registrations or wrong route templates. Unit tests are still useful for pure business logic, but they do not prove the endpoint works end to end. The trade-off is that integration tests are slower and need more setup, so you use them for the important paths, not every branch.",
+    "real_world": "This is useful when a controller looks correct in code but returns 404 or 415 because of routing or content-type issues. Teams often keep a small set of integration tests for critical endpoints like login, checkout, or file upload.",
+    "code_lang": "csharp",
+    "code": "var client = factory.CreateClient();\nvar res = await client.GetAsync(\"/health\");\nres.EnsureSuccessStatusCode();",
+    "follow_up": "When would you still prefer a unit test over an integration test for an endpoint?"
+   },
+   {
+    "question": "What is the effect of calling `ToList()` too early in a query pipeline in ASP.NET Core, and why can that hurt performance?",
+    "answer": "Calling `ToList()` materializes the query immediately, so any later filtering, sorting, or paging happens in memory instead of in the database. That can increase memory usage and move work from the database engine to the app process. With ORMs like Entity Framework Core, it also means you may load far more rows than needed. The better pattern is to compose the query first and materialize only at the boundary where you actually need the data.",
+    "real_world": "A common production issue is an endpoint that gets slow as the table grows because it loads thousands of rows before paging. Another is accidental N+1 or overfetching caused by materializing too soon in a repository method.",
+    "code_lang": "csharp",
+    "code": "var query = db.Users.Where(u => u.IsActive);\nvar page = await query\n    .OrderBy(u => u.Name)\n    .Skip(20).Take(20)\n    .ToListAsync();",
+    "follow_up": "How would you spot this problem when reviewing code or looking at SQL logs?"
+   },
+   {
+    "question": "How do you handle cancellation tokens correctly in ASP.NET Core request processing, and why does it matter?",
+    "answer": "The request `CancellationToken` should usually be passed down to async I/O calls so work stops when the client disconnects or the request is aborted. This avoids wasting CPU and database time on responses nobody will receive. It matters most for long-running queries, external HTTP calls, and background operations started from a request. The trade-off is that you have to thread the token through your code instead of ignoring it at the top level.",
+    "real_world": "In production, this prevents expensive work from piling up during browser refreshes, timeouts, or mobile network drops. It also protects downstream services and databases from unnecessary load during traffic spikes.",
+    "code_lang": "csharp",
+    "code": "public async Task<IActionResult> Get(CancellationToken ct)\n{\n    var items = await db.Items.ToListAsync(ct);\n    return Ok(items);\n}",
+    "follow_up": "What should you do if an operation must continue even after the HTTP request is canceled?"
+   },
+   {
+    "question": "How does the ASP.NET Core request pipeline decide which middleware runs, and what happens when you put a middleware in the wrong order?",
+    "answer": "Middleware runs in the order it is registered, and each component can either pass the request to the next one or short-circuit it. That order matters because later middleware may depend on earlier ones setting up features like authentication, routing, or static file handling. If you place authorization before authentication, for example, the app may evaluate a user before one is established and deny access incorrectly. Misordering often shows up as endpoints not matching, auth failures, or headers never being written.",
+    "real_world": "A common production bug is a custom middleware that logs requests but is placed before routing and never sees endpoint metadata, so it cannot label metrics correctly. Another is putting exception handling too late, which lets some errors escape and return inconsistent responses.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which middleware should usually come before routing, and why?"
+   },
+   {
+    "question": "When would you use endpoint filters instead of middleware or action filters in ASP.NET Core?",
+    "answer": "Endpoint filters are useful when you want logic applied to specific endpoints, especially in minimal APIs, without affecting the whole pipeline. Middleware is broader and works for every request, while action filters are tied to MVC controllers. Endpoint filters sit closer to the handler, so they can inspect arguments and results in a way that is often simpler for per-endpoint validation, logging, or transformation. The trade-off is that they are not a replacement for cross-cutting concerns that truly belong at the HTTP level.",
+    "real_world": "Teams often use endpoint filters to enforce consistent request validation or tenant checks across a group of minimal API routes. That avoids duplicating the same guard code in every handler.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main differences between endpoint filters and MVC action filters?"
+   },
+   {
+    "question": "How do you choose between configuration binding with options and reading values directly from `IConfiguration` in a service?",
+    "answer": "Use options when you want typed settings, validation, and a clear contract for a feature. Reading from `IConfiguration` directly is flexible, but it scatters keys through the code and makes refactoring and testing harder. Options also make it easier to catch missing or invalid settings at startup or on reload, depending on how you wire them up. Direct configuration access is usually fine for a small one-off value, but for a feature area, typed options scale better.",
+    "real_world": "In real projects, configuration drift is common after environment-specific values change. Typed options help catch bad settings earlier and make it clearer which feature owns which config values.",
+    "code_lang": "csharp",
+    "code": "public sealed class MailOptions\n{\n    public string Host { get; set; } = \"\";\n    public int Port { get; set; }\n}\n\nservices.Configure<MailOptions>(config.GetSection(\"Mail\"));\npublic class Mailer(IOptions<MailOptions> options) { }",
+    "follow_up": "How would you validate those options so the app fails fast on invalid configuration?"
+   },
+   {
+    "question": "What happens if a scoped service is injected into a singleton in ASP.NET Core, and how do you fix it?",
+    "answer": "A singleton lives for the application's lifetime, so it cannot safely hold onto a scoped service that is meant to be created per request. In many cases the container will reject the registration, because that dependency would outlive its intended scope. The fix is usually to move the singleton's work into a scoped service, create a scope when needed, or inject a factory abstraction instead of the scoped dependency itself. This matters because lifetime mismatches can cause stale data, disposed objects, or thread-safety bugs.",
+    "real_world": "This comes up when a background cache or hosted service tries to use a request-based database context. It can work in local testing and then fail under load with disposed context errors or cross-request data leakage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is it appropriate for a singleton to create a scope manually?"
+   },
+   {
+    "question": "How do you keep database access efficient in an ASP.NET Core API when returning related data from Entity Framework Core?",
+    "answer": "The main goal is to fetch only what the endpoint needs and avoid repeated database round-trips. That usually means projecting to a DTO instead of materializing full entity graphs, and being careful about lazy loading or loops that trigger extra queries. `Include` can help for related data, but it can also fetch more than necessary, so projection is often better for read endpoints. The right choice depends on whether you need tracking, related entities, or just a shaped response.",
+    "real_world": "A common performance issue is an endpoint that looks fine in development but makes dozens of queries per request in production because it iterates navigation properties. That often becomes visible only after traffic grows.",
+    "code_lang": "csharp",
+    "code": "var orders = await db.Orders\n    .Select(o => new OrderDto(o.Id, o.Customer.Name, o.Total))\n    .ToListAsync();",
+    "follow_up": "How would you detect an N+1 query problem in a real application?"
+   },
+   {
+    "question": "What is the difference between `Task<IActionResult>` and `ValueTask<IActionResult>` in ASP.NET Core, and when would you use one over the other?",
+    "answer": "`Task` is the standard choice and is usually the simplest and safest option. `ValueTask` can reduce allocations when a result is often available synchronously, but it adds complexity and has usage restrictions, so it should be used only when profiling shows a real benefit. For most controller and API endpoints, `Task` is the right default. The performance gain from `ValueTask` is small unless the method is on a very hot path and frequently completes synchronously.",
+    "real_world": "Teams sometimes reach for `ValueTask` too early in low-level libraries and make the code harder to use correctly. In web APIs, that usually creates more complexity than measurable benefit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the constraints or pitfalls of using `ValueTask` compared with `Task`?"
+   },
+   {
+    "question": "How do you implement structured logging in ASP.NET Core so logs are useful during an incident?",
+    "answer": "Structured logging means logging named fields instead of only string messages, so you can query and filter by properties like request id, user id, or order id. In ASP.NET Core, the key is to log with placeholders and include enough context at boundaries such as incoming requests, downstream calls, and failures. You should avoid logging sensitive data and keep high-volume logs at appropriate levels to control noise. Good structured logs make it much easier to trace a single request across services.",
+    "real_world": "During an outage, plain text logs often force engineers to grep manually through huge files. Structured logs let them group all failures for one tenant or correlate a spike with a specific dependency.",
+    "code_lang": "csharp",
+    "code": "logger.LogInformation(\"Creating order {OrderId} for customer {CustomerId}\",\n    orderId, customerId);\nlogger.LogError(ex, \"Payment failed for order {OrderId}\", orderId);",
+    "follow_up": "How would you propagate a correlation id through an incoming request and outbound calls?"
+   },
+   {
+    "question": "When would you choose minimal APIs over controllers in an ASP.NET Core project, and what trade-offs do you make?",
+    "answer": "Minimal APIs are a good fit for small services, simple endpoints, and lightweight HTTP surfaces where you want less ceremony. Controllers are often better when you need more built-in structure, conventions, filters, and a larger team-friendly organization. Minimal APIs can become harder to navigate as the app grows unless you add your own structure around them. The trade-off is usually between speed and simplicity on one side, and discoverability and convention on the other.",
+    "real_world": "A team may start with minimal APIs for a narrow backend and later move some routes to controllers as the surface area grows. That often happens when the app accumulates versioning, filters, or lots of shared behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you organize a larger minimal API app so it stays maintainable?"
+   },
+   {
+    "question": "How do you safely handle file uploads in ASP.NET Core without risking memory or security problems?",
+    "answer": "You should avoid loading large files into memory when you can stream them to disk or object storage. Validate size, content type, and file name handling, and never trust the client-provided extension or MIME type by itself. For public-facing apps, virus scanning and storage isolation may also be required. The main trade-off is between simplicity and protecting the app from oversized payloads, path traversal, and accidental resource exhaustion.",
+    "real_world": "File upload endpoints are a frequent source of outages when a few large requests consume memory or disk. They are also a common attack surface for malformed files and abuse.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test an upload endpoint with a large file and validate its behavior?"
+   },
+   {
+    "question": "What is a good strategy for versioning ASP.NET Core APIs, and what problems are you trying to avoid?",
+    "answer": "A versioning strategy should let you change an API without breaking existing clients. Common approaches include versioning in the URL, query string, or headers, but the best choice depends on client control and operational simplicity. The important part is to have a clear deprecation path, documentation, and a plan for supporting multiple versions during migration. Without versioning discipline, teams end up making breaking changes and forcing coordinated deployments.",
+    "real_world": "Mobile and partner integrations often lag behind server releases, so breaking changes can cause incidents long after deployment. Versioning gives teams room to evolve the API without freezing it forever.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide when an API change is breaking enough to require a new version?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "What actually happens under the hood when an ASP.NET Core app starts, from `Program.cs` to handling the first request?",
+    "answer": "Startup builds a host, creates the root service provider, configures the server such as Kestrel, and composes the request delegate chain from middleware and endpoint data sources. The pipeline is effectively compiled once into a single `RequestDelegate`, so per-request work is mostly executing that delegate plus creating a scope for scoped services. Endpoint routing also builds matcher data structures at startup rather than scanning routes on every request. This matters because expensive work in startup can delay readiness, while expensive work captured in middleware can affect every request.",
+    "real_world": "Teams hit slow deploys or readiness probe failures because startup does synchronous I/O, database calls, or heavy reflection before the app can accept traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of work should never happen during startup if you care about fast restarts and autoscaling?"
+   },
+   {
+    "question": "How does Kestrel handle requests concurrently, and what thread-safety assumptions should you make inside ASP.NET Core code?",
+    "answer": "Kestrel processes many connections concurrently using asynchronous I/O; there is not a dedicated thread per request. Your action or middleware may resume on different thread-pool threads after awaits, so request handling code must be thread-safe if it shares mutable state. `HttpContext` itself is only safe to use within the active request flow and should not be cached or accessed from background work after the request ends. The practical rule is to avoid shared mutable singletons unless you synchronize access carefully.",
+    "real_world": "A common production bug is storing per-request data in a singleton or kicking off fire-and-forget work that touches `HttpContext`, which then fails intermittently under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need background work triggered by a request, how do you pass data to it safely?"
+   },
+   {
+    "question": "Why can synchronous I/O or blocking calls cause serious throughput problems in ASP.NET Core, even if the app is CPU-light?",
+    "answer": "Blocking ties up thread-pool threads that could be serving other requests, so latency rises long before CPU is saturated. In ASP.NET Core the server is optimized for async I/O; if you block on network or disk calls, thread-pool starvation can create a feedback loop where continuations wait longer and the whole app slows down. Calling `.Result` or `.Wait()` on async work is especially risky. The main trade-off is complexity versus scalability, but for hot paths the async version usually wins clearly.",
+    "real_world": "An API that looks idle on CPU can still time out heavily because a downstream HTTP call or database call is being waited on synchronously, exhausting available request threads.",
+    "code_lang": "csharp",
+    "code": "public async Task<string> Good()\n{\n    return await _client.GetStringAsync(\"/data\");\n}\n\npublic string Bad()\n{\n    return _client.GetStringAsync(\"/data\").Result;\n}",
+    "follow_up": "How would you diagnose thread-pool starvation in a production ASP.NET Core service?"
+   },
+   {
+    "question": "How does ASP.NET Core stream a response, and what are the trade-offs compared with buffering the whole payload first?",
+    "answer": "Streaming writes bytes to the response as they become available, often through `HttpResponse.BodyWriter`, file results, or async enumeration. It reduces memory usage and can improve time-to-first-byte, but once headers or partial body data are sent you cannot easily change the status code or return a clean error payload. Buffering is simpler and makes retries or validation before send easier, but it costs memory and adds latency for large responses. The right choice depends on payload size, failure semantics, and whether clients benefit from incremental delivery.",
+    "real_world": "For large exports or proxy endpoints, buffering can cause high memory usage per request, while streaming avoids that but makes mid-stream failures visible to clients as truncated responses.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when response compression is enabled for a streamed response?"
+   },
+   {
+    "question": "What is the difference between `Use`, `Run`, and `Map` in the ASP.NET Core pipeline, and where do senior engineers get tripped up?",
+    "answer": "`Use` adds middleware that can run code before and after `next`, `Run` terminates the pipeline, and `Map` branches the pipeline based on path matching. The main gotcha is accidentally short-circuiting requests with `Run` or with a `Use` middleware that never calls `next`, which can bypass auth, logging, or endpoint execution. Another subtle issue is assuming `Map` affects all routes when it only applies inside that branch. These are control-flow tools, so correctness depends heavily on order and branch scope.",
+    "real_world": "Incidents happen when health-check or custom middleware branches are placed too early and skip authentication or observability for whole sections of the app.",
+    "code_lang": "csharp",
+    "code": "app.Use(async (ctx, next) =>\n{\n    await ctx.Response.WriteAsync(\"A\");\n    await next();\n    await ctx.Response.WriteAsync(\"C\");\n});\n\napp.Run(async ctx => await ctx.Response.WriteAsync(\"B\"));",
+    "follow_up": "What does that snippet return, and how would the behavior change if `Run` were replaced with `Use`?"
+   },
+   {
+    "question": "How do you approach backpressure and rate limiting in ASP.NET Core when the service is overloaded?",
+    "answer": "The goal is to reject or slow excess work before the app collapses, rather than letting queues grow without bound. In ASP.NET Core that usually means rate limiting at the edge or app layer, bounded queues for background work, request timeouts, and clear overload responses like 429 or 503. If every request is accepted and waits on a saturated dependency, latency explodes and recovery gets harder. The trade-off is some clients get rejected earlier, but overall availability and tail latency improve.",
+    "real_world": "Without backpressure, a brief traffic spike or a slow database can create a queueing storm where even healthy requests time out for minutes after the original event passes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to return 429 versus 503 during overload?"
+   },
+   {
+    "question": "When would you use `IMemoryCache` in ASP.NET Core, and what failure modes should you plan for in a scaled-out deployment?",
+    "answer": "`IMemoryCache` is good for cheap, per-instance caching of data that is safe to recompute or briefly lose. It is not shared across instances, so cache hit rate drops with horizontal scaling and invalidation becomes best-effort unless you use a distributed cache or external signal. You also need to think about stampedes, memory pressure, and whether stale values are acceptable. For consistency-sensitive data, local cache alone is usually the wrong tool.",
+    "real_world": "A service works fine on one node, then after scaling to ten pods each pod warms its own cache, causing a sudden spike against the database and inconsistent reads during updates.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you prevent many concurrent requests from all recomputing the same missing cache entry?"
+   },
+   {
+    "question": "What should you know about `DbContext` concurrency and lifetime when using Entity Framework Core inside ASP.NET Core?",
+    "answer": "`DbContext` is meant to be a short-lived unit-of-work and is not thread-safe. In ASP.NET Core it is typically scoped per request, which works well as long as you do not use the same context concurrently across multiple awaits or parallel tasks. Sharing one context across threads can corrupt state tracking or throw runtime exceptions. If you need parallel database work, use separate contexts and be deliberate about transaction boundaries.",
+    "real_world": "Teams sometimes parallelize several repository calls with `Task.WhenAll` using the same scoped context, which fails only under certain request paths and becomes hard to reproduce.",
+    "code_lang": "csharp",
+    "code": "var a = _db.Users.CountAsync();\nvar b = _db.Orders.CountAsync();\nawait Task.WhenAll(a, b); // bad: same DbContext concurrently",
+    "follow_up": "If you truly need parallel queries, how would you structure that safely?"
+   },
+   {
+    "question": "How do forwarded headers and reverse proxies affect ASP.NET Core behavior, and what can go wrong if you misconfigure them?",
+    "answer": "Behind a proxy, the app often sees the proxy's connection details unless forwarded headers are applied correctly. That affects scheme, client IP, host, redirects, cookie security decisions, and link generation. If misconfigured, you can get redirect loops, incorrect absolute URLs, bad audit data, or trust spoofed headers from untrusted networks. The key trade-off is convenience versus security: only trust forwarded values from known proxy hops.",
+    "real_world": "A common incident is HTTPS redirect loops in production because the app thinks requests are HTTP after TLS was already terminated at the load balancer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is it dangerous to blindly trust `X-Forwarded-For` from the public internet?"
+   },
+   {
+    "question": "How would you reason about graceful shutdown in an ASP.NET Core service, especially with long-running requests and background work?",
+    "answer": "Graceful shutdown means stop accepting new work, allow in-flight requests some time to finish, and signal background services to cancel cleanly. In ASP.NET Core that usually involves host shutdown tokens, propagating cancellation, and designing background loops so they observe cancellation instead of blocking indefinitely. If your request handlers ignore cancellation or your background queue is unbounded, deploys can hang or terminate work mid-flight. The trade-off is shutdown speed versus work completion guarantees.",
+    "real_world": "During rolling deploys, services that do not drain properly cause dropped requests, duplicate processing, or pods that exceed termination windows and get killed abruptly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if some requests can legitimately take longer than the platform's termination window?"
+   },
+   {
+    "question": "How would you compare in-process and out-of-process hosting for ASP.NET Core on IIS, and what trade-offs matter in production?",
+    "answer": "In-process hosting runs the app inside the IIS worker process, so requests avoid the extra hop through a reverse-proxy boundary and usually get lower overhead. Out-of-process runs Kestrel as a separate process behind IIS, which adds some cost but gives a cleaner process boundary and behavior closer to Linux or container deployments. The trade-off is mostly performance versus isolation and deployment consistency. If you need identical hosting behavior across environments, out-of-process can simplify operations even if it is a bit less efficient.",
+    "real_world": "Teams sometimes benchmark only on developer machines and then see different timeout or startup behavior once IIS is introduced. During incident response, knowing whether IIS is proxying to Kestrel or hosting in-process changes where you look for connection resets and request limits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of failures would you expect IIS to handle differently from Kestrel?"
+   },
+   {
+    "question": "What happens if you use `Task.Run` inside an ASP.NET Core request handler to offload work, and when is that a mistake?",
+    "answer": "Using `Task.Run` does not create more request capacity for typical server code; it just moves work to another thread-pool thread. For I/O-bound work it is usually pointless, and for CPU-bound work it can increase thread-pool pressure and hurt tail latency under load. The right fix is usually true async I/O, a background queue, or a separate worker service for expensive CPU work. `Task.Run` is only occasionally useful to isolate short CPU work when you have measured that it helps.",
+    "real_world": "A common production failure is an API that seems fine at low traffic but collapses at peak because each request schedules extra thread-pool work. You then see rising latency, request timeouts, and thread-pool starvation symptoms even though CPU is not fully saturated.",
+    "code_lang": "csharp",
+    "code": "app.MapPost(\"/resize\", async (ImageJob job, IBackgroundTaskQueue q) =>\n{\n    await q.EnqueueAsync(job);\n    return Results.Accepted();\n});",
+    "follow_up": "How would you recognize thread-pool starvation in a live ASP.NET Core service?"
+   },
+   {
+    "question": "How does ASP.NET Core authentication actually populate `HttpContext.User`, and where do people make wrong assumptions?",
+    "answer": "Authentication middleware runs the configured authentication handlers, and a handler can validate credentials and produce a `ClaimsPrincipal` that gets assigned to `HttpContext.User`. That does not mean every request is authenticated automatically in every scheme; the active default scheme and endpoint metadata determine what runs. A common mistake is assuming `User` is meaningful before authentication middleware, or assuming multiple schemes all execute unless explicitly requested. Another mistake is treating claims as trusted without understanding who issued them and how they were validated.",
+    "real_world": "This matters in systems that mix cookies, bearer tokens, and internal proxy authentication. Teams often misread empty or unexpected claims during incidents because the wrong default scheme was selected or the endpoint challenged a different scheme than expected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle an API that needs to accept either a JWT or an API key on the same endpoint?"
+   },
+   {
+    "question": "What are the real differences between `UseExceptionHandler`, developer exception pages, and server-level failures in ASP.NET Core?",
+    "answer": "`UseExceptionHandler` handles unhandled exceptions from later middleware and endpoints inside the application pipeline, letting you return a controlled response. The developer exception page is for local diagnostics and should not be exposed publicly because it reveals stack traces and internals. Server-level failures are different: if the process crashes, startup fails, headers are already sent, or the connection is aborted, your exception middleware may never produce a clean response. You need app-level handling plus host-level logging and monitoring.",
+    "real_world": "A team may think they have global error handling covered, then still get empty responses or truncated bodies in production because the failure happened after the response started. That changes how you design error contracts and observability.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should your app do if an exception occurs after part of the response body has already been written?"
+   },
+   {
+    "question": "How do you think about large request bodies in ASP.NET Core, especially around buffering, streaming, and denial-of-service risk?",
+    "answer": "Large bodies are dangerous if you let the framework buffer them into memory or repeatedly read them without limits. For big uploads or imports, prefer streaming and process data incrementally, while setting request size limits and validating content early. Buffering makes retries and multi-pass parsing easier, but it increases memory usage and can amplify abuse. The safe design is explicit limits, streaming where possible, and rejecting requests before doing expensive work.",
+    "real_world": "Production incidents often happen when a few oversized multipart uploads or JSON payloads trigger memory spikes across many pods at once. The service may look fine in tests with small bodies but fail badly under abusive or accidental large requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you intentionally enable request buffering, and what safeguards would you add?"
+   },
+   {
+    "question": "How does endpoint metadata drive behavior in ASP.NET Core, and why is that important beyond routing?",
+    "answer": "Once routing selects an endpoint, ASP.NET Core exposes metadata attached to that endpoint, and later middleware or filters can use it to change behavior. Authorization, CORS, rate limiting, caching-related policies, and custom conventions often rely on endpoint metadata rather than hard-coded path checks. This is important because policy becomes declarative and composable, but it also means middleware order matters: anything that needs the selected endpoint must run after routing. If you inspect metadata too early, you will get nothing or the wrong result.",
+    "real_world": "In real systems, teams add custom metadata for tenancy, audit requirements, or internal-only endpoints. Bugs show up when a middleware expects metadata before `UseRouting`, or when a convention silently stops applying and protection disappears.",
+    "code_lang": "csharp",
+    "code": "app.MapGet(\"/internal\", () => \"ok\")\n   .WithMetadata(new InternalOnlyAttribute());\n\napp.Use(async (ctx, next) =>\n{\n    var isInternal = ctx.GetEndpoint()?.Metadata.GetMetadata<InternalOnlyAttribute>() != null;\n    await next();\n});",
+    "follow_up": "What middleware must run before and after routing if you want to enforce endpoint-specific policies?"
+   },
+   {
+    "question": "What does `EnableBuffering()` on the request body really do, and what are the trade-offs?",
+    "answer": "`EnableBuffering()` allows the request body to be read multiple times by wrapping it in a buffering mechanism instead of a forward-only stream. That is useful for logging, signature verification, or custom parsing, but it adds I/O and can consume memory or spill to disk depending on body size. If you use it carelessly, you pay the cost on every request even when most requests do not need it. It also does not remove the need to reset the stream position before downstream code reads it.",
+    "real_world": "A common incident is a logging middleware that reads every body for debugging and quietly destroys throughput or fills temporary storage under load. Another is model binding suddenly seeing an empty body because a middleware read it and forgot to rewind.",
+    "code_lang": "csharp",
+    "code": "app.Use(async (ctx, next) =>\n{\n    ctx.Request.EnableBuffering();\n    using var reader = new StreamReader(ctx.Request.Body, leaveOpen: true);\n    var body = await reader.ReadToEndAsync();\n    ctx.Request.Body.Position = 0;\n    await next();\n});",
+    "follow_up": "How would you capture request bodies for diagnostics without turning it on globally?"
+   },
+   {
+    "question": "How do HTTP/1.1, HTTP/2, and HTTP/3 change the behavior you care about in ASP.NET Core services?",
+    "answer": "The main differences are connection management, multiplexing, and transport behavior. HTTP/2 multiplexes many streams over one connection, which reduces head-of-line blocking at the application layer and changes how you think about connection counts and long-lived requests. HTTP/3 moves to QUIC over UDP, improving behavior on lossy networks and connection migration, but it can complicate infrastructure and observability. In ASP.NET Core, the application model stays similar, but limits, timeouts, streaming patterns, and reverse-proxy compatibility matter a lot more.",
+    "real_world": "This shows up when mobile clients have flaky networks or when gRPC is introduced, since gRPC commonly relies on HTTP/2 semantics. Teams that only watch request rate can miss that a few busy multiplexed connections are carrying a huge amount of work.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes operationally when you deploy gRPC on ASP.NET Core behind a proxy?"
+   },
+   {
+    "question": "How would you prevent duplicate processing when clients retry POST requests against an ASP.NET Core API?",
+    "answer": "You usually need idempotency at the application level, not just HTTP semantics. A common approach is an idempotency key supplied by the client and stored with the result of the first successful or in-progress operation, so retries can return the same outcome instead of creating duplicates. The hard parts are atomicity, expiration, and deciding what to do when the first attempt partially failed. If the operation touches external systems, you often need a durable outbox or similar pattern rather than just an in-memory check.",
+    "real_world": "This matters when payment, order, or provisioning calls time out after the server committed work but before the client got the response. Without idempotency, retries create double charges or duplicate resources and the cleanup becomes manual and expensive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement idempotency safely if the endpoint writes to both a database and a message broker?"
+   },
+   {
+    "question": "What is the practical difference between 429, 503, and connection-level shedding in an overloaded ASP.NET Core service?",
+    "answer": "A 429 means the client exceeded a rate or quota policy, so it is a client-scoped rejection and often should include retry guidance. A 503 means the service is temporarily unavailable, usually due to broader saturation or dependency failure, and it signals that the problem is on the server side. Connection-level shedding is more brutal: the server or proxy drops or refuses work before an HTTP response is fully produced, which protects resources but gives clients less structured feedback. The right choice depends on whether overload is per-client, global, or so severe that generating responses is itself too expensive.",
+    "real_world": "During a major traffic spike, teams often discover that continuing to return pretty JSON errors consumes enough CPU to make recovery slower. At lighter overload, explicit 429s can protect fair usage and stop one tenant from starving everyone else.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you combine application-level rate limiting with load balancer or proxy protections?"
+   }
+  ]
+ }
+}

@@ -1,0 +1,485 @@
+{
+ "slug": "svelte",
+ "name": "Svelte and SvelteKit",
+ "category": "Frontend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Svelte, and how is it different from a framework like React or Vue?",
+    "answer": "Svelte is a compiler that turns your components into efficient JavaScript at build time, instead of shipping a large runtime that reconciles a virtual DOM. That usually means less code in the browser and simpler component code. The trade-off is that some behavior is decided at compile time, so patterns can feel different from runtime frameworks.",
+    "real_world": "Teams often choose Svelte for performance-sensitive pages or when they want simpler state updates without a lot of boilerplate. It can also reduce bundle size in apps where shipping less JavaScript matters.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does Svelte compile your component code into?"
+   },
+   {
+    "question": "How do you create reactive state in a Svelte component?",
+    "answer": "In Svelte, local variables are reactive when you assign to them. If a variable is used in the markup, updating it with an assignment causes the DOM to update automatically. A common mistake is mutating nested data without reassigning the top-level variable, which can prevent updates.",
+    "real_world": "This shows up when a counter updates correctly, but editing an item inside an array does not refresh the UI because the array reference never changed.",
+    "code_lang": "svelte",
+    "code": "<script>\n  let count = 0;\n  function inc() {\n    count += 1;\n  }\n</script>\n\n<button on:click={inc}>{count}</button>",
+    "follow_up": "How do you update an item inside an array so Svelte notices?"
+   },
+   {
+    "question": "What does the `$:` label do in Svelte?",
+    "answer": "`$:` creates a reactive statement that reruns when any value it depends on changes. It is useful for derived values and side effects that should stay in sync with state. The main thing to watch is making sure the dependencies are clear, because Svelte tracks them from the code you write.",
+    "real_world": "A team might use this to keep a total price updated whenever quantity or unit price changes, instead of recomputing it in multiple event handlers.",
+    "code_lang": "svelte",
+    "code": "<script>\n  let price = 10;\n  let qty = 2;\n  $: total = price * qty;\n</script>\n\n<p>{total}</p>",
+    "follow_up": "When would you use a reactive statement instead of a function?"
+   },
+   {
+    "question": "What is a Svelte prop, and how do you pass data into a child component?",
+    "answer": "Props are values passed from a parent component into a child component. In Svelte, you declare them with `export let` in the child, then provide the values as attributes when using the component. Props are for one-way data flow; if the child needs to change something, you usually lift state up or use events.",
+    "real_world": "This is common for reusable UI like buttons, cards, or modals where the parent controls the content and behavior.",
+    "code_lang": "svelte",
+    "code": "<!-- Child.svelte -->\n<script>\n  export let name;\n</script>\n\n<p>Hello {name}</p>",
+    "follow_up": "How would a child component communicate an action back to the parent?"
+   },
+   {
+    "question": "What is event forwarding or dispatching in Svelte, and when would you use it?",
+    "answer": "Use component events when a child needs to notify a parent about something like a click, submit, or selection. In Svelte, the child can dispatch a custom event, and the parent listens for it. This keeps components reusable and avoids tightly coupling child components to parent state.",
+    "real_world": "A modal component may dispatch a `close` event so the parent decides whether to hide it and what cleanup to do next.",
+    "code_lang": "svelte",
+    "code": "<script>\n  import { createEventDispatcher } from 'svelte';\n  const dispatch = createEventDispatcher();\n</script>\n\n<button on:click={() => dispatch('close')}>Close</button>",
+    "follow_up": "What is the difference between a prop and an event?"
+   },
+   {
+    "question": "What is a Svelte store, and why would you use one instead of component state?",
+    "answer": "A store is a shared reactive value that multiple components can subscribe to. You use it when state needs to be shared across components, such as authentication, theme, or a shopping cart. For local state inside one component, plain variables are simpler.",
+    "real_world": "Stores are useful when a header, sidebar, and settings page all need to reflect the same logged-in user or theme choice immediately.",
+    "code_lang": "svelte",
+    "code": "import { writable } from 'svelte/store';\n\nexport const count = writable(0);\n\n// in a component: $count gives current value",
+    "follow_up": "What does the `$store` syntax do in a component?"
+   },
+   {
+    "question": "How does SvelteKit handle routing?",
+    "answer": "SvelteKit uses file-based routing, so the folder and file structure in `src/routes` defines your app routes. A page component becomes a route automatically, and nested folders create nested routes. This is simpler than manually configuring a router for many basic apps.",
+    "real_world": "A team can add a new page by creating a file, which reduces routing bugs and makes the app structure easy to understand for new developers.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do dynamic route parameters work in SvelteKit?"
+   },
+   {
+    "question": "What is the difference between `load` in SvelteKit and fetching data directly in a component?",
+    "answer": "`load` is used to fetch or prepare data before a page or layout renders, and it works on both the server and the client depending on navigation. Fetching inside a component is more ad hoc and can cause loading logic to be spread out. Using `load` keeps data requirements close to the route and makes server-side rendering easier.",
+    "real_world": "This matters when a page needs user-specific data before it displays, such as a dashboard that should not render empty and then fill in later.",
+    "code_lang": "svelte",
+    "code": "export async function load({ fetch }) {\n  const res = await fetch('/api/items');\n  return { items: await res.json() };\n}",
+    "follow_up": "When would you put data loading in a layout load function instead of a page load function?"
+   },
+   {
+    "question": "What are SvelteKit hooks used for?",
+    "answer": "Hooks let you run code around every request or navigation, depending on the hook, so you can handle concerns like authentication, request context, or response headers. They are a good place for shared app-wide logic that should not live in every page. A common use is checking whether a user is logged in and redirecting if they are not.",
+    "real_world": "Teams often use hooks to attach the current user to request state so all routes can access it consistently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you protect a private route in SvelteKit?"
+   },
+   {
+    "question": "What is the `+layout.svelte` file for in SvelteKit?",
+    "answer": "A layout component wraps multiple routes and lets you share UI like navigation, sidebars, or a footer. Nested routes can inherit layouts, so you do not repeat the same shell on every page. This keeps shared structure centralized and makes large route trees easier to maintain.",
+    "real_world": "A dashboard app often uses one layout for the authenticated area and another for marketing pages, so shared navigation stays consistent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between `+layout.svelte` and `+page.svelte`?"
+   },
+   {
+    "question": "How do you bind an input value to component state in Svelte, and when is that useful?",
+    "answer": "Use `bind:value` to keep an input and a variable in sync. It is useful for forms, search boxes, and any UI where the displayed value should always match state without writing manual `on:input` handlers. A common mistake is trying to mutate the DOM directly instead of updating state and letting Svelte reflect it.",
+    "real_world": "This is common in filter forms and live search fields. If binding is wrong, the UI can lag behind what the user typed or you end up writing repetitive event code.",
+    "code_lang": "svelte",
+    "code": "<script>\n  let name = '';\n</script>\n\n<input bind:value={name} />\n<p>Hello {name}</p>",
+    "follow_up": "How do you bind other types of form controls like checkboxes or selects?"
+   },
+   {
+    "question": "What is the difference between a Svelte `{#if}` block and using CSS to hide an element?",
+    "answer": "`{#if}` conditionally renders or removes the element from the DOM, while CSS hiding keeps it in the DOM but invisible. Use `{#if}` when the content should not exist unless needed, especially for expensive components or inaccessible hidden content. Use CSS hiding when you need the element to keep its state or layout behavior.",
+    "real_world": "This matters for modals, dropdowns, and loading states. Leaving expensive UI mounted can waste work, while removing something too aggressively can reset local state unexpectedly.",
+    "code_lang": "svelte",
+    "code": "{#if isOpen}\n  <Modal />\n{/if}",
+    "follow_up": "What is the equivalent of `{#if}` for rendering a list of items?"
+   },
+   {
+    "question": "How do keyed `{#each}` blocks work in Svelte, and why would you use keys?",
+    "answer": "A keyed `{#each}` gives Svelte a stable identity for each item, usually based on an ID. This helps Svelte preserve the right DOM element and component state when items are inserted, removed, or reordered. Without keys, Svelte matches by position, which can cause state to appear on the wrong item.",
+    "real_world": "This comes up in todo lists, chat messages, and sortable tables. A missing key can make an edited row or input value jump to another row after reordering.",
+    "code_lang": "svelte",
+    "code": "{#each todos as todo (todo.id)}\n  <TodoItem {todo} />\n{/each}",
+    "follow_up": "What can go wrong if you use the array index as the key?"
+   },
+   {
+    "question": "What does `onMount` do in Svelte, and when should you use it?",
+    "answer": "`onMount` runs only in the browser after the component is mounted. Use it for browser-only work like reading `window`, starting timers, or subscribing to APIs that depend on the DOM. Do not use it for data fetching that should happen during server rendering, because that usually belongs in SvelteKit `load` instead.",
+    "real_world": "This matters when a component needs access to browser APIs such as `localStorage` or `IntersectionObserver`. Using them too early can break server-side rendering.",
+    "code_lang": "svelte",
+    "code": "<script>\n  import { onMount } from 'svelte';\n  onMount(() => {\n    console.log(window.location.href);\n  });\n</script>",
+    "follow_up": "How do you clean up work started in `onMount`?"
+   },
+   {
+    "question": "What is the purpose of `onDestroy` in Svelte?",
+    "answer": "`onDestroy` runs when a component is removed from the DOM. Use it to clean up intervals, subscriptions, event listeners, or other resources started by the component. This prevents memory leaks and avoids background work continuing after the UI is gone.",
+    "real_world": "A common production issue is a page that keeps receiving updates after navigation because a subscription was never cleaned up. That can cause duplicate requests or rising memory usage over time.",
+    "code_lang": "svelte",
+    "code": "<script>\n  import { onDestroy } from 'svelte';\n  const id = setInterval(() => console.log('tick'), 1000);\n  onDestroy(() => clearInterval(id));\n</script>",
+    "follow_up": "How does this compare to cleanup in React effects or unsubscribe functions in stores?"
+   },
+   {
+    "question": "How do you access route parameters in SvelteKit, and what are they used for?",
+    "answer": "Route parameters come from dynamic route folders like `[id]` and are available in `params` inside `load` or server functions. They let you build pages such as `/users/123` or `/posts/my-slug`. Use them to load the specific data for the current route.",
+    "real_world": "This is the basis of detail pages in many apps, like product pages or user profiles. If params are handled incorrectly, the wrong record can be shown or a page can 404 unexpectedly.",
+    "code_lang": "javascript",
+    "code": "// src/routes/users/[id]/+page.js\nexport function load({ params }) {\n  return { id: params.id };\n}",
+    "follow_up": "How do you distinguish between a route param and a query string?"
+   },
+   {
+    "question": "What is a `+page.svelte` file in SvelteKit?",
+    "answer": "`+page.svelte` is the component for a specific route's page. It receives the data returned by that route's `load` function through the `data` prop. Use it for the UI of a page, while keeping fetching and route logic outside the component when possible.",
+    "real_world": "In a team codebase, this keeps pages predictable: the route file loads data and the page component renders it. It also makes it easier to test the UI separately from data fetching.",
+    "code_lang": "svelte",
+    "code": "<script>\n  export let data;\n</script>\n\n<h1>{data.title}</h1>",
+    "follow_up": "How is `+page.svelte` different from `+layout.svelte`?"
+   },
+   {
+    "question": "What is the difference between `+page.js` and `+page.server.js` in SvelteKit?",
+    "answer": "`+page.js` can run on both the server and the client during navigation, while `+page.server.js` runs only on the server. Use the server version for secrets, direct database access, or anything that should never reach the browser. Use the shared version for data that is safe to run in either place.",
+    "real_world": "This matters for API keys, database queries, and auth-sensitive logic. Putting private logic in the wrong file can expose data to the browser or break during client-side navigation.",
+    "code_lang": "javascript",
+    "code": "// +page.server.js\nexport async function load({ params }) {\n  return { secret: process.env.MY_SECRET };\n}",
+    "follow_up": "When would you choose a form action instead of a `load` function?"
+   },
+   {
+    "question": "What are SvelteKit form actions, and why would you use them?",
+    "answer": "Form actions handle form submissions on the server and let SvelteKit manage progressive enhancement. They are a good fit for create/update/delete operations because they keep mutation logic on the server and work even without JavaScript. Use them when you want a simple, secure way to submit forms without building a separate API route.",
+    "real_world": "This is common for login forms, profile updates, and admin dashboards. A server action lets the same form work for both browser users and less capable clients.",
+    "code_lang": "javascript",
+    "code": "// +page.server.js\nexport const actions = {\n  default: async ({ request }) => {\n    const data = await request.formData();\n    return { ok: true };\n  }\n};",
+    "follow_up": "How do you show validation errors back in the form after an action fails?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do Svelte's reactive assignments differ from derived state in a store, and when would you choose one over the other?",
+    "answer": "Reactive assignments are local to a component and recompute when referenced values change, which is ideal for UI-specific values like filtered lists or display flags. Derived stores are better when multiple components need the same computed value or when you want to centralize logic outside the component tree. The trade-off is simplicity versus reuse and testability. If the value is only meaningful inside one component, keep it local; if it crosses component boundaries, a derived store is usually cleaner.",
+    "real_world": "A common bug is duplicating the same filtered data logic in several components and then fixing one copy but not the others. Moving that logic into a derived store keeps the behavior consistent across the app.",
+    "code_lang": "svelte",
+    "code": "$: visible = items.filter((item) => item.active)\n\nimport { derived } from 'svelte/store'\nexport const visibleStore = derived(itemsStore, ($items) =>\n  $items.filter((item) => item.active)\n)",
+    "follow_up": "When would you replace a derived store with a plain function or a memoized selector?"
+   },
+   {
+    "question": "How do Svelte's lifecycle hooks help when integrating browser-only APIs, and what goes wrong if you use them on the server?",
+    "answer": "Hooks like `onMount` let you run code only after the component is in the browser, which is where DOM APIs, `window`, and `localStorage` exist. If you run that logic during server rendering, it will fail because those globals are unavailable. In SvelteKit, the key is to keep browser-only work inside `onMount` or guarded by `browser` checks. That keeps SSR safe and avoids hydration-time crashes.",
+    "real_world": "This comes up when adding analytics, resize observers, or reading persisted settings from `localStorage`. If that code runs during SSR, the page may fail to render for every request.",
+    "code_lang": "svelte",
+    "code": "<script>\n  import { onMount } from 'svelte';\n  onMount(() => {\n    const theme = localStorage.getItem('theme');\n  });\n</script>",
+    "follow_up": "What would you do if the initial HTML needs the same data that only exists in the browser?"
+   },
+   {
+    "question": "How do you prevent a SvelteKit page from refetching the same data unnecessarily when navigating between routes?",
+    "answer": "Use layout-level loading when the data is shared across multiple pages, so it can be fetched once and reused by child routes. If the data is route-specific but changes rarely, you can also use SvelteKit's invalidation and dependency tracking so only the affected load function reruns. The main trade-off is freshness versus avoiding duplicate requests. In practice, you want shared data in a layout and narrow invalidation for anything user- or page-specific.",
+    "real_world": "Without this, teams often see repeated API calls on every navigation, which slows the app and can hit rate limits. Consolidating shared data into a layout load usually fixes both performance and consistency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide whether data belongs in a parent layout load or a child page load?"
+   },
+   {
+    "question": "What is hydration mismatch in SvelteKit, and how do you debug it?",
+    "answer": "A hydration mismatch happens when the HTML rendered on the server does not match what the client renders during hydration. Common causes are using non-deterministic values like `Date.now()`, reading browser-only state during render, or rendering different branches on the server and client. To debug it, compare the server output with the client state at first render and isolate any code that depends on time, randomness, or browser APIs. The fix is usually to move that logic into `onMount`, a load function, or a stable server-provided value.",
+    "real_world": "This often appears as flickering content or console warnings after deploy, especially on pages with user-specific settings or live timestamps. It can be hard to reproduce locally unless you test both SSR and hydration.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of components are most likely to cause hydration problems?"
+   },
+   {
+    "question": "How do you handle a form in SvelteKit when you need both progressive enhancement and validation feedback?",
+    "answer": "Use a normal HTML form with a server action for validation so it works without JavaScript, then enhance it on the client for a smoother experience. The server remains the source of truth for validation, and the returned form state can display field errors after submission. This avoids duplicating validation logic in the client and server. The trade-off is that client-side feedback can be faster, but server validation is more reliable and secure.",
+    "real_world": "This pattern is common for login, signup, and checkout flows where users may have JS disabled or flaky connections. It also makes sure the same validation rules apply whether the request comes from the browser or an automated client.",
+    "code_lang": "svelte",
+    "code": "<form method=\"POST\">\n  <input name=\"email\" />\n  <button>Save</button>\n</form>\n\n{#if form?.errors?.email}\n  <p>{form.errors.email}</p>\n{/if}",
+    "follow_up": "When would you still add client-side validation on top of the server action?"
+   },
+   {
+    "question": "How does Svelte's `{#await}` block compare with manually tracking loading and error state?",
+    "answer": "The `{#await}` block is a concise way to render pending, success, and error states for a promise in the template. Manual state gives you more control when you need retries, cancellation, or multiple overlapping requests, but it also adds more boilerplate. `{#await}` is best for straightforward one-off fetches in a component. If the async logic is more complex, moving it into a store or load function is usually cleaner.",
+    "real_world": "This matters on dashboards that load a few independent widgets, where each section can show its own loading and error state. Using `{#await}` can keep the component readable instead of spreading state flags across the script.",
+    "code_lang": "svelte",
+    "code": "{#await promise}\n  <p>Loading...</p>\n{:then data}\n  <p>{data.name}</p>\n{:catch err}\n  <p>{err.message}</p>\n{/await}",
+    "follow_up": "When would you avoid `{#await}` and fetch data in a `load` function instead?"
+   },
+   {
+    "question": "How do you share state across unrelated Svelte components without making everything depend on a global store?",
+    "answer": "First ask whether the state really needs to be shared broadly; if it only connects a small subtree, lift it to the nearest common parent and pass it down. If the state is cross-cutting, a store or context can work better than prop drilling. Context is useful for dependency-like values such as theme, localization, or form control groups, while stores are better when components outside the subtree also need access. The key trade-off is scope: keep state as local as possible, but no more local than practical.",
+    "real_world": "Teams often start with a global store for everything and end up with hidden coupling. Using context for subtree-specific concerns keeps refactors safer and makes dependencies easier to trace.",
+    "code_lang": "svelte",
+    "code": "<script>\n  import { setContext } from 'svelte';\n  setContext('theme', { color: 'dark' });\n</script>",
+    "follow_up": "What are the downsides of using context too broadly?"
+   },
+   {
+    "question": "What is the difference between server-side `load` and calling an API from the browser after the page renders?",
+    "answer": "Server-side `load` can fetch data before HTML is sent, which improves first render, SEO, and consistency between server and client. Browser-side fetching can be useful for highly interactive or user-triggered data, but it usually means more loading states and an empty initial shell. Server `load` also lets you access request-specific data like cookies and headers safely. The trade-off is that server fetching increases server work, while client fetching shifts work to the browser and delays visible content.",
+    "real_world": "This decision affects pages like product detail pages or news articles, where you want content visible immediately, versus live dashboards that refresh frequently after load. Picking the wrong approach often shows up as slower perceived performance.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you handle a page that needs some data at SSR time and some data only after mount?"
+   },
+   {
+    "question": "How do you test a Svelte component that depends on a store or a form action?",
+    "answer": "Test the component at the boundary: render it with a mocked store or mocked action result, then assert on visible behavior rather than internal implementation. For stores, you can set up a writable store with controlled values; for actions, test the server-side logic separately and verify the component reacts to the returned form state. This keeps tests stable and focused on user-facing behavior. The main trade-off is that you may need a small amount of test scaffolding to isolate the component.",
+    "real_world": "In practice, failures often come from a component showing the wrong error message or not updating after a store change. A focused test catches regressions without requiring full end-to-end coverage for every path.",
+    "code_lang": "typescript",
+    "code": "import { writable } from 'svelte/store';\nconst user = writable({ name: 'Ada' });\nuser.set({ name: 'Lin' });\n\n// component under test should react to store changes",
+    "follow_up": "What would you test at the unit level versus with an end-to-end test?"
+   },
+   {
+    "question": "How do you think about performance in Svelte when a page renders a large list or frequent updates?",
+    "answer": "Start by reducing the amount of DOM that changes: use keyed lists when items move, split large components, and avoid recomputing expensive values inside reactive statements on every update. If a list is very large, consider pagination, virtualization, or narrowing the reactive dependencies so unrelated state changes do not rerender the whole list. Svelte is efficient, but it still pays the cost of DOM work and your own computations. The best optimization is usually to update less, not to micro-optimize template syntax.",
+    "real_world": "This shows up in admin screens or messaging apps where hundreds of rows update often. If each keystroke causes a full list recomputation, the UI can feel sluggish even though the framework itself is fast.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you identify whether the bottleneck is DOM updates, data computation, or network latency?"
+   },
+   {
+    "question": "How do nested layouts in SvelteKit help you structure an app, and when would you choose them over putting shared UI in a single top-level layout?",
+    "answer": "Nested layouts let you scope shared UI and shared data to only the routes that need them, so you can keep unrelated parts of the app isolated. Use them when sections of the site have different chrome, auth requirements, or data dependencies. A single top-level layout is simpler, but it can become too broad and cause unnecessary data loading or coupling. The trade-off is between reuse and keeping route groups independent.",
+    "real_world": "A dashboard might share navigation and user data across all authenticated pages, while marketing pages should not load any of that. Nested layouts keep those concerns separate and avoid pulling dashboard logic into public routes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do layout loading and page loading interact when both define data?"
+   },
+   {
+    "question": "What happens in SvelteKit when a `load` function throws an error or redirects, and why is that preferable to handling it inside the component?",
+    "answer": "If `load` throws, SvelteKit can stop rendering that route and show the appropriate error or redirect response before the page is delivered. That keeps routing logic close to data requirements and avoids rendering a broken page state in the component. It also works better for SSR, because the server can return the right HTTP response. The main trade-off is that the page component should assume required data is already valid.",
+    "real_world": "This matters when a user is not authorized to see a page. Instead of rendering a blank page and then pushing them away in the browser, you return a proper redirect or error from `load`.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use `error` versus `redirect` in a route load function?"
+   },
+   {
+    "question": "How do server-only modules in SvelteKit protect sensitive code, and what mistake do teams commonly make with them?",
+    "answer": "Server-only modules let you keep secrets, database access, and privileged logic out of the client bundle. The common mistake is importing server code into a shared module or a component, which can either fail at build time or accidentally pull sensitive logic into client-visible code. The rule of thumb is to keep anything secret or environment-specific behind server-only boundaries and only pass sanitized data to the browser. This is important for auth, payments, and third-party API keys.",
+    "real_world": "A team might put a database helper in a shared utility file and then import it from both server and client code. That can leak implementation details or break the build when the client bundle tries to resolve server APIs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you structure shared code so both server and client can use it safely?"
+   },
+   {
+    "question": "How do you choose between `form` actions and a JSON API endpoint in SvelteKit for a mutation-heavy feature?",
+    "answer": "Use form actions when the interaction is naturally a form submission and you want built-in SSR, progressive enhancement, and straightforward validation feedback. Use a JSON endpoint when the client needs a more custom protocol, frequent partial updates, or non-form consumers. Actions reduce boilerplate and fit SvelteKit's routing model well, but they are less flexible for complex client-driven workflows. The trade-off is simplicity and accessibility versus API-style control.",
+    "real_world": "A profile settings page often works well with actions because it can submit normally and still feel fast with enhancement. A drag-and-drop editor or live collaboration tool usually fits an API endpoint better.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle optimistic UI with a form action?"
+   },
+   {
+    "question": "What is the difference between using a writable store and passing props through component trees for shared state?",
+    "answer": "Props are best when the data flow is local and the relationship is parent to child, because the dependency stays explicit. A writable store is better when multiple distant components need the same state or when prop drilling would make the tree hard to maintain. Stores can make updates easier, but they also hide dependencies and can create more global coupling if overused. In practice, start with props and only move to a store when the sharing pattern becomes broad or awkward.",
+    "real_world": "A theme toggle or authenticated user state often belongs in a store because many unrelated components need it. A modal title or list item data should usually stay as props.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer context over a store in Svelte?"
+   },
+   {
+    "question": "How do you debug a hydration mismatch in SvelteKit when the server-rendered HTML does not match the browser render?",
+    "answer": "First check whether any code depends on browser-only data like `window`, local time, random values, or client-only state during initial render. Then compare what the server rendered with what the client sees before hydration completes. The fix is usually to make the initial markup deterministic, move browser-specific work into `onMount`, or render placeholders until the client can safely fill them in. Hydration issues matter because they can cause flicker, warnings, or broken interactive state.",
+    "real_world": "A timestamp rendered with the user's local timezone can differ between server and client and trigger a mismatch. Another common case is reading from localStorage during component initialization.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns do you use to keep SSR output deterministic?"
+   },
+   {
+    "question": "How does Svelte's compiler-driven reactivity affect performance when you update nested objects or arrays?",
+    "answer": "Svelte tracks assignments, not deep mutations, so changing a nested field without reassigning the parent may not update the UI. That means immutable-style updates or explicit reassignment are often the safest pattern for predictable reactivity. The upside is less runtime overhead than fine-grained proxy tracking, but you need to be careful about how you mutate data. This matters most in forms, lists, and state objects that change frequently.",
+    "real_world": "A bug often appears when a developer does `user.profile.name = 'x'` and wonders why the UI did not refresh. Reassigning the object or creating a new copy makes the change visible to Svelte.",
+    "code_lang": "svelte",
+    "code": "let user = { profile: { name: 'A' } };\nfunction updateName() {\n  user.profile.name = 'B';\n  user = user;\n}",
+    "follow_up": "When is mutating an array in place acceptable in Svelte, and when is it not?"
+   },
+   {
+    "question": "What are the trade-offs between client-side fetching in a component and fetching in `load` for data that changes often?",
+    "answer": "Fetching in `load` gives you SSR, route-based data dependencies, and a consistent loading story, but it can increase navigation cost if the page refetches frequently. Client-side fetching can feel more dynamic for live data and partial updates, but it shifts work to the browser and can complicate loading and error handling. For fast-changing data, a hybrid approach is common: load the initial page on the server, then refresh specific parts on the client. The key trade-off is freshness and interactivity versus simpler SSR behavior.",
+    "real_world": "An analytics dashboard often renders the first batch of data in `load`, then polls or refreshes only the live widgets on the client. That avoids making every navigation wait on repeated full-page data fetches.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you avoid duplicate requests when both SSR and client navigation can fetch the same data?"
+   },
+   {
+    "question": "How do Svelte component tests usually differ from testing a SvelteKit page or action, and what do you verify in each case?",
+    "answer": "For a component test, focus on rendering, props, events, and state changes in isolation. For a SvelteKit page or action, you also verify route data, server behavior, redirects, and validation responses. The page-level test is closer to an integration test because it checks the contract between `load`, actions, and the rendered UI. A good testing strategy keeps component tests small and uses a few route-level tests for the critical flows.",
+    "real_world": "A button component can be tested by checking that it shows the right label and emits the right event. A login flow should also test that invalid credentials return the expected form error and that success redirects correctly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you mock in a SvelteKit action test, and what would you avoid mocking?"
+   },
+   {
+    "question": "How do you handle environment variables in SvelteKit so secrets stay on the server but public config is still available in the browser?",
+    "answer": "Keep secrets in server-only env access and expose only non-sensitive values to the client through the public env mechanism. The important part is never assuming an env variable is safe just because the code uses it in a shared file. Server code can use secrets directly, while client code should only see values that are meant to be public. This separation prevents accidental leaks during build and runtime.",
+    "real_world": "A payment secret or API token must never reach the browser bundle, but a public analytics key or site URL might need to. Teams often discover this only after inspecting the built assets or seeing a secret appear in client logs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you audit a SvelteKit codebase for accidental secret exposure?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "When would you turn SSR off for a SvelteKit route, and what do you give up when you do that?",
+    "answer": "I disable SSR only for routes that are truly browser-only or where first paint depends on APIs unavailable on the server, like complex canvas editors or auth flows tied to client SDKs. The trade-off is worse first-load SEO, slower time to meaningful content on cold visits, and losing the server as a place to enforce data loading and redirects before render. It also changes failure modes: users now see loading spinners and client-side errors instead of a fully rendered response or proper HTTP status. In practice, SSR off should be the exception, not the default.",
+    "real_world": "Teams often disable SSR to avoid a hydration bug and then discover search pages stopped indexing or cold-start performance regressed badly on mobile. It also makes incidents harder to diagnose because errors move from server logs into browser-only telemetry.",
+    "code_lang": "js",
+    "code": "// +page.js\nexport const ssr = false;\n\n// Often paired with browser-only logic in the component",
+    "follow_up": "How would you isolate just the browser-only part without disabling SSR for the whole route?"
+   },
+   {
+    "question": "How does invalidation actually work in SvelteKit, and how would you use it to avoid stale data without refetching everything?",
+    "answer": "SvelteKit tracks data dependencies from `load`, especially fetches and explicit dependency keys, and `invalidate` reruns only the affected loads. The important design point is to scope dependencies narrowly, so a mutation can refresh one resource instead of blowing away the whole page tree. `invalidateAll` is the blunt instrument and is easy to overuse because it increases network traffic and can cause visible UI churn. For fast-feeling apps, I prefer targeted invalidation plus optimistic UI where the consistency model allows it.",
+    "real_world": "A common production issue is a dashboard that refetches every widget after one small mutation, creating thundering herd traffic and flicker. Targeted invalidation keeps both server load and user-visible latency down.",
+    "code_lang": "js",
+    "code": "// in load\nexport async function load({ fetch, depends }) {\n  depends('app:todos');\n  const res = await fetch('/api/todos');\n  return { todos: await res.json() };\n}\n\n// after a mutation\nimport { invalidate } from '$app/navigation';\nawait invalidate('app:todos');",
+    "follow_up": "What happens if two invalidations overlap with an in-flight navigation or mutation?"
+   },
+   {
+    "question": "What are the main caching layers in a SvelteKit app, and how do you avoid serving the wrong user's data?",
+    "answer": "You have to think about browser cache, CDN or reverse-proxy cache, server-side fetch caching if your platform adds it, and any upstream API cache headers. The key rule is to separate public, shared responses from user-specific ones and set caching headers accordingly; anything tied to cookies, auth, or per-user personalization should not be cached as a shared response unless the cache key includes that identity. In SvelteKit, the danger is assuming a page is safe to cache because its HTML looks static while its `load` actually depends on session state. I treat cacheability as part of the route contract, not an afterthought.",
+    "real_world": "Teams have leaked one user's dashboard to another by putting an authenticated route behind a CDN rule that cached HTML without varying on auth. The bug is rare in test but severe in production because caches amplify it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure a route where most of the page is cacheable but one section is user-specific?"
+   },
+   {
+    "question": "How do you reason about race conditions in SvelteKit when users navigate quickly and multiple loads or form submissions overlap?",
+    "answer": "I assume responses can arrive out of order and design so stale work is either canceled or ignored. SvelteKit navigation handles a lot of this for route loads, but custom fetches, optimistic updates, and repeated form submissions still need explicit coordination with abort signals, idempotent mutations, or request versioning. The goal is that the UI state always corresponds to the latest user intent, not the last packet that arrived. If you skip that, fast users can overwrite newer state with older responses.",
+    "real_world": "A common incident is a search page where typing quickly causes older results to flash back in after newer ones rendered. Another is double-submit on a slow network creating duplicate orders because the server mutation was not idempotent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a form action safe against duplicate submissions from retries or double-clicks?"
+   },
+   {
+    "question": "What is the cost model of Svelte's compiled updates compared with virtual DOM diffing, and where can Svelte still get slow?",
+    "answer": "Svelte avoids a general tree diff by compiling update code that knows exactly which bindings changed, so many updates are smaller and more predictable than a virtual DOM pass. But it still gets slow when you force lots of DOM work, recreate large subtrees, trigger expensive layout and paint, or update giant lists at high frequency. The compiler helps with JavaScript overhead, not with the browser's rendering cost. So at scale, the wins come from preserving DOM, chunking work, virtualizing long lists, and avoiding reactive cascades that touch too much state.",
+    "real_world": "People sometimes assume 'compiled' means large tables will stay fast automatically, then hit jank because 10,000 DOM nodes still need layout and paint. In production the browser usually becomes the bottleneck before Svelte's generated code does.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you profile whether the bottleneck is Svelte update work, JavaScript, or browser layout and paint?"
+   },
+   {
+    "question": "How do context and stores differ under the hood in Svelte, and when is context the better architectural choice?",
+    "answer": "A store is an explicit subscription-based state container, while context is dependency injection scoped to a component subtree. Context is better when the state or service should follow the lifetime of part of the tree, like a form controller, modal manager, or per-request data wrapper, instead of becoming app-global by accident. It also improves testability because you can mount a subtree with a different provider rather than mocking a singleton. The trade-off is discoverability: hidden context dependencies are easier to miss than imported stores.",
+    "real_world": "Large apps often regret turning every shared concern into a singleton store because pages start interfering with each other in tests and during embedded reuse. Scoped context helps avoid cross-route state leaks.",
+    "code_lang": "js",
+    "code": "// parent\nimport { setContext } from 'svelte';\nsetContext('editor', createEditorState());\n\n// child\nimport { getContext } from 'svelte';\nconst editor = getContext('editor');",
+    "follow_up": "What problems show up if you put request-specific or route-specific state into a module-level store?"
+   },
+   {
+    "question": "How would you stream or progressively render data in SvelteKit, and what are the trade-offs?",
+    "answer": "The usual pattern is to return some data immediately from `load` and let slower promises resolve later, rendering them with an `{#await}` boundary or separate UI regions. That improves time to first byte and perceived performance, especially when one backend call is much slower than the rest. The trade-off is more complex loading states and a higher chance of partial-failure UX issues, where one section succeeds and another errors after the page is already visible. You also need to be careful that streaming behavior depends on the adapter and hosting stack.",
+    "real_world": "On content-heavy pages, streaming the shell and primary article first can cut user-perceived wait time a lot even if recommendations or comments arrive later. But teams need clear error boundaries or users see parts of the page pop in and fail inconsistently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the UI so a late failure in one streamed section doesn't destabilize the whole page?"
+   },
+   {
+    "question": "What pitfalls do you watch for with module-level state in SvelteKit, especially under SSR?",
+    "answer": "Module-level variables live beyond a single component instance, and on the server they can outlive a single request depending on the runtime. That means request-specific data, auth state, or mutable caches stored at module scope can leak across users or create hard-to-reproduce race bugs. Safe module state is limited to immutable configuration or carefully designed shared caches that do not contain per-user data. If state is request-bound, keep it in `load`, locals, context, or a store created per request or per subtree.",
+    "real_world": "A classic production bug is storing the current user in a module singleton during SSR and occasionally rendering Alice's name into Bob's page under concurrency. It passes local testing because the leak only appears under overlapping requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you do need shared in-memory caching on the server, how would you keep it safe and bounded?"
+   },
+   {
+    "question": "How do you decide between form actions, endpoints, and remote backends when you need real-time or high-frequency mutations?",
+    "answer": "Form actions are excellent for standard document-style mutations with progressive enhancement, redirects, and validation tied to page state. For high-frequency interactions like autosave, drag-and-drop ordering, or collaborative editing, JSON endpoints or a dedicated real-time backend are usually a better fit because you need finer control over payloads, retries, debouncing, and conflict handling. The real decision is about interaction shape and consistency requirements, not just transport. I often mix them: actions for coarse user flows, APIs or sockets for rapid background updates.",
+    "real_world": "Using form actions for autosave every few keystrokes can create excessive rerenders and awkward UX on flaky networks. Teams usually move those paths to lighter API calls while keeping actions for explicit submits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle conflict resolution if two clients edit the same record concurrently?"
+   },
+   {
+    "question": "What are the biggest adapter-specific gotchas in SvelteKit, and how do they affect architecture?",
+    "answer": "The big differences are around runtime APIs, streaming support, filesystem access, cold starts, connection reuse, and whether the environment is long-lived or edge-like. Code that works on a Node server may fail or perform differently on serverless or edge runtimes, especially if it assumes writable disk, persistent memory, native modules, or long-running connections. Architecturally, that means choosing storage, caching, and background work patterns that fit the deployment target instead of treating the adapter as a packaging detail. I make adapter constraints explicit early, because changing them late can force a redesign.",
+    "real_world": "Teams often prototype on Node with in-memory caches and local file writes, then deploy to serverless and discover caches are unreliable and disk is ephemeral. The result is sporadic data loss, latency spikes, or features that only work in one environment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you audit first before moving a SvelteKit app from a Node adapter to an edge-oriented one?"
+   },
+   {
+    "question": "When you look at compiled Svelte output, what actually triggers a component update, and how does that affect the way you structure state changes?",
+    "answer": "Svelte compiles assignments into dirty-flag updates, so the key trigger is usually an assignment the compiler can see, not deep mutation by itself. That means `obj.x = 1` only updates the DOM if the generated code also marks `obj` dirty, which is why teams often reassign arrays or objects after mutation. The upside is very targeted DOM work with little runtime bookkeeping; the downside is that hidden mutations and aliasing can create stale UI. I structure state so update boundaries are explicit and easy for the compiler to track.",
+    "real_world": "A common production bug is mutating nested state from utility code and wondering why only part of the UI refreshed. Teams usually standardize on immutable-style updates or very explicit reassignment to avoid those misses.",
+    "code_lang": "javascript",
+    "code": "let items = [{ done: false }];\n\nfunction toggle() {\n  items[0].done = !items[0].done;\n  items = items; // force reassignment so update is scheduled\n}",
+    "follow_up": "What cases still cause unnecessary work even though Svelte avoids virtual DOM diffing?"
+   },
+   {
+    "question": "How do you think about SSR concurrency in SvelteKit when multiple requests are rendering the same module at once?",
+    "answer": "Under SSR, module scope can be shared across requests within the same server process, so anything mutable there is potentially cross-request state. Concurrency means one user's request can overwrite another user's data, leak auth context, or create heisenbugs that only appear under load. Request-specific data should live in `event.locals`, `load`, or per-request objects passed through the render path. I treat module-level caches as read-mostly and safe only when keyed correctly and independent of user identity.",
+    "real_world": "Teams get bitten by this with module-level `let currentUser` or in-memory stores initialized during SSR; under load, one user's name or permissions can appear in another session.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you do need in-memory caching on the server, how would you make it safe?"
+   },
+   {
+    "question": "What are the trade-offs of using snapshots in SvelteKit for preserving UI state across navigation, versus putting everything in the URL or a store?",
+    "answer": "Snapshots are good for transient UI state like scroll position, expanded panels, or partially filled controls that should survive back/forward navigation without becoming app-global. They avoid polluting the URL and don't require long-lived stores, but they are navigation-stateful rather than shareable or durable. If state needs deep linking, reload persistence, or collaboration, it belongs in the URL or backend; if it needs to outlive a route tree, a store can be cleaner. The trade-off is convenience versus explicitness and reproducibility.",
+    "real_world": "This matters in search and admin tools where users expect browser back to restore UI context exactly, but product teams do not want every drawer toggle encoded into query params.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of state would you explicitly avoid putting into snapshots?"
+   },
+   {
+    "question": "In SvelteKit, how would you prevent a parent layout load from becoming a bottleneck for all child navigations?",
+    "answer": "A parent layout `load` runs for every child route beneath it when its dependencies are invalidated, so if it fetches heavy or highly variable data it can serialize a lot of navigation work. I keep parent loads focused on stable, broadly shared data like session or feature flags, and push route-specific data down to child pages or layouts. I also avoid accidental dependencies on `url` or params in high-level layouts unless the whole subtree really depends on them. The design goal is to minimize the blast radius of invalidation.",
+    "real_world": "A top-level layout that fetches large navigation metadata or account data on every route change can add hundreds of milliseconds to the whole app and make unrelated pages feel slow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you identify whether a layout is rerunning because of a real dependency or an accidental one?"
+   },
+   {
+    "question": "What is the practical difference between `error` and an unexpected thrown exception in SvelteKit, and why does that matter operationally?",
+    "answer": "Using SvelteKit's expected error path lets you signal an intended HTTP status and message without treating it as an app fault. An unexpected exception means a bug, infrastructure failure, or unhandled edge case, so it should be logged and often sanitized before reaching the user. Operationally, mixing the two pollutes error reporting and makes it hard to tell normal business outcomes like 404 or 403 from genuine incidents. I reserve expected errors for user-facing control flow and let true exceptions surface to monitoring.",
+    "real_world": "If missing records are thrown as generic exceptions, alerting systems will light up during normal traffic and hide the real failures you actually need to investigate.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure logging so expected failures are observable without spamming incident alerts?"
+   },
+   {
+    "question": "How do you handle cancellation and cleanup for browser-side async work in a Svelte component so stale results do not win?",
+    "answer": "Any async task tied to component state or props should either be cancellable or ignored when it becomes obsolete. In practice that means using `AbortController` for fetches, cleaning up subscriptions and timers in `onDestroy`, and checking whether a response still belongs to the latest request before committing state. Svelte won't automatically solve races inside arbitrary async code; it only tears down the component lifecycle correctly. The trade-off is extra plumbing for correctness under rapid user interaction.",
+    "real_world": "Autosuggests and typeahead UIs often show stale results because an older, slower request resolves after a newer one and overwrites the list.",
+    "code_lang": "javascript",
+    "code": "let controller;\n\nasync function search(q) {\n  controller?.abort();\n  controller = new AbortController();\n  const res = await fetch(`/api/search?q=${q}`, {\n    signal: controller.signal\n  });\n  results = await res.json();\n}",
+    "follow_up": "How would you solve the same stale-result problem for non-fetch async work that cannot be aborted?"
+   },
+   {
+    "question": "When would you use `depends` deliberately in a SvelteKit load, and what can go wrong if you do not model dependencies clearly?",
+    "answer": "`depends` is useful when a load relies on data sources that are not obvious from a normal `fetch`, so you can invalidate the right consumers after a mutation. It gives you a stable invalidation key and avoids broad refreshes like rerunning every active load. If dependencies are unclear, teams either over-invalidate and hurt performance or under-invalidate and serve stale data. I use it to make cache boundaries explicit around derived server data, aggregated queries, or non-HTTP resources.",
+    "real_world": "A dashboard that combines several backend calls can otherwise require a full page refresh after a mutation because SvelteKit has no precise signal for which loads became stale.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose the granularity of dependency keys for a multi-tenant app?"
+   },
+   {
+    "question": "How do you approach code-splitting and bundle control in a large SvelteKit app beyond just relying on route-based splitting?",
+    "answer": "Route-level splitting is the baseline, but large apps still need scrutiny around shared dependencies, client-only libraries, and what gets pulled into layouts used everywhere. I isolate heavy widgets behind dynamic imports, keep browser-only code out of universal modules, and watch top-level layout imports because they can become part of many routes. The main trade-off is fewer initial bytes versus more async boundaries and potential loading states. Bundle analysis usually shows that one charting editor or rich text package dominates the first load if left uncontained.",
+    "real_world": "Teams often discover that importing an admin-only editor in a shared component adds a large chunk to the public site's initial JS, even though most users never touch that feature.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of imports in SvelteKit most commonly defeat your intended code-splitting strategy?"
+   },
+   {
+    "question": "What are the security and correctness implications of using `{@html}` in Svelte, especially in an SSR app?",
+    "answer": "`{@html}` bypasses Svelte's normal escaping, so any untrusted content must be sanitized before it gets there. In SSR, the risk is worse because unsafe HTML is rendered into the initial response and can execute immediately in the browser. There is also a correctness angle: content injected this way is outside Svelte's template understanding, so you cannot rely on normal bindings or component semantics inside it. I treat it as a narrow integration point for trusted CMS output or pre-sanitized rich text only.",
+    "real_world": "A production incident here is usually XSS from user-generated content or a third-party CMS field that was assumed safe and turned out not to be.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If a product requires rich text from users, where would you put sanitization and how would you test it?"
+   },
+   {
+    "question": "How would you debug a memory leak in a long-lived SvelteKit session where navigation stays inside the SPA for hours?",
+    "answer": "I start by separating retained DOM, retained JS objects, and retained subscriptions or event listeners. In Svelte apps, leaks usually come from stores that keep subscribers alive, global listeners not removed on destroy, or caches keyed by route params that never evict. I reproduce with repeated navigations, take heap snapshots, and look for objects retaining old component instances or route data. The key is that Svelte's compiled teardown is usually solid, so leaks are often in custom integration code rather than the framework core.",
+    "real_world": "Internal dashboards left open all day can slowly consume hundreds of megabytes because charts, websocket handlers, or custom stores retain references to destroyed pages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What instrumentation would you add in the app itself before reaching for heap snapshots?"
+   }
+  ]
+ }
+}

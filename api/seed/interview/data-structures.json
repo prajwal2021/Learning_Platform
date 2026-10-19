@@ -1,0 +1,485 @@
+{
+ "slug": "data-structures",
+ "name": "Data structures",
+ "category": "Computer science",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is an array, and when would you choose it over a linked list?",
+    "answer": "An array stores elements in contiguous memory, so you can access any element by index in constant time. It is a good choice when you need fast random access and the size is known or changes infrequently. A linked list is better if you expect lots of insertions and deletions in the middle, but it usually gives slower access to a specific position. In practice, arrays are the default choice for most simple ordered collections.",
+    "real_world": "A team might use an array for a fixed list of IDs or for buffering sensor readings. If they pick a linked list instead, they often discover that looking up the nth item is slower than expected.",
+    "code_lang": "python",
+    "code": "nums = [10, 20, 30]\nprint(nums[1])  # 20\nnums.append(40)",
+    "follow_up": "What makes indexed access in an array faster than in a linked list?"
+   },
+   {
+    "question": "What is a stack, and what kinds of problems fit it well?",
+    "answer": "A stack is a last-in, first-out data structure: the last item pushed is the first one removed. It fits problems where you need to reverse order, track nested structure, or remember recent state, like function calls, undo features, and parsing expressions. The basic operations are push, pop, and peek. A common mistake is using a stack when you actually need queue behavior.",
+    "real_world": "Editors use stacks for undo and redo, and compilers use them to match parentheses and nested blocks. Bugs often show up when items are popped in the wrong order and the state becomes inconsistent.",
+    "code_lang": "python",
+    "code": "stack = []\nstack.append('a')\nstack.append('b')\nprint(stack.pop())  # b\nprint(stack[-1])    # a",
+    "follow_up": "How is a stack different from a queue?"
+   },
+   {
+    "question": "What is a queue, and where would you use it?",
+    "answer": "A queue is a first-in, first-out data structure: the first item added is the first removed. It is useful when order matters and work should be processed in arrival order, such as task scheduling, message handling, or breadth-first search. The main operations are enqueue and dequeue. A common beginner mistake is calling pop on the wrong end and accidentally turning it into a stack.",
+    "real_world": "Web servers often place incoming jobs into a queue so requests are handled fairly. If the queue is not sized or monitored well, latency can grow during traffic spikes.",
+    "code_lang": "python",
+    "code": "from collections import deque\nq = deque()\nq.append('a')\nq.append('b')\nprint(q.popleft())  # a",
+    "follow_up": "When would you prefer a priority queue instead of a normal queue?"
+   },
+   {
+    "question": "What is a hash map, and why is it so commonly used?",
+    "answer": "A hash map stores key-value pairs and uses a hash function to find the value for a key quickly. On average, lookup, insert, and delete are fast, which makes it a great choice for dictionaries, caches, and counting items. The trade-off is that it does not keep items sorted, and performance depends on good hashing and handling collisions. A common mistake is assuming iteration order is meaningful unless the language specifically guarantees it.",
+    "real_world": "A backend service might use a hash map to count page views per user or to cache database lookups. If keys are poorly chosen or too many collisions happen, performance can degrade and lookups become slower.",
+    "code_lang": "python",
+    "code": "counts = {}\ncounts['apple'] = 1\ncounts['apple'] += 1\nprint(counts['apple'])  # 2",
+    "follow_up": "What is a collision in a hash map, and how is it handled?"
+   },
+   {
+    "question": "What is a linked list, and what are its advantages and disadvantages?",
+    "answer": "A linked list is a chain of nodes, where each node stores data and a reference to the next node. It can make insertions and deletions easier when you already have a reference to the node, because you do not need to shift other elements. The downside is that you cannot jump directly to the nth element, so access is slower than with an array. Beginners often overuse linked lists when an array would be simpler and faster.",
+    "real_world": "Linked lists sometimes appear in interview problems and in low-level code where frequent splicing matters. In most application code, arrays or dynamic arrays are used instead because they are easier to work with and often faster in practice.",
+    "code_lang": "python",
+    "code": "class Node:\n    def __init__(self, val, next=None):\n        self.val = val\n        self.next = next\nhead = Node(1, Node(2))\nprint(head.next.val)  # 2",
+    "follow_up": "How do you detect a cycle in a linked list?"
+   },
+   {
+    "question": "What is a tree data structure?",
+    "answer": "A tree is a hierarchical structure made of nodes connected by parent-child relationships, with one root node at the top. Trees are used for representing nested or hierarchical data, such as file systems, organization charts, or syntax trees. A common type is a binary tree, where each node has at most two children. The key idea is that there is usually one path from the root to any node, which makes tree traversal different from graphs.",
+    "real_world": "File explorers, XML/HTML parsers, and search features often rely on tree-like structures. If the hierarchy is modeled incorrectly, operations like moving subfolders or rendering nested menus become messy.",
+    "code_lang": "python",
+    "code": "root = {\n    'value': 1,\n    'children': [{'value': 2, 'children': []}]\n}\nprint(root['children'][0]['value'])  # 2",
+    "follow_up": "What is the difference between a binary tree and a binary search tree?"
+   },
+   {
+    "question": "What is a binary search tree, and what property does it maintain?",
+    "answer": "A binary search tree is a binary tree that keeps left-side values smaller than the node and right-side values larger, according to the tree’s comparison rule. That property lets you search, insert, and delete efficiently on average if the tree stays balanced. If the tree becomes skewed, performance can degrade toward a linked list. A common mistake is forgetting that the ordering rule must be consistent for every node.",
+    "real_world": "BSTs are used in in-memory indexes and sets when ordered traversal matters. If data arrives already sorted and the tree is not balanced, performance can collapse unexpectedly.",
+    "code_lang": "python",
+    "code": "# Insert 5 under 10 on the left if smaller\nroot = {'value': 10, 'left': None, 'right': None}\nroot['left'] = {'value': 5, 'left': None, 'right': None}\nprint(root['left']['value'])  # 5",
+    "follow_up": "Why do balanced trees matter for search performance?"
+   },
+   {
+    "question": "What is a graph, and how is it different from a tree?",
+    "answer": "A graph is a collection of nodes connected by edges, and unlike a tree it can contain cycles and multiple paths between nodes. Graphs are used for networks, dependencies, maps, and social relationships. A tree is a special case of a graph with no cycles and exactly one path from the root to each node. The main beginner pitfall is using tree logic on a graph and forgetting to track visited nodes.",
+    "real_world": "Routing systems, recommendation engines, and dependency resolvers all use graphs. Without cycle detection or visited tracking, a traversal can loop forever or repeat work unnecessarily.",
+    "code_lang": "python",
+    "code": "graph = {'A': ['B', 'C'], 'B': ['A'], 'C': []}\nvisited = set()\nvisited.add('A')\nprint(graph['A'])  # ['B', 'C']",
+    "follow_up": "What is breadth-first search, and when would you use it?"
+   },
+   {
+    "question": "How do you choose the right data structure for a problem?",
+    "answer": "Start by asking what operation matters most: lookup, insertion, deletion, ordering, or uniqueness. If you need fast index access, use an array; if you need membership checks, a set or hash map; if you need FIFO or LIFO behavior, a queue or stack. Also consider whether the data is ordered, whether duplicates matter, and how often the collection changes. The best choice is usually the one that matches the dominant operation, not the most advanced structure.",
+    "real_world": "A junior engineer might choose a list for everything and then run into slow lookups or awkward code later. Teams often review data structure choices when a feature becomes slow or hard to maintain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where the wrong data structure caused a real performance problem?"
+   },
+   {
+    "question": "What is the difference between a set and a list, and when would you use a set?",
+    "answer": "A set stores unique values and is optimized for checking whether something exists, while a list preserves order and can contain duplicates. Use a set when duplicates do not matter and membership tests are common. If you need ordering, duplicates, or access by position, a list is usually better. The main trade-off is uniqueness and fast lookup versus preserving sequence.",
+    "real_world": "A team might use a set to deduplicate user IDs coming from multiple events before writing them to a report. Using a list there can silently keep duplicates and inflate counts.",
+    "code_lang": "python",
+    "code": "seen = {\"a\", \"b\", \"c\"}\nprint(\"b\" in seen)\nseen.add(\"d\")\nseen.add(\"b\")  # no duplicate added\nprint(seen)",
+    "follow_up": "How does a set differ from a hash map?"
+   },
+   {
+    "question": "What is the difference between a tuple and a list?",
+    "answer": "A tuple is an ordered collection that is typically treated as fixed, while a list is meant to be modified. Tuples are useful when you want to group related values that should not change, like coordinates or a small record. Lists are better when you need to append, remove, or reorder items. The main idea is expressing intent: stable data with a tuple, mutable data with a list.",
+    "real_world": "Code often returns a tuple for multiple values, like latitude and longitude, because that pair belongs together and should not be casually changed. Lists are more common for user-facing collections that grow over time.",
+    "code_lang": "python",
+    "code": "point = (10, 20)\nitems = [1, 2, 3]\nitems.append(4)\nprint(point)\nprint(items)",
+    "follow_up": "When would you choose a tuple over a custom object or class?"
+   },
+   {
+    "question": "What does it mean for a data structure to be mutable or immutable?",
+    "answer": "Mutable means you can change the object after creating it; immutable means you cannot change it, so any update produces a new value. This matters for reasoning about bugs, sharing data safely, and whether references can change unexpectedly. Mutable structures are often easier for in-place updates, while immutable ones can be safer and simpler to reason about. The trade-off is convenience and performance versus predictability.",
+    "real_world": "A bug can happen when two parts of a program share the same mutable list and one part changes it unexpectedly. Immutability helps avoid those hidden side effects.",
+    "code_lang": "python",
+    "code": "a = [1, 2]\nb = a\nb.append(3)\nprint(a)  # a changed because both names point to the same list\ns = \"hi\"\n# s[0] = \"H\"  # strings are immutable",
+    "follow_up": "Why can mutability make debugging harder?"
+   },
+   {
+    "question": "What is an enum, and when would you use one instead of strings or numbers?",
+    "answer": "An enum is a type with a fixed set of named values, like statuses or directions. It is useful when a variable should only take one of a known small set of options, because it makes code clearer and reduces invalid values. Compared with raw strings or numbers, enums are easier to read and safer to use. The trade-off is a bit more structure in exchange for fewer mistakes.",
+    "real_world": "A payment system might use an enum for order status instead of free-form strings, so invalid values like \"pendng\" do not slip into production data. That makes branching logic and logging much more reliable.",
+    "code_lang": "python",
+    "code": "from enum import Enum\nclass Status(Enum):\n    PENDING = 1\n    PAID = 2\nstatus = Status.PAID\nprint(status == Status.PAID)",
+    "follow_up": "How is an enum different from a string constant?"
+   },
+   {
+    "question": "What is a deque, and why would you use it instead of a list or a queue?",
+    "answer": "A deque is a double-ended queue, which means you can add and remove items efficiently from both the front and the back. It is a good choice when your algorithm needs both queue-like and stack-like behavior. Compared with a plain list, it is better suited to operations at both ends. The trade-off is that it is more specialized than a simple list.",
+    "real_world": "A breadth-first search implementation often uses a deque so it can efficiently pull items from the front while adding newly discovered nodes to the back. Using the wrong structure there can make the code much slower.",
+    "code_lang": "python",
+    "code": "from collections import deque\nq = deque()\nq.append(\"a\")\nq.append(\"b\")\nprint(q.popleft())\nprint(q)",
+    "follow_up": "Why is removing from the front of a list often inefficient?"
+   },
+   {
+    "question": "What is the difference between an index and a key in a collection?",
+    "answer": "An index is a numeric position, usually used in ordered sequences like arrays or lists. A key is a label used to look up a value in a mapping such as a dictionary or hash map. Indices are good when order matters and you want positional access; keys are good when you want direct access by meaning, like a username or ID. Choosing the wrong one often makes code harder to read or slower to search.",
+    "real_world": "A cache often uses keys like URLs or user IDs because the data is not naturally positional. Trying to model that with numeric indexes would make lookups awkward and brittle.",
+    "code_lang": "python",
+    "code": "names = [\"Ada\", \"Linus\"]\nprint(names[0])\nuser = {\"id\": 7, \"name\": \"Ada\"}\nprint(user[\"name\"])",
+    "follow_up": "When would you need both keys and indexes in the same data structure?"
+   },
+   {
+    "question": "What is recursion, and what is the main risk when using it?",
+    "answer": "Recursion is when a function calls itself to solve a problem by reducing it to smaller versions of the same problem. It is useful for naturally recursive structures like trees or divide-and-conquer algorithms. The main risk is forgetting the base case or recursing too deeply, which can cause infinite recursion or stack overflow. Good recursive code needs a clear stopping condition and a smaller step each time.",
+    "real_world": "Parsing nested data or walking a folder tree is often simpler with recursion than with manual bookkeeping. But a missing base case can bring down a service with runaway calls.",
+    "code_lang": "python",
+    "code": "def fact(n):\n    if n == 0:\n        return 1\n    return n * fact(n - 1)\nprint(fact(5))",
+    "follow_up": "How would you turn a recursive solution into an iterative one?"
+   },
+   {
+    "question": "What is a min-heap, and what problem is it good for?",
+    "answer": "A min-heap is a structure where the smallest element is always at the top. It is useful when you repeatedly need the smallest item, such as in priority scheduling or finding the next best candidate. It does not keep all items fully sorted, but it gives efficient access to the minimum. The trade-off is fast repeated minimum access versus not supporting fast random lookup.",
+    "real_world": "A task scheduler may use a min-heap to always run the job with the earliest deadline next. This is common in systems that manage timers or prioritized work queues.",
+    "code_lang": "python",
+    "code": "import heapq\nh = []\nheapq.heappush(h, 5)\nheapq.heappush(h, 2)\nheapq.heappush(h, 8)\nprint(heapq.heappop(h))",
+    "follow_up": "How is a heap different from a sorted array?"
+   },
+   {
+    "question": "What does it mean for a data structure to have O(1), O(log n), or O(n) operations?",
+    "answer": "Those are time-complexity descriptions showing how runtime grows as input size increases. O(1) means constant time, O(log n) means growth is very slow, and O(n) means the work grows linearly with the number of items. They help you compare choices without focusing on hardware-specific details. The key idea is that performance at small sizes can look fine even when the algorithm scales poorly.",
+    "real_world": "A search feature might work well on a few hundred records but become slow on millions if it scans linearly every time. Understanding complexity helps teams avoid that kind of production slowdown.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give examples of operations that are usually O(1) and O(n) in common data structures?"
+   },
+   {
+    "question": "What is a shallow copy versus a deep copy?",
+    "answer": "A shallow copy duplicates the outer container but keeps references to the same nested objects, while a deep copy recursively copies the nested objects too. This matters when your structure contains lists or objects inside other lists or objects. With a shallow copy, changing a nested value can affect both copies. The trade-off is speed and memory versus isolation from shared state.",
+    "real_world": "This often shows up when one function copies a list of lists and then updates an inner list, accidentally changing the original data. Deep copy prevents that class of bug when independent ownership is needed.",
+    "code_lang": "python",
+    "code": "import copy\nx = [[1], [2]]\ny = copy.copy(x)\ny[0].append(9)\nprint(x)\nprint(y)",
+    "follow_up": "When would a shallow copy be exactly the right choice?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How does a hash table handle collisions, and what are the trade-offs between chaining and open addressing?",
+    "answer": "A hash table handles collisions when two keys map to the same bucket. With chaining, each bucket stores a small collection of entries; with open addressing, the table probes for another empty slot. Chaining is simpler and easier to grow, while open addressing can be more cache-friendly but gets harder to keep fast as the table fills. The choice matters because collision strategy affects performance, memory use, and deletion behavior.",
+    "real_world": "This shows up when a service suddenly slows down because a bad hash distribution creates long collision chains or excessive probing. Teams often discover it while debugging a spike in latency on a seemingly simple key lookup path.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do load factor and resizing affect hash table performance?"
+   },
+   {
+    "question": "What is a binary heap, and how is it different from a sorted array when you need repeated access to the smallest item?",
+    "answer": "A binary heap keeps the smallest item at the root, but it does not keep the whole structure fully sorted. Compared with a sorted array, a heap gives faster inserts and removals of the smallest element, while a sorted array gives faster direct access by rank and easier iteration in order. Heaps are a better fit when the workload is dominated by push and pop of the minimum rather than arbitrary searches. The trade-off is that heaps are less convenient for scanning or removing arbitrary elements.",
+    "real_world": "This comes up in job schedulers, rate limiters, and event loops where the next soonest task must be picked repeatedly. A sorted array can become expensive if new tasks arrive frequently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What operations are O(log n) in a heap, and why?"
+   },
+   {
+    "question": "How would you explain the difference between adjacency list and adjacency matrix representations for a graph?",
+    "answer": "An adjacency list stores, for each node, the nodes it connects to; an adjacency matrix stores a full table of possible edges. Lists are usually better for sparse graphs because they use less memory and let you iterate over neighbors efficiently. Matrices are useful when the graph is dense or when you need very fast edge-existence checks. The right choice depends on graph density and the operations you perform most often.",
+    "real_world": "In routing or dependency systems, sparse graphs are common, so adjacency lists usually save a lot of memory. In dense relationship checks, a matrix can make certain validations much simpler and faster.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose one representation even if the other is asymptotically better?"
+   },
+   {
+    "question": "What happens when you iterate over a collection while modifying it, and how do you avoid bugs from that?",
+    "answer": "Modifying a collection during iteration can skip elements, process items twice, or raise an error depending on the language and collection type. The safe pattern is to iterate over a snapshot, build a new collection, or collect changes and apply them afterward. This matters because the bug often only appears with certain data shapes and is hard to reproduce. The key is to make mutation explicit and controlled.",
+    "real_world": "This often appears in cleanup jobs, filter pipelines, or UI state updates where items are removed during traversal. A production bug might only happen for adjacent matching elements or under concurrent updates.",
+    "code_lang": "python",
+    "code": "items = [1, 2, 3, 4]\nfor x in items[:]:\n    if x % 2 == 0:\n        items.remove(x)\nprint(items)",
+    "follow_up": "How would you test for this kind of bug?"
+   },
+   {
+    "question": "What is a trie, and when is it a better choice than a hash map for string lookups?",
+    "answer": "A trie stores strings by shared prefixes, so lookups depend on the length of the string rather than the number of stored keys. It is useful for prefix searches, autocomplete, and finding all strings under a common prefix. A hash map is usually better for exact lookup because it is simpler and often uses less memory. The trade-off is that tries can be faster for prefix-heavy workloads but more memory-intensive and more complex to implement.",
+    "real_world": "Autocomplete systems and dictionary-like features often use tries to return matches as the user types. A hash map alone is not enough when the product needs prefix suggestions or incremental search.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the memory costs of a trie, and how can they be reduced?"
+   },
+   {
+    "question": "When would you use a linked hash map or ordered map instead of a plain hash map?",
+    "answer": "Use an ordered map when you need hash-based lookup and also want deterministic iteration order, usually insertion order or sorted order depending on the type. A plain hash map is optimized for lookup but does not guarantee stable ordering. Ordered maps are useful for caches, reproducible output, and APIs where response order matters. The trade-off is extra memory and some overhead to maintain the ordering structure.",
+    "real_world": "This matters in caching layers and test suites where output order must stay consistent across runs. Without stable ordering, diffs become noisy and flaky tests become harder to debug.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement an LRU cache using an ordered map and a hash map?"
+   },
+   {
+    "question": "What is the difference between a min-heap and a priority queue, and why do people sometimes use the terms interchangeably?",
+    "answer": "A min-heap is a concrete data structure that supports efficient access to the smallest element. A priority queue is an abstract interface: insert items with priorities and remove the highest- or lowest-priority item first. Many priority queue implementations use a heap, so people often use the terms interchangeably in practice. The distinction matters when you are choosing an API versus choosing an internal implementation.",
+    "real_world": "In systems code or library work, the abstraction matters because you may swap the underlying data structure later. In application code, the heap-backed priority queue is usually the practical default.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What features would a priority queue need that a heap alone does not expose?"
+   },
+   {
+    "question": "How do you decide between an array-backed implementation and a tree-backed implementation for maintaining sorted data?",
+    "answer": "Array-backed sorted structures are good when reads dominate and inserts are infrequent, because binary search gives fast lookup and contiguous memory helps cache performance. Tree-backed structures are better when you need frequent inserts, deletes, or range queries without shifting many elements. Arrays are simpler and often faster in practice for small or mostly static datasets. Trees win when you need the structure to stay sorted under heavy mutation.",
+    "real_world": "This comes up in leaderboards, event timelines, and maintaining the top N records. A team may start with a sorted array and later switch to a tree when write volume makes insert cost too high.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What workloads make the array approach unexpectedly faster despite worse asymptotic inserts?"
+   },
+   {
+    "question": "What is amortized analysis, and why does it matter for dynamic arrays or resizable buffers?",
+    "answer": "Amortized analysis describes the average cost over many operations, even if some individual operations are expensive. For a dynamic array, most appends are cheap, but occasional resizing copies many elements; the average append is still efficient over time. This matters because performance claims based only on worst-case single operations can be misleading. In practice, amortized reasoning explains why repeated append is usually acceptable even though resize is expensive.",
+    "real_world": "This matters in services that accumulate events or build request payloads incrementally. A poorly sized buffer strategy can create periodic latency spikes when resizing happens under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you explain a real example where worst-case and amortized costs differ?"
+   },
+   {
+    "question": "How would you test a custom data structure implementation beyond just checking a few example inputs?",
+    "answer": "I would test invariants, boundary cases, randomized sequences, and compare against a known-correct reference implementation. For example, after each operation, the structure should still satisfy ordering, size, or emptiness rules. Property-based tests are useful because they explore many operation sequences that manual examples miss. The goal is to catch state bugs, not just verify a couple of happy paths.",
+    "real_world": "Custom collections often pass simple unit tests but fail after a long sequence of inserts and deletes. Randomized tests can expose corruption, off-by-one errors, or stale metadata early in development.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What invariants would you check for a queue, heap, or LRU cache?"
+   },
+   {
+    "question": "How do you compare the performance and practical behavior of a balanced search tree and a hash map for lookups, inserts, and ordered traversal?",
+    "answer": "A hash map usually gives faster average lookups and inserts, but it does not keep keys sorted. A balanced search tree gives O(log n) lookups and inserts while also supporting ordered operations like range queries, predecessor/successor, and iteration in key order. In practice, the choice depends on whether you need ordering, predictable worst-case behavior, or just fast key-based access. Hash maps are often faster for point lookups; trees are better when order matters.",
+    "real_world": "This comes up in caches and deduplication tables, where a hash map is ideal, versus leaderboards or scheduling systems where sorted iteration and range queries matter. Teams often switch from one to the other when a feature starts requiring “show me everything between these timestamps” or “next item after X.”",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main reasons a tree can be preferable even when a hash map is faster on average?"
+   },
+   {
+    "question": "What is the difference between breadth-first search and depth-first search, and when would you use each one?",
+    "answer": "Breadth-first search explores neighbors level by level, so it finds the shortest path in an unweighted graph. Depth-first search goes as far as possible down one path before backtracking, which is useful for cycle detection, topological sorting, and exploring connected components. BFS usually needs more memory on wide graphs, while DFS is often simpler for recursive structure exploration. The right choice depends on whether you care about shortest distance or structural traversal.",
+    "real_world": "BFS is common in route-finding, social graph hops, and shortest click-path features. DFS shows up in dependency analysis, file-tree walking, and detecting cycles in build graphs.",
+    "code_lang": "python",
+    "code": "from collections import deque\n\ndef bfs(start, graph):\n    seen = {start}\n    q = deque([start])\n    while q:\n        node = q.popleft()\n        for nxt in graph[node]:\n            if nxt not in seen:\n                seen.add(nxt)\n                q.append(nxt)",
+    "follow_up": "How would you detect a cycle in a directed graph?"
+   },
+   {
+    "question": "What is a dynamic array, and what happens under the hood when it grows?",
+    "answer": "A dynamic array stores elements contiguously but allocates extra capacity so it can append efficiently most of the time. When it runs out of room, it allocates a larger block and copies existing elements over, which is why individual appends can occasionally be expensive even though the average cost is small. This design gives fast random access and cache-friendly iteration. The trade-off is occasional resize spikes and wasted unused capacity.",
+    "real_world": "You see this in language runtimes and in application code that repeatedly appends to a list or vector. A burst of resizes can cause latency spikes in services that build large in-memory batches.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is repeated insertion at the front usually a bad fit for a dynamic array?"
+   },
+   {
+    "question": "When would you use a sorted map or ordered map instead of a hash map, and what operations become easier?",
+    "answer": "Use an ordered map when you need keys in sorted order or need operations like min, max, floor, ceiling, or range queries. A hash map is better for direct key lookup, but it cannot answer ordering questions without extra work. Ordered maps also make it easy to iterate over a subset of keys in order. The trade-off is typically slower inserts and lookups than a hash map, with more predictable structure and richer order-based queries.",
+    "real_world": "This matters in time-series indexing, leaderboards, and config systems where you need to ask for all entries between two keys. Teams often start with a hash map and later add a sorted structure when range queries become common.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement a range query efficiently on top of an ordered map?"
+   },
+   {
+    "question": "What is a common cause of bugs when using a mutable object as a key in a hash-based collection?",
+    "answer": "If the fields used to compute the hash or equality can change after insertion, the object may no longer be found in the collection. The item is still there, but it may be stored in the wrong bucket for its new hash value, so lookups, deletes, and containment checks become unreliable. Keys should be effectively immutable while they are in the map or set. The safest approach is to use stable identifiers or immutable key types.",
+    "real_world": "This bug appears in caches and deduplication sets when a request object or model instance is mutated after being used as a key. It can create “missing” entries that are hard to debug because iteration still shows the data is present.",
+    "code_lang": "python",
+    "code": "class Key:\n    def __init__(self, x): self.x = x\n    def __hash__(self): return hash(self.x)\n    def __eq__(self, other): return self.x == other.x\n\nk = Key(1)\nd = {k: 'value'}\nk.x = 2\n# d.get(k) may now fail logically",
+    "follow_up": "What design patterns help avoid this class of bug in real code?"
+   },
+   {
+    "question": "How do you decide between a stack-based iterative solution and a recursive solution for tree or graph traversal?",
+    "answer": "Recursion can be clearer when the problem naturally mirrors the data structure, like tree traversal, but it uses the call stack and can overflow on deep inputs. An explicit stack gives you more control over memory and traversal order, and it avoids recursion limits in languages with shallow default stacks. In production, iterative code is often safer for untrusted or very deep input. The trade-off is that the iterative version is usually a bit more verbose.",
+    "real_world": "This comes up when traversing large directory trees, parsing nested expressions, or processing deeply nested JSON. A recursive version can work in tests but fail in production on a pathological input depth.",
+    "code_lang": "python",
+    "code": "def preorder(root):\n    stack = [root]\n    out = []\n    while stack:\n        node = stack.pop()\n        if not node: continue\n        out.append(node.val)\n        stack.append(node.right)\n        stack.append(node.left)\n    return out",
+    "follow_up": "When would you still prefer recursion even if an iterative version is possible?"
+   },
+   {
+    "question": "What is the difference between a sparse and a dense representation of a matrix or graph, and why does it matter?",
+    "answer": "A dense representation stores every possible cell or edge slot, while a sparse representation stores only the non-empty entries. Dense structures are simple and fast when most positions are used, but they waste memory when the data is mostly empty. Sparse structures save memory and can be much faster for large, mostly empty problems, though access and updates may be more complex. The key trade-off is memory usage versus simplicity and constant-time indexing.",
+    "real_world": "This matters in recommendation systems, network analysis, and scientific computing, where graphs and matrices are often huge but mostly empty. Picking a dense form by default can make a system blow up in memory long before CPU becomes the problem.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What access patterns make a dense matrix a better choice despite the memory cost?"
+   },
+   {
+    "question": "How would you explain the difference between a multiset and a set, and when does a multiset make sense?",
+    "answer": "A set stores each distinct value once, while a multiset allows duplicate values and tracks how many times each value appears. A multiset is useful when frequency matters, such as counting occurrences, tracking inventory, or solving problems where duplicates change the answer. It can be implemented with counts in a hash map or with a tree structure that supports ordered duplicates. The trade-off is a little more bookkeeping in exchange for correct multiplicity handling.",
+    "real_world": "You use this in search ranking, inventory reconciliation, and analytics pipelines where repeated values are meaningful. A plain set would lose information and produce incorrect results if duplicates are important.",
+    "code_lang": "python",
+    "code": "from collections import Counter\nitems = ['a', 'b', 'a', 'c', 'a']\ncounts = Counter(items)\n# counts['a'] == 3",
+    "follow_up": "How would you support efficient removal of one occurrence versus all occurrences?"
+   },
+   {
+    "question": "What can go wrong with an LRU cache implementation, and what data structures are usually combined to build one correctly?",
+    "answer": "An LRU cache needs fast key lookup and fast eviction of the least-recently-used item. The usual pattern is a hash map for direct access plus a doubly linked list to maintain recency order, because moving an item to the front and removing the tail both need to be constant time. Common bugs include failing to update list pointers, letting the map and list get out of sync, or mishandling capacity changes. The main goal is to keep all core operations O(1).",
+    "real_world": "This pattern is common in HTTP caches, memoization layers, and image thumbnail services. Bugs here often show up as memory leaks, stale entries, or sudden latency when eviction becomes expensive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is a singly linked list usually not enough for an efficient LRU cache?"
+   },
+   {
+    "question": "How do you reason about a custom data structure by writing tests for invariants rather than just example cases?",
+    "answer": "Example tests check specific inputs, but invariant tests check properties that should always hold after any sequence of operations. For a stack, that might mean push then pop returns the same item; for a map, inserted keys remain retrievable until removed; for a heap, the root should always be the extreme element. Good tests also include randomized sequences and edge cases like empty structure behavior and repeated insert/remove cycles. This finds state bugs that only appear after many operations.",
+    "real_world": "This is useful when validating a new cache, queue, or tree implementation before it is trusted in production. Teams often catch pointer corruption, size mismatches, and stale bookkeeping this way instead of from user reports.",
+    "code_lang": "python",
+    "code": "import random\nfor _ in range(1000):\n    op = random.choice(['push','pop'])\n    # apply op to model and implementation\n    # assert both produce same result and size\n    pass",
+    "follow_up": "What invariants would you check for a heap or balanced tree specifically?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you walk me through how a B-tree or B+ tree actually reduces I/O, and why databases prefer it over a binary search tree on disk?",
+    "answer": "The key idea is high fan-out: each node stores many keys, so the tree is very shallow and a lookup touches only a few pages. On disk or SSD, page reads dominate cost, so reducing pointer-chasing matters more than minimizing comparisons. A B+ tree also keeps all records or row pointers in leaves and links leaves for efficient range scans. A binary search tree would be much taller and its nodes would map poorly to fixed-size pages, causing many random reads.",
+    "real_world": "Database indexes are usually page-sized B+ trees because range queries, ORDER BY, and prefix scans stay efficient even at very large scale. Production incidents often show up as sudden I/O amplification when an index choice forces random heap lookups or poor locality.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes in the trade-offs when the working set fits in RAM but writes are still frequent?"
+   },
+   {
+    "question": "How does a skip list compare to a balanced tree in terms of internals, performance, and concurrency?",
+    "answer": "A skip list keeps multiple forward-pointer layers chosen probabilistically, so search, insert, and delete are expected O(log n) without rotations or strict rebalancing. Balanced trees give deterministic bounds and often better worst-case space efficiency, but their update logic is more complex. Skip lists are attractive for concurrent implementations because local pointer updates are easier to compose than tree rotations. The downside is extra pointers, cache-unfriendly traversal, and dependence on randomized level distribution.",
+    "real_world": "Several in-memory systems use skip-list-like structures for ordered sets because lock-free or fine-grained locking designs are simpler to get right. Under contention, simpler update mechanics can matter more than slightly better single-threaded constants.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you were implementing a concurrent ordered map, what memory reclamation problem would you need to solve?"
+   },
+   {
+    "question": "What is a disjoint-set union structure, and what optimizations make it effectively constant time in practice?",
+    "answer": "Disjoint-set union tracks partitions with a parent forest and supports find and union. Path compression flattens trees during find, and union by rank or size prevents tall trees from forming, making operations amortized very close to O(1). The important nuance is that the guarantee is amortized over many operations, not a strict constant per call. It is excellent when you only need connectivity and merges, not full traversal of members.",
+    "real_world": "It shows up in Kruskal's algorithm, clustering, and connectivity checks during batch processing. Teams sometimes misuse it for workloads that also need deletions or per-set iteration, where it becomes the wrong abstraction.",
+    "code_lang": "python",
+    "code": "parent = list(range(n))\nsize = [1] * n\n\ndef find(x):\n    if parent[x] != x:\n        parent[x] = find(parent[x])\n    return parent[x]\n\ndef union(a, b):\n    ra, rb = find(a), find(b)\n    if ra == rb: return\n    if size[ra] < size[rb]: ra, rb = rb, ra",
+    "follow_up": "Why does this structure handle merges well but not deletions?"
+   },
+   {
+    "question": "When would you choose a bloom filter, and what are the operational trade-offs versus an exact set?",
+    "answer": "A bloom filter is for fast, compact membership tests when false positives are acceptable but false negatives are not. It saves a lot of memory compared with storing full keys, especially for large deduplication or cache-admission workloads. The trade-off is probabilistic answers, no straightforward deletion in the basic form, and degraded accuracy as it fills. It is usually placed in front of a slower exact store, not used as the source of truth.",
+    "real_world": "A common pattern is preventing pointless database or object-store reads for keys that almost certainly do not exist. If the filter is undersized, false positives spike and the backend still gets hammered, which looks like the filter 'stopped working' even though it is technically correct.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you size the filter and choose the number of hash functions for a target false-positive rate?"
+   },
+   {
+    "question": "What is a monotonic queue or monotonic stack, and why can it turn a seemingly quadratic problem into linear time?",
+    "answer": "It maintains elements in sorted order by value while preserving only candidates that can still matter for future queries. Each element is pushed once and popped at most once, so the total work over the whole input is O(n) even though there may be inner while-loops. This is useful for sliding-window maximums, next greater element, and histogram-style problems. The trick is recognizing when dominated elements can be safely discarded.",
+    "real_world": "In streaming analytics, windowed max or min computations can go from too slow to comfortably real-time with this pattern. A naive implementation that rescans each window often becomes a CPU hotspot as window sizes grow.",
+    "code_lang": "python",
+    "code": "from collections import deque\n\ndef max_window(nums, k):\n    q, out = deque(), []\n    for i, x in enumerate(nums):\n        while q and nums[q[-1]] <= x: q.pop()\n        q.append(i)\n        if q[0] <= i - k: q.popleft()\n        if i >= k - 1: out.append(nums[q[0]])\n    return out",
+    "follow_up": "What invariant does the deque maintain, and how would you adapt it for minimums instead of maximums?"
+   },
+   {
+    "question": "Can you explain copy-on-write data structures and when their performance profile is better or worse than mutable ones?",
+    "answer": "Copy-on-write shares existing structure and creates new nodes only along the modified path, so reads can be cheap and snapshots are nearly free. This works especially well for persistent trees and versioned maps where many readers need stable views. The cost is extra allocations, more pointer chasing, and potentially higher write amplification than an in-place mutable structure. It is a good trade when snapshot isolation or undo/history matters more than raw write throughput.",
+    "real_world": "Build systems, query engines, and configuration pipelines often benefit from cheap snapshots and rollback. In write-heavy services, though, copy-on-write can trigger GC pressure or allocator contention and become the bottleneck.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does structural sharing change the memory behavior compared with deep-copying the whole structure on every update?"
+   },
+   {
+    "question": "What is false sharing, and how can the layout of a concurrent data structure cause it even when threads touch different variables?",
+    "answer": "False sharing happens when independent variables live on the same cache line and different cores keep invalidating that line while updating their own fields. The threads are logically independent, but the hardware coherence protocol still makes them interfere. In concurrent queues, counters, ring-buffer slots, or per-shard stats, layout can matter as much as algorithmic complexity. Common mitigations are padding, separating hot fields, or giving each thread its own shard and merging later.",
+    "real_world": "Teams see this as mysterious CPU burn and poor scaling after adding more threads, even though lock contention looks low. A profiler may not point to the real cause because the time is lost in cache coherence traffic rather than obvious application code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish false sharing from lock contention in a performance investigation?"
+   },
+   {
+    "question": "How does a lock-free queue avoid corrupting the structure under concurrency, and what is the ABA problem people worry about?",
+    "answer": "Lock-free queues use atomic compare-and-swap on pointers or indexes so progress can continue without a global lock, typically with carefully chosen invariants around head and tail updates. The ABA problem is when a location changes from A to B and back to A, so a compare-and-swap succeeds even though the structure changed in between. That matters especially with node reuse and memory reclamation. Practical designs pair atomics with tagged pointers, hazard pointers, epochs, or garbage collection depending on the language runtime.",
+    "real_world": "These issues surface under high contention or after long uptimes, where rare races become production crashes or silent corruption. Many teams choose a well-tested library queue because the memory reclamation edge cases are harder than the algorithm sketch makes them look.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is memory reclamation often the hardest part of a lock-free linked structure?"
+   },
+   {
+    "question": "If you had to build a top-k system over a massive stream, how would you choose between a heap, a sketch, and full sorting?",
+    "answer": "If you need exact top-k and k is small relative to n, a min-heap of size k is usually the right baseline because each new candidate costs O(log k). Full sorting is wasteful unless you also need the entire order or the data volume is already bounded and batch-oriented. If memory is tight or the stream is too large for exact counts, a sketch or approximate heavy-hitters structure gives bounded memory with approximation error. The right choice depends on whether you need exact answers, deletions, merges across shards, and time-window semantics.",
+    "real_world": "In telemetry pipelines, exact global top-k can be too expensive to maintain per event, so teams use approximate summaries and only materialize exact rankings for the most promising candidates. Incidents happen when people accidentally sort full datasets in hot paths instead of keeping bounded state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your design change if the query were top-k over the last 10 minutes rather than all time?"
+   },
+   {
+    "question": "What are the practical trade-offs between a row-oriented layout and a columnar layout, viewed as a data-structure decision rather than a database buzzword?",
+    "answer": "A row layout stores all fields of a record together, which is great for point lookups and updates to whole objects. A columnar layout stores each field contiguously, which improves cache locality, compression, and vectorized scans when queries touch only a few columns across many rows. The trade-off is that reconstructing full records becomes more expensive, and updates can be more complicated depending on encoding and mutability. At scale, memory bandwidth and cache behavior often dominate, so layout choice can outweigh asymptotic complexity.",
+    "real_world": "Analytics engines favor columnar structures because scanning billions of values from a few columns is far cheaper than dragging full rows through memory. Operational systems usually stay row-oriented because they need low-latency point reads and frequent updates to individual records.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of compression become more effective in a columnar layout, and why?"
+   },
+   {
+    "question": "Can you explain how a red-black tree maintains balance, and why systems often choose it over a strictly balanced tree like an AVL tree?",
+    "answer": "A red-black tree enforces a small set of color and path-length invariants so the height stays logarithmic without requiring perfect balance. Compared with AVL, it usually does fewer rotations and less rebalancing work on updates, at the cost of slightly taller trees and sometimes slower lookups. That trade-off is attractive in maps and sets with mixed reads and writes. The key point is bounded imbalance can be cheaper overall than aggressively minimizing height.",
+    "real_world": "Language runtimes and standard libraries often use red-black trees for ordered maps because inserts and deletes stay predictable under churn. In production, that matters when a hot index is constantly updated and you care about tail latency, not just best-case lookup depth.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What invariants would you validate after every insert or delete in a red-black tree test suite?"
+   },
+   {
+    "question": "What is a segment tree, and when is it the right choice over a Fenwick tree or just recomputing aggregates?",
+    "answer": "A segment tree stores aggregates over intervals so you can answer range queries and apply point updates in O(log n), and with variants you can support range updates too. A Fenwick tree is usually simpler and smaller when you only need invertible prefix-style aggregates like sums. Segment trees are the better fit when you need arbitrary range queries, min/max, or lazy propagation for bulk updates. Recomputing is only reasonable when updates or queries are rare enough that O(n) scans are acceptable.",
+    "real_world": "This shows up in telemetry pipelines and game backends where you need rolling range statistics with frequent updates. Teams often start with rescans, then hit CPU ceilings once both update rate and query rate climb.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does lazy propagation work, and what bugs appear if you forget to push pending updates before descending?"
+   },
+   {
+    "question": "How would you implement a circular buffer for a high-throughput producer-consumer path, and what are the main edge cases?",
+    "answer": "Use a fixed-size array with head and tail indices that wrap with modulo or bit-masking if the capacity is a power of two. The tricky parts are distinguishing full from empty, handling wraparound correctly, and defining concurrency semantics: single-producer/single-consumer is much simpler than multiple producers or consumers. A fixed ring buffer gives stable memory use and good cache locality, but once it fills you need an explicit policy like block, drop, or overwrite. Capacity planning matters because resizing defeats the main performance benefit.",
+    "real_world": "Network stacks, logging pipelines, and telemetry agents often use ring buffers because allocation spikes can become latency spikes. Production incidents happen when a buffer silently overwrites unread data or when backpressure policy is undefined under bursts.",
+    "code_lang": "go",
+    "code": "type Ring struct { buf []int; head, tail, size int }\nfunc (r *Ring) Push(v int) bool {\n\tif r.size == len(r.buf) { return false }\n\tr.buf[r.tail] = v\n\tr.tail = (r.tail + 1) % len(r.buf)\n\tr.size++\n\treturn true\n}",
+    "follow_up": "How would your design change for a multi-producer multi-consumer ring buffer?"
+   },
+   {
+    "question": "What is the difference between a rope and a flat string buffer, and when does a rope actually help?",
+    "answer": "A rope stores a long string as a tree of chunks, so concatenation and mid-string edits can avoid copying the entire value. That helps when you do many large edits, especially near the middle, but it hurts locality and makes traversal, indexing, and small-string operations more expensive. In practice, ropes shine in text editors or document systems, not in typical request processing where most strings are small and short-lived. The hidden cost is more pointers, more allocations, and more complicated balancing.",
+    "real_world": "Editors and IDEs use rope-like structures because repeatedly inserting into a giant flat buffer becomes quadratic or causes constant large copies. Teams sometimes over-apply ropes in services and then discover that cache misses dominate because most operations are sequential scans.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does a piece table compare to a rope for an editor workload?"
+   },
+   {
+    "question": "Can you walk me through a suffix array versus a suffix tree, and why many production systems prefer the array?",
+    "answer": "A suffix tree gives powerful substring operations in linear-time theory, but it is complex and memory-hungry because of many nodes, edges, and pointers. A suffix array stores sorted suffix positions in a compact array, often paired with auxiliary data for longest common prefix, and usually has much better constant factors and cache behavior. So although queries may be less elegant, suffix arrays are often easier to implement, serialize, and fit in memory. For large text indexes, memory efficiency can matter more than the cleanest asymptotic bound.",
+    "real_world": "Search and genomics workloads can index huge texts where a pointer-heavy structure simply does not fit RAM comfortably. A theoretically faster structure is often slower in production if it causes cache thrashing or forces sharding due to memory blowup.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What additional structure do you add to a suffix array to speed up repeated substring comparisons?"
+   },
+   {
+    "question": "What is a van Emde Boas tree, and why is it rarely used despite its attractive asymptotic bounds?",
+    "answer": "A van Emde Boas tree supports predecessor, successor, insert, and delete in O(log log U) time where U is the universe size. That sounds excellent, but it assumes integer keys from a bounded universe and pays for it with high constant factors, tricky layout, and substantial memory overhead. In many real systems, a balanced tree, hash-based approach, or bitset over a smaller range wins because it is simpler and more cache-friendly. It is a good example of asymptotics not being enough to choose a data structure.",
+    "real_world": "Teams dealing with ID allocation or scheduling over bounded integer ranges sometimes evaluate exotic predecessor structures, then find a plain bitmap or B-tree is faster at realistic sizes. The production cost of complexity is debugging time and poorer memory density.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If the universe is small and dense, when does a bitset beat a van Emde Boas tree outright?"
+   },
+   {
+    "question": "How do persistent data structures actually share memory, and what trade-offs do they introduce under heavy write load?",
+    "answer": "Persistent structures preserve old versions by path copying: an update creates new nodes only along the modified path while reusing the untouched remainder. That makes snapshots and rollback cheap and safe, especially for concurrent readers, but each write allocates more objects and can increase pointer chasing and GC pressure. They work best when reads and versioning matter more than raw mutation throughput. The practical trade-off is simpler correctness versus higher allocation cost and often worse cache locality.",
+    "real_world": "Compilers, query planners, and event-sourced systems use persistent trees so multiple phases or readers can hold consistent views without locks. Under write-heavy traffic, though, teams can see allocation rate and memory retention become the bottleneck.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you reduce memory blowup when many versions are short-lived?"
+   },
+   {
+    "question": "What is an order-statistics tree, and when would you use it instead of a heap or a sorted array?",
+    "answer": "An order-statistics tree is a balanced search tree augmented with subtree sizes so you can ask for the k-th smallest element or the rank of a key in O(log n). A heap is good for repeatedly accessing the min or max, but it cannot efficiently answer arbitrary rank queries. A sorted array supports rank lookup well but makes inserts expensive because shifting is O(n). So the order-statistics tree is the right choice when you need both dynamic updates and rank/select operations.",
+    "real_world": "Leaderboards, percentile tracking, and matching engines often need to ask questions like \"who is in position k\" while scores keep changing. Using a heap there usually leads to awkward rebuilds or extra indexes once product requirements expand beyond top-1 or top-k.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What extra metadata besides subtree size might you maintain to answer range-sum queries too?"
+   },
+   {
+    "question": "If you need a compact set for integer IDs, how do you think about bitsets versus compressed bitmaps like Roaring?",
+    "answer": "A plain bitset gives excellent speed and simple set operations when the ID space is reasonably dense, because membership is just a bit test and unions become word-wise operations. Its downside is memory scales with the universe size, not the number of elements. Compressed bitmaps trade some complexity and overhead to stay compact for sparse or clustered data while still supporting fast logical operations. The right choice depends on cardinality, clustering, and whether you optimize for RAM, CPU, or serialization size.",
+    "real_world": "Analytics engines and search systems use compressed bitmaps for filters because millions of sparse IDs would waste huge memory in raw bitsets. The wrong choice shows up as either blown memory budgets or unexpectedly slow intersections on hot queries.",
+    "code_lang": "python",
+    "code": "bits = 0\nfor x in [1, 3, 5]:\n    bits |= 1 << x\nprint(bool(bits & (1 << 3)))  # True\nprint(bool(bits & (1 << 4)))  # False",
+    "follow_up": "What data distribution makes compression perform badly enough that a plain bitset becomes preferable?"
+   },
+   {
+    "question": "How do memory layout and pointer indirection change the real performance of a data structure even when the Big-O is the same?",
+    "answer": "Two structures can both be O(log n) or O(1) yet perform very differently because cache misses, branch prediction, and TLB behavior dominate on modern hardware. Contiguous layouts like arrays are usually friendlier to prefetching and vectorization, while pointer-heavy layouts pay extra latency per node visited. Allocation patterns also matter: fragmentation and extra metadata can reduce effective memory bandwidth. For senior-level decisions, you look beyond asymptotics and ask how many cache lines, branches, and allocations each operation touches.",
+    "real_world": "This is why a sorted vector can beat a balanced tree for moderate sizes, and why a flat hash table can outperform a chained one despite similar expected complexity. Many production regressions come from replacing a compact structure with a more abstract one that multiplies cache misses.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where an O(n) scan is faster than an O(log n) search in practice and explain why?"
+   }
+  ]
+ }
+}

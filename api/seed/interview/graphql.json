@@ -1,0 +1,453 @@
+{
+ "slug": "graphql",
+ "name": "GraphQL",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is GraphQL, and how is it different from REST?",
+    "answer": "GraphQL is a query language for APIs where the client asks for exactly the fields it needs from a typed schema. With REST, you usually work with multiple endpoints and fixed response shapes; with GraphQL, one endpoint can serve many different queries. The main trade-off is flexibility versus more complexity on the server, especially around authorization, caching, and query cost.",
+    "real_world": "A mobile app may need only a user’s name and avatar, while a dashboard needs the full profile and recent activity. GraphQL lets both screens avoid overfetching or underfetching from separate REST endpoints.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main building blocks of a GraphQL API?"
+   },
+   {
+    "question": "What is a GraphQL schema?",
+    "answer": "A schema defines the types, fields, and operations that are available in a GraphQL API. It is the contract between client and server, so clients can know what they can ask for and what shape the response will have. This matters because GraphQL is strongly typed and validation happens against the schema before execution.",
+    "real_world": "Teams use the schema as shared documentation and tooling input for code generation, validation, and IDE autocomplete. If the schema is wrong or outdated, clients break at build time or runtime.",
+    "code_lang": "graphql",
+    "code": "type User {\n  id: ID!\n  name: String!\n}\n\ntype Query {\n  user(id: ID!): User\n}",
+    "follow_up": "What is the difference between a type and a field in GraphQL?"
+   },
+   {
+    "question": "What is a query in GraphQL?",
+    "answer": "A query is a read operation used to fetch data from the API. It lets the client specify which fields it wants, including nested fields, so the response matches the requested shape. Queries should be used for reads, while mutations are used for writes.",
+    "real_world": "A frontend often queries only the data needed for one page, which reduces payload size and avoids extra client-side filtering. This is especially useful when different screens need different slices of the same resource.",
+    "code_lang": "graphql",
+    "code": "query GetUser {\n  user(id: \"1\") {\n    id\n    name\n  }\n}",
+    "follow_up": "How do query fields relate to the schema?"
+   },
+   {
+    "question": "What is a mutation, and when would you use one?",
+    "answer": "A mutation is a GraphQL operation used to change data on the server, such as creating, updating, or deleting records. It is separate from queries so intent is clear and side effects are explicit. A mutation usually returns data as well, often the updated object or a status payload.",
+    "real_world": "When a user updates their profile, the client sends a mutation and then uses the returned data to refresh the UI without making a second request. This reduces race conditions and keeps the client state in sync.",
+    "code_lang": "graphql",
+    "code": "mutation UpdateName {\n  updateUser(id: \"1\", name: \"Ava\") {\n    id\n    name\n  }\n}",
+    "follow_up": "Why are mutations not supposed to be used for reads?"
+   },
+   {
+    "question": "What are GraphQL arguments?",
+    "answer": "Arguments are values passed to a field or mutation to make the request specific, such as selecting one user by id or filtering a list. They are part of the query syntax and are validated against the schema. Arguments are how clients parameterize requests instead of hardcoding every variation into the schema.",
+    "real_world": "A product list screen may pass a category or search string as arguments to fetch only matching items. Without arguments, the client would have to download everything and filter locally.",
+    "code_lang": "graphql",
+    "code": "query ProductsByCategory {\n  products(category: \"books\") {\n    id\n    title\n  }\n}",
+    "follow_up": "What is the difference between an argument and a variable?"
+   },
+   {
+    "question": "What are GraphQL variables, and why are they useful?",
+    "answer": "Variables let you pass dynamic values into a query or mutation without embedding the values directly in the operation text. They make requests safer and easier to reuse, and they help avoid rebuilding the whole query string for each request. They also reduce the risk of injection-style bugs from string concatenation.",
+    "real_world": "A search page might send different text and pagination values on each keystroke or navigation step. Using variables keeps the query definition stable while only the inputs change.",
+    "code_lang": "graphql",
+    "code": "query GetUser($id: ID!) {\n  user(id: $id) {\n    id\n    name\n  }\n}",
+    "follow_up": "What does the exclamation mark mean in GraphQL types?"
+   },
+   {
+    "question": "What does the `!` mean in a GraphQL type like `String!`?",
+    "answer": "The exclamation mark means the value is non-null, so the field or argument is required and cannot be null. If a resolver returns null for a non-null field, GraphQL treats it as an error and may null out parent fields depending on the schema. This is important because it communicates guarantees in the API contract.",
+    "real_world": "If a client assumes a field always exists, a nullable surprise can cause UI crashes or missing data handling bugs. Non-null types help catch those mismatches early.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do lists and non-null types combine, like `[User!]!`?"
+   },
+   {
+    "question": "What is GraphQL introspection?",
+    "answer": "Introspection is a feature that lets clients query the schema itself to discover available types, fields, and arguments. It is useful for tooling like GraphQL IDEs, documentation generators, and code generation. In some environments it may be restricted for security or operational reasons, but the schema still exists conceptually.",
+    "real_world": "Developer tools use introspection to provide autocomplete and inline docs, which makes GraphQL easier to work with. Some teams disable it in production if they do not want public schema discovery.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the `__typename` field used for?"
+   },
+   {
+    "question": "What is a GraphQL error response, and what should a client do with it?",
+    "answer": "GraphQL responses can contain both `data` and `errors`, so a successful HTTP response does not always mean every field resolved correctly. The client should check the errors array and handle partial data carefully instead of assuming everything succeeded. This matters because GraphQL can return usable data alongside field-level failures.",
+    "real_world": "A user profile page might render the main user data while showing a fallback for a failed sidebar widget. If the client ignores errors, it may silently show incomplete or misleading content.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle partial failures in the UI?"
+   },
+   {
+    "question": "What is the difference between a field and a type in GraphQL?",
+    "answer": "A type is a shape of data, like `User` or `Post`, and a field is one property on that type, like `name` or `title`. Types group fields together and define what can be queried. Fields can return scalars, objects, lists, or other schema types, and they are the actual pieces clients request.",
+    "real_world": "Teams use this distinction when designing the schema so clients can ask for exactly the nested data they need. If fields are modeled poorly, queries become awkward or the schema becomes hard to evolve.",
+    "code_lang": "graphql",
+    "code": "type User {\n  id: ID!\n  name: String\n}\n\nquery {\n  user {\n    name\n  }\n}",
+    "follow_up": "How do nested fields work when a field returns another object type?"
+   },
+   {
+    "question": "What is the purpose of the `query`, `mutation`, and `subscription` root types?",
+    "answer": "They are the entry points for operations. `query` is for reading data, `mutation` is for changing data, and `subscription` is for receiving pushed updates over time. A schema may support all three, but a client only uses the ones the server exposes.",
+    "real_world": "This helps teams separate safe read traffic from write traffic and real-time event streams. It also makes authorization and caching decisions easier because the operation type is explicit.",
+    "code_lang": "graphql",
+    "code": "query { me { id } }\nmutation { updateName(name: \"Sam\") { id name } }",
+    "follow_up": "When would you choose a subscription instead of polling?"
+   },
+   {
+    "question": "What is an alias in GraphQL, and why would you use one?",
+    "answer": "An alias gives a field a different name in the response. You use it when you need the same field more than once with different arguments, or when you want a clearer name in the client response. The underlying schema field does not change; only the response key does.",
+    "real_world": "Aliases are common when a page needs two versions of similar data, like two search results or two differently filtered lists. They prevent response key collisions and make client code easier to read.",
+    "code_lang": "graphql",
+    "code": "query {\n  recent: posts(limit: 5) { id }\n  popular: posts(limit: 5, sort: POPULAR) { id }\n}",
+    "follow_up": "How do aliases help when querying the same field twice with different arguments?"
+   },
+   {
+    "question": "What are fragments in GraphQL?",
+    "answer": "Fragments let you define a reusable set of fields and spread it into multiple queries or parts of a query. They are useful when the same field selection is repeated in several places, especially for shared UI components. Fragments also make complex queries easier to read and keep consistent.",
+    "real_world": "Front-end teams use fragments to keep a component’s data requirements next to the component. That reduces duplication and makes schema changes easier to manage.",
+    "code_lang": "graphql",
+    "code": "fragment UserCard on User {\n  id\n  name\n}\n\nquery {\n  me {\n    ...UserCard\n  }\n}",
+    "follow_up": "What is the difference between a fragment and an inline fragment?"
+   },
+   {
+    "question": "What does GraphQL validation happen before execution, and why does that matter?",
+    "answer": "Before a query runs, the server checks it against the schema to make sure the operation is structurally valid. That catches issues like asking for fields that do not exist or passing the wrong argument shape. It matters because many mistakes are rejected before any resolver work happens, which saves time and avoids unnecessary backend load.",
+    "real_world": "This is useful in development because broken queries fail fast and clearly. In production, it prevents malformed client requests from hitting expensive data sources.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of mistakes are caught by validation versus at runtime?"
+   },
+   {
+    "question": "What is a common beginner mistake when designing a GraphQL schema?",
+    "answer": "A common mistake is making the schema mirror the database too closely instead of the client’s needs. That often leads to awkward nesting, too many tiny types, or fields that are hard to use from the UI. A good schema should reflect how clients actually fetch data while still keeping the server implementation flexible.",
+    "real_world": "Teams often discover this after a few front-end features, when every query becomes deeply nested and brittle. Refactoring the schema early is much cheaper than letting that complexity spread.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to split a type or keep fields together?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do resolvers work in GraphQL, and what is the most common performance pitfall with them?",
+    "answer": "Resolvers are the functions that fetch the value for each field in a GraphQL response. GraphQL executes them field by field, so a naive resolver can trigger many repeated backend calls, especially when resolving nested lists. The classic pitfall is the N+1 query problem: one query for parents, then one query per parent for children. In practice, you fix this by batching, caching within a request, or reshaping the data access layer so field resolution is cheap.",
+    "real_world": "This shows up when a dashboard suddenly gets slow because a list of 50 users causes 51 database lookups. Teams usually spot it in tracing or SQL logs when one GraphQL request fans out into hundreds of backend calls.",
+    "code_lang": "python",
+    "code": "# naive: one DB call per post\nposts = get_posts()\nfor post in posts:\n    post.author = get_user(post.author_id)\n\n# better: batch once\nuser_ids = {post.author_id for post in posts}\nusers = get_users_by_ids(user_ids)",
+    "follow_up": "How would you detect N+1 problems in production or tests?"
+   },
+   {
+    "question": "When would you use a DataLoader-style batching layer, and what trade-off does it introduce?",
+    "answer": "Use a batching layer when multiple resolvers need the same kind of data in the same request, such as users, products, or permissions. It collapses many small reads into fewer bulk reads and can also cache repeated lookups during that request. The trade-off is added complexity: you have to think about request scoping, cache invalidation within the request, and how to preserve error handling when some keys fail. It is most useful when resolver code is otherwise simple but chatty.",
+    "real_world": "A common case is a feed API where each item needs author and reaction metadata. Without batching, latency spikes because each nested field becomes its own database or service call.",
+    "code_lang": "javascript",
+    "code": "const loader = new DataLoader(async (ids) => {\n  const rows = await db.users.findMany(ids);\n  return ids.map(id => rows.get(id) || null);\n});\n\n// resolver\nreturn loader.load(userId);",
+    "follow_up": "What are the risks of sharing a loader instance across requests?"
+   },
+   {
+    "question": "How do you think about designing a GraphQL schema around domain objects versus database tables?",
+    "answer": "You should model the schema around client needs and domain concepts, not mirror tables one-to-one. A table structure often leaks implementation details and can make the API awkward to use or hard to evolve. Domain-first schemas let you rename, reshape, and compose data without forcing clients to understand storage choices. The trade-off is that the schema may require more resolver logic and care about authorization and consistency.",
+    "real_world": "Teams that expose tables directly often regret it when they need to split or merge tables later, because clients have learned the storage shape. A domain-shaped schema makes backend refactors less disruptive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle a case where two clients want very different shapes of the same underlying data?"
+   },
+   {
+    "question": "What is the difference between a schema change that is additive and one that is breaking in GraphQL?",
+    "answer": "An additive change lets existing clients keep working, such as adding a new field or a new optional argument with a safe default. A breaking change removes or changes something a client already depends on, like deleting a field, changing a field’s type, or making an optional field required. GraphQL makes some evolution easier because clients ask for exactly what they need, but it does not eliminate breaking changes. In practice, you still need deprecation, versioning strategy, and usage tracking.",
+    "real_world": "This matters when a mobile app may stay on an old query for months. Teams often deprecate fields first, watch usage, then remove them only after old clients fade out.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you deprecate a field without surprising clients?"
+   },
+   {
+    "question": "What is a GraphQL union or interface used for, and when is it better than separate fields?",
+    "answer": "A union or interface is used when a field can return one of several related types and the client needs to handle them polymorphically. This is better than separate fields when the types share a common role but have different details, such as search results or notification items. Interfaces give you shared fields and a contract; unions are looser and require type refinement on the client. The trade-off is more client-side branching, but a cleaner schema than forcing everything into a single bloated type.",
+    "real_world": "Search pages often need to return users, groups, and documents in one list. A union keeps that result shape honest instead of inventing a fake common table-shaped response.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose an interface over a union?"
+   },
+   {
+    "question": "How do pagination patterns differ in GraphQL, and why is offset pagination often a bad fit at scale?",
+    "answer": "Offset pagination is simple, but it becomes unstable and slower as data changes or the offset grows, because rows can shift between requests and the database still has to count or skip many records. Cursor-based pagination is usually better for GraphQL because it is more stable under inserts and deletes and supports incremental loading. The trade-off is that cursors are less human-readable and require a little more schema design. For most production APIs, cursor pagination is the safer default.",
+    "real_world": "A feed or inbox can show duplicates or missing items if clients page by offset while new records are inserted. Cursor pagination helps avoid those surprises and tends to perform better on large tables.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What fields would you include in a cursor to make it stable?"
+   },
+   {
+    "question": "What should you check when a GraphQL query is unexpectedly slow in production?",
+    "answer": "First look at the resolver trace and identify whether the time is in the gateway, a specific resolver, or a downstream service. Then check for N+1 patterns, overly broad queries, expensive joins, and fields that trigger extra authorization or serialization work. You should also look at whether the slow query is asking for too much nested data or whether caching is missing for a hot path. The key is to separate schema shape problems from backend data-access problems.",
+    "real_world": "This often appears as one seemingly harmless query causing a large latency spike after a release. Tracing usually shows that a nested field or authorization check is doing the expensive work repeatedly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to optimize the resolver, the database query, or the client query shape?"
+   },
+   {
+    "question": "How do GraphQL authorization checks usually differ from authentication checks?",
+    "answer": "Authentication answers who the caller is; authorization answers what that caller is allowed to access. In GraphQL, authentication is often handled once per request, but authorization may need to happen at the field or object level because different fields can expose different sensitivity. A common mistake is checking only at the top-level operation and assuming nested fields are safe. Good implementations keep authorization close to the data being returned and fail closed when access is unclear.",
+    "real_world": "This matters when one type contains both public and private information, like a user profile with internal flags. A query that looks harmless can leak data if field-level checks are skipped.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you place authorization logic: middleware, resolvers, or the data layer?"
+   },
+   {
+    "question": "What is persisted GraphQL, and why do teams use it in production?",
+    "answer": "Persisted GraphQL means the server accepts only pre-registered queries or query hashes instead of arbitrary client-sent documents. Teams use it to reduce attack surface, improve cacheability, control query cost, and make it easier to know which operations are in production use. It also helps mobile and frontend teams because the server can track and version known operations more safely. The trade-off is added release coordination and less flexibility for ad hoc querying.",
+    "real_world": "This is common in large consumer apps where unknown queries would be risky or expensive. It also helps when you want to block unexpected client behavior before it hits your database.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does persisted GraphQL change your deployment process for frontend changes?"
+   },
+   {
+    "question": "How would you test a GraphQL API effectively without relying only on end-to-end tests?",
+    "answer": "You want a mix of schema-level, resolver-level, and integration tests. Schema tests catch breaking shape changes and validate required fields, resolver tests cover business logic and edge cases, and integration tests prove that the full stack works with real auth and data access. You should also include at least one test for error shape and one for authorization behavior, since those regressions are common. The goal is to catch failures close to the code while still verifying the GraphQL contract.",
+    "real_world": "Teams often discover that unit tests passed but the client broke because a field was renamed or a nullability rule changed. A small set of contract-style GraphQL tests prevents that from slipping through.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you assert in a test for partial data plus errors?"
+   },
+   {
+    "question": "How would you decide whether a GraphQL field should return a scalar value or a nested object type?",
+    "answer": "Use a scalar when the field is a leaf value with no meaningful substructure for clients, and use an object when clients commonly need to fetch related data off it. The main trade-off is schema clarity versus flexibility: object types make the API more expressive, but they can encourage expensive deep queries if you don’t control resolver cost. A good rule is to model the shape clients actually need, not just the storage model.",
+    "real_world": "This comes up when a team starts with IDs and names as scalars, then later finds every screen needs more related fields and the schema has to be redesigned. It also matters when deciding whether something like an address should stay a string or become a reusable type.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you prevent nested object fields from turning into expensive deep query trees?"
+   },
+   {
+    "question": "What is GraphQL schema stitching or schema federation, and when would you choose one over a single monolithic schema?",
+    "answer": "Both are ways to compose multiple GraphQL services into a larger API, but federation usually gives each team ownership over a subgraph with a shared composition layer, while stitching is a more manual composition approach. The trade-off is organizational scalability versus operational complexity: composition helps teams move independently, but it adds debugging and versioning complexity. I’d choose composition when one team can’t safely own the whole schema anymore.",
+    "real_world": "This matters when different teams own billing, catalog, and user data but product wants one API for the frontend. Without composition, the gateway becomes a bottleneck; with it, you need strong contracts and deployment discipline.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of failures or schema conflicts become harder to debug in a composed GraphQL setup?"
+   },
+   {
+    "question": "What happens if a client requests a field that the server can’t resolve at runtime?",
+    "answer": "If the field exists in the schema but the resolver throws or returns an error, GraphQL usually returns partial data plus an error entry, and the nullability of the field determines how far the null propagates. If the field is not in the schema, validation fails before execution. This matters because a resolver bug may not fail the whole response, so clients and observability need to handle partial success carefully.",
+    "real_world": "A production issue often shows up as one nested section of the page missing while the rest still renders. If the team only watches HTTP 200s, they can miss that a resolver has been failing for hours.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does null propagation behave differently for nullable and non-nullable fields?"
+   },
+   {
+    "question": "How would you design a GraphQL schema to avoid exposing implementation details that will be hard to change later?",
+    "answer": "I’d expose stable business concepts and hide storage-specific concepts like table names, join tables, or internal status codes unless clients truly need them. The key trade-off is convenience now versus coupling later: a schema that mirrors the database is quick to build, but it leaks internal change into the API. If a detail is likely to change or is only useful internally, keep it behind a resolver or transform it into a domain-level field.",
+    "real_world": "This matters when a team renames or splits a table and suddenly the frontend depends on fields that were never meant to be stable. It also helps during migrations, when you want to change storage without forcing client releases.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals tell you a field is too implementation-specific to belong in the public schema?"
+   },
+   {
+    "question": "How do you decide whether to add a new field to an existing type or create a new type in GraphQL?",
+    "answer": "Add a field when it represents the same underlying concept and it belongs to the same lifecycle and permissions model. Create a new type when the data has a different shape, ownership, or access pattern, or when the existing type would become confusingly broad. The trade-off is a flatter schema that is easier to query versus a cleaner model that is easier to reason about long term.",
+    "real_world": "A common case is deciding whether payment details belong on an Order type or should live under a separate Payment type. If the data has different access rules or comes from another service, a separate type is usually cleaner.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you handle a field that is only available for some users or some object states?"
+   },
+   {
+    "question": "What is the difference between a resolver that returns data immediately and one that performs I/O, and why does that matter for GraphQL performance?",
+    "answer": "A pure resolver that just reads from its parent object is cheap, while one that does database or network I/O can dominate request time, especially when repeated across many list items. GraphQL makes it easy to accidentally fan out into many small calls because each field can be resolved independently. The fix is to batch, cache, or prefetch where possible, and to keep an eye on resolver boundaries.",
+    "real_world": "This is the root cause of many ‘one query turned into 200 SQL queries’ incidents. It also shows up when a field fetches another microservice for every item in a large list.",
+    "code_lang": "javascript",
+    "code": "const resolvers = {\n  User: {\n    fullName: (u) => `${u.firstName} ${u.lastName}`,\n    posts: async (u, _, { loaders }) => loaders.postsByUserId.load(u.id),\n  },\n};",
+    "follow_up": "How would you measure whether a resolver is causing excessive downstream calls?"
+   },
+   {
+    "question": "When would you use custom scalars in GraphQL, and what should you be careful about when defining them?",
+    "answer": "Use a custom scalar when a value has a domain-specific format or semantics that can’t be expressed well with built-in scalars, such as a date, JSON blob, or opaque identifier. The important part is to define both serialization and parsing rules consistently so clients and servers agree on what is valid. The trade-off is stronger typing for clients versus more work to implement, document, and test.",
+    "real_world": "Custom scalars are common when a frontend needs proper date handling instead of a raw string. They also matter when an API accepts structured values that shouldn’t be broken into many fields.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test a custom scalar to make sure invalid values are rejected correctly?"
+   },
+   {
+    "question": "What is the role of input types in GraphQL mutations, and why not just take a bunch of separate arguments?",
+    "answer": "Input types group related fields into a single structured payload, which keeps mutations easier to extend and validate. Separate arguments become awkward as the mutation grows and make it harder to represent nested or optional data cleanly. The trade-off is a slightly more verbose schema, but much better maintainability and clearer client contracts.",
+    "real_world": "This comes up when a create or update action starts with two fields and slowly grows to ten. Using an input object avoids repeatedly changing the mutation signature and breaking client code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you split one large input type into multiple smaller inputs?"
+   },
+   {
+    "question": "How do you handle authorization for nested GraphQL fields without duplicating the same check in every resolver?",
+    "answer": "Use a consistent policy layer or shared authorization helpers so access rules live close to the domain, not scattered across resolvers. For nested fields, you often need to check both the parent object and the current user’s permissions, because a user may be allowed to read the parent but not sensitive child fields. The trade-off is centralization versus context-specific logic; the goal is to keep rules reusable without hiding them so much that debugging becomes hard.",
+    "real_world": "A common bug is exposing a private field inside an object that otherwise looks safe. Teams often discover it only after a security review or a customer reports seeing data they shouldn’t.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you keep authorization consistent between GraphQL and non-GraphQL endpoints?"
+   },
+   {
+    "question": "What would you look at if a GraphQL query is fast in development but slow in production?",
+    "answer": "I’d compare resolver counts, downstream latency, cache hit rates, and the actual query shape from production traffic, because dev data is usually too small and too clean. Production slowness often comes from larger lists, deeper selection sets, auth checks, or a dependency that behaves differently at scale. The key is to trace the request across resolver, database, and service boundaries instead of treating GraphQL as a black box.",
+    "real_world": "This usually appears after a launch when real users request many more nested fields than the test environment did. A slow production query often turns out to be one hot path combined with high fan-out.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you add to make these slowdowns visible before users report them?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does GraphQL nullability actually behave at runtime when a non-null field resolver returns null or throws?",
+    "answer": "GraphQL records an error and replaces the nearest nullable parent with null; this is the null-bubbling behavior. If the violated non-null field is deep in the tree, you can lose a much larger subtree than expected, and if everything up to the root is non-null the entire `data` payload can become null. That makes non-null a strong contract, not just documentation. I use it only when I can guarantee the value or when failing the whole parent object is the right behavior.",
+    "real_world": "Teams often mark too many fields non-null, then a single downstream timeout turns a partially usable page into a total failure because null bubbles to the top.",
+    "code_lang": "graphql",
+    "code": "type User { id: ID!, manager: User!, name: String! }\ntype Query { me: User! }",
+    "follow_up": "How would you choose which fields should be nullable when the backing data comes from multiple unreliable services?"
+   },
+   {
+    "question": "How do you prevent expensive GraphQL queries from taking down a service if clients can compose arbitrary nested selections?",
+    "answer": "You usually need demand control before execution: depth limits are a start, but they are too blunt on their own. Better approaches assign cost based on field fan-out, list sizes, and known expensive resolvers, then reject or throttle requests over a budget. Production systems often combine this with persisted operations, per-client limits, and timeouts at downstream boundaries. The trade-off is that cost models are approximate, so you have to tune them as schemas and traffic evolve.",
+    "real_world": "A harmless-looking query can explode into thousands of backend calls when a nested list field is requested under another list field; that is a common source of load spikes and cache stampedes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of fields would you score as high-cost even if the query depth is low?"
+   },
+   {
+    "question": "What are the hard parts of GraphQL subscriptions in production beyond just opening a WebSocket?",
+    "answer": "The real issues are fan-out, ordering, backpressure, and reconnection semantics. You need to decide whether events are at-most-once or replayable, how to resume after disconnects, and how authorization is revalidated over long-lived connections. Subscriptions also shift load from request/response to many concurrent idle connections plus bursts on publish, which changes scaling and failure modes. In many systems the GraphQL layer is mostly a projection over a separate event bus, not the source of truth for delivery guarantees.",
+    "real_world": "Incidents often come from one hot topic causing a thundering herd of updates, or from clients reconnecting after a deploy and replaying a large backlog unexpectedly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose subscriptions versus polling or server-sent events for a GraphQL client?"
+   },
+   {
+    "question": "How would you make a GraphQL mutation idempotent when clients retry on timeouts or network failures?",
+    "answer": "I’d separate transport retries from business semantics by accepting a client-supplied idempotency key or operation identifier and storing the result of the side effect. On a retry, the server returns the prior outcome instead of executing again. This matters because GraphQL mutations are only serialized within one request; they are not magically exactly-once across retries or concurrent clients. The trade-off is storage and key lifecycle management, but it is much cheaper than duplicate charges or duplicate job creation.",
+    "real_world": "Payment, email, and job-enqueue mutations commonly get retried by gateways or mobile clients; without idempotency you create duplicate external side effects while the GraphQL response looks normal.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you scope the idempotency key so two different mutation types cannot accidentally collide?"
+   },
+   {
+    "question": "If you run GraphQL over HTTP caches or a CDN, what is actually cacheable and what usually gets in the way?",
+    "answer": "GET queries can be cached if the full response is determined by the URL, headers, and auth context, but GraphQL makes this tricky because many operations are POST, include large bodies, or mix cacheable and personalized fields. Persisted queries help because they make GET practical and stabilize cache keys. The hard part is response variation: if one field depends on user identity or volatile data, the whole document response may become uncacheable unless you split operations or add a more granular caching layer below GraphQL. So GraphQL caching is often layered: CDN for safe public queries, resolver/result caches for the rest.",
+    "real_world": "Teams sometimes assume GraphQL cannot be cached, but the real problem is usually that a single operation fetches both public content and per-user state, destroying shared cache hit rate.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you use to decide whether to split one client query into two for better cacheability?"
+   },
+   {
+    "question": "How do you think about transactions and consistency when one GraphQL mutation touches multiple services?",
+    "answer": "A GraphQL mutation gives the client one logical operation, but it does not provide a distributed transaction across services. If the work spans databases or external systems, you usually need a saga or compensating actions, plus clear status reporting so clients can tell whether the operation is pending, partial, or failed. I try to keep mutations aligned to one consistency boundary when possible and make asynchronous steps explicit in the schema. Hiding eventual consistency behind a synchronous-looking mutation creates confusing failure modes.",
+    "real_world": "A create-order mutation may write the order, reserve inventory, and charge payment; if step three fails after step one succeeds, the GraphQL layer needs a recovery strategy, not just an error string.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you return from a mutation if the side effects continue asynchronously after the initial response?"
+   },
+   {
+    "question": "What is the execution model for sibling fields in GraphQL, and why does that matter for concurrency and backend load?",
+    "answer": "Sibling fields are conceptually independent, so GraphQL executors often resolve them in parallel if the implementation is async. That reduces tail latency for independent I/O, but it can also create burstiness by fanning out many backend requests at once. You need per-request batching, connection-pool awareness, and sometimes resolver-level concurrency limits for expensive fields. A query that is fast at small scale can become self-induced overload when every nested branch fires concurrently against the same dependency.",
+    "real_world": "I’ve seen a single query trigger hundreds of concurrent RPCs to one downstream service, saturating its pool and causing timeouts that disappear when the same fields are fetched in separate requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you cap concurrency without accidentally serializing the whole query execution?"
+   },
+   {
+    "question": "How would you approach observability for GraphQL so you can debug slow or failing operations without exploding metric cardinality?",
+    "answer": "I’d instrument at the operation level with normalized names or persisted IDs, plus field-level traces sampled selectively for expensive paths. Raw query text is useful in logs but dangerous as a metric label because aliases, literals, and client-generated variation create huge cardinality. You also want resolver timing, downstream call counts, and error paths so you can distinguish parsing, validation, execution, and backend failures. The trick is correlating all of that per request while keeping telemetry volume manageable.",
+    "real_world": "Without normalization, one mobile app version can generate thousands of unique metric series from the same logical query shape, making dashboards unusable during an incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you include in a normalized operation fingerprint so equivalent queries group together?"
+   },
+   {
+    "question": "What are the trade-offs of using the Relay-style global `node(id:)` pattern and opaque IDs across a large GraphQL API?",
+    "answer": "Global opaque IDs decouple clients from database keys and let generic caches or refetch flows work across types. The cost is extra encoding/decoding, a central lookup path, and the risk that teams overuse `node(id:)` as a catch-all fetch mechanism that bypasses more domain-specific access patterns and authorization context. It also complicates migrations if multiple systems disagree on identity shape. I use it when cross-type refetch and normalized client caches are important, not as a blanket replacement for every lookup field.",
+    "real_world": "A common issue is clients storing opaque IDs long-term, then a backend identity migration breaks refetch behavior because the server treated the opaque format as more stable than it really was.",
+    "code_lang": "graphql",
+    "code": "interface Node { id: ID! }\ntype User implements Node { id: ID!, name: String! }\ntype Query { node(id: ID!): Node }",
+    "follow_up": "How would you enforce authorization on `node(id:)` so it does not become an enumeration or data-leak vector?"
+   },
+   {
+    "question": "How do you evolve a GraphQL API when deprecation isn’t enough because clients may never upgrade?",
+    "answer": "Deprecation is only a communication tool; it does not remove traffic. In practice you need field-level usage telemetry by client, version negotiation or allowlists, deadlines with direct client outreach, and sometimes server-side shims that map old contracts to new behavior. Persisted operations make this much easier because you know exactly who is sending what. The trade-off is operational overhead, but without it schemas accumulate dead fields and every resolver change becomes risky.",
+    "real_world": "Mobile clients are the usual pain point: an old app build can keep calling a deprecated field for months, so deleting it blindly creates a production outage you cannot hotfix quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if you had to retire a dangerous field quickly but still had a long tail of old clients using it?"
+   },
+   {
+    "question": "How does GraphQL execution walk the selection set internally, and where do the real performance costs show up beyond resolver code itself?",
+    "answer": "Execution is essentially a tree walk: coerce arguments, call the field resolver, complete the returned value against the field type, then recurse into sub-selections for objects and lists. The hidden costs are often parsing and validation, repeated serialization, promise scheduling, context propagation, and per-field instrumentation or auth hooks. Large lists are especially expensive because completion happens per item per selected field, so cost grows with both breadth and cardinality. That is why two queries hitting the same SQL can still differ a lot in CPU time.",
+    "real_world": "Teams often optimize the database call and miss that a single response with thousands of nested objects is burning CPU in value completion, JSON encoding, and tracing middleware on the GraphQL tier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts would you cache or precompute if parse and validation became a measurable fraction of request latency?"
+   },
+   {
+    "question": "If you had to enforce query cost limits in production, how would you model cost so it catches real abuse without blocking legitimate traffic?",
+    "answer": "I would combine static analysis with runtime-aware multipliers. Static complexity can score fields differently, multiply child cost by list-size arguments like first or last, and reject obviously abusive shapes early, but it misses true cardinality and backend behavior. In production I would calibrate weights from observed latency and fan-out, keep separate budgets for trusted and untrusted clients, and pair limits with timeouts and circuit breakers. The trade-off is false positives versus letting one query shape saturate CPU or downstream pools.",
+    "real_world": "A common incident is a harmless-looking nested query with first: 500 on multiple edges that passes validation but explodes into millions of completed field values and enough DB work to degrade the whole cluster.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle a field whose cost depends on user-specific authorization or on a database filter that changes selectivity a lot?"
+   },
+   {
+    "question": "What are the hard consistency problems with GraphQL response caching, and how would you design around them?",
+    "answer": "A GraphQL response is shaped by the exact document, variables, viewer identity, locale, and often feature flags, so whole-response cache keys fragment quickly. Normalized entity caching helps, but then invalidation becomes difficult because one entity can appear in many query shapes and partial selections. On the server, I usually separate concerns: cache parsed documents and plans, cache resolver results or entities where ownership is clear, and only cache full responses for a small set of stable persisted operations. The main trade-off is hit rate versus correctness and invalidation complexity.",
+    "real_world": "Teams sometimes put a CDN in front of GraphQL and expect REST-like wins, then discover auth headers, POST bodies, and highly variable selection sets make cache hit rates too low to matter.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose stale-while-revalidate semantics for GraphQL data, and where would you implement it?"
+   },
+   {
+    "question": "How do deferred and streamed GraphQL responses change backend architecture, and what can go wrong when you adopt them?",
+    "answer": "They turn one request-response into a long-lived operation that emits patches, so your server now has to manage per-operation state, cancellation, ordering, and backpressure. They improve time-to-first-byte by sending critical fields first, but they can increase total work because clients may disconnect after the initial patch while backends are still running. Error handling also becomes more subtle because failures can arrive after partial data is already delivered. The trade-off is better perceived latency versus more complex transport, buffering, and resource accounting.",
+    "real_world": "In practice, teams see lower page render times for expensive side panels or recommendations, but also discover load balancers, proxies, and tracing systems were built assuming one short HTTP response.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you propagate cancellation so downstream work stops when the client closes the connection?"
+   },
+   {
+    "question": "In a federated GraphQL system, what actually happens during query planning and execution, and where do the biggest latency traps come from?",
+    "answer": "The gateway parses and validates the operation, builds a query plan split by subgraph ownership, fetches from one service, then uses returned keys or entities to fetch required fields from others and merges the results. The big latency traps are serial cross-subgraph dependencies, entity fan-out, repeated hydration of the same entities, and a gateway that becomes CPU-bound on planning or response assembly. Good federation design tries to minimize handoffs and avoid fields that require hopping across services at high-cardinality edges. The trade-off is team autonomy versus extra network boundaries and coordination costs.",
+    "real_world": "A classic incident is a product list resolved in one subgraph and pricing in another, where each page turns into a large entity resolution step that dominates p95 even though both services are healthy alone.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What schema changes would you make if you saw a hot query bouncing across three subgraphs before it could render a list item?"
+   },
+   {
+    "question": "How do you make GraphQL observability useful when every client can send a different document and field-level metrics can explode in cardinality?",
+    "answer": "I would normalize around operation signatures, not raw query text, and sample traces while keeping cheap counters for a bounded set of dimensions like operation name, client name, status, and latency bucket. For deeper diagnosis, capture per-field timings in sampled traces or structured logs, and annotate downstream calls so you can separate GraphQL overhead from backend latency. It also helps to track top signatures by CPU, result size, and error rate, not just request count. The trade-off is less detail on every request in exchange for metrics that remain affordable and usable.",
+    "real_world": "Without normalization, a mobile app that inlines literals or slightly changes fragments can create thousands of unique metric series, making dashboards noisy and expensive while hiding the actual hot operations.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you attribute slow requests to a specific field path if multiple resolvers are running concurrently?"
+   },
+   {
+    "question": "What failure modes do you watch for when a single GraphQL request fans out to many downstream services, and how do you contain the blast radius?",
+    "answer": "The main risks are partial outages amplifying into thread or connection pool exhaustion, head-of-line blocking from a few slow dependencies, and retries multiplying traffic across already-degraded services. I contain that with per-dependency timeouts, bounded concurrency, bulkheads, request-scoped caches, and clear policies on whether a field should fail closed, return null, or surface an error. It is also important to stop speculative or low-value subtrees once the overall response is no longer useful. The trade-off is completeness of data versus protecting the system under stress.",
+    "real_world": "A homepage query that touches profile, recommendations, inventory, and pricing can go from one degraded downstream to a full incident if the GraphQL layer keeps waiting on every optional widget and retries each timeout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide which fields are allowed to degrade to null and which should fail the whole operation?"
+   },
+   {
+    "question": "How do you use database transactions safely inside GraphQL resolvers when the operation can trigger many nested resolver calls?",
+    "answer": "I avoid opening a broad transaction for the whole GraphQL operation unless the mutation semantics truly require it, because nested resolvers may perform unrelated reads, call other services, or take too long. Instead, keep the transactional boundary close to the write set, pass a request-scoped unit of work only where needed, and make sure child resolvers do not accidentally issue inconsistent reads outside that boundary. For reads, it is usually better to rely on snapshot or application-level consistency than to hold locks across resolver execution. The trade-off is simpler correctness versus lock contention and long-lived transactions.",
+    "real_world": "A common production bug is wrapping an entire mutation tree in one transaction, then calling remote services or expensive resolvers inside it and causing lock waits, deadlocks, or connection starvation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if a mutation has to write locally and then publish an event or call another service exactly once?"
+   },
+   {
+    "question": "What does a robust persisted-query rollout look like at scale, especially during schema changes and multi-client deployments?",
+    "answer": "Treat persisted operations as an allowlisted artifact with versioning, client attribution, and a publish step tied to deploys. The server should support a miss path during rollout, reject unknown operations for untrusted traffic once coverage is high, and keep old operations available long enough for lagging clients. You also need compatibility checks against schema changes so a server deploy does not invalidate still-live mobile builds. The trade-off is more release discipline in exchange for safer traffic, lower parse overhead, and better cacheability and analytics.",
+    "real_world": "Teams with mobile clients often break production by removing a field after web has migrated, forgetting that old app versions still send the persisted operation for weeks or months.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect that an operation is safe to remove when clients are partially offline or behind long app-review cycles?"
+   },
+   {
+    "question": "Can you explain why GraphQL can have surprising memory pressure, and what you would do when large queries start causing OOMs or GC spikes?",
+    "answer": "GraphQL tends to materialize a lot at once: resolver results, intermediate objects, lists, errors, tracing metadata, and finally the full JSON response. Memory blows up with wide selections over large lists, especially if resolvers prefetch more columns or related rows than the selection actually needs. I would cap page sizes and response bytes, stream where supported, avoid copying objects between layers, trim tracing payloads, and profile allocation hotspots in completion and serialization paths. The trade-off is protecting server memory versus limiting very data-heavy client requests.",
+    "real_world": "A query that returns a few thousand nodes with nested edges can look fine in latency tests but still trigger GC storms in production because multiple such responses are being built concurrently on the same instance.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you put next to latency so you can tell CPU-bound queries from memory-bound ones?"
+   }
+  ]
+ }
+}

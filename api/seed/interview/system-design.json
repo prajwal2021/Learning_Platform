@@ -1,0 +1,485 @@
+{
+ "slug": "system-design",
+ "name": "System design concepts",
+ "category": "Computer science",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a client and a server in a system?",
+    "answer": "A client is the part that sends a request for data or action, and a server is the part that receives the request and responds. The same machine can act as both depending on the role in a specific interaction. This distinction matters because it helps you reason about who initiates communication and where logic or data lives.",
+    "real_world": "A web browser is usually the client, and a web app backend is usually the server. In microservices, one service can be a client of another service while still serving its own clients.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is an API, and how does it fit between a client and a server?"
+   },
+   {
+    "question": "What does it mean for a system to be stateless?",
+    "answer": "A stateless system does not keep important conversation data on the server between requests. Each request must contain everything needed to process it, or the server must fetch it from shared storage. Stateless designs are easier to scale because any server instance can handle any request.",
+    "real_world": "This is why many web APIs keep session data in a database or cache instead of in one app server’s memory. If a load balancer sends the next request to a different instance, the user still works.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a stateful design instead?"
+   },
+   {
+    "question": "What is a load balancer, and why do you use one?",
+    "answer": "A load balancer distributes incoming traffic across multiple servers. It improves availability, helps handle more traffic, and can route around unhealthy instances. The trade-off is added infrastructure and sometimes extra latency or complexity.",
+    "real_world": "If one app server goes down during a traffic spike, a load balancer can keep sending requests to the remaining healthy servers. Teams also use it when deploying new versions with minimal downtime.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between round-robin and health-check-based routing?"
+   },
+   {
+    "question": "What is caching, and what problem does it solve?",
+    "answer": "Caching stores a copy of data that is expensive to fetch or compute, so later requests are faster. It is useful when the same data is read often and does not change every second. The main trade-off is cache invalidation: you must decide when cached data is too old to trust.",
+    "real_world": "A product page may cache the response for a few seconds to reduce database load during a flash sale. If the cache is wrong or stale, users may see outdated prices or inventory.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you keep cached data consistent with the source of truth?"
+   },
+   {
+    "question": "What is a database index, and when would you add one?",
+    "answer": "An index is a data structure that makes lookups faster for certain columns, similar to a book index. You add one when a column is frequently used in searches, joins, or sorting, and read performance matters more than write speed. The trade-off is extra storage and slower inserts, updates, and deletes.",
+    "real_world": "A team might add an index on `user_id` in an orders table because every request looks up that user’s orders. Without it, the database may scan far more rows than necessary.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX idx_orders_user_id ON orders(user_id);\n",
+    "follow_up": "Why might too many indexes hurt performance?"
+   },
+   {
+    "question": "What is sharding?",
+    "answer": "Sharding means splitting one dataset across multiple databases or machines. Each shard holds only part of the data, often based on a key like user ID. It helps scale storage and write throughput, but it makes queries and operations more complex because data is no longer in one place.",
+    "real_world": "Large systems shard customer data so one database does not become too large or too slow. A common mistake is picking a shard key that creates uneven traffic and hot spots.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a good shard key?"
+   },
+   {
+    "question": "What is replication in a distributed system?",
+    "answer": "Replication means keeping copies of the same data on multiple machines. It improves availability and can speed up reads, because a request can go to a replica if the primary fails or is overloaded. The trade-off is that replicas may lag behind the primary, so reads can be stale.",
+    "real_world": "Many production databases use a primary for writes and one or more replicas for reads. If the primary goes down, a replica may be promoted to keep the service running.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is eventual consistency, and how does it relate to replication?"
+   },
+   {
+    "question": "What is the difference between horizontal scaling and vertical scaling?",
+    "answer": "Vertical scaling means giving one machine more CPU, memory, or storage. Horizontal scaling means adding more machines and spreading the load across them. Vertical scaling is simpler, but it has hard limits; horizontal scaling is more flexible but usually needs stateless services and coordination.",
+    "real_world": "A startup may begin with one larger database server, then move to multiple app servers behind a load balancer as traffic grows. The system design changes because one box is no longer enough.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which kinds of components are easier to scale horizontally?"
+   },
+   {
+    "question": "What is the difference between synchronous and asynchronous communication?",
+    "answer": "Synchronous communication means the caller waits for the result right away. Asynchronous communication means the caller sends work and continues, then gets the result later or notifies through another channel. Asynchronous designs help with latency and resilience, but they are harder to reason about because work completes in stages.",
+    "real_world": "Sending an email or a job to a queue is often asynchronous because the work may take too long for an immediate response. A login request is usually synchronous because the user expects an instant answer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use a message queue instead of a direct API call?"
+   },
+   {
+    "question": "What is a message queue, and why would a system use one?",
+    "answer": "A message queue stores messages between a producer and a consumer so they do not need to run at the same time. It helps absorb traffic spikes, decouple services, and move slow work out of request paths. The trade-off is added complexity, and you must think about retries, duplicates, and message order.",
+    "real_world": "A checkout service might put order confirmation work on a queue so the user does not wait for an email to send. If the email service is down, the message can be retried later instead of losing the task.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What can go wrong if a queued job is processed more than once?"
+   },
+   {
+    "question": "What is an API, and why do systems use one instead of talking directly to each other’s internals?",
+    "answer": "An API is a defined interface for one system to request work or data from another system. It matters because it hides implementation details, so both sides can change internally without breaking every caller. APIs also make access control, versioning, and documentation possible. In practice, they are the contract between teams or services.",
+    "real_world": "A mobile app calls a backend API to fetch user profiles instead of reading the database directly. That keeps the app simple and lets the backend change schemas without breaking the app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between REST and RPC-style APIs?"
+   },
+   {
+    "question": "What is the difference between a database primary key and a foreign key?",
+    "answer": "A primary key uniquely identifies a row in one table, while a foreign key stores a reference to a primary key in another table. Primary keys enforce row identity; foreign keys enforce relationships between tables. This helps prevent duplicate records and broken links between related data. A common mistake is choosing a value that can change as a primary key.",
+    "real_world": "In an orders system, each order has its own primary key, and each order row may contain a foreign key pointing to the customer who placed it. That lets you join orders to customers reliably.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE customers (\n  id INT PRIMARY KEY\n);\nCREATE TABLE orders (\n  id INT PRIMARY KEY,\n  customer_id INT,\n  FOREIGN KEY (customer_id) REFERENCES customers(id)\n);",
+    "follow_up": "Why would you still use an index on a foreign key column?"
+   },
+   {
+    "question": "What is normalization in databases, and when might you choose not to normalize fully?",
+    "answer": "Normalization is organizing data to reduce duplication and avoid update anomalies. You split repeated information into separate tables and connect them with keys. This usually makes writes safer and data more consistent, but it can increase the number of joins needed to read data. Teams sometimes denormalize selectively when read performance is more important than strict structure.",
+    "real_world": "A product catalog may keep brand information in a separate table so changing a brand name updates one place only. Later, a reporting table might duplicate some fields to make analytics faster.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of problems can denormalization create?"
+   },
+   {
+    "question": "What is an HTTP request and response?",
+    "answer": "An HTTP request is how a client asks a server to do something, and an HTTP response is how the server replies. The request includes a method like GET or POST, a path, headers, and sometimes a body. The response includes a status code, headers, and usually a body. Understanding these parts is basic to debugging web and API issues.",
+    "real_world": "When a page fails to load, you often inspect the request and response in browser dev tools to see whether the server returned 404, 500, or some other error.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between GET and POST?"
+   },
+   {
+    "question": "What is an HTTP status code, and what do the common ranges mean?",
+    "answer": "An HTTP status code is a three-digit number in the response that tells the client how the request went. The 2xx range usually means success, 4xx means the client made a bad request or lacks permission, and 5xx means the server failed. Status codes matter because clients and tools can react differently based on them. For example, a 404 is very different from a 500 when debugging.",
+    "real_world": "If an API returns 401 instead of 200, the frontend may prompt the user to log in again rather than showing broken data. Ops teams also alert differently on 4xx versus 5xx spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between 401 and 403?"
+   },
+   {
+    "question": "What is authentication, and how is it different from authorization?",
+    "answer": "Authentication is proving who you are, while authorization is deciding what you are allowed to do. A login step usually handles authentication, and permissions or roles handle authorization. Confusing the two leads to security bugs, like verifying a password but still letting the user access resources they should not see. They often happen together but solve different problems.",
+    "real_world": "A user may log in successfully but still not be allowed to delete another user’s account. The system authenticated them, but it did not authorize that action.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you enforce authorization in an application?"
+   },
+   {
+    "question": "What is a session, and why do some systems store session data on the server?",
+    "answer": "A session is a way to keep track of a user’s state across multiple requests. Since HTTP itself is stateless, sessions let the server remember things like whether the user is logged in. Server-side sessions are useful when you want to invalidate logins centrally or store data that should not be exposed to the client. A common mistake is assuming the browser will remember everything automatically.",
+    "real_world": "After a user logs in, the server may store a session record and send the browser a session ID cookie. On later requests, the browser sends that cookie back so the server can recognize the user.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a session cookie and a JWT?"
+   },
+   {
+    "question": "What is a timeout, and why should systems use them?",
+    "answer": "A timeout is a limit on how long a request or operation is allowed to take before the system gives up. It prevents a slow dependency from tying up threads, connections, or users forever. Timeouts are important in distributed systems because failures often look like slowness before they look like errors. The trade-off is that timeouts that are too short can fail healthy requests.",
+    "real_world": "If a payment service becomes slow, upstream services with timeouts can fail fast and show an error instead of hanging until the user refreshes. This helps protect the rest of the system from overload.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should you do after a timeout: retry, fail, or both?"
+   },
+   {
+    "question": "What is a retry, and when can retries make a problem worse?",
+    "answer": "A retry is when a client repeats a failed request, usually because the failure might be temporary. Retries help with flaky networks and brief service hiccups, but they can make outages worse if every client retries at once. That is why retries are often limited and paired with backoff. You also need to know whether the operation is safe to repeat, because some actions are not idempotent.",
+    "real_world": "If an API times out after creating an order but before replying, a blind retry could create a duplicate order. Teams often add idempotency keys or deduplication to prevent that.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does idempotent mean in the context of APIs?"
+   },
+   {
+    "question": "What is a cache miss, and what is one common mistake people make with caching?",
+    "answer": "A cache miss happens when the requested data is not in the cache, so the system has to fetch it from the slower source of truth. The common mistake is treating cache data as always correct or always present. Caches can expire, be evicted, or become stale, so the application must still work without them. Cache invalidation is hard because you must decide when cached data should be refreshed.",
+    "real_world": "An ecommerce site may cache product pages to speed up browsing, but after a price change the cache can briefly show old information. Teams often add expiration or explicit invalidation to reduce that risk.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a cache-aside pattern and writing through the cache?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How would you decide whether to use a monolith or split a system into services?",
+    "answer": "Start with the cost of coordination versus the cost of independent scaling and deployment. A monolith is usually simpler to build, test, and debug early on because calls are in-process and data consistency is easier. Services help when different parts need independent release cycles, different scaling profiles, or separate ownership, but they add network failures, versioning, and operational overhead. In practice, many teams start monolithic and split only when a boundary becomes painful and stable enough to extract.",
+    "real_world": "A team shipping a new product often moves faster with one deployable unit, then extracts a service when one area becomes a bottleneck or needs separate scaling. Over-splitting too early can make simple changes require multiple deployments and cross-team coordination.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals tell you a service boundary is a good one?"
+   },
+   {
+    "question": "How do you think about consistency versus availability in a distributed system?",
+    "answer": "You trade off how quickly all nodes agree against how often the system can keep serving requests during failures. Strong consistency makes reads and writes easier to reason about, but it can increase latency and reduce availability when partitions or replicas lag. Weaker consistency can keep the system responsive, but clients may read stale data or need conflict resolution. The right choice depends on whether correctness or uptime matters more for that operation.",
+    "real_world": "For a banking transfer, stale reads or conflicting writes are unacceptable, so teams favor stronger guarantees. For analytics counters or social feeds, a slightly stale view is often fine if the system stays fast and available.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of bugs show up when a system is only eventually consistent?"
+   },
+   {
+    "question": "How would you design idempotent write operations, and why does that matter?",
+    "answer": "An idempotent write can be repeated without changing the final result beyond the first success. This matters because retries, duplicated messages, and client reconnects happen in real systems, and you do not want them to create duplicate orders or double charges. Common approaches include using a client-generated request ID, deduplicating on the server, or making the write upsert-like when appropriate. The main trade-off is extra storage or coordination to remember what has already been processed.",
+    "real_world": "Payment and checkout systems often see duplicate submits when a user refreshes or a network call times out after the server already completed the work. Idempotency keys prevent the same purchase from being created twice.",
+    "code_lang": "python",
+    "code": "processed = set()\n\ndef charge(request_id, amount):\n    if request_id in processed:\n        return \"already processed\"\n    processed.add(request_id)\n    return f\"charged {amount}\"\n",
+    "follow_up": "How would you handle idempotency across multiple service instances?"
+   },
+   {
+    "question": "What is backpressure, and how does it help a system stay stable?",
+    "answer": "Backpressure is a way for a slower consumer to signal a faster producer to slow down or stop sending work. It prevents queues from growing without bound, which otherwise increases latency, memory use, and failure risk. In practice this can mean rejecting requests, pausing reads, or limiting concurrency upstream. The trade-off is that you may reduce throughput in the short term to keep the system healthy overall.",
+    "real_world": "A log ingestion pipeline can fall over if producers outpace storage for even a few minutes. With backpressure, the system degrades by slowing intake instead of running out of memory or dropping data unpredictably.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if backpressure is missing in a queue-based pipeline?"
+   },
+   {
+    "question": "How do you choose between polling and event-driven updates?",
+    "answer": "Polling is simpler because the client repeatedly asks for new data, but it wastes work when changes are rare and adds latency between checks. Event-driven updates push changes as they happen, which is more efficient and timely, but requires more infrastructure and careful handling of delivery failures, ordering, and reconnects. Polling can be acceptable for low-frequency needs or unreliable clients, while push is better when freshness matters. The right choice depends on update rate, latency requirements, and operational complexity.",
+    "real_world": "A dashboard that refreshes every few minutes may be fine with polling, but chat notifications or trading alerts usually need push-based delivery. Teams often start with polling and switch once load or freshness becomes a problem.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make event delivery reliable if the client disconnects?"
+   },
+   {
+    "question": "What is rate limiting, and what problem is it solving?",
+    "answer": "Rate limiting caps how many requests a user, token, or IP can make in a time window. It protects shared resources from abuse, accidental loops, and sudden traffic spikes that could starve other users. It can also be a product control, not just a safety mechanism, for fair usage and cost control. The trade-off is deciding what to limit on and how to handle bursts without hurting legitimate traffic.",
+    "real_world": "Public APIs often get hammered by buggy clients or abusive scrapers. A rate limiter can prevent one customer from exhausting database capacity and causing outages for everyone else.",
+    "code_lang": "python",
+    "code": "from collections import defaultdict\nhits = defaultdict(int)\n\ndef allow(user):\n    hits[user] += 1\n    return hits[user] <= 5\n",
+    "follow_up": "How would you implement rate limiting across multiple app servers?"
+   },
+   {
+    "question": "How do you test a distributed system beyond unit tests?",
+    "answer": "You need tests that cover integration points, failure modes, and timing behavior, not just pure business logic. Integration tests verify services and databases work together, while end-to-end tests validate the user-facing flow. For distributed systems, it is especially useful to test timeouts, retries, duplicate delivery, partial failures, and schema compatibility. The key trade-off is keeping tests realistic enough to catch production bugs without making the suite too slow or flaky.",
+    "real_world": "A service can pass unit tests and still fail when one dependency is slow or returns a malformed response. Teams often discover these issues only with contract tests or failure injection before a real outage exposes them.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of failures would you simulate in a staging environment?"
+   },
+   {
+    "question": "What is a circuit breaker, and when would you use one?",
+    "answer": "A circuit breaker stops sending requests to an unhealthy dependency after repeated failures, then tries again later to see if it recovered. It prevents a struggling downstream service from being overloaded by more traffic and helps your system fail fast instead of waiting on doomed calls. It is useful for slow databases, third-party APIs, and services that tend to cascade under load. The trade-off is that you must choose good thresholds so you do not block traffic too aggressively or recover too slowly.",
+    "real_world": "If a payment provider starts timing out, continued retries from every web server can make the outage worse. A circuit breaker lets the system degrade quickly and preserve capacity for other requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a circuit breaker different from a timeout or retry?"
+   },
+   {
+    "question": "How would you debug a production latency spike in a service?",
+    "answer": "First determine whether the delay is in your service, a downstream dependency, or the network by comparing metrics like p50, p95, error rate, and saturation. Then correlate the spike with recent deploys, traffic patterns, GC, database slow queries, or thread pool exhaustion. Tracing and structured logs help find where requests spend time, and a controlled rollback can confirm whether a new release caused it. The goal is to isolate the bottleneck before changing multiple things at once.",
+    "real_world": "A spike often turns out to be a database query plan regression, an accidental hot loop, or a dependency that got slower under load. Fast diagnosis matters because latency can trigger retries and amplify the incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you check first and why?"
+   },
+   {
+    "question": "What is eventual consistency, and how do you handle its side effects in application logic?",
+    "answer": "Eventual consistency means replicas or services may temporarily disagree, but they converge later. It is common in distributed systems where availability and partition tolerance matter more than immediate agreement. Application logic should tolerate stale reads, duplicate events, and out-of-order updates by using versioning, deduplication, or user-visible states like \"pending.\" The trade-off is more complex logic in exchange for better scalability and resilience.",
+    "real_world": "A shopping app may create an order before inventory and shipping services fully catch up. If the UI assumes everything is instantly consistent, users may see confusing or incorrect status until the workflow settles.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a user experience around eventually consistent data?"
+   },
+   {
+    "question": "How do you decide whether to use a relational database or a NoSQL database for a new system?",
+    "answer": "I start from the access patterns and invariants. If the data has strong relationships, transactions, and ad hoc querying needs, a relational database is usually the safer default. If the system needs very high write throughput, flexible schemas, or access is mostly by a few known keys, a NoSQL store can fit better. The trade-off is usually simplicity and correctness versus operational flexibility and scaling characteristics.",
+    "real_world": "A team building orders and payments usually benefits from a relational model because they need atomic updates and reporting. A clickstream or event-ingestion pipeline often fits NoSQL or append-only storage better.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs would make you reconsider the database choice after launch?"
+   },
+   {
+    "question": "What is a distributed transaction, and why do teams often avoid them?",
+    "answer": "A distributed transaction coordinates changes across multiple services or databases so they succeed or fail together. The problem is that it adds coordination overhead, failure modes, and tight coupling between systems that are meant to be independent. In practice, teams often prefer sagas, compensation actions, or eventual consistency because those approaches are easier to operate and recover from. The trade-off is stronger atomicity versus simpler failure handling and better availability.",
+    "real_world": "If an e-commerce checkout tries to reserve inventory, charge payment, and create shipment records in one atomic flow, a distributed transaction can become fragile. Many teams instead accept temporary inconsistency and reconcile failed steps explicitly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you model a saga for a multi-step business workflow?"
+   },
+   {
+    "question": "How do you design for high availability when a dependent service can fail or become slow?",
+    "answer": "You want to isolate failures instead of letting one dependency take down the whole request path. Common tools are timeouts, fallbacks, circuit breakers, bulkheads, and graceful degradation. You also need to decide which features can fail open, fail closed, or return stale data. The key trade-off is serving a partial experience versus blocking the whole system waiting for one dependency.",
+    "real_world": "If a recommendation service is slow, a storefront should still load product pages without recommendations rather than timing out the entire page. This often matters more than perfect feature completeness during an outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose between a fallback and returning an error?"
+   },
+   {
+    "question": "How do you think about schema migrations without taking a system down?",
+    "answer": "The safe approach is usually to deploy in small steps and keep old and new code compatible during the transition. A common pattern is expand, migrate data, switch reads or writes, then contract by removing unused columns or tables later. That avoids requiring every service instance to change at once. The trade-off is temporary duplication and more deployment steps, but it reduces outage risk.",
+    "real_world": "A column rename done in one step can break older app instances still reading the old name. Teams often use additive changes first so both versions work during rollout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a database migration risky in a live system?"
+   },
+   {
+    "question": "How would you design a cache invalidation strategy for data that changes often?",
+    "answer": "The main choice is whether the application writes through the cache, refreshes it after writes, or simply lets entries expire. For rapidly changing data, short TTLs can limit staleness, but they increase cache misses and load on the database. If correctness matters, you usually combine explicit invalidation on writes with a fallback TTL as a safety net. The hard part is balancing freshness, complexity, and the chance of serving stale data.",
+    "real_world": "Price or inventory data is often too sensitive to rely on long-lived cache entries. Teams usually need explicit invalidation and careful monitoring for stale reads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect that stale cache entries are causing incorrect behavior?"
+   },
+   {
+    "question": "What are the trade-offs between pagination by offset and pagination by cursor?",
+    "answer": "Offset pagination is simple and easy to implement, but it gets slower on large datasets and can skip or duplicate rows when new data is inserted. Cursor pagination is more stable because it pages from a specific position in the ordered data, so it behaves better under concurrent writes. The trade-off is that cursors are less flexible for jumping to arbitrary pages and can be harder to debug. For large or mutable datasets, cursor-based pagination is usually the better default.",
+    "real_world": "A social feed or audit log can change while users are scrolling, so offset-based paging often creates confusing duplicates or missing items. Cursor paging is more reliable there.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM events\nWHERE id > ?\nORDER BY id\nLIMIT 50;",
+    "follow_up": "What additional fields would you use if ordering by something other than a unique id?"
+   },
+   {
+    "question": "How do you design an API versioning strategy that does not break old clients?",
+    "answer": "You want clients and servers to evolve independently, so changes should be backward compatible whenever possible. That usually means adding fields instead of changing meanings, keeping old endpoints alive for a transition period, or versioning the contract when a breaking change is unavoidable. The important part is having a deprecation plan and telemetry so you know who still depends on the old version. The trade-off is long-lived compatibility versus cleaner APIs.",
+    "real_world": "Mobile apps and third-party integrations often update slowly, so breaking changes can leave old clients failing in production for months. Versioning buys time for a controlled migration.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a new endpoint version over backward-compatible evolution?"
+   },
+   {
+    "question": "What is a graceful shutdown, and what needs to happen during it?",
+    "answer": "A graceful shutdown lets a service stop accepting new work, finish in-flight requests, and release resources cleanly. It matters because abrupt termination can drop requests, corrupt jobs, or leave connections hanging. A good shutdown usually includes health check updates, draining traffic, closing workers, and persisting any necessary state. The trade-off is slightly slower shutdown versus fewer failed operations and less data loss.",
+    "real_world": "During deploys or autoscaling, instances are often terminated while still handling requests. Without graceful shutdown, users see random errors and retried work can create duplicates.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle long-running background jobs during shutdown?"
+   },
+   {
+    "question": "How do you decide what to monitor in a production system?",
+    "answer": "I monitor symptoms that reflect user impact and signals that explain why those symptoms happen. Typical categories are latency, error rate, throughput, saturation, and business-level metrics like failed checkouts or dropped jobs. Good monitoring also includes logs and traces so you can move from alert to root cause quickly. The trade-off is collecting enough signal without flooding the team with noisy alerts.",
+    "real_world": "A service can have normal CPU usage and still be broken because a downstream database is timing out. Good monitoring catches that at the request level, not just infrastructure level.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes an alert actionable instead of noisy?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "If you have to maintain a consistent ordering of events across machines, what would you rely on and what would you avoid?",
+    "answer": "I would avoid assuming wall-clock timestamps give a correct global order, because clocks drift, can jump due to NTP, and have different precision. For causality, I’d use sequence numbers from a single writer, partition-local offsets, or logical clocks like Lamport or vector clocks depending on whether I need total or partial order. If I need a total order at scale, I usually scope it per key or partition because global ordering is expensive and limits throughput. The key trade-off is correctness of ordering versus write parallelism and latency.",
+    "real_world": "Teams often sort by client or server timestamps and later find payments, chat messages, or CDC events applied out of order during clock skew or region failover.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would Lamport clocks be insufficient and push you toward vector clocks or per-key serialization?"
+   },
+   {
+    "question": "How would you prevent one noisy tenant or hot key from taking down a multi-tenant system?",
+    "answer": "I’d isolate capacity at multiple layers: per-tenant quotas, concurrency limits, queue partitioning, and storage layouts that avoid concentrating load on one shard. For hot keys, I’d use techniques like request coalescing, selective replication, write batching, or key-space redesign so one partition is not the bottleneck. Fairness matters as much as raw throughput, so I’d measure tail latency and shed or degrade work for abusive tenants first. The trade-off is extra complexity and sometimes weaker semantics, like temporarily stale reads from replicas.",
+    "real_world": "A single large customer can saturate a shared worker pool or a single partition, causing unrelated tenants to see 99th percentile latency explode even though average CPU looks fine.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would tell you the problem is a hot partition rather than a fleet-wide capacity issue?"
+   },
+   {
+    "question": "Can you explain tail latency amplification and how it changes the way you design fan-out requests?",
+    "answer": "In a fan-out request, overall latency is often determined by the slowest subrequest, so even modest p99s per dependency can produce a much worse end-to-end p99. If a request waits on 20 parallel calls, the chance that at least one is slow becomes high, and retries can amplify load further. To manage that, I reduce fan-out, use hedged requests carefully, set per-hop deadlines instead of long independent timeouts, and return partial results when the product allows it. This is why median latency is a poor design target for distributed systems.",
+    "real_world": "Search, feed generation, and aggregation services often look healthy at the median while users still see long stalls because one backend shard or recommendation service is intermittently slow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the risks of hedged requests, and how would you keep them from overloading the system?"
+   },
+   {
+    "question": "How would you choose and tune a quorum protocol for reads and writes in a replicated data store?",
+    "answer": "The basic idea is choosing read and write quorum sizes so the sets overlap when you need strong enough consistency, while keeping latency acceptable. Larger write quorums improve read freshness but increase write latency and reduce availability during failures; larger read quorums do the opposite. In practice, behavior also depends on read repair, hinted handoff, anti-entropy, and what happens under partitions, so the theoretical quorum rule is not the whole story. I’d tune it based on whether stale reads, write loss windows, or cross-region latency is the bigger business risk.",
+    "real_world": "A team may pick majority writes for correctness, then discover cross-region writes became too slow for user traffic; or pick loose quorums and later see users read stale account state after failover.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can a system configured with quorum reads and writes still return stale data?"
+   },
+   {
+    "question": "What is the thundering herd problem, and how would you design around it in a large system?",
+    "answer": "A thundering herd happens when many clients wake up or retry at once and hit the same dependency, often after a cache expiry, lock release, or outage recovery. The usual defenses are jitter on retries and TTLs, request coalescing, stale-while-revalidate, token-bucket admission, and warm-up strategies so recovered instances are not flooded immediately. I’d also avoid synchronized timers and cron schedules across a fleet. The goal is to smooth demand, because instantaneous spikes often break systems that can handle the same average load.",
+    "real_world": "A common incident is a popular cache key expiring and thousands of requests stampeding the database, which then slows down and causes even more retries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you stop cache stampede for a single expensive key without serializing the entire cache layer?"
+   },
+   {
+    "question": "When would you use consistent hashing, and what are its practical limitations?",
+    "answer": "Consistent hashing is useful when you want to add or remove nodes with minimal key movement, such as in caches, partitions, or request routing. In practice, plain consistent hashing can still produce uneven load, so systems often use many virtual nodes or weighted placement to smooth distribution. It also doesn’t solve hot keys, failure-domain awareness, or the cost of rebalancing large stateful nodes by itself. The benefit is lower churn during membership changes, but you still need operational mechanisms for skew and data movement.",
+    "real_world": "Without careful placement, adding one cache node can remap too many keys or still leave one node overloaded, causing hit rate drops and uneven memory pressure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you adapt consistent hashing when nodes have different capacities or live in different zones?"
+   },
+   {
+    "question": "How do you think about leader election and split-brain risks in a distributed system?",
+    "answer": "Leader election is really about ensuring there is at most one actor making coordination decisions at a time, despite delays and failures. I prefer lease-based leadership backed by a consensus system, with fencing tokens so an old leader cannot continue writing after losing leadership but before noticing it. Split brain happens when two nodes both believe they are leader, often due to partitions, long GC pauses, or stale leases. The hard part is not electing quickly; it’s making downstream state changes reject stale leaders safely.",
+    "real_world": "Production incidents happen when a paused primary resumes and keeps writing to storage after failover, corrupting data because the storage layer had no fencing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why are heartbeats alone not enough to prevent split brain?"
+   },
+   {
+    "question": "What is write-ahead logging, and how does it affect durability and recovery behavior?",
+    "answer": "Write-ahead logging means persisting an intent record before applying changes to the main data structures, so recovery can replay committed operations after a crash. It turns random in-place updates into an append-heavy path, which is good for throughput, but durability depends on when you fsync and how much loss you can tolerate between flushes. Recovery time then depends on log size, checkpoint frequency, and whether compaction or snapshotting exists. The trade-off is usually write latency versus data-loss window and restart time.",
+    "real_world": "A system may benchmark well with infrequent flushes, then lose the last few seconds of writes on power loss; or recover too slowly because replaying a huge log delays service startup.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do checkpoints or snapshots change the performance and failure characteristics of a WAL-based system?"
+   },
+   {
+    "question": "How would you design a globally unique ID generator for a high-throughput distributed system?",
+    "answer": "I’d start by deciding what properties matter: uniqueness only, rough time ordering, short length, or locality in storage indexes. Random IDs are simple and decentralized but can fragment B-tree indexes; time-ordered IDs help range scans and insert locality but need care around clock rollback and per-node sequence exhaustion. Central allocators are easy to reason about but become a dependency and throughput bottleneck unless batched. The right design depends on whether the ID is just an identifier or also part of your storage and ordering strategy.",
+    "real_world": "Teams often switch away from purely random primary keys after seeing heavier index churn, page splits, and worse write amplification in large relational tables.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure modes do you watch for in time-based ID schemes during clock skew or region failover?"
+   },
+   {
+    "question": "Suppose you need to roll out a protocol or data-format change across many services without downtime; how would you do it safely?",
+    "answer": "I’d make the change backward and forward compatible first: new readers should accept old and new formats, and new writers should not require all consumers to upgrade immediately. In practice that means additive changes, reserving unknown-field handling, dual read or dual write where needed, and feature flags to control activation separately from deployment. I’d also watch for semantic compatibility, not just parse compatibility, because a field can be syntactically optional but still change behavior. The safe rollout pattern is usually expand, migrate, verify, then contract.",
+    "real_world": "Incidents happen when one service starts emitting a new enum value or required field and an older consumer crashes or silently drops messages, backing up queues across the system.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of schema changes look backward compatible on paper but still break production consumers?"
+   },
+   {
+    "question": "Can you explain how flow control and congestion control differ, and why both matter in a distributed system?",
+    "answer": "Flow control protects a receiver or downstream component from being overwhelmed by a sender that is too fast. Congestion control protects the shared network or service path when aggregate demand exceeds capacity, usually by reducing send rate based on delay, loss, or queue growth. In practice you need both: a system can have healthy links but an overloaded consumer, or healthy consumers but overloaded intermediaries. The trade-off is throughput versus latency and fairness; aggressive sending can raise raw throughput briefly while causing queueing, retries, and collapse.",
+    "real_world": "A common incident is a producer fleet flooding a broker after a deploy, where per-connection flow control exists but cluster-wide congestion is ignored. Latency climbs, queues build, and retries amplify the overload.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect congestion collapse early from metrics and traces?"
+   },
+   {
+    "question": "How would you reason about coordinated omission when measuring latency, and what mistakes does it cause?",
+    "answer": "Coordinated omission happens when the load generator stops issuing work while the system is stalled, so the worst delays disappear from the measurement. That makes percentiles look much better than what real users experience, especially under queueing or pauses. To avoid it, drive requests based on an external schedule or record the missed intervals and attribute the delay. The key point is that latency measurement is part of system design; bad measurement leads to undersized capacity and false confidence.",
+    "real_world": "Teams often see a service pass a benchmark at low p99, then fail in production because GC pauses or lock contention caused queues that the benchmark never counted.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kind of benchmark setup would you use for a service that has bursty traffic and internal queues?"
+   },
+   {
+    "question": "Suppose a service works fine at average load but melts down during bursts. How would you use queueing theory to reason about that?",
+    "answer": "The main intuition is that as utilization approaches 100%, waiting time grows nonlinearly, so a system can look fine at 50% and become unstable near saturation. Variability matters too: bursty arrivals or uneven service times create long queues even when average throughput seems sufficient. I would estimate arrival rate, service rate, concurrency, and queue capacity, then check whether bursts can push effective utilization too high for too long. The practical trade-off is between keeping hardware busy and preserving headroom for spikes, retries, and failover events.",
+    "real_world": "A service sized for average 5 ms work at 80% CPU may still hit multi-second p99 when one dependency slows slightly, because queues form faster than workers can drain them.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you change the design if the service-time distribution has a very heavy tail?"
+   },
+   {
+    "question": "What happens in a two-phase commit when the coordinator fails, and why is that one reason teams often prefer sagas or compensation?",
+    "answer": "In two-phase commit, participants can end up blocked after voting yes because they must wait for the coordinator's final decision to know whether to commit or abort. If the coordinator fails at the wrong time, locks and resources may remain held until recovery, which hurts availability and throughput. The protocol gives strong atomicity but at the cost of coordination, failure sensitivity, and operational complexity across services. Sagas trade atomicity for explicit compensation and easier isolation of failures.",
+    "real_world": "This shows up when a payment and inventory workflow spans databases: a coordinator outage can stall order processing, while a saga can keep the system moving with compensating actions and reconciliation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What classes of business actions are hard or unsafe to compensate after the fact?"
+   },
+   {
+    "question": "How would you compare optimistic and pessimistic concurrency control in a high-contention system?",
+    "answer": "Optimistic control assumes conflicts are rare, so transactions proceed without locking and detect conflicts at commit, usually with versions or validation. Pessimistic control locks early to prevent conflicts, which reduces retries but can increase blocking, deadlocks, and tail latency. Under low contention, optimistic approaches usually give better concurrency and simpler scaling; under hot rows or hot keys, repeated aborts can waste a lot of work. The right choice depends on conflict rate, transaction length, and whether retries are cheap and safe.",
+    "real_world": "Inventory counters, account balances, and seat booking are classic places where an optimistic design works until one hot item causes retry storms and CPU waste.",
+    "code_lang": "sql",
+    "code": "BEGIN;\nSELECT qty, version FROM inventory WHERE sku = 'A1';\nUPDATE inventory\nSET qty = qty - 1, version = version + 1\nWHERE sku = 'A1' AND version = 42 AND qty > 0;\n-- if 0 rows updated, retry or report conflict\nCOMMIT;",
+    "follow_up": "How would you prevent starvation if many clients keep losing the same optimistic update race?"
+   },
+   {
+    "question": "Can you walk through the difference between deadlock, livelock, and starvation, and how you would handle each in a production system?",
+    "answer": "Deadlock means operations are waiting on each other in a cycle and no one can make progress. Livelock means they keep reacting and retrying but still make no useful progress. Starvation means some work is perpetually delayed while other work keeps succeeding, often because of unfair scheduling or hot contention. I would handle deadlocks with lock ordering, timeouts, or detection; livelock with jitter, backoff, and fewer synchronized retries; starvation with fairness controls like bounded queues, priority limits, or admission control.",
+    "real_world": "A classic production failure is many workers retrying a hot row in lockstep after a timeout, turning a brief issue into sustained livelock and starving normal traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What instrumentation would help you distinguish livelock from ordinary high load?"
+   },
+   {
+    "question": "How do vector clocks help with conflict detection, and where do they break down in real systems?",
+    "answer": "Vector clocks capture causal relationships by tracking a logical counter per replica or actor, so you can tell whether one version happened before another or whether two versions are concurrent. That makes them useful for conflict detection in eventually consistent stores because they avoid incorrectly overwriting concurrent updates. The downside is metadata growth and complexity: the vector size grows with the number of writers you need to track, and truncation can lose causality information. In large or dynamic clusters, teams often use coarser approaches or accept application-level conflict resolution.",
+    "real_world": "Systems with multi-region writes may need to detect concurrent profile edits or shopping-cart updates; vector-clock-style metadata can solve that, but becomes expensive when many nodes can author writes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you cannot afford full vector clocks, what weaker mechanism would you use and what errors would it allow?"
+   },
+   {
+    "question": "What is the difference between exactly-once delivery and exactly-once processing, and how would you explain the practical limits?",
+    "answer": "Exactly-once delivery means the transport itself guarantees a message is delivered one time and never duplicated, which is very hard across failures and usually depends on narrow assumptions. Exactly-once processing means the business effect happens once, typically by making handlers idempotent and coupling state changes with deduplication or transactional offsets. In practice systems often provide at-least-once delivery plus application-level deduplication because that is easier to make reliable. The important trade-off is complexity and throughput versus stronger semantics at a boundary you can actually control.",
+    "real_world": "Payment, billing, and order systems usually treat duplicates as inevitable and design handlers so replaying the same event does not double-charge or create duplicate shipments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design deduplication windows for a stream where duplicates can arrive much later than expected?"
+   },
+   {
+    "question": "How would you design around hotspotting caused by monotonically increasing keys or uneven access patterns?",
+    "answer": "Monotonic keys can force all new writes to the same shard, partition, or storage page, creating write amplification and uneven load. I would spread writes with techniques like hashing, key bucketing, or adding a random or tenant prefix, while preserving queryability through secondary indexes or composite keys. For read hotspots, I would consider replication, request coalescing, and separate handling for hot partitions. The trade-off is that better load distribution can make range scans, locality, and operational debugging harder.",
+    "real_world": "A time-ordered event table or auto-increment primary key can pin inserts to one partition, causing one node to page-cache thrash while others sit mostly idle.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need both even write distribution and efficient time-range queries, what schema or storage pattern would you choose?"
+   },
+   {
+    "question": "What is priority inversion in concurrent systems, and how can it show up in service architectures instead of just operating systems?",
+    "answer": "Priority inversion happens when high-priority work is blocked by lower-priority work holding a shared resource, often while medium-priority work keeps running. In services, the equivalent can be a critical request waiting behind bulk jobs for a worker pool, DB connections, or a mutex on a hot object. The fix is usually isolation or priority-aware scheduling: separate pools, reservations, bounded background concurrency, or in some cases priority inheritance around shared locks. The trade-off is lower average utilization in exchange for protecting tail latency of important traffic.",
+    "real_world": "A common example is batch reindexing consuming most database connections, causing user-facing requests to time out even though CPU usage is not maxed out.",
+    "code_lang": "go",
+    "code": "sem := make(chan struct{}, 2)\nfor _, job := range jobs {\n    sem <- struct{}{}\n    go func(j Job) {\n        defer func(){ <-sem }()\n        process(j)\n    }(job)\n}\n// use separate semaphores/pools for critical and batch traffic",
+    "follow_up": "How would you choose the size and isolation policy for separate worker or connection pools?"
+   }
+  ]
+ }
+}

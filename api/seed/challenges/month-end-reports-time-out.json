@@ -1,0 +1,382 @@
+{
+  "slug": "month-end-reports-time-out",
+  "title": "Month-end reports time out for large customers",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "databases",
+    "indexing",
+    "query-performance",
+    "postgres",
+    "incident-response"
+  ],
+  "scenario": "On the last day of the month, enterprise customers with more than 80 million transactions see the reports page time out after 60 seconds. The query filters by org_id, created_at range, and status, then sorts by created_at desc. The only relevant index is on status, so the database scans tens of millions of rows for common statuses.",
+  "goal": "Diagnose the timeout and choose a production-safe indexing strategy that makes large-customer month-end reports load reliably without creating unsafe write impact.",
+  "concepts": [
+    {
+      "key": "query-plan",
+      "name": "Query plan",
+      "summary": "A query plan shows how the database intends to find, filter, join, and sort rows. It is the main evidence for why a query is slow.",
+      "used_here": "It shows whether the report query uses the status index, how many rows it scans, and whether it sorts a large result."
+    },
+    {
+      "key": "database-index",
+      "name": "Database index",
+      "summary": "A database index is a data structure that helps the database find rows without scanning the whole table. It speeds reads but costs storage and extra work on writes.",
+      "used_here": "The existing index is only on status, which is not enough for this report query."
+    },
+    {
+      "key": "selectivity",
+      "name": "Selectivity",
+      "summary": "Selectivity means how much a filter narrows down the data. A highly selective filter matches few rows; a low-selectivity filter matches many rows.",
+      "used_here": "Common statuses match a large share of transactions, so using status alone still scans tens of millions of rows."
+    },
+    {
+      "key": "external-sort",
+      "name": "External sort",
+      "summary": "An external sort happens when the database cannot sort all rows in memory and spills work to disk. It is often much slower than an in-memory or index-ordered result.",
+      "used_here": "The slow plan sorts many filtered rows by created_at desc after scanning them."
+    },
+    {
+      "key": "sort-order",
+      "name": "Index sort order",
+      "summary": "An index can store values in an order that matches ORDER BY. If the query can read rows in index order, the database may avoid a separate sort.",
+      "used_here": "The report needs created_at desc, so the useful index should support that ordering after the equality filters."
+    },
+    {
+      "key": "composite-index",
+      "name": "Composite index",
+      "summary": "A composite index contains multiple columns in a chosen order. The order matters because it controls which filters and ordering the database can use efficiently.",
+      "used_here": "The report needs an index that matches org_id, status, and created_at together rather than relying on a single status index."
+    },
+    {
+      "key": "online-index-build",
+      "name": "Online index build",
+      "summary": "An online or concurrent index build creates an index while allowing normal reads and writes to continue. It usually takes longer but avoids long blocking locks.",
+      "used_here": "The transactions table is large and heavily written, so the index must be built without stopping writes."
+    },
+    {
+      "key": "lock-timeout",
+      "name": "Lock timeout",
+      "summary": "A lock timeout limits how long a database operation waits for a lock. It helps prevent schema changes from blocking production traffic unexpectedly.",
+      "used_here": "It makes the index rollout safer if the database cannot get a required short lock quickly."
+    },
+    {
+      "key": "replica-lag",
+      "name": "Replica lag",
+      "summary": "Replica lag is the delay between changes on the primary database and when a replica applies them. Heavy operations can increase this delay.",
+      "used_here": "Building a large index can create enough I/O and WAL activity to make read replicas fall behind."
+    },
+    {
+      "key": "write-amplification",
+      "name": "Write amplification",
+      "summary": "Write amplification means one logical write causes extra physical work. Extra indexes increase this because each insert, update, or delete must also update the indexes.",
+      "used_here": "New indexes can fix reads but may slow the high-volume transaction write path and consume more storage."
+    },
+    {
+      "key": "covering-index",
+      "name": "Covering index",
+      "summary": "A covering index contains all columns needed by a query, either as key columns or included columns. It can let the database answer from the index without reading table rows.",
+      "used_here": "It may reduce heap or table lookups for the report page if the selected columns are small and stable."
+    },
+    {
+      "key": "cache-ttl",
+      "name": "Cache TTL",
+      "summary": "A cache stores computed data for reuse, and a TTL controls how long the cached value is kept. It can reduce repeated work but risks stale or invalid data if used carelessly.",
+      "used_here": "A cached report page is tempting, but it does not fix the slow underlying query and may be wrong for fresh month-end data."
+    },
+    {
+      "key": "denormalization",
+      "name": "Denormalization",
+      "summary": "Denormalization stores duplicated or precomputed data to make reads faster. It can help some workloads but adds consistency and write complexity.",
+      "used_here": "Packing monthly transactions into a separate blob would be a large design change and is not the right immediate fix for this query."
+    },
+    {
+      "key": "table-partitioning",
+      "name": "Table partitioning",
+      "summary": "Partitioning splits one logical table into smaller physical pieces, often by time or tenant. Queries can be faster when they only need a few partitions.",
+      "used_here": "Monthly partitions can keep month-end reports from touching old months when every report has a created_at month range."
+    },
+    {
+      "key": "partition-pruning",
+      "name": "Partition pruning",
+      "summary": "Partition pruning is when the database skips partitions that cannot contain matching rows. It reduces the amount of data considered by a query.",
+      "used_here": "A report for one month can skip partitions for other months if the table is partitioned by created_at."
+    },
+    {
+      "key": "sharding",
+      "name": "Sharding",
+      "summary": "Sharding splits data across databases or nodes, usually to scale storage and throughput. It adds routing, operational, and cross-shard query complexity.",
+      "used_here": "Randomly sharding by transaction_id would spread data but would not align with the report filters."
+    },
+    {
+      "key": "p95-latency",
+      "name": "p95 latency",
+      "summary": "p95 latency is the time under which 95% of requests complete. It is better than an average for seeing whether most users avoid slow responses.",
+      "used_here": "The fix should be confirmed on enterprise report latency, not only on average traffic."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with evidence from the database",
+      "question": "A large customer’s month-end report times out after 60 seconds. What should you inspect first to understand where the time is going?",
+      "concept_keys": [
+        "query-plan",
+        "database-index"
+      ],
+      "options": [
+        {
+          "text": "Run a manual vacuum and statistics refresh on the transactions table before checking the query behavior.",
+          "correct": false,
+          "hint": "Stale statistics can cause bad plans, but you need evidence before choosing maintenance work. The plan will show whether statistics or access path is the likely issue.",
+          "id": "a"
+        },
+        {
+          "text": "Check web server CPU and add more report workers if the process pool is saturated during month-end.",
+          "correct": false,
+          "hint": "More workers can increase pressure on the database if the query is inefficient. First find out whether the bottleneck is in the query execution.",
+          "id": "b"
+        },
+        {
+          "text": "Increase the reports page timeout to 180 seconds and review application logs for slow controller actions.",
+          "correct": false,
+          "hint": "The timeout is a symptom, not the cause. Application logs may show the request is slow, but they usually do not show how many database rows were scanned or sorted.",
+          "id": "c"
+        },
+        {
+          "text": "Run EXPLAIN ANALYZE with buffer details for the exact org_id, month range, and status, and list the relevant indexes.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The first useful evidence is the actual query plan for the slow customer and date range. It will show the chosen index, rows scanned, rows filtered, sort method, and I/O. Raising the timeout may hide the incident briefly, but it does not explain why a query over 80 million transactions cannot finish within 60 seconds."
+    },
+    {
+      "title": "Interpret the slow plan",
+      "question": "The plan shows an index scan on idx_transactions_status for status = 'posted', which matches 88% of the table. It then filters by org_id and created_at, removes 43 million rows, and performs an external sort on created_at desc before timing out. What is the best diagnosis?",
+      "concept_keys": [
+        "query-plan",
+        "database-index",
+        "selectivity",
+        "external-sort",
+        "sort-order"
+      ],
+      "options": [
+        {
+          "text": "The status-only index has poor selectivity for this workload and does not match the org, month, and ordering needs of the query.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "The report is probably waiting behind write locks, because month-end inserts are heavy for enterprise customers.",
+          "correct": false,
+          "hint": "Lock waits would appear differently in database wait events or the plan timing. The plan already shows large scanning and sorting work.",
+          "id": "b"
+        },
+        {
+          "text": "The main issue is network transfer, because returning 120,000 report rows over the application connection is too slow.",
+          "correct": false,
+          "hint": "Network transfer can matter for very large responses, but this plan spends most of its effort before rows are returned. The removed-row count is a stronger clue.",
+          "id": "c"
+        },
+        {
+          "text": "The main issue is insufficient sort memory, because the external sort is the only operation that can explain a 60 second timeout.",
+          "correct": false,
+          "hint": "The sort is expensive, but ask why so many rows reach the sort in the first place. A memory change will not stop the database from scanning tens of millions of mostly irrelevant rows.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A status value that matches 88% of the table is not selective enough to be the leading access path. The database scans 43 million rows that are later discarded, then sorts the survivors because the index order does not match created_at desc for this query. Increasing sort memory is tempting, but it only treats one cost after the excessive scan has already happened."
+    },
+    {
+      "title": "Choose the index that matches the query",
+      "question": "Production stats show this report query always has one org_id, one status, a monthly created_at range, and ORDER BY created_at DESC. Which index is the best first candidate for this query shape?",
+      "concept_keys": [
+        "composite-index",
+        "selectivity",
+        "sort-order",
+        "database-index"
+      ],
+      "options": [
+        {
+          "text": "Add separate indexes on org_id and created_at so the planner can combine them with the status index.",
+          "correct": false,
+          "hint": "Index combination can be useful for some queries, but it is not a safe bet for a high-volume range-and-order workload. It can still require large bitmap work and a separate sort.",
+          "id": "a"
+        },
+        {
+          "text": "Create an index on transactions (created_at DESC) and rely on the existing status index for the status filter.",
+          "correct": false,
+          "hint": "The date order helps the sort, but it does not put one customer and one status together. For a large month across all customers, this can still scan far too much data.",
+          "id": "b"
+        },
+        {
+          "text": "Rebuild the existing index on transactions (status) with a lower fill factor so it is less fragmented.",
+          "correct": false,
+          "hint": "A better-built single-column index still starts from a low-selectivity status value. It does not line up with the org and month filters.",
+          "id": "c"
+        },
+        {
+          "text": "Create an index on transactions (org_id, status, created_at DESC) and validate that the report reads rows in that order.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "With equality filters on org_id and status followed by a created_at range and descending order, an index on (org_id, status, created_at DESC) matches the query shape. The database can seek to one org and status, scan the month range, and read rows in the requested order. Several single-column indexes are tempting, but the planner does not magically turn them into an efficient ordered access path for tens of millions of rows."
+    },
+    {
+      "title": "Roll out the index safely",
+      "question": "The transactions table has 2.4 billion rows and receives about 15,000 writes per second at peak. What is the safest production rollout plan for the new index?",
+      "concept_keys": [
+        "online-index-build",
+        "lock-timeout",
+        "replica-lag",
+        "write-amplification"
+      ],
+      "options": [
+        {
+          "text": "Create the index only on a read replica and route month-end reports there, leaving the primary schema unchanged.",
+          "correct": false,
+          "hint": "Schema drift between primary and replicas creates operational risk, especially during failover. Many systems also do not allow independent index changes on physical replicas.",
+          "id": "a"
+        },
+        {
+          "text": "Run a normal CREATE INDEX on the primary during a 45 minute maintenance window, because report reads can continue while it builds.",
+          "correct": false,
+          "hint": "A normal index build can take stronger locks than you want on a hot table. The risk is not only reads; writes and schema access can be blocked.",
+          "id": "b"
+        },
+        {
+          "text": "Use the database’s online or concurrent index build with lock timeouts, run during a lower-traffic window, monitor I/O and replica lag, then validate the plan.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Put the index creation in the regular app migration transaction so it deploys atomically with the report code change.",
+          "correct": false,
+          "hint": "Large index builds should not be hidden inside a normal deploy transaction. Some databases also disallow concurrent index builds inside a transaction block.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A large index on a 2.4 billion-row hot table must be built in a way that avoids long write-blocking locks. An online or concurrent build with lock timeouts and monitoring reduces the risk, though it still consumes I/O and creates write amplification while it runs. A normal CREATE INDEX is tempting because it is simple, but on a table receiving 15,000 writes per second it can cause a bigger outage than the report timeout."
+    },
+    {
+      "title": "Avoid over-indexing while reducing table reads",
+      "question": "After the new index, most reports are below the timeout, but the largest customer still performs 120,000 table lookups to read transaction_id, amount, and currency for the page. The SELECT does not need large text or metadata columns. What follow-up should you consider?",
+      "concept_keys": [
+        "covering-index",
+        "write-amplification",
+        "cache-ttl",
+        "denormalization"
+      ],
+      "options": [
+        {
+          "text": "Store each organization’s monthly transactions as one denormalized JSON blob and read reports from that blob.",
+          "correct": false,
+          "hint": "Denormalization can be useful, but this is a major data-model change with consistency costs. The current problem is a query access path, so exhaust targeted index fixes first.",
+          "id": "a"
+        },
+        {
+          "text": "Cache the final report pages for 24 hours with a TTL so repeated month-end views avoid database reads.",
+          "correct": false,
+          "hint": "Caching can help repeated identical requests, but it does not make the first slow query fast. It also introduces freshness and invalidation questions for month-end data.",
+          "id": "b"
+        },
+        {
+          "text": "Include every column from transactions in the index so future report variants can avoid table reads too.",
+          "correct": false,
+          "hint": "Covering only helps when the extra columns are worth the storage and write cost. Very wide indexes can make writes and cache behavior much worse.",
+          "id": "c"
+        },
+        {
+          "text": "Replace or extend the index with a narrow covering index that includes transaction_id, amount, and currency, after measuring size and write cost.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "A narrow covering index can let the database answer the page from the index without 120,000 extra table lookups. The key is to include only the small columns the page actually needs and to measure the added storage and write amplification. Including every column is the tempting overcorrection, but it creates a large, expensive index that slows the write path."
+    },
+    {
+      "title": "Plan for continued growth",
+      "question": "Six months later, the largest organizations have far more historical data, and every month-end report includes a created_at month range. Indexes are becoming large, and old months dominate maintenance work. What longer-term schema change best targets this pattern?",
+      "concept_keys": [
+        "table-partitioning",
+        "partition-pruning",
+        "sharding",
+        "selectivity"
+      ],
+      "options": [
+        {
+          "text": "Partition transactions by status so each report reads only the partition for the selected status.",
+          "correct": false,
+          "hint": "Status is still low-selectivity for common values. A common status partition can remain huge and still span all months.",
+          "id": "a"
+        },
+        {
+          "text": "Partition transactions by created_at month, keep matching local indexes, and rely on pruning so monthly reports skip other months.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Randomly shard transactions by transaction_id so storage and reads are evenly spread across database nodes.",
+          "correct": false,
+          "hint": "Even distribution is not the same as efficient filtering. A query by org, status, and month would have to visit many random shards unless the shard key matches the access pattern.",
+          "id": "c"
+        },
+        {
+          "text": "Drop indexes on transactions older than 90 days because most users care about recent reports.",
+          "correct": false,
+          "hint": "Dropping historical indexes may help maintenance, but it breaks older reports unless the product explicitly removes that access pattern. It is not a general fix for monthly reporting.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Monthly partitioning matches the fact that every report has a created_at month range. The database can prune partitions for other months and use smaller local indexes for the target month. Partitioning by status is tempting, but common statuses are the original low-selectivity problem and would still contain very large slices of data."
+    },
+    {
+      "title": "Confirm the fix worked",
+      "question": "After the index and rollout changes, what is the strongest confirmation that the incident is resolved for enterprise customers?",
+      "concept_keys": [
+        "query-plan",
+        "partition-pruning",
+        "external-sort",
+        "p95-latency",
+        "write-amplification"
+      ],
+      "options": [
+        {
+          "text": "Compare EXPLAIN ANALYZE and production metrics: the plan uses the new access path, avoids large external sorts, scans near the returned rows, and enterprise p95 stays below target without write regression.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Verify that average report latency across all customers improved, even if the largest customers still have high p95 latency.",
+          "correct": false,
+          "hint": "The incident affects the largest enterprise customers. Averages can improve while the affected segment still times out.",
+          "id": "b"
+        },
+        {
+          "text": "Check that the new index exists in the schema and that the application logs show no report errors for the next 10 minutes.",
+          "correct": false,
+          "hint": "Index existence does not prove the planner uses it. A short quiet period can also miss the month-end enterprise workload.",
+          "id": "c"
+        },
+        {
+          "text": "Confirm database CPU is lower during an off-peak hour and close the incident if no active reports are running.",
+          "correct": false,
+          "hint": "Off-peak CPU does not test the failing workload. You need evidence from the same query shape and customer segment that timed out.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The confirmation must connect the mechanism to the user-visible result. The plan should show the new index or partition pruning, far fewer scanned rows, and no large disk sort, while production p95 for enterprise reports remains below target. Checking that the index exists is not enough because the planner may ignore an index that does not match the real query shape or statistics."
+    }
+  ],
+  "takeaway": "Slow report queries are often caused by an index that does not match the filters and ordering, not by a lack of single-column indexes. Use the query plan and production cardinalities to choose a composite index, then roll it out safely and measure write cost. For very large time-based workloads, covering indexes and monthly partitioning can help, but only when they match observed query patterns.",
+  "review_issues": []
+}

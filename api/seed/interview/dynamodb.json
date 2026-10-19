@@ -1,0 +1,485 @@
+{
+ "slug": "dynamodb",
+ "name": "DynamoDB",
+ "category": "Databases",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is DynamoDB, and when would you choose it over a relational database?",
+    "answer": "DynamoDB is a managed NoSQL key-value and document database from AWS. You choose it when you need predictable low-latency reads and writes at scale, flexible schema, and you can model access patterns around keys instead of joins and ad hoc queries. It is a poor fit when you need complex joins, multi-row transactions everywhere, or heavily relational reporting.",
+    "real_world": "A team building a session store, user profiles, or event metadata often uses DynamoDB because traffic can spike suddenly and the access pattern is simple.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a partition key and a sort key?"
+   },
+   {
+    "question": "What is the difference between a partition key and a sort key in DynamoDB?",
+    "answer": "The partition key determines which partition stores the item and is the main way DynamoDB finds it. A sort key lets multiple items share the same partition key and be ordered within that partition, which enables range queries and grouped data. Together they form the table's primary key when both are used.",
+    "real_world": "This matters when designing things like all orders for one customer, where customer ID can be the partition key and order timestamp can be the sort key.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you fetch one item versus a range of items with that key design?"
+   },
+   {
+    "question": "What is the difference between GetItem and Query?",
+    "answer": "GetItem retrieves exactly one item by its full primary key. Query reads one partition key value and can return one or many items based on the sort key condition. If you need to look up a single known item, use GetItem; if you need all items for a key or a key range, use Query.",
+    "real_world": "Teams often accidentally use Scan-like patterns when they really need Query, which becomes slow and expensive as the table grows.",
+    "code_lang": "python",
+    "code": "import boto3\n\nddb = boto3.resource('dynamodb')\ntable = ddb.Table('Orders')\nresp = table.get_item(Key={'CustomerId': 'c1', 'OrderId': 'o9'})\nitem = resp.get('Item')",
+    "follow_up": "When would you use Scan, and why is it usually a bad idea?"
+   },
+   {
+    "question": "What does Scan do in DynamoDB, and why should you avoid it on large tables?",
+    "answer": "Scan reads every item in the table or index and filters after reading. That makes it expensive and slow at scale because you pay for reading data you may not return. It is useful for small tables, one-time migrations, or admin tasks, but not for normal application reads.",
+    "real_world": "A common production issue is an endpoint that works in testing with a tiny table, then times out or costs too much after data grows because it uses Scan plus filter expressions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the better alternative when you need to look up data by a non-key attribute?"
+   },
+   {
+    "question": "What is a GSI, and when would you add one?",
+    "answer": "A global secondary index is an alternate way to query the same table using different partition and sort keys. You add one when your application needs a query pattern that the base table key cannot support directly. The trade-off is extra storage and write cost because the index must be kept up to date.",
+    "real_world": "If users need to search orders by status or email address, a GSI is often the cleanest way to support that without scanning the table.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a GSI different from a local secondary index?"
+   },
+   {
+    "question": "How is a local secondary index different from a global secondary index?",
+    "answer": "A local secondary index uses the same partition key as the base table but a different sort key, so it only changes how you sort and query within the same partition. A global secondary index can use a completely different partition key and sort key. LSI choices are more limited, while GSI gives more flexibility for access patterns.",
+    "real_world": "If all items for one customer need to be queried by different timestamps or statuses, an LSI may fit; if you need to query by another dimension like email, you usually need a GSI.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is eventual consistency, and where does it show up with indexes?"
+   },
+   {
+    "question": "What does eventual consistency mean in DynamoDB?",
+    "answer": "Eventual consistency means a recent write may not be visible immediately on every read. DynamoDB reads can be eventually consistent by default in some cases, which improves throughput and latency, but you may briefly see stale data. If your use case needs the latest write immediately, you need to design for that and use strongly consistent reads where supported.",
+    "real_world": "This matters for workflows like payment status or inventory reservations, where stale reads can cause duplicate actions or overselling if the app assumes instant visibility.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the basic ways to update items safely when multiple clients write at once?"
+   },
+   {
+    "question": "How do you safely update an item when multiple clients might write to it at the same time?",
+    "answer": "Use conditional writes or optimistic locking so you only update if the item is still in the expected state. For example, you can check a version number or a field value in the condition expression. That prevents one client from silently overwriting another client's changes.",
+    "real_world": "This is common for counters, cart updates, and profile edits where two requests may hit the same item nearly at the same time.",
+    "code_lang": "javascript",
+    "code": "const params = {\n  TableName: 'Users',\n  Key: { id: 'u1' },\n  UpdateExpression: 'SET #v = #v + :one',\n  ConditionExpression: '#v = :expected',\n  ExpressionAttributeNames: { '#v': 'version' },\n  ExpressionAttributeValues: { ':one': 1, ':expected': 3 }\n};",
+    "follow_up": "What happens if the condition fails?"
+   },
+   {
+    "question": "What is a conditional write failure, and how should an app handle it?",
+    "answer": "A conditional write failure means DynamoDB rejected the write because the condition expression was not true. The app should treat that as a normal concurrency signal, not as a server bug, and either retry after re-reading or return a conflict error to the user. This is how you avoid lost updates.",
+    "real_world": "In practice, this prevents two people editing the same record from overwriting each other without noticing, such as in an order editing or inventory system.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is TTL used for in DynamoDB?"
+   },
+   {
+    "question": "What is TTL in DynamoDB?",
+    "answer": "TTL, or time to live, lets you mark items with an expiration timestamp so DynamoDB can remove them later. It is useful for temporary data like sessions, caches, or one-time verification codes. You should not rely on it for precise timing, because deletion is asynchronous and not immediate.",
+    "real_world": "Teams use TTL to keep session and token tables from growing forever, which reduces storage cost and cleanup jobs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problem is DynamoDB trying to avoid with hot partitions, and how do you design around that?"
+   },
+   {
+    "question": "What is a hot partition, and how do you avoid it?",
+    "answer": "A hot partition happens when too much traffic goes to the same partition key, creating a bottleneck even if the table overall has enough capacity. You avoid it by choosing partition keys with good cardinality, spreading writes across many keys, and avoiding monotonically increasing or highly skewed key values when possible. Good key design is the main defense.",
+    "real_world": "A common failure is using a single date or status value as the partition key, which sends most traffic to one key and causes throttling during spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you redesign a table if most writes were landing on one partition key?"
+   },
+   {
+    "question": "What does a DynamoDB table store at a high level, and what is the shape of an item?",
+    "answer": "A DynamoDB table stores items, and each item is a set of attributes identified by the table’s key schema. Unlike a relational row, items in the same table do not have to share the same non-key attributes, so the schema is flexible. The key attributes are required, and the rest can vary by item. This is useful when different record types are closely related and fit a single access pattern.",
+    "real_world": "A team might store users, sessions, and preferences in one table when they are always fetched by the same key pattern. The flexible item shape lets them add new attributes without a migration.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide whether to store everything in one table or split it into multiple tables?"
+   },
+   {
+    "question": "What is the main difference between PutItem and UpdateItem?",
+    "answer": "PutItem replaces the entire item at the key unless you use conditions, so it is best for creating or fully overwriting an item. UpdateItem changes only the attributes you specify, which is safer when you want to modify part of an existing item. A common mistake is using PutItem and accidentally deleting attributes that were not included in the request. Use UpdateItem for partial changes and PutItem when you intentionally write the full item.",
+    "real_world": "This matters when an API updates a profile. If the service uses PutItem with only the fields from the form, it can silently wipe fields stored by other parts of the system.",
+    "code_lang": "python",
+    "code": "# Update only one attribute instead of replacing the whole item\nclient.update_item(\n    TableName='Users',\n    Key={'userId': {'S': '123'}},\n    UpdateExpression='SET lastLogin = :t',\n    ExpressionAttributeValues={':t': {'S': '2026-10-16T10:00:00Z'}}\n)",
+    "follow_up": "When would you choose a conditional UpdateItem instead of a plain UpdateItem?"
+   },
+   {
+    "question": "What does BatchWriteItem do, and what are its limits as an API?",
+    "answer": "BatchWriteItem lets you send multiple put and delete operations in a single request, which reduces round trips. It does not make the writes atomic across items, so some operations can succeed while others fail. You also have to handle unprocessed items and retry them, because DynamoDB may throttle part of the batch. It is useful for bulk loading and fan-out writes, not for transactions.",
+    "real_world": "A backfill job often uses batch writes to load millions of records faster. If the job ignores unprocessed items, it will silently lose data and leave the table incomplete.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you retry unprocessed items safely without duplicating data?"
+   },
+   {
+    "question": "What is a projection in a DynamoDB index?",
+    "answer": "A projection defines which non-key attributes from the base table are copied into an index. If an attribute is projected, the index can answer reads without going back to the base table for those fields. Projecting fewer attributes saves storage and write cost, but it may require extra fetches later. The trade-off is between cheaper indexing and read convenience.",
+    "real_world": "A team may project only the fields needed for list pages into a GSI so the UI can render from the index alone. If they later need more fields, they may have to query the base table after the index lookup.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the differences between keys-only and include projections?"
+   },
+   {
+    "question": "What is a primary key in DynamoDB, and why must it be unique?",
+    "answer": "A primary key is the table’s identifier, made up of a partition key alone or a partition key plus sort key. It must be unique because DynamoDB uses it to map each item to exactly one location in the table. If you write another item with the same key, you replace the existing item rather than create a duplicate. Uniqueness is what makes key-based access fast and deterministic.",
+    "real_world": "This matters when importing data from a source system that does allow duplicates. If the application picks a key that is not truly unique, later writes will overwrite earlier records.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you model one-to-many data in DynamoDB if the primary key must stay unique?"
+   },
+   {
+    "question": "What does a Query require, and what common mistake do beginners make with it?",
+    "answer": "Query requires an exact match on the partition key, and then it can optionally filter or range-scan by the sort key. A common mistake is expecting Query to search across all partition keys or to behave like a SQL query on any attribute. If the access pattern does not start with the key, Query cannot use the table efficiently. You usually fix that by choosing a better key or adding an index.",
+    "real_world": "A developer may try to query orders by status without a partition key and wonder why DynamoDB does not support it directly. That usually means the data model does not match the query pattern yet.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would a filter expression still be useful on a Query, even though it does not reduce read cost?"
+   },
+   {
+    "question": "What is a filter expression in DynamoDB, and what is the important limitation to remember?",
+    "answer": "A filter expression removes items from the results after DynamoDB has already read them. It is useful for trimming down what the application receives, but it does not make the read cheaper because the matching items were still read first. That means it should not be used as a substitute for a key condition or index. If you need to avoid reading a lot of unwanted items, change the key design or add an index.",
+    "real_world": "Teams often add a filter for `status = active` and think they have optimized the query, but the read capacity stays high. That can become a cost problem when the underlying partition contains many irrelevant items.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a key condition expression and a filter expression?"
+   },
+   {
+    "question": "What is a transactional write in DynamoDB, and when would you need one?",
+    "answer": "A transactional write groups multiple operations so they either all succeed or all fail together. You use it when you must keep related items consistent, such as moving money, reserving inventory, or writing an item and an audit record together. The trade-off is more complexity and higher cost than a simple write. For many app flows, a normal conditional write is enough.",
+    "real_world": "An e-commerce system may need to decrement stock and create an order atomically so it never sells the same unit twice. Without a transaction, a partial failure can leave inventory and orders out of sync.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a transaction different from using a single conditional write?"
+   },
+   {
+    "question": "What is the TTL feature used for, and what should you not rely on it for?",
+    "answer": "TTL marks items for automatic expiration so DynamoDB can delete them later without a cleanup job. It is useful for caches, session records, and temporary data that should disappear eventually. You should not rely on TTL for immediate deletion at an exact time, because expiration and removal are not guaranteed to happen instantly. If something must disappear right away for business logic or compliance, delete it explicitly.",
+    "real_world": "A session table often uses TTL so old sessions do not pile up forever. If the app assumes the item is gone the moment the timestamp passes, it can still find stale data for a while.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What types of data are good candidates for TTL, and what types are not?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you choose a good partition key for a DynamoDB table in a real application?",
+    "answer": "A good partition key spreads traffic and storage evenly while still matching your access patterns. You want high cardinality and low skew, and you should avoid keys where many requests land on the same value, like a status flag or tenant with huge traffic concentration. If you need to query by another dimension, model that with a sort key or a secondary index instead of forcing the partition key to do everything. The key choice is usually the biggest performance decision in the design.",
+    "real_world": "A common failure is a table that looks fine in development but becomes slow in production because all writes go to one partition key value. Teams often discover this after a launch when one customer or one time bucket dominates traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you redesign a table if your current partition key is creating hot traffic?"
+   },
+   {
+    "question": "When would you use a sort key to model multiple access patterns instead of adding a GSI?",
+    "answer": "Use a sort key when the alternate access pattern is naturally scoped to the same partition key, because Query can then retrieve it efficiently without extra index write cost. A GSI is better when you need to look up items by a different partitioning dimension, but it adds write amplification, storage, and eventual consistency for reads. The trade-off is between flexibility and operational cost. In practice, I try to get as many access patterns as possible from the base table first.",
+    "real_world": "If you model orders by customer, a sort key can let you query recent orders for one customer efficiently. If product support later needs lookup by order status across all customers, that usually becomes a GSI.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What naming or encoding pattern would you use in a sort key to support several query shapes?"
+   },
+   {
+    "question": "What happens if you query DynamoDB with a filter expression that matches very few items?",
+    "answer": "DynamoDB still reads the items that match the key condition first, then applies the filter afterward. That means you can pay for reading a lot of items and return very few, which is why filter expressions are not a substitute for good key design. If the filter is selective, you usually want to move that attribute into the key or into a different index. Filters are fine for light post-processing, not for reducing read cost.",
+    "real_world": "This often shows up in dashboards where a team expects only open tickets, but the table stores many statuses under the same partition key. Read costs climb even though the API returns only a handful of rows.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell from CloudWatch or metrics that filtering is hiding a bad data model?"
+   },
+   {
+    "question": "How do you decide between a GSI and storing duplicated data in another table?",
+    "answer": "A GSI is simpler when the alternate lookup is just another view of the same item and you want DynamoDB to maintain it for you. A separate table can be better when the access pattern, retention, scaling behavior, or ownership differs enough that the data should be modeled independently. GSIs share some operational characteristics with the base table, while a separate table gives you more isolation and sometimes easier backfills. The right choice depends on how tightly coupled the two views really are.",
+    "real_world": "Teams often start with a GSI for user lookups by email, then later move to a separate table when they need different lifecycle rules or want to isolate noisy reads from the main workload.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can happen if you denormalize too aggressively in DynamoDB?"
+   },
+   {
+    "question": "What is a common cause of `ProvisionedThroughputExceededException`, and how would you debug it?",
+    "answer": "It usually means one partition or the table as a whole is getting more read or write demand than the capacity supports. I would check whether the requests are concentrated on a single key, whether a new access pattern was added, and whether the table or index is being hit more than expected. On-demand mode or higher provisioned capacity may help, but fixing skew is often the real solution. It is important to inspect both the base table and any GSIs, because either one can be the bottleneck.",
+    "real_world": "This often appears after a release that adds a new report or retry loop. The table may look healthy overall, but one index or one tenant is saturating the capacity.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether the issue is table-level capacity or a single hot key?"
+   },
+   {
+    "question": "What is the difference between eventually consistent and strongly consistent reads in DynamoDB, and when would you pay for the stronger option?",
+    "answer": "Eventually consistent reads may briefly return stale data after a write, while strongly consistent reads return the latest successful write from the base table. Strong consistency only applies to the base table and not to GSIs, so you cannot depend on it everywhere. I would use strong reads when a user action immediately depends on seeing its own write, or when correctness matters more than latency and cost. Otherwise eventual consistency is usually the default choice because it is cheaper and often sufficient.",
+    "real_world": "A common case is a user updating a profile and immediately refreshing the page. If the product cannot tolerate showing old data for a moment, strong reads on the base table may be worth it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design around the fact that GSIs are not strongly consistent?"
+   },
+   {
+    "question": "How do you update only one attribute in DynamoDB without overwriting the rest of the item?",
+    "answer": "Use an UpdateItem-style partial update rather than replacing the whole item. That lets you set, remove, or increment specific attributes while preserving the others, which is safer for large or frequently changing items. This matters because a full overwrite can accidentally drop attributes if your application does not send the complete current image. Partial updates also reduce the amount of data you need to send over the wire.",
+    "real_world": "This is common in APIs where different services own different fields on the same item. A bug that writes a partial object as a full replacement can silently delete unrelated state.",
+    "code_lang": "python",
+    "code": "table.update_item(\n    Key={\"pk\": \"USER#1\", \"sk\": \"PROFILE\"},\n    UpdateExpression=\"SET displayName = :n\",\n    ExpressionAttributeValues={\":n\": \"Ava\"},\n)",
+    "follow_up": "What is the risk if two services update different fields on the same item at the same time?"
+   },
+   {
+    "question": "What happens if you try to write an item larger than DynamoDB's item size limit?",
+    "answer": "The write fails, because DynamoDB enforces an upper bound on item size. In practice, this means you need to keep blobs, logs, or large collections out of a single item and store them elsewhere, such as object storage or separate items. The design trade-off is between atomic updates on one item and keeping the item small enough to stay efficient. Large items also make reads, writes, and replication more expensive even before you hit the hard limit.",
+    "real_world": "Teams hit this when they keep appending events or large nested JSON documents to one record. The failure may show up only after a data growth milestone in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you redesign a model that is growing too large for one item?"
+   },
+   {
+    "question": "When would you use BatchGetItem, and what should your code do if some keys are not returned?",
+    "answer": "BatchGetItem is useful when you need to fetch several independent items with fewer network round trips. It is not a guarantee that every requested key will be returned in one call, so your code has to inspect the response and retry any unprocessed or missing keys as appropriate. You also need to handle the fact that the returned items may come back in a different order than requested. The main benefit is lower latency and better client efficiency, not simpler correctness.",
+    "real_world": "A page that loads a list of related records often uses BatchGetItem to avoid many sequential gets. Production bugs happen when the app assumes the first response is complete and silently drops missing items.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure retries so they do not amplify load during a partial failure?"
+   },
+   {
+    "question": "How do you test DynamoDB access code so you catch schema and query bugs before production?",
+    "answer": "I would write integration tests against a local or isolated DynamoDB environment, not just unit tests with mocks. The important cases are key design, conditional writes, pagination, and the exact expressions used in queries and updates, because those are easy to get wrong in ways mocks will not catch. I also like seed data that reflects real skew and edge cases, such as missing optional attributes and duplicate writes. The goal is to verify behavior against the actual service contract, not just the wrapper code.",
+    "real_world": "Many DynamoDB bugs only appear when the expression syntax or key shape is exercised for real. A mock may happily accept a query that DynamoDB itself would reject or interpret differently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What do you include in a minimal test dataset for a new DynamoDB access pattern?"
+   },
+   {
+    "question": "How do you model a one-to-many relationship in DynamoDB without joining tables?",
+    "answer": "Common patterns are to put the parent and child items in the same table and use a shared partition key, with the sort key distinguishing item types. That lets you Query all children for one parent efficiently. The trade-off is that you denormalize data and may duplicate attributes you would otherwise join for in SQL. This works best when your access pattern is known up front.",
+    "real_world": "A support system might store one ticket item and many comment items under the same ticket id. A bug report often starts when a team can fetch the ticket but not its latest comments efficiently.",
+    "code_lang": "python",
+    "code": "# PK = ticket#123\n# SK = META or COMMENT#<ts>\nresponse = table.query(\n    KeyConditionExpression=Key('PK').eq('ticket#123') & Key('SK').begins_with('COMMENT#')\n)",
+    "follow_up": "How would you fetch the parent item and its latest child efficiently?"
+   },
+   {
+    "question": "When would you use a composite sort key design, and what does it buy you?",
+    "answer": "A composite sort key is useful when you need to query items by prefix or by ordered ranges within one partition. It lets you group related records and support patterns like latest-first, type-based access, or time windows without extra indexes. The downside is that you must design the key format carefully, because changing query patterns later can be expensive. It is a modeling tool, not just a unique identifier.",
+    "real_world": "An event stream or order timeline often uses a sort key like `TYPE#timestamp` so the application can fetch recent events or only one category of events. Teams run into trouble when the sort key is too generic and every read becomes a wider query than expected.",
+    "code_lang": "python",
+    "code": "# Example sort key pattern: ORDER#2026-01-01T10:00:00Z\nitems = table.query(\n    KeyConditionExpression=Key('pk').eq('acct#1') & Key('sk').between('ORDER#2026', 'ORDER#2027')\n)",
+    "follow_up": "What are the risks of encoding too much meaning into the sort key?"
+   },
+   {
+    "question": "How do you handle pagination with Query, and what can go wrong if you ignore it?",
+    "answer": "DynamoDB Query returns a page of results, not necessarily the full matching set. You need to follow `LastEvaluatedKey` until it is absent, otherwise your application may silently miss records. This matters for both correctness and UX, especially when users expect complete lists or reports. Pagination also helps keep requests bounded in size.",
+    "real_world": "A dashboard that only shows the first page of alerts may look fine in testing but miss older unresolved alerts in production. Teams often discover this when users complain that search results or exports are incomplete.",
+    "code_lang": "python",
+    "code": "items = []\nkey = None\nwhile True:\n    resp = table.query(..., ExclusiveStartKey=key) if key else table.query(...)\n    items.extend(resp['Items'])\n    key = resp.get('LastEvaluatedKey')\n    if not key:\n        break",
+    "follow_up": "How would you design an API response so clients can page through results safely?"
+   },
+   {
+    "question": "How do you choose between on-demand and provisioned capacity for a DynamoDB table?",
+    "answer": "On-demand is simpler when traffic is unpredictable or you want to avoid capacity planning. Provisioned can be cheaper and more controllable when you know your steady-state load and want predictable performance. The trade-off is operational: provisioned requires you to size and monitor capacity, while on-demand trades some cost efficiency for convenience. The right choice depends on traffic shape and cost sensitivity.",
+    "real_world": "A product launch or seasonal workload often starts on on-demand to avoid throttling surprises. Mature services with stable traffic sometimes move to provisioned once they understand their peak and average usage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would make you switch from one mode to the other?"
+   },
+   {
+    "question": "What should you look at first when a DynamoDB request is being throttled?",
+    "answer": "First check whether throttling is concentrated on one partition key or spread across the table. Then look at consumed capacity, hot keys, and whether the workload is read-heavy, write-heavy, or both. If the key is hot, the fix is usually data modeling or traffic shaping, not just increasing capacity. If the table is generally overloaded, then capacity or autoscaling settings may be the issue.",
+    "real_world": "A notification service might write many updates for a single celebrity account and throttle only that key, even though the rest of the table is idle. In practice, the fix is often to shard that access pattern or buffer writes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect a hot key in logs or metrics?"
+   },
+   {
+    "question": "How does DynamoDB Streams help in a real system, and what is one important caveat?",
+    "answer": "Streams let you react to item changes, which is useful for search indexing, cache invalidation, audit trails, or asynchronous workflows. The important caveat is that stream processing is still an eventually consistent pipeline and consumers must be idempotent because records can be retried. You should treat it as a change feed, not a transactional message bus. If ordering matters, design carefully around the item or partition scope.",
+    "real_world": "A team may update DynamoDB and use Streams to propagate changes to OpenSearch. If the consumer is not idempotent, retries can duplicate downstream documents or create inconsistent state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a stream consumer safe to retry?"
+   },
+   {
+    "question": "What is idempotency in DynamoDB writes, and why does it matter?",
+    "answer": "Idempotency means repeating the same request has the same effect as doing it once. It matters because network timeouts, retries, and duplicate events are normal in distributed systems. In DynamoDB you often achieve this with conditional writes, idempotency tokens stored in the item, or a separate deduplication record. Without it, retries can create duplicate orders, payments, or messages.",
+    "real_world": "An order API may receive the same create request twice after a timeout. If the write is not idempotent, the customer may be charged twice or get two records for one purchase.",
+    "code_lang": "python",
+    "code": "table.update_item(\n    Key={'pk': 'order#1'},\n    UpdateExpression='SET processed = :t',\n    ConditionExpression='attribute_not_exists(processed)',\n    ExpressionAttributeValues={':t': True}\n)",
+    "follow_up": "When would you prefer a transaction over an idempotent single-item write?"
+   },
+   {
+    "question": "How do transactions in DynamoDB compare with simpler conditional writes from a design perspective?",
+    "answer": "Transactions are for coordinating multiple items atomically when you truly need all-or-nothing behavior. Conditional writes are simpler, cheaper, and usually better when you can keep the invariant on one item or one key space. The trade-off is complexity and cost versus correctness scope. In many systems, good single-item modeling avoids the need for transactions entirely.",
+    "real_world": "Inventory reservation can sometimes be modeled with one item per SKU and a condition, but a checkout flow may need a transaction across order and stock records. Teams often start with simple writes and only move to transactions when they can name the invariant they need to protect.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of invariants are hard to enforce without transactions?"
+   },
+   {
+    "question": "How would you debug a DynamoDB query that is correct but still slow or expensive?",
+    "answer": "Check whether the query is using a key condition efficiently and whether a filter expression is discarding most of the read items. Then look at page size, returned item size, and whether you are fetching more attributes than needed. Also verify whether the access pattern could be served by a better key design or a narrower index projection. Slow but correct queries usually mean the model does not match the read pattern well enough.",
+    "real_world": "A reporting page may work fine in staging but become slow in production because each request reads thousands of items and filters almost all of them out. This often shows up as high latency and high read capacity at the same time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or logs would you add to catch this earlier?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how DynamoDB partitions data and why that matters for throughput limits even when a table looks underutilized overall?",
+    "answer": "DynamoDB hashes the partition key to place items on physical partitions, and each physical partition has finite read and write capacity. A table can have plenty of aggregate capacity but still throttle if one logical key range maps to a hot physical partition. The practical point is that scaling is per partition as well as per table, so key distribution matters more than table size. Adaptive capacity helps, but it does not make a badly skewed access pattern free.",
+    "real_world": "A common incident is a table showing low average consumed capacity while one customer, tenant, or time bucket gets throttled because most traffic lands on a small subset of partition keys.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you redesign a key if one tenant generates most of your write traffic?"
+   },
+   {
+    "question": "What actually happens under the hood when you add a new global secondary index to a large live table, and what risks would you plan for?",
+    "answer": "Adding a GSI triggers a backfill where DynamoDB reads existing items and populates the new index while also applying ongoing writes. That process consumes resources and can expose bad key distribution in the new index even if the base table was healthy. During backfill you need to watch throttling, lag, and whether the index key design creates hot spots. The key trade-off is adding a new access pattern without migration code versus operational risk during index creation.",
+    "real_world": "Teams often add a GSI to unblock a feature, then discover the backfill takes much longer than expected or the new index immediately throttles because many old items share the same indexed value.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or alarms would you watch during a GSI backfill?"
+   },
+   {
+    "question": "If you need to enforce uniqueness for a non-key attribute like username or email, how would you do it in DynamoDB?",
+    "answer": "DynamoDB does not enforce uniqueness on arbitrary attributes, so you usually model a separate lock item whose primary key is derived from the unique value, then write both items atomically with conditions. The condition prevents creating the lock item if it already exists, which gives you uniqueness at write time. The trade-off is extra write cost and more complicated delete or rename flows. You also need to decide how to recover if an application crashes mid-workflow and you are not using a transaction.",
+    "real_world": "User registration systems often need unique usernames globally; without a lock item pattern, two concurrent signups can both pass an application-side pre-check and create duplicates.",
+    "code_lang": "python",
+    "code": "# transact write idea\n# 1) PK=USER#123\n# 2) PK=UNAME#alice\n# both written only if neither exists\n\nConditionExpression = \"attribute_not_exists(PK)\"\n",
+    "follow_up": "How would you handle renaming a username without leaving stale uniqueness records behind?"
+   },
+   {
+    "question": "How do DynamoDB transactions fail in practice, and what design mistakes make them much more expensive than they need to be?",
+    "answer": "Transactions can fail because a condition check fails, a participating item is being modified concurrently, or capacity is insufficient on one of the touched items or indexes. They are more expensive because DynamoDB has to coordinate multiple items atomically, so using them for every write path can raise latency and cost noticeably. A common design mistake is using transactions when a single-item conditional write would guarantee the same business invariant. I usually reserve transactions for true multi-item invariants or cross-entity state transitions.",
+    "real_world": "A payments workflow may legitimately need atomic updates to a ledger item and an idempotency record, but using transactions for simple profile edits often just adds cost and contention.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Give me an example where a conditional write is enough and a transaction is unnecessary."
+   },
+   {
+    "question": "What are the main consistency and failure-mode differences between a base table and its global secondary indexes?",
+    "answer": "A GSI is updated asynchronously from the base table, so reads from the index can lag behind recent writes even if the base table write already succeeded. That means you can observe temporary missing or stale index entries, and uniqueness or workflow decisions should not rely on an immediate GSI read-after-write guarantee. In failure analysis, you have to remember the base write path and index propagation are decoupled from the application's point of view. GSIs are great for access patterns, but they are not a substitute for write-time constraints.",
+    "real_world": "A team writes an order, then immediately queries a status GSI to confirm it exists; under load they intermittently fail to find the order and mistakenly retry the write.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need read-after-write correctness for a secondary lookup, what patterns would you consider?"
+   },
+   {
+    "question": "How would you design around the 400 KB item limit when an entity can grow over time, like a document, shopping cart, or event history?",
+    "answer": "You usually split the entity into multiple items under the same partition key and use the sort key to separate metadata, chunks, or append-only records. That keeps hot mutable fields small and avoids rewriting a giant blob for every update. The trade-off is more application logic and more reads to reconstruct the full object, but it scales better and avoids hard size failures. It also reduces write amplification when only one part changes.",
+    "real_world": "Large carts or chat threads often start fine as single items, then a holiday spike or power user pushes them past the limit and writes begin failing for only a subset of customers.",
+    "code_lang": "typescript",
+    "code": "// PK = CART#123\n// SK = META            -> totals, owner\n// SK = ITEM#sku-1      -> one line item\n// SK = ITEM#sku-2\n// SK = NOTE#2026-10-16T12:00:00Z\n",
+    "follow_up": "What consistency issues show up when totals are stored separately from the line items?"
+   },
+   {
+    "question": "How do read capacity costs really work for Query and why can a query that returns almost nothing still be expensive?",
+    "answer": "Read cost is based on the amount of data DynamoDB reads, not the number of items your application keeps after filtering. A Query can be expensive if the matching key range is large, the items are big, or you use a filter expression that discards most of what was read. Strongly consistent reads also cost more than eventually consistent ones for the same data volume. The practical lesson is to encode selectivity into the key, not into filters or client-side post-processing.",
+    "real_world": "A feed service may query a day's worth of events for a tenant and filter by subtype; if subtype is not in the key, the service burns RCUs reading everything during peak hours.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What schema change would you make if a filtered query is consuming too many RCUs?"
+   },
+   {
+    "question": "What is the write-sharding pattern in DynamoDB, and what are the operational downsides people underestimate?",
+    "answer": "Write sharding spreads writes for one logical entity or time bucket across multiple partition key suffixes, like ORDER#123#0 through ORDER#123#9, to avoid a hot key. It works because DynamoDB throughput is tied to physical partitions, but it pushes complexity into reads, aggregates, and background processing. You often need fan-out queries across shards and then merge results, which increases latency and code complexity. Choosing the shard count is also a trade-off: too few and you still throttle, too many and reads become expensive.",
+    "real_world": "Metrics ingestion pipelines often shard by time bucket plus suffix to survive bursts, but dashboard reads get slower because every chart query now has to hit many shards.",
+    "code_lang": "python",
+    "code": "def shard_key(base_id, n=16):\n    s = hash(base_id) % n\n    return f\"{base_id}#{s:02d}\"\n",
+    "follow_up": "How would you choose the shard count if traffic is growing but unpredictable?"
+   },
+   {
+    "question": "Suppose you need a global counter or inventory decrement at very high write rates. What DynamoDB design would you trust, and what would you avoid?",
+    "answer": "I would avoid a single hot counter item because it creates contention and throttling long before the table looks saturated. For approximate or eventually aggregated counts, I would use sharded counters and sum them on read or in a background rollup. For strict inventory semantics, I would use conditional updates on per-item stock records and accept that one SKU can become a contention point, then isolate that workflow carefully. The key trade-off is exactness versus throughput and simplicity.",
+    "real_world": "Ticketing and inventory systems fail when they keep one global remaining-count item; flash-sale traffic turns it into the hottest key in the system.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent overselling when many buyers try to reserve the last few units at once?"
+   },
+   {
+    "question": "If a DynamoDB-backed service has a sudden latency spike but no obvious throttling, what DynamoDB-specific causes would you investigate?",
+    "answer": "I would check whether the workload shifted to larger items, broader queries, or a new access path hitting a sparse or badly distributed GSI. I would also look for retry storms from conditional failures, pagination amplifying request counts, or a recent schema change causing more round trips per request. If streams consumers, backfills, or index creation started recently, they can coincide with capacity pressure even before clear throttling alarms fire. In DynamoDB, latency problems are often data-shape or access-pattern regressions rather than just raw request volume.",
+    "real_world": "A release that adds one attribute to every item can quietly increase item size enough that the same Query now reads more pages and doubles p99 latency without changing business traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What telemetry would help you distinguish larger items from retry storms?"
+   },
+   {
+    "question": "How do adaptive capacity and burst capacity actually help in DynamoDB, and where do people misunderstand their limits?",
+    "answer": "Adaptive capacity can shift more throughput to partitions that are busier than others, and burst capacity lets a table use recently unused capacity for short spikes. They help with uneven traffic, but they do not make a bad key design safe forever or guarantee one hot key can scale arbitrarily. The practical limit is still the physical partition and the access pattern hitting it. I treat both as resilience features, not as substitutes for load distribution.",
+    "real_world": "Teams often see a new workload survive load tests and assume the partition key is fine, then hit sustained skew in production and start throttling on one tenant or one time bucket.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or evidence would you use to tell whether adaptive capacity is masking a design problem versus solving a temporary skew?"
+   },
+   {
+    "question": "What are the main trade-offs of a single-table design in DynamoDB at scale, beyond the usual 'fewer joins' explanation?",
+    "answer": "Single-table design optimizes for known access patterns and can reduce round trips, but it pushes complexity into key design, item typing, and application-level constraints. At scale, the hard parts are operational: avoiding hot keys across mixed entity types, keeping GSIs sparse and affordable, and making schema evolution safe when many workflows share the same partitions. It also makes ad hoc analytics and isolated team ownership harder. I use it when the access patterns are stable and performance-critical, not as a default style.",
+    "real_world": "A common incident is one new feature adding a noisy entity type into an existing partition pattern and unexpectedly degrading unrelated reads because they now share item collections and index write load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you deliberately split a single-table design into multiple tables even if the access patterns could fit one table?"
+   },
+   {
+    "question": "How would you execute a large backfill or migration on a DynamoDB table without causing production impact?",
+    "answer": "I would pace the job, segment reads if scanning is unavoidable, and write with explicit rate limiting plus exponential backoff on unprocessed items or throttling. The key is to budget capacity for the backfill separately from user traffic and to watch index write amplification, because updating one attribute may write to multiple GSIs. If possible, I prefer dual-write or stream-based incremental migration over a giant one-shot rewrite. I also make the job resumable and idempotent so partial failures are cheap.",
+    "real_world": "Backfills often look safe on the base table but saturate one newly added GSI, which causes user-facing write throttling even though table-level capacity graphs look acceptable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do differently if the migration changes the primary key shape and every item has to move?"
+   },
+   {
+    "question": "What exactly does ReturnConsumedCapacity tell you, and how do you use it to debug a bad DynamoDB access pattern?",
+    "answer": "It tells you how much read or write capacity a request consumed, optionally broken down by the table and indexes touched. I use it to prove where the cost is really happening: for example, whether a query is cheap on the base table but expensive because of index access, or whether item size is driving write cost. It is especially useful in load tests because it shows hidden amplification before throttling appears. It is a better signal than only looking at item counts returned.",
+    "real_world": "A team may think a request is cheap because it returns one item, but ReturnConsumedCapacity shows it read many large items or wrote to several indexes on every update.",
+    "code_lang": "javascript",
+    "code": "const res = await docClient.query({\n  TableName: 'Orders',\n  KeyConditionExpression: 'pk = :pk',\n  ExpressionAttributeValues: { ':pk': 'USER#42' },\n  ReturnConsumedCapacity: 'INDEXES'\n}).promise();\n\nconsole.log(res.ConsumedCapacity);",
+    "follow_up": "If the consumed capacity is higher than expected on writes, what are the first schema causes you would inspect?"
+   },
+   {
+    "question": "How do sparse indexes work in DynamoDB, and why are they such a powerful but risky modeling tool?",
+    "answer": "A sparse index only contains items that have the indexed key attributes, so you can create a cheap index over a subset of entities or states. That is powerful because it lets you materialize work queues, active records, or incomplete tasks without indexing the whole table. The risk is that correctness now depends on attribute presence and cleanup logic; a missing or stale attribute can silently hide data from the index. You also need to remember GSI propagation is asynchronous.",
+    "real_world": "A workflow queue implemented as a sparse GSI can lose visible work temporarily if writers update the base item but a consumer assumes the index is instantly current.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a consumer so sparse-index lag does not cause dropped work or double processing?"
+   },
+   {
+    "question": "If you need to read many items across many partition keys, how would you choose between BatchGetItem, parallel Query calls, and a secondary index?",
+    "answer": "BatchGetItem is best when you already know exact keys and just want fewer network round trips; it is not a search primitive. Parallel Query is useful when you know a bounded set of partition keys and need each partition's item collection, but cost and tail latency grow with fan-out. A secondary index is the right answer when that cross-partition access pattern is core to the product and frequent enough to justify extra write cost and index storage. The decision is really about whether the pattern is lookup, fan-out, or first-class query.",
+    "real_world": "A service that starts with fetching 20 known keys often evolves into querying hundreds of tenant partitions in parallel, and latency becomes dominated by the slowest few partitions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure mode appears when fan-out queries become large even if each individual Query is efficient?"
+   },
+   {
+    "question": "What are the DynamoDB-specific pitfalls of storing time-series data, and how would you model around them?",
+    "answer": "Time-series workloads tend to create hot keys if all recent writes land in the same partition, and unbounded item collections can make queries and storage patterns awkward. I usually bucket by time and another sharding dimension, like tenant plus day or hour, and make retention and archival explicit instead of letting collections grow forever. You also need to design for common query windows so you are not fanning out across too many buckets on every read. The right bucket size is a throughput and query-latency trade-off.",
+    "real_world": "A table keyed only by device ID often works until a few devices become extremely active and all recent writes and reads pile onto the same partitions during incidents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you pick bucket granularity if writes are heavy but users often ask for the last 90 days in one view?"
+   },
+   {
+    "question": "What can go wrong when using DynamoDB Streams as the trigger for downstream side effects, and how do you make the pipeline reliable?",
+    "answer": "Streams are at-least-once, so consumers must be idempotent because duplicates happen. Ordering is only reliable within the same item key, not across the whole table, so any workflow that assumes global order will eventually break. There is also lag and retention to consider, so a slow or broken consumer can fall behind and require replay planning. I design downstream handlers to dedupe, tolerate reordering, and recover from partial processing.",
+    "real_world": "A billing or email pipeline that assumes one stream record equals one side effect can double-charge or send duplicate messages when Lambda retries or a consumer crashes after the external call.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement idempotency for a stream consumer that calls an external payment or notification service?"
+   },
+   {
+    "question": "How do you approach multi-region design with DynamoDB when the business asks for active-active writes?",
+    "answer": "Active-active sounds simple but the hard part is conflict resolution and read-your-write expectations across regions. You need to decide whether last-writer-wins is acceptable for each entity, or whether some writes must be funneled to one region or protected by higher-level reconciliation logic. Latency improves for local users, but operational complexity rises sharply because failures create divergent histories that have to converge somehow. I only use multi-region writes for data models that are naturally mergeable or can tolerate conflict loss.",
+    "real_world": "Shopping carts and session state can often tolerate merge logic, but inventory, financial balances, or uniqueness constraints usually expose painful conflict bugs under region failover or split-brain-like conditions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which kinds of entities would you explicitly forbid from active-active writes even if the platform supports it?"
+   },
+   {
+    "question": "Suppose a partition key has become too hot in production. How would you migrate to a better key without downtime?",
+    "answer": "I would usually introduce a new write path that writes to both the old and new model, then backfill historical data, verify reads on the new path, and finally cut traffic over gradually. During migration, read logic may need to consult both locations, or use a pointer item, so clients remain correct while data is moving. The main risks are duplicate updates, stale reads during cutover, and underestimating index backfill cost. A no-downtime fix is mostly about safe coexistence, not just copying bytes.",
+    "real_world": "This shows up when a customer or product ID unexpectedly becomes a celebrity key; trying to rewrite everything in one batch often causes more throttling than the original problem.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you keep dual writes consistent if one write succeeds and the second path fails?"
+   }
+  ]
+ }
+}

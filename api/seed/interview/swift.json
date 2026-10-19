@@ -1,0 +1,437 @@
+{
+ "slug": "swift",
+ "name": "Swift",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a class and a struct in Swift, and when would you choose one over the other?",
+    "answer": "A struct is a value type, so assignments and parameter passing copy the value, while a class is a reference type, so multiple variables can point to the same instance. Use structs for simple data models and most cases where independent copies are safer. Use classes when you need identity, shared mutable state, or inheritance. In Swift, structs are often the default choice.",
+    "real_world": "This matters when modeling things like a shopping cart item versus a shared cache. A struct avoids accidental cross-object mutation, while a class is useful when several parts of the app must observe the same instance.",
+    "code_lang": "swift",
+    "code": "struct Point { var x: Int; var y: Int }\nlet a = Point(x: 1, y: 2)\nvar b = a\nb.x = 10\n// a.x is still 1",
+    "follow_up": "What does mutating a property mean for a struct versus a class?"
+   },
+   {
+    "question": "What is optional in Swift, and why does Swift use them instead of allowing null everywhere?",
+    "answer": "An optional is a type that can hold a value or no value at all. Swift uses optionals to make missing values explicit and force you to handle them safely instead of crashing unexpectedly later. You must unwrap an optional before using its underlying value. This design helps prevent null-related bugs at compile time.",
+    "real_world": "You see this constantly when parsing JSON, reading from a database, or looking up a dictionary key. Those operations may not produce a value, so optionals make that uncertainty visible in the type system.",
+    "code_lang": "swift",
+    "code": "var name: String? = nil\nname = \"Ava\"\nif let safeName = name {\n    print(safeName)\n}",
+    "follow_up": "What is the difference between optional binding and force unwrapping?"
+   },
+   {
+    "question": "What does `if let` do in Swift?",
+    "answer": "`if let` unwraps an optional safely and only enters the block if the optional contains a value. It also creates a non-optional constant inside the block, so you can use it without extra checks. This is the standard way to handle optional values when absence is possible. It is safer than force unwrapping because it avoids runtime crashes.",
+    "real_world": "This is common in form validation, API responses, and user input. If a value might be missing, `if let` lets you handle the success and failure paths cleanly.",
+    "code_lang": "swift",
+    "code": "let age: Int? = 21\nif let age = age {\n    print(age + 1)\n} else {\n    print(\"Missing age\")\n}",
+    "follow_up": "When would you use `guard let` instead of `if let`?"
+   },
+   {
+    "question": "What is the difference between `let` and `var` in Swift?",
+    "answer": "`let` creates a constant, so the binding cannot be reassigned after initialization. `var` creates a variable that can change. For value types, `let` also prevents changing stored properties through that binding. Prefer `let` when the value should not change, because it makes code easier to reason about.",
+    "real_world": "A common beginner bug is using `var` everywhere and accidentally changing state in multiple places. Teams often prefer `let` by default to reduce accidental mutation.",
+    "code_lang": "swift",
+    "code": "let name = \"Mia\"\n// name = \"Noah\" // error\nvar count = 1\ncount += 1",
+    "follow_up": "Can a `let` constant ever refer to an object whose internal state changes?"
+   },
+   {
+    "question": "What is an array in Swift, and what is a common mistake beginners make with arrays?",
+    "answer": "An array is an ordered collection of values of the same type. You access elements by index, starting at zero. A common mistake is reading past the end of the array, which causes a runtime crash. Another common mistake is assuming an array can contain mixed types without using a more general type.",
+    "real_world": "This comes up when processing lists from an API or user input. Off-by-one errors on array indexes are a frequent source of crashes in production apps.",
+    "code_lang": "swift",
+    "code": "let names = [\"Ana\", \"Bo\"]\nprint(names[0])\n// print(names[2]) // crash: index out of range",
+    "follow_up": "How do you safely check whether an array has an element before accessing it?"
+   },
+   {
+    "question": "What is a dictionary in Swift, and when would you use one?",
+    "answer": "A dictionary stores key-value pairs, and each key is unique. You use it when you want fast lookup by a known key, such as an ID, a username, or a setting name. Access returns an optional because the key may not exist. Dictionaries are good for lookups, not for preserving order or indexed access.",
+    "real_world": "A team might use a dictionary to map product IDs to product details or to cache configuration values. This avoids scanning a whole list every time you need one item.",
+    "code_lang": "swift",
+    "code": "let ages = [\"Sam\": 30, \"Lee\": 25]\nprint(ages[\"Sam\"] ?? 0)\nprint(ages[\"Kim\"] ?? 0)",
+    "follow_up": "What is the difference between looking up a value in an array versus a dictionary?"
+   },
+   {
+    "question": "What does `guard` do in Swift, and why is it useful?",
+    "answer": "`guard` checks a condition early and exits the current scope if the condition fails. It is useful for validating prerequisites at the top of a function and keeping the happy path less nested. When you unwrap optionals with `guard let`, the unwrapped value stays available after the `guard` block. This often makes code easier to read than deeply nested `if` statements.",
+    "real_world": "You often see `guard` in request handlers, view controllers, and input validation. It helps fail fast when required data is missing and keeps the rest of the function simpler.",
+    "code_lang": "swift",
+    "code": "func greet(name: String?) {\n    guard let name = name else { return }\n    print(\"Hello, \\(name)\")\n}",
+    "follow_up": "How is `guard let` different from `if let` in terms of variable scope?"
+   },
+   {
+    "question": "What is optional chaining in Swift?",
+    "answer": "Optional chaining lets you access properties or call methods on an optional value without unwrapping it first. If any part of the chain is nil, the whole expression becomes nil instead of crashing. It is useful when dealing with nested optional data. The result of an optional chain is usually still optional, so you often combine it with `??` or `if let`.",
+    "real_world": "This is common when traversing nested model objects or UI hierarchies where some links may not exist. It avoids repetitive nil checks and reduces crash risk.",
+    "code_lang": "swift",
+    "code": "struct User { var name: String }\nlet user: User? = nil\nprint(user?.name ?? \"Unknown\")",
+    "follow_up": "When would you prefer `guard` over optional chaining?"
+   },
+   {
+    "question": "How do you define a function in Swift, and how do parameter labels work?",
+    "answer": "A function is defined with `func`, a name, parameters, and a return type if it produces a value. Swift often uses external parameter labels, so the call site reads like a sentence, which improves clarity. If you don’t want a label at the call site, you can use `_` for that parameter. This matters because beginners often confuse the label used at the call site with the internal parameter name.",
+    "real_world": "This comes up in API design and everyday code reviews, where readable call sites make code easier to understand. Teams often use labels to make calls self-documenting.",
+    "code_lang": "swift",
+    "code": "func greet(person name: String) -> String {\n    return \"Hello, \\(name)!\"\n}\n\nlet message = greet(person: \"Ava\")",
+    "follow_up": "What is the difference between `inout` parameters and regular parameters?"
+   },
+   {
+    "question": "What is a `switch` statement in Swift, and what makes it different from `switch` in some other languages?",
+    "answer": "`switch` compares a value against several cases and runs the first matching branch. In Swift, cases must be exhaustive, so you need to cover all possible values or include `default`. Swift `switch` can also match ranges and patterns, which makes it more flexible than simple equality checks. That helps reduce long `if-else` chains.",
+    "real_world": "This is useful for handling app states, HTTP status codes, or user roles. Exhaustive matching helps catch missed cases before they become runtime bugs.",
+    "code_lang": "swift",
+    "code": "let score = 82\nswitch score {\ncase 90...100:\n    print(\"A\")\ncase 80..<90:\n    print(\"B\")\ndefault:\n    print(\"Other\")\n}",
+    "follow_up": "When would you use `where` inside a `switch` case?"
+   },
+   {
+    "question": "What is a `for-in` loop in Swift?",
+    "answer": "A `for-in` loop iterates over items in a collection or over a range of values. It’s the standard way to process arrays, dictionaries, and numeric ranges in Swift. For dictionaries, each element is a key-value pair, so you usually unpack both values in the loop. It matters because it’s the most common loop style you’ll use in Swift code.",
+    "real_world": "You use this when rendering a list of items, processing API results, or doing repeated work over a range. It is clearer than manual index management in many cases.",
+    "code_lang": "swift",
+    "code": "let names = [\"Mina\", \"Leo\", \"Ivy\"]\nfor name in names {\n    print(name)\n}\n",
+    "follow_up": "How would you loop with indices as well as values?"
+   },
+   {
+    "question": "What is the difference between a `while` loop and a `repeat-while` loop in Swift?",
+    "answer": "A `while` loop checks its condition before each iteration, so it may run zero times. A `repeat-while` loop runs the body first and checks the condition afterward, so it runs at least once. The difference matters when the loop body must happen before the condition can be validated, like prompting the user or retrying an action once.",
+    "real_world": "This comes up in input validation and retry logic, where you need one attempt before you can decide whether to continue. Picking the wrong loop can lead to code that never runs or runs unexpectedly.",
+    "code_lang": "swift",
+    "code": "var attempts = 0\nrepeat {\n    attempts += 1\n} while attempts < 1",
+    "follow_up": "When would a `for-in` loop be better than either of these?"
+   },
+   {
+    "question": "What does `Array` subscripting do, and what mistake do beginners often make with indexes?",
+    "answer": "Subscript syntax like `items[0]` reads or writes the element at a specific position. Swift arrays are zero-based, so the first element is at index 0, not 1. A common beginner mistake is accessing an index that doesn’t exist, which causes a runtime crash. You should only use a valid index or check bounds first.",
+    "real_world": "This often shows up when parsing user input or working with lists from a server, where an empty array or off-by-one bug can crash the app. It’s a common source of production crashes in simple list code.",
+    "code_lang": "swift",
+    "code": "let items = [\"a\", \"b\", \"c\"]\nprint(items[0])\n// print(items[3]) // crash: out of range",
+    "follow_up": "How do you safely get the last element of an array?"
+   },
+   {
+    "question": "What is a `Set` in Swift, and how is it different from an array?",
+    "answer": "A `Set` stores unique values with no guaranteed order. It is useful when you care about membership or uniqueness rather than position. Compared with arrays, sets are better for checking whether a value exists and for removing duplicates. The trade-off is that you lose ordering and index-based access.",
+    "real_world": "Sets are common for tags, permissions, and deduplicating lists from APIs. They help prevent duplicate entries without extra bookkeeping.",
+    "code_lang": "swift",
+    "code": "var tags: Set<String> = [\"swift\", \"ios\", \"swift\"]\nprint(tags.contains(\"ios\"))\ntags.insert(\"mobile\")",
+    "follow_up": "How would you preserve order while still avoiding duplicates?"
+   },
+   {
+    "question": "What are access control keywords like `private` and `public` used for in Swift?",
+    "answer": "Access control limits where a type, property, or method can be seen and used. `private` keeps something inside a narrow scope, while `public` exposes it outside the module, and Swift also has intermediate levels like `internal` and `fileprivate`. This matters because it helps you hide implementation details and prevent accidental use of internal code. Good access control makes APIs safer and easier to maintain.",
+    "real_world": "Teams use access control to keep helper methods from leaking into the public API. It reduces accidental dependencies across files and modules.",
+    "code_lang": "swift",
+    "code": "public struct User {\n    private let id: String\n    public let name: String\n    public init(id: String, name: String) {\n        self.id = id\n        self.name = name\n    }\n}",
+    "follow_up": "What is the difference between `private` and `fileprivate`?"
+   },
+   {
+    "question": "What is an initializer in Swift?",
+    "answer": "An initializer sets up a new instance of a type and ensures stored properties start in a valid state. For structs and classes, you commonly write `init(...)` to accept values needed for setup. Swift requires all stored properties to be initialized before the instance is usable. This is important because it prevents partially initialized objects from being used accidentally.",
+    "real_world": "Initializers are used everywhere in app code, especially for models and view controllers. Bugs here often show up as missing required values or invalid object state.",
+    "code_lang": "swift",
+    "code": "struct Point {\n    let x: Int\n    let y: Int\n    init(x: Int, y: Int) {\n        self.x = x\n        self.y = y\n    }\n}",
+    "follow_up": "What is the difference between a designated initializer and a convenience initializer?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide between using `struct` methods that mutate state and keeping the type immutable in Swift?",
+    "answer": "Prefer immutable `struct`s by default, and add mutating methods only when changing state is part of the model’s job. Mutability makes code easier to reason about, but it also increases the chance of accidental shared-state bugs when values are copied around and passed between layers. If a type has many changing fields or represents a long-lived object with identity, that can be a signal to reconsider the design. In practice, the trade-off is clarity and safety versus convenience.",
+    "real_world": "This comes up in view models, form state, and request-building code. Teams often start with a mutable model and later hit bugs where a copy was changed in one place but not the other, so they move toward immutable data plus explicit updates.",
+    "code_lang": "swift",
+    "code": "struct User {\n    let id: Int\n    var name: String\n\n    mutating func rename(to newName: String) {\n        name = newName\n    }\n}",
+    "follow_up": "When would a value type still be a bad fit even if it is immutable?"
+   },
+   {
+    "question": "How does Swift handle string interpolation and what should you watch out for with performance or formatting?",
+    "answer": "String interpolation builds a string from values using `\\(…)`, and Swift will call the appropriate conversion for the inserted expression. It is usually the most readable way to compose messages, but repeated concatenation in tight loops can create extra temporary strings and allocations. For user-facing formatting, raw interpolation is not enough; dates, numbers, and currencies should be formatted explicitly. The key trade-off is convenience versus control over output and cost.",
+    "real_world": "This matters in logging, analytics payloads, and UI text. A team may discover that a hot loop building lots of strings is slowing down a background job, or that naive interpolation produces locale-insensitive currency text.",
+    "code_lang": "swift",
+    "code": "let name = \"Ava\"\nlet count = 3\nlet message = \"Hello, \\(name). You have \\(count) new messages.\"",
+    "follow_up": "How would you format a date or currency correctly instead of relying on interpolation?"
+   },
+   {
+    "question": "What happens when you use `map`, `compactMap`, or `flatMap` on a collection in Swift?",
+    "answer": "`map` transforms every element and keeps the same number of results. `compactMap` transforms and drops `nil` results, which is useful when converting strings to numbers or filtering invalid items. `flatMap` is used to flatten one level of nesting after a transform that returns collections; with optionals, `compactMap` is usually the clearer choice. The main trade-off is expressiveness versus accidentally hiding invalid data if you drop too much too early.",
+    "real_world": "This is common in API parsing when some records are malformed. A team may use `compactMap` to keep the app running on partial data, but they still need logging so bad inputs do not disappear silently.",
+    "code_lang": "swift",
+    "code": "let values = [\"1\", \"x\", \"3\"]\nlet numbers = values.compactMap(Int.init)\n// numbers == [1, 3]",
+    "follow_up": "When would you prefer `filter` plus `map` instead of `compactMap`?"
+   },
+   {
+    "question": "How do you choose between `class` inheritance and protocol-oriented design in Swift?",
+    "answer": "Use protocols when you want shared behavior without forcing a single class hierarchy. Inheritance is useful for true is-a relationships and shared implementation, but it can become rigid and hard to test as the hierarchy grows. Protocols with default implementations often make dependencies easier to mock and the code easier to compose. The trade-off is that protocols can spread behavior across more places, so you need clear naming and ownership.",
+    "real_world": "This comes up in networking, persistence, and feature flags. A team that starts with a base class for every service often finds it harder to swap implementations in tests than if they had used a protocol from the start.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the downside of using protocols everywhere?"
+   },
+   {
+    "question": "What does Swift do with errors thrown by a function, and how do `do-catch` and `try?` differ?",
+    "answer": "Throwing functions force callers to acknowledge failure, either by handling it with `do-catch` or propagating it with `try`. `do-catch` is better when you need to distinguish failure cases and react differently, while `try?` converts any error into `nil`, which is simpler but can hide useful details. `try!` should be reserved for cases that truly cannot fail, because it crashes if the assumption is wrong. The trade-off is explicit error handling versus brevity.",
+    "real_world": "This matters when parsing user input, decoding JSON, or talking to the file system. Teams sometimes overuse `try?` and later lose the reason a request failed, which makes debugging production issues much harder.",
+    "code_lang": "swift",
+    "code": "do {\n    let data = try loadConfig()\n} catch {\n    print(\"Failed: \\(error)\")\n}\nlet maybeConfig = try? loadConfig()",
+    "follow_up": "When would you define your own error type instead of using a generic error?"
+   },
+   {
+    "question": "How do value semantics affect passing arrays and dictionaries around in Swift?",
+    "answer": "Arrays and dictionaries are value types, so they behave as if each variable owns its own copy. Under the hood, Swift uses copy-on-write, so copying is usually cheap until one copy is mutated. This gives safer reasoning about ownership while avoiding unnecessary copying in common cases. The trade-off is that shared mutation is not the default, so you need a reference type if multiple parts of the app must observe the same changing state.",
+    "real_world": "This matters in reducers, caching layers, and background processing. A developer might assume a copied array mutation updates all holders, but instead only one branch changes, which is the correct Swift behavior and can surprise people coming from reference-heavy languages.",
+    "code_lang": "swift",
+    "code": "var a = [1, 2, 3]\nvar b = a\nb.append(4)\n// a is still [1, 2, 3]",
+    "follow_up": "How would you model shared mutable state if you actually needed it?"
+   },
+   {
+    "question": "What is the difference between `weak`, `unowned`, and strong references in Swift ARC?",
+    "answer": "A strong reference keeps an object alive, while `weak` and `unowned` do not. Use `weak` for relationships that can legitimately disappear, because it becomes `nil` automatically; use `unowned` only when you know the referenced object will outlive the holder, since accessing a dead unowned reference crashes. The common use case is breaking retain cycles, especially between closures and objects like view controllers. The trade-off is safety versus convenience: `weak` is safer, `unowned` is more concise but less forgiving.",
+    "real_world": "This is a frequent source of memory leaks in iOS apps. A closure stored by a view controller that captures the controller strongly can prevent the screen from deallocating, so teams use `[weak self]` in asynchronous callbacks.",
+    "code_lang": "swift",
+    "code": "someAsyncWork { [weak self] result in\n    guard let self = self else { return }\n    self.handle(result)\n}",
+    "follow_up": "How would you confirm in debugging that a retain cycle is actually happening?"
+   },
+   {
+    "question": "How do you debug a crash caused by force unwrapping an optional in Swift?",
+    "answer": "Start by finding the exact line that crashed and tracing where the optional came from. Force unwraps often fail because the value is missing on an unexpected code path, so inspect the data source, lifecycle timing, and any asynchronous work involved. Replace the unwrap with safer handling and add logging or assertions if the value is supposed to exist by contract. The key point is to treat the crash as a symptom of an invalid assumption, not just a syntax problem.",
+    "real_world": "This is common in UI code when a label or model is set before a network response arrives. A production crash report may only point to a force unwrap, so teams need enough context in logs to identify which input was unexpectedly nil.",
+    "code_lang": "swift",
+    "code": "// risky\nlet name = user.name!\n\n// safer\nguard let name = user.name else { return }\nprint(name)",
+    "follow_up": "How would you prevent this class of bug with tests?"
+   },
+   {
+    "question": "How do you test Swift code that depends on time, randomness, or networking?",
+    "answer": "Inject the dependency instead of calling the system API directly, then replace it with a deterministic fake in tests. For time, use a clock or date provider; for randomness, use a seeded generator; for networking, use a mock client or protocol abstraction. This makes tests repeatable and much easier to debug than waiting for real time or real servers. The trade-off is a bit more design work up front in exchange for stable, fast tests.",
+    "real_world": "This is important for business logic like token expiry, retry behavior, and scheduled refreshes. Teams that leave `Date()` or `URLSession` scattered through the codebase usually end up with flaky tests that fail only on CI or only under load.",
+    "code_lang": "swift",
+    "code": "protocol Clock { func now() -> Date }\nstruct SystemClock: Clock { func now() -> Date { Date() } }\nstruct FakeClock: Clock { let fixed = Date(timeIntervalSince1970: 0); func now() -> Date { fixed } }",
+    "follow_up": "How would you structure a network client so it is easy to mock in unit tests?"
+   },
+   {
+    "question": "How do `map`, `filter`, and `reduce` differ in Swift, and when would you choose one over a loop?",
+    "answer": "`map` transforms each element into a new collection, `filter` keeps only elements that match a condition, and `reduce` combines the collection into a single result. They make intent clear and reduce boilerplate, but a loop can be easier when the logic is stateful, has multiple side effects, or needs early exit. For performance, they are usually fine, but readability should drive the choice. In performance-sensitive code, measure rather than assuming one is faster.",
+    "real_world": "A team might use `filter` and `map` in a data formatting pipeline for clarity, then switch to a loop when profiling shows intermediate allocations matter. This also comes up in reviews when someone writes a chain that is elegant but harder to debug.",
+    "code_lang": "swift",
+    "code": "let names = [\"ada\", \"bob\", \"carol\"]\nlet result = names\n    .filter { $0.count > 3 }\n    .map { $0.uppercased() }\n// result = [\"CAROL\"]",
+    "follow_up": "When would you replace a chain of collection operations with a single loop?"
+   },
+   {
+    "question": "How does `reduce` work in Swift, and what are the common mistakes with it?",
+    "answer": "`reduce` starts with an initial accumulator value and combines each element into a final result. The most common mistake is choosing the wrong initial value or writing a closure with side effects instead of a pure accumulation. Another pitfall is using `reduce` for logic that is easier to read with a loop, especially when the accumulator changes shape or the operation is not associative. It is best for sums, concatenation, merging, and other clear aggregations.",
+    "real_world": "Teams often use `reduce` to build dictionaries, totals, or grouped summaries from event streams. A bad accumulator choice can silently produce wrong counts or empty results in production reports.",
+    "code_lang": "swift",
+    "code": "let numbers = [1, 2, 3, 4]\nlet sum = numbers.reduce(0) { partial, value in\n    partial + value\n}\n// sum = 10",
+    "follow_up": "How would you use `reduce` to build a dictionary keyed by a property?"
+   },
+   {
+    "question": "What is Swift’s `Codable` protocol for, and what problems do teams run into with it?",
+    "answer": "`Codable` lets types be encoded and decoded to formats like JSON with less manual parsing code. It works well when the backend and app models are close, but teams run into issues when field names differ, values are missing, nested structures change, or the API is inconsistent. In those cases, you often need custom coding keys or custom decoding logic. The trade-off is convenience versus control over edge cases.",
+    "real_world": "This is common in mobile apps consuming evolving APIs, where a backend change can break decoding at runtime. Teams use custom decoding to tolerate missing fields, migrate old payloads, or map server names to Swift naming conventions.",
+    "code_lang": "swift",
+    "code": "struct User: Codable {\n    let id: Int\n    let fullName: String\n    enum CodingKeys: String, CodingKey {\n        case id\n        case fullName = \"full_name\"\n    }\n}",
+    "follow_up": "How would you handle a field that may be either a string or a number in the JSON?"
+   },
+   {
+    "question": "How do value types behave when they are passed into functions or stored in collections, and why does copy-on-write matter?",
+    "answer": "Swift value types like structs are copied on assignment and when passed around, so each variable has its own logical value. Collections use copy-on-write, which means the actual storage is shared until one copy is mutated, keeping common cases efficient. This matters because code that looks like it is copying large arrays may still be cheap until mutation happens. The trade-off is simple reasoning about ownership with good performance in typical use.",
+    "real_world": "This comes up when a team worries that passing a big array through several layers is too expensive. In practice, copy-on-write often avoids the cost until a write actually occurs, but accidental mutation can still create hidden allocations.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when you store reference types inside a value type collection?"
+   },
+   {
+    "question": "How do closures capture variables in Swift, and what should you watch for when a closure escapes?",
+    "answer": "Closures capture values from the surrounding scope, which lets them read and mutate outside state if allowed. When a closure escapes, it can outlive the function that created it, so you need to think about ownership, capture lists, and whether captured references may create retain cycles. Escaping closures are common in async APIs and callbacks, so the key is to be explicit about what is captured and why. The trade-off is flexibility versus lifecycle complexity.",
+    "real_world": "This matters when passing completion handlers to networking or animation APIs, where a closure may execute long after the caller returns. A retained closure can accidentally keep a view controller alive or use stale state.",
+    "code_lang": "swift",
+    "code": "func load(_ completion: @escaping () -> Void) {\n    DispatchQueue.main.async {\n        completion()\n    }\n}",
+    "follow_up": "How would you decide whether to use a weak capture list in that closure?"
+   },
+   {
+    "question": "What is the difference between `defer` and just putting cleanup code at the end of a function?",
+    "answer": "`defer` schedules cleanup to run when the current scope exits, even if the function returns early or throws. That makes it useful for closing files, ending locks, or restoring state in one place instead of duplicating cleanup paths. The main caution is that `defer` runs in reverse order, so you should keep the blocks small and predictable. It improves correctness when there are multiple exit points.",
+    "real_world": "Teams use `defer` in code that opens resources or changes temporary state, especially when error handling can exit early. It helps avoid leaks or leaving shared state half-updated after a failure.",
+    "code_lang": "swift",
+    "code": "func update() {\n    lock()\n    defer { unlock() }\n    // work that may return early\n}",
+    "follow_up": "What are cases where `defer` can make code harder to read?"
+   },
+   {
+    "question": "What happens if an initializer in Swift does not fully initialize stored properties before using `self`?",
+    "answer": "Swift requires all stored properties to be initialized before `self` is used, because the instance must be in a valid state first. In designated initializers, you initialize your own stored properties before calling `super.init`, and you cannot use instance methods or read `self` too early. This prevents partially initialized objects from escaping and causing undefined behavior. The rule is stricter in classes with inheritance than in structs.",
+    "real_world": "This often appears when building view models or custom UI components with several required properties. A common bug is trying to call helper methods from `init` before all stored properties are assigned.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do convenience initializers differ from designated initializers in this regard?"
+   },
+   {
+    "question": "How do you test Swift code that uses async/await, and what problems do you look for in flaky tests?",
+    "answer": "For async/await code, you typically write async tests and await the result directly rather than using expectations everywhere. The main sources of flakiness are real network calls, timing assumptions, and shared mutable state between tests, so you should inject fakes or mocks and control scheduling where possible. A good async test checks both the returned value and error paths, including cancellation if relevant. The goal is deterministic tests that fail for logic bugs, not timing noise.",
+    "real_world": "This comes up when testing a service that fetches data and updates UI state after several awaits. Without mocks, tests may pass locally and fail in CI because of latency or ordering differences.",
+    "code_lang": "swift",
+    "code": "func testLoadUser() async throws {\n    let client = MockClient()\n    let service = UserService(client: client)\n    let user = try await service.loadUser()\n    XCTAssertEqual(user.name, \"Ada\")\n}",
+    "follow_up": "How would you test cancellation or timeout behavior in that async code?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does Swift’s exclusivity enforcement work, and what kinds of bugs or performance issues does it prevent?",
+    "answer": "Swift enforces that overlapping accesses to the same memory are either multiple reads or a single write. The compiler catches many cases statically, and some are checked at runtime, especially with `inout`, mutating methods, and captured variables. This prevents undefined behavior like reading partially updated state, and it also gives the optimizer stronger aliasing guarantees. The trade-off is that some patterns that look harmless, especially around nested mutation or closure captures, become compile errors or runtime traps.",
+    "real_world": "Teams often hit exclusivity violations when refactoring synchronous mutation into helper closures or passing the same buffer into multiple APIs. In production, the runtime trap is far better than silent memory corruption, but it can surface only under specific code paths.",
+    "code_lang": "swift",
+    "code": "var x = 0\nfunc bump(_ a: inout Int, _ b: inout Int) {\n    a += 1\n    b += 1\n}\n\n// bump(&x, &x) // overlapping access error",
+    "follow_up": "When does Swift need a runtime exclusivity check instead of proving safety at compile time?"
+   },
+   {
+    "question": "What actually happens under the hood with protocol existentials like `any P`, and when do they become a performance problem?",
+    "answer": "An existential stores a value plus type metadata and a witness table so calls can be dispatched through the protocol requirements. Small values may fit inline; larger ones can spill to heap storage, and using an existential often blocks specialization the compiler could do with generics. That means more indirection, weaker optimization, and sometimes extra allocations or ARC traffic. Use `any P` when you need heterogeneous storage or ABI boundaries, but prefer generics when performance or static guarantees matter.",
+    "real_world": "This shows up in hot paths like parsing, rendering, or middleware pipelines where replacing `[any Protocol]` with generic composition can remove measurable overhead. Teams also hit it at module boundaries where existential-heavy APIs are flexible but harder to optimize.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you compare `any P` with `some P` in terms of dispatch, specialization, and API design?"
+   },
+   {
+    "question": "How does Swift’s async/await runtime schedule tasks, and why can actor code still have race-like bugs?",
+    "answer": "Swift tasks are cooperatively scheduled: suspension points like `await` let the runtime park a task and run other work, rather than blocking a thread. Actors serialize access to their isolated state, but actor methods can still interleave across suspension points, so invariants that span an `await` are not automatically protected. The common mistake is reading actor state, awaiting, then assuming the state is unchanged when execution resumes. You still need to structure critical sections carefully or re-check state after suspension.",
+    "real_world": "A common production bug is duplicate work or stale state inside an actor-backed cache because two requests both pass a pre-await check and then both update after resuming. These issues feel like races even though there is no simultaneous memory access.",
+    "code_lang": "swift",
+    "code": "actor Counter {\n    var value = 0\n    func next() async -> Int {\n        let old = value\n        await Task.yield()\n        value = old + 1\n        return value\n    }\n}",
+    "follow_up": "What patterns do you use to avoid reentrancy bugs inside actors?"
+   },
+   {
+    "question": "How does ARC behave in optimized Swift code, and what are the main ways retain and release traffic becomes a bottleneck?",
+    "answer": "ARC is inserted by the compiler, and optimization passes try to eliminate redundant retains and releases, sink them out of loops, or balance them across scopes. It becomes expensive when code creates lots of short-lived reference objects, captures references in escaping closures, bridges repeatedly between Swift and Objective-C, or bounces through abstraction layers the optimizer cannot see through. The cost is usually not one big retain but aggregate churn in hot paths. Reducing temporary reference allocations or switching some data to value types can matter more than micro-optimizing individual calls.",
+    "real_world": "In scrolling UIs and backend request handlers, ARC churn often shows up as CPU time and tail latency rather than obvious leaks. Profiling frequently points to closure-heavy pipelines or boxed abstractions rather than business logic itself.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you confirm that ARC, rather than algorithmic complexity, is the reason a hot path is slow?"
+   },
+   {
+    "question": "Can you explain Swift’s resilience model and how it affects performance and API design across module boundaries?",
+    "answer": "Resilience lets a library evolve without breaking binary clients, but that means some layout and implementation details are hidden across module boundaries. If a type or method is not exposed in a way the compiler can fully reason about, clients may lose inlining, specialization, or direct field access they would get within the same module. Attributes like `@inlinable` and careful public API design can recover performance, but they also expose more implementation surface and constrain future changes. It is a trade-off between library evolution and optimization.",
+    "real_world": "Teams shipping SDKs often see benchmarks look great internally but slower for downstream apps because cross-module optimization opportunities disappear. This matters a lot for utility libraries used in tight loops or serialization code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you mark a function `@inlinable`, and what future-compatibility cost does that introduce?"
+   },
+   {
+    "question": "What are the trade-offs between `String` correctness and performance in Swift, especially around indexing and bridging?",
+    "answer": "Swift `String` is designed around extended grapheme clusters, so a user-perceived character may span multiple Unicode scalars, which makes random access by integer offset inherently expensive. Many operations that look O(1) in other languages require walking boundaries, and bridging to `NSString` can change semantics toward UTF-16 indexing while adding conversion costs. For correctness, use `String.Index`; for performance-sensitive parsing, work at the `utf8` or `unicodeScalars` level when appropriate. The trade-off is lower-level code and stricter assumptions about encoding.",
+    "real_world": "This becomes critical in log parsing, syntax highlighting, and text editors where repeated offset-based indexing can turn linear work into quadratic behavior. Teams also ship bugs when server offsets are in UTF-16 or bytes but app code treats them as Swift character positions.",
+    "code_lang": "swift",
+    "code": "let s = \"a🇺🇸é\"\nprint(s.count)          // user-perceived characters\nprint(s.utf8.count)     // bytes\nprint(s.utf16.count)    // UTF-16 code units",
+    "follow_up": "If you need to map byte offsets from a network protocol back to Swift `String`, how would you design that safely?"
+   },
+   {
+    "question": "What does type erasure solve in Swift, and what costs or failure modes come with it?",
+    "answer": "Type erasure hides a concrete generic type behind a stable wrapper, which is useful when protocols have associated types, you need heterogeneous storage, or you want to simplify API surfaces. The cost is usually loss of static information, more dynamic dispatch, and sometimes heap allocation or extra reference counting depending on the wrapper design. It can also make debugging and compiler diagnostics worse because the concrete type disappears from the API. Use it deliberately at boundaries, not as the default inside performance-sensitive internals.",
+    "real_world": "This comes up in architectures that expose `AnyPublisher`-style wrappers or plugin systems that store mixed implementations together. Teams often overuse type erasure early, then later have to unwind it in hot paths to recover specialization.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide between a generic API, an existential, and a type-erased wrapper for the same abstraction?"
+   },
+   {
+    "question": "How do `Sendable` and actor isolation improve safety, and where do they still leave room for bugs in real systems?",
+    "answer": "`Sendable` is a static check that a value is safe to transfer across concurrency domains, and actor isolation restricts mutable state to one executor at a time. Together they catch many accidental data races at compile time, especially with shared mutable references. But they do not guarantee higher-level correctness: you can still have logical races, deadlocks through waiting on external systems, stale reads after `await`, or unsafe escapes through legacy APIs and unchecked annotations. They raise the floor, not eliminate concurrency design mistakes.",
+    "real_world": "Production incidents still happen when a type is marked unchecked sendable without real thread-safety, or when callback-based frameworks bypass isolation assumptions. Migrations from older GCD-heavy code often uncover these gaps.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is `@unchecked Sendable` justified, and what evidence would you want before allowing it in a code review?"
+   },
+   {
+    "question": "What are the common performance traps with copy-on-write collections in Swift, and how do you avoid accidental copies at scale?",
+    "answer": "Copy-on-write is cheap until mutation happens on a buffer that is no longer uniquely referenced. Hidden copies often appear when large arrays or dictionaries are shared across layers, captured by closures, bridged to Foundation, or mutated element-by-element after being passed around. The symptom is memory spikes and unexpected CPU during what looks like in-place work. To avoid it, keep ownership clear, prefer `inout` or mutating APIs on uniquely held values, and profile before assuming value types are always free.",
+    "real_world": "Large data pipelines and image-processing code often regress when one extra reference keeps a buffer non-unique, turning linear mutation into repeated copying. These bugs are nasty because the source code still looks value-semantic and safe.",
+    "code_lang": "swift",
+    "code": "var a = Array(0..<1_000_000)\nvar b = a      // shares storage initially\nb[0] = 42      // copy happens here if storage isn't unique\nprint(a[0], b[0])",
+    "follow_up": "How would you investigate whether a memory spike is caused by copy-on-write versus a leak?"
+   },
+   {
+    "question": "When would you use `withUnsafeBytes` or `UnsafeMutableBufferPointer` in Swift, and what are the main correctness risks?",
+    "answer": "You use unsafe APIs when you need predictable memory layout, zero-copy interop with C, custom parsing, or to avoid overhead in tight loops that higher-level collections introduce. The risks are lifetime violations, assuming alignment that is not guaranteed, violating binding rules by viewing memory as the wrong type, and letting pointers escape the closure where the storage is only temporarily valid. These bugs can pass tests and then fail under optimization or on different architectures. The gain can be real, but you should isolate unsafe code behind small, well-tested boundaries.",
+    "real_world": "This is common in networking, binary codecs, and cryptography wrappers where one wrong pointer assumption can cause rare crashes or silent data corruption. Teams usually keep the unsafe portion tiny and benchmark to justify it.",
+    "code_lang": "swift",
+    "code": "let data = Data([1, 2, 3, 4])\nlet sum = data.withUnsafeBytes { raw -> UInt8 in\n    raw.bindMemory(to: UInt8.self).reduce(0, +)\n}\nprint(sum)",
+    "follow_up": "What does Swift’s memory binding model require before reading raw bytes as a typed value?"
+   },
+   {
+    "question": "How would you explain Swift’s memory layout rules for structs, enums, and optionals, and why do they matter for performance-sensitive code?",
+    "answer": "Swift aggressively uses static layout information: structs are laid out from their stored properties, enums need storage for the largest payload plus a discriminator, and some optionals can use spare-bit optimizations so they do not always add an extra word. That matters because layout drives cache behavior, copy cost, ABI stability, and whether values can be passed efficiently in registers. It also affects interop and serialization, because source-level shape does not guarantee a stable binary layout across resilience boundaries. In hot paths, a seemingly small payload change can increase size enough to hurt memory bandwidth.",
+    "real_world": "A team adds one large stored property to a widely used value type and suddenly list scrolling regresses because each element gets bigger and copies become more expensive. Layout awareness also matters when sharing buffers with C or memory-mapped data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When does Swift use extra inhabitants or spare bits to optimize enum and optional representations?"
+   },
+   {
+    "question": "What is dynamic dispatch in Swift, and how do you reason about the cost and behavior differences between direct calls, witness table dispatch, and Objective-C message dispatch?",
+    "answer": "Swift can call methods directly when the target is statically known, through a vtable for class overrides, through a witness table for protocol requirements, or through Objective-C messaging for `@objc` dynamic behavior. The real cost is not just the dispatch instruction; it is also lost inlining and specialization opportunities, which often matter more. Protocol-oriented code can be very fast when the compiler specializes generics, but the same API used through `any Protocol` may block that optimization. I treat dispatch choice as an architecture and performance trade-off, not just a micro-optimization.",
+    "real_world": "A metrics pipeline built around protocol existentials can look clean but become CPU-heavy because parsing and aggregation calls stop specializing. Teams often recover performance by moving hot loops back to generics or concrete types.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you measure whether existential use is actually blocking specialization in a real codebase?"
+   },
+   {
+    "question": "What are reabstraction thunks in Swift, and when do higher-order functions start paying for them?",
+    "answer": "A reabstraction thunk is compiler-generated glue that converts between different function representations, like a generic closure type and a concrete calling convention or escaping representation. They show up when passing closures through abstractions, especially across generic boundaries, protocol requirements, or bridged APIs. The cost is usually small, but in tight loops or allocation-heavy pipelines they can add indirect calls, captures, and ARC traffic that the compiler cannot optimize away. If a hot path repeatedly constructs and passes closures, I check whether a simple loop or a more concrete helper specializes better.",
+    "real_world": "We’ve seen a chain of tiny higher-order transforms over millions of elements benchmark much slower than a hand-written loop, not because `map` is inherently bad but because abstraction prevented fusion and specialization.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What compiler or profiling signals would tell you closure abstraction is the real bottleneck?"
+   },
+   {
+    "question": "How do protocol extension methods interact with protocol requirements, and what surprising dispatch behavior can that cause?",
+    "answer": "If a method is a protocol requirement, calls through the protocol use witness table dispatch and a conforming type can provide its own implementation. If a method exists only in a protocol extension and is not a requirement, calling it through the protocol uses the extension implementation, even if the concrete type defines a same-named method. That surprises people because the concrete method is not overriding anything in the protocol model. For API design, anything you expect conformers to customize should usually be an explicit requirement.",
+    "real_world": "This causes production bugs when a default logging or caching method in an extension is assumed to be overridden, but code typed as `any Protocol` still executes the default path.",
+    "code_lang": "swift",
+    "code": "protocol P { func required() }\nextension P { func helper() { print(\"ext\") } }\nstruct S: P {\n  func required() { print(\"req\") }\n  func helper() { print(\"S\") }\n}\nlet p: any P = S()\np.helper()   // ext\n",
+    "follow_up": "How would you redesign that protocol if helper behavior must be polymorphic?"
+   },
+   {
+    "question": "What does Swift bridging to Objective-C collections and strings actually cost, and how do you decide whether the convenience is acceptable?",
+    "answer": "Bridging can introduce allocation, reference-counted wrapper objects, type checks, and sometimes element-by-element conversions between native Swift storage and Foundation types. Some bridges are deferred or shared, but you cannot assume they are free, especially in loops or on large collections. The trade-off is usually API compatibility versus predictable performance and semantics, because bridged types may also change mutability and indexing behavior. I keep boundaries narrow: bridge once at the edge, then stay native inside performance-critical code.",
+    "real_world": "A common incident is parsing JSON into Foundation containers, repeatedly bridging into Swift arrays and strings during processing, and burning CPU in conversion rather than business logic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What specific patterns would you look for in Instruments to confirm bridging overhead?"
+   },
+   {
+    "question": "How do generic specialization and inlining affect Swift performance, and when can a generic API end up slower than an erased one?",
+    "answer": "Generics are often fast in Swift because the compiler can specialize concrete instantiations, inline through them, and remove abstraction. But specialization is not guaranteed across module boundaries, resilient interfaces, or when code size heuristics say no, so a very abstract generic API can end up with extra layers and larger binaries. In some cases an erased representation is slower per call but wins overall by reducing code bloat and instruction-cache pressure. The right choice depends on call frequency, number of type instantiations, and whether the hot path stays in one module.",
+    "real_world": "At scale, teams sometimes see app size grow noticeably from many specialized generic paths, then choose selective erasure for cold code while keeping generics in the inner loop.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure a library API if you want clients to get specialization benefits without exposing too much implementation detail?"
+   },
+   {
+    "question": "What are the main failure modes when using `TaskGroup` or `async let`, especially around cancellation and partial results?",
+    "answer": "The biggest gotcha is assuming child tasks keep running independently after the parent exits or throws; structured concurrency ties their lifetime to the scope and will cancel unfinished children. Another issue is collecting partial results incorrectly: if one child fails, siblings are typically cancelled, so you need to decide whether fail-fast is correct or whether each child should return a `Result`. `async let` is simpler but less flexible, while task groups are better for dynamic fan-out and incremental result handling. You also need to check for cancellation in child work that does long CPU or blocking operations.",
+    "real_world": "In production, teams launch dozens of backend calls and are surprised that one timeout cancels the rest, dropping useful partial data that the UI could have shown.",
+    "code_lang": "swift",
+    "code": "try await withThrowingTaskGroup(of: Int.self) { group in\n  for i in 0..<3 { group.addTask { try await work(i) } }\n  var sum = 0\n  do {\n    for try await v in group { sum += v }\n    return sum\n  } catch {\n    group.cancelAll()\n    throw error\n  }\n}\n",
+    "follow_up": "If the product requires best-effort results, how would you redesign that group?"
+   },
+   {
+    "question": "How do you think about actor reentrancy in Swift, and what kinds of invariants break because of it?",
+    "answer": "Actors serialize access to their isolated state, but they are reentrant across suspension points, so once an actor method `await`s, other tasks may run on that actor before the original method resumes. That means invariants that span multiple awaits are not protected just because the code is inside the same actor. The fix is usually to keep mutation phases synchronous, snapshot state before awaiting, or move long-running external work out of the critical section. I treat actor methods like transactions that end at every suspension point.",
+    "real_world": "A common bug is checking a cache entry, awaiting a refresh, and then writing back stale assumptions because another task updated the actor in between.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns do you use to deduplicate in-flight work inside an actor without introducing stale writes?"
+   },
+   {
+    "question": "How do move-only concepts and ownership features change the way you design Swift APIs, even before the full feature set is everywhere?",
+    "answer": "The core idea is making transfer of ownership explicit so the compiler can prevent accidental copies and enable more predictable performance for resources like buffers, file handles, or unique mutable state. Even today, that pushes API design toward clear borrowing versus consuming operations, fewer hidden copies, and less reliance on shared mutable reference types. It matters because many performance and correctness bugs come from ambiguous ownership, especially in systems code or large data pipelines. Designing with ownership in mind now makes APIs easier to evolve as the language gains stronger move-only support.",
+    "real_world": "If you process large byte buffers or manage scarce resources, accidental copies or aliasing can double memory usage or cause lifecycle bugs that ownership-aware APIs would make impossible.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which existing Swift patterns are the worst fit for an ownership-oriented redesign?"
+   },
+   {
+    "question": "When optimizing Swift code, how do you decide whether a problem is CPU, allocation, ARC, contention, or algorithmic, and what Swift-specific signals do you look for first?",
+    "answer": "I start by measuring wall time, allocations, and thread behavior before touching code, because Swift performance problems often look similar from source but have different fixes. Swift-specific signals include heavy retain or release traffic, bridging frames, generic or closure thunks, copy-on-write uniqueness checks, executor hopping in async code, and unexpected Foundation work. Then I classify the bottleneck: algorithmic issues need different data structures, allocation issues need object and buffer lifetime changes, and contention needs architecture changes rather than micro-tuning. Premature tweaks to syntax rarely matter compared with those categories.",
+    "real_world": "In one code path, replacing `map` with a loop changed nothing because the real issue was repeated bridging to Foundation and task hopping between executors. In another, the entire win came from reducing temporary allocations, not from changing the algorithm.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If Instruments shows most time under retains, releases, and closure thunks, what concrete refactors would you try next?"
+   }
+  ]
+ }
+}

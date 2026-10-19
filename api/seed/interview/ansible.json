@@ -1,0 +1,469 @@
+{
+ "slug": "ansible",
+ "name": "Ansible and configuration management",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Ansible, and what problem does it solve compared with running commands by hand on servers?",
+    "answer": "Ansible is a configuration management and automation tool used to describe the desired state of machines and then apply it consistently. Instead of manually logging in and running commands, you write repeatable tasks in YAML and Ansible executes them over SSH or other transports. It reduces drift, makes setups reproducible, and is easier to audit than ad hoc shell commands.",
+    "real_world": "A team uses Ansible to install packages and deploy config files to dozens of Linux servers the same way every time. Without it, each server slowly drifts as people make manual one-off fixes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main building blocks in an Ansible run?"
+   },
+   {
+    "question": "What is the difference between an inventory, a playbook, and a role in Ansible?",
+    "answer": "An inventory lists the hosts Ansible should manage, grouped by environment or function. A playbook is the set of plays and tasks that define what to do to those hosts. A role is a reusable package of tasks, handlers, variables, templates, and files that helps organize playbooks into shared building blocks.",
+    "real_world": "A company may keep one inventory for dev, staging, and prod, then reuse the same database role across multiple playbooks. That avoids duplicating the same install and config logic in many places.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a role instead of putting tasks directly in a playbook?"
+   },
+   {
+    "question": "What does idempotent mean in Ansible, and why does it matter?",
+    "answer": "Idempotent means running the same task multiple times results in the same final state without unnecessary changes. This matters because configuration management should be safe to rerun during deploys, recoveries, or audits. Good Ansible tasks check current state and only change what is needed.",
+    "real_world": "If a server reboots and the playbook is rerun, idempotent tasks should not reinstall packages or rewrite files unless something actually changed. That makes automation predictable and safer in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How can you tell whether a task is idempotent from its module choice?"
+   },
+   {
+    "question": "What is a module in Ansible, and why should you use modules instead of plain shell commands when possible?",
+    "answer": "A module is the unit that performs a specific action, such as managing packages, files, users, or services. Modules are preferred because they are usually idempotent, return structured results, and handle platform details better than raw shell commands. Shell should be a fallback when no suitable module exists or for complex commands that cannot be expressed otherwise.",
+    "real_world": "Using the package module to install software avoids repeating work and gives clearer failures than a long shell script. Teams often start with shell and later replace it with modules when the automation needs to be reliable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is it reasonable to use the shell or command module anyway?"
+   },
+   {
+    "question": "What is a handler in Ansible, and when would you use one?",
+    "answer": "A handler is a task that runs only when notified by another task that changed something. It is commonly used for restarting a service after a configuration file changes. This keeps restarts conditional instead of happening on every run.",
+    "real_world": "If an Nginx config template changes, the playbook can notify a restart handler instead of restarting Nginx every time. That reduces downtime and avoids unnecessary service interruptions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does Ansible decide whether a handler should run?"
+   },
+   {
+    "question": "What is the purpose of variables in Ansible, and how do they help with reuse?",
+    "answer": "Variables let you parameterize playbooks and roles so the same logic can work across different hosts, environments, or applications. They are used for values like package names, ports, usernames, and paths. This reduces duplication and makes changes easier because you update the value in one place instead of editing many tasks.",
+    "real_world": "A team might use one web role for multiple apps by setting different port numbers and config file paths per environment. Without variables, they would copy and modify the whole playbook for each app.",
+    "code_lang": "yaml",
+    "code": "- hosts: web\n  vars:\n    app_port: 8080\n  tasks:\n    - name: Create config\n      template:\n        src: app.conf.j2\n        dest: /etc/app.conf",
+    "follow_up": "What is the difference between a variable defined in a playbook and one set in inventory?"
+   },
+   {
+    "question": "What is a template in Ansible, and why would you use Jinja2 with it?",
+    "answer": "A template is a file with placeholders that Ansible renders into a final config file using variable values. Jinja2 is the templating language used to insert values, loops, and conditionals into those files. It is useful when config files need to vary by host or environment but should still be generated consistently.",
+    "real_world": "A single database config template can produce different connection settings for dev and prod. That prevents maintaining separate hand-edited config files for each server.",
+    "code_lang": "jinja",
+    "code": "listen {{ app_port }}\nserver_name {{ inventory_hostname }};\n{% if enable_tls %}\nssl on;\n{% endif %}",
+    "follow_up": "What can go wrong if you put too much logic into templates?"
+   },
+   {
+    "question": "What does it mean to run a playbook in check mode, and when is that useful?",
+    "answer": "Check mode is a dry run that shows what Ansible would change without making those changes on the target hosts. It is useful for validating a playbook before applying it, especially in production or during reviews. It is not a perfect guarantee, because not every module can fully predict its changes.",
+    "real_world": "Before a maintenance window, a team can run a playbook in check mode to see whether it would restart services or modify configs. That helps catch mistakes before any production impact.",
+    "code_lang": "bash",
+    "code": "ansible-playbook site.yml --check",
+    "follow_up": "What limitations have you seen with dry runs or preview modes?"
+   },
+   {
+    "question": "What is the difference between `ansible` and `ansible-playbook`?",
+    "answer": "`ansible` is usually used to run ad hoc commands against one or more hosts, while `ansible-playbook` runs a structured playbook file. Ad hoc commands are good for quick one-off actions like checking uptime or listing packages. Playbooks are better for repeatable automation and configuration management.",
+    "real_world": "An operator may use an ad hoc command to verify a service is alive across a fleet, then use a playbook to apply a full change safely. This keeps routine work from turning into brittle shell history.",
+    "code_lang": "bash",
+    "code": "ansible web -m ping\nansible-playbook deploy.yml",
+    "follow_up": "Why might ad hoc commands be risky as a long-term automation strategy?"
+   },
+   {
+    "question": "What are some common beginner mistakes people make with Ansible?",
+    "answer": "A common mistake is writing non-idempotent shell tasks that change state every time. Another is hardcoding values instead of using variables, which makes playbooks hard to reuse. Beginners also often forget about privilege escalation, inventory grouping, or handlers, which leads to brittle automation and unnecessary restarts.",
+    "real_world": "A team might ship a playbook that works once but fails on the second run because it recreates existing users or appends duplicate lines. These issues usually show up only after the playbook is used in real deployments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you refactor a fragile playbook to make it safer to rerun?"
+   },
+   {
+    "question": "What is `ansible.cfg`, and what kinds of settings do people usually put there?",
+    "answer": "`ansible.cfg` is Ansible’s configuration file for defaults that you do not want to pass on every command. Common settings include the inventory location, SSH behavior, role and module search paths, and output formatting. It matters because it keeps projects consistent and reduces command-line clutter. The main trade-off is that project-local config is convenient, but hidden defaults can surprise someone if they do not know where they are coming from.",
+    "real_world": "A repo often includes its own `ansible.cfg` so everyone runs the playbooks against the same inventory and uses the same roles. Without that, different developers may accidentally target the wrong hosts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the search order Ansible uses when it looks for configuration files?"
+   },
+   {
+    "question": "How do you pass variables to Ansible from the command line, and when would you do that?",
+    "answer": "You can pass extra variables with `-e` when you need a one-off value such as a version number, a feature flag, or a temporary override. This is useful for environment-specific values or CI jobs that need to inject release data. The downside is that command-line variables can override other sources, so they can hide where a value really came from. For repeatable infrastructure, it is better to keep long-lived values in inventory, group vars, or role defaults.",
+    "real_world": "A deployment pipeline may pass the image tag or application version into a playbook at runtime. That lets the same playbook deploy different releases without editing files.",
+    "code_lang": "bash",
+    "code": "ansible-playbook deploy.yml -e version=1.4.2\nansible-playbook deploy.yml -e \"env=prod debug=false\"",
+    "follow_up": "How do command-line variables compare with variables defined in inventory or role defaults?"
+   },
+   {
+    "question": "What is the difference between `gather_facts` and normal playbook tasks?",
+    "answer": "Fact gathering collects information about the target hosts, such as operating system details, network interfaces, and available memory. It happens before regular tasks if enabled, and Ansible stores the data in variables you can use later. You use it when your tasks need to branch based on host properties. The trade-off is that it adds time, so on simple plays or very large fleets you may disable it if you do not need the data.",
+    "real_world": "A playbook may install different package names on different Linux distributions. Facts let the same playbook detect the OS family instead of hardcoding separate runs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you use facts inside a task to choose different behavior for different hosts?"
+   },
+   {
+    "question": "What does a `when` condition do in Ansible, and why is it useful?",
+    "answer": "A `when` condition makes a task or play run only if a boolean expression is true. It is how you handle differences between operating systems, environments, or feature flags without copying whole playbooks. Good use of conditions keeps automation flexible and reduces branching logic in separate files. A common mistake is making conditions too complex instead of splitting the work into clearer tasks.",
+    "real_world": "You might use `when` to install one package on Debian-based hosts and another on Red Hat-based hosts. That prevents failures from trying to use the wrong package name on the wrong system.",
+    "code_lang": "yaml",
+    "code": "- name: Install apache on Debian\n  ansible.builtin.package:\n    name: apache2\n    state: present\n  when: ansible_facts.os_family == 'Debian'",
+    "follow_up": "What is the difference between `when` and a loop in Ansible?"
+   },
+   {
+    "question": "What is the purpose of `become` in Ansible?",
+    "answer": "`become` tells Ansible to run a task or play with elevated privileges, usually as root or another user. You use it for actions like installing packages, managing services, or writing to protected system paths. It matters because not every connection user should have full admin rights all the time. A good pattern is to elevate only where needed rather than running everything as root.",
+    "real_world": "A deployment account might be allowed to connect as a normal user, but package installation still needs privilege escalation. `become` lets the playbook handle both safely.",
+    "code_lang": "yaml",
+    "code": "- name: Install nginx\n  hosts: web\n  become: true\n  tasks:\n    - ansible.builtin.package:\n        name: nginx\n        state: present",
+    "follow_up": "What is the difference between `become_user` and the default user you connect as?"
+   },
+   {
+    "question": "What does `register` do in Ansible?",
+    "answer": "`register` stores the result of a task in a variable so later tasks can inspect it. You use it when you need to react to command output, check whether something changed, or branch based on a return code. This is how you turn Ansible from a simple executor into a decision-making workflow. The key trade-off is that registered output can be verbose, so it is best used for data you actually need.",
+    "real_world": "A playbook may run a health check command and then fail or notify a handler depending on the output. Registering the result makes that possible.",
+    "code_lang": "yaml",
+    "code": "- name: Check app status\n  ansible.builtin.command: systemctl is-active myapp\n  register: app_status\n\n- name: Fail if app is not running\n  ansible.builtin.fail:\n    msg: \"myapp is not active\"\n  when: app_status.rc != 0",
+    "follow_up": "How do you use a registered result inside a `when` condition?"
+   },
+   {
+    "question": "What is the difference between `import` and `include` style reuse in Ansible?",
+    "answer": "Imported content is resolved when Ansible parses the playbook, while included content is loaded later during execution. In basic terms, imported tasks behave more like static structure, and included tasks are more dynamic because they can depend on variables or conditions at runtime. This matters when you want reuse but also need conditional or variable-driven behavior. For beginners, the important idea is that not all reused files are processed the same way.",
+    "real_world": "A team may split a large playbook into task files for readability. Some files are fixed parts of the run, while others should only be loaded for certain hosts or conditions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose one approach over the other in a real playbook?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you structure a playbook so it is maintainable when the same service has different settings per environment?",
+    "answer": "Use a common role or playbook for shared steps, then keep environment-specific values in inventory, group vars, or host vars. That separates behavior from configuration and avoids copy-pasting whole playbooks for dev, staging, and prod. The trade-off is a little more indirection, but it makes changes safer because the task flow stays the same while only data changes.",
+    "real_world": "This comes up when the same application is deployed to multiple regions or clusters with different hostnames, sizes, or feature flags. Teams often break a monolithic playbook into a base role plus thin environment overlays to reduce drift.",
+    "code_lang": "yaml",
+    "code": "- hosts: app\n  roles:\n    - app_server\n\n# group_vars/prod.yml\nenv_name: prod\napp_port: 8443",
+    "follow_up": "How do you decide whether a setting belongs in group vars, host vars, or a role default?"
+   },
+   {
+    "question": "What happens if two different variable sources define the same name in Ansible?",
+    "answer": "Ansible uses a precedence order, so one value wins based on where it came from. In practice, this is important because a value from a more specific source, like host vars or `--extra-vars`, can silently override a default and change behavior. The safest approach is to use clear variable names and keep high-precedence overrides limited to intentional cases.",
+    "real_world": "A common production bug is a role default being overridden by a group var from an unrelated inventory file. The playbook appears correct, but the deployed service picks up the wrong port or endpoint.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug which source is providing the final value during a run?"
+   },
+   {
+    "question": "When would you use `set_fact` instead of defining a variable in inventory or defaults?",
+    "answer": "Use `set_fact` when the value is discovered or computed during the run and needs to be reused later in the same play. Inventory and defaults are better for static configuration, while `set_fact` is for derived state such as parsing command output or choosing a conditional value. The trade-off is that facts created at runtime are less visible up front, so overusing them can make playbooks harder to reason about.",
+    "real_world": "This is useful after checking a remote system for the installed version or free disk space and then making later tasks branch on that result. It also helps when assembling a value from several inputs without repeating the expression everywhere.",
+    "code_lang": "yaml",
+    "code": "- shell: myapp --version\n  register: ver\n- set_fact:\n    app_version: \"{{ ver.stdout }}\"\n- debug:\n    msg: \"Running {{ app_version }}\"",
+    "follow_up": "How does `set_fact` differ from using `register` directly in later tasks?"
+   },
+   {
+    "question": "How do you decide between a role and a plain task file?",
+    "answer": "Use a role when you want a reusable unit with its own defaults, handlers, templates, files, and variables. A plain task file is fine for a small shared sequence, but it becomes awkward once you need structure or reuse across multiple playbooks. Roles cost more initial organization, but they scale better and make dependencies and entry points clearer.",
+    "real_world": "Teams often start with task includes, then move to roles once the same service setup is needed in several repos or environments. Roles also help when a platform team owns standard hardening or monitoring steps used by many apps.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What files would you expect inside a well-structured role?"
+   },
+   {
+    "question": "What are tags in Ansible, and how do they help in a larger codebase?",
+    "answer": "Tags let you run only selected parts of a playbook, which is useful for long runs or for separating setup, deploy, and cleanup steps. They help with developer workflow and safer partial execution, but they also create a maintenance burden if tag usage is inconsistent or too granular. Good tag design keeps common operational paths obvious and avoids surprising dependencies between tagged tasks.",
+    "real_world": "A team might tag database migration tasks separately so operators can deploy code without immediately applying schema changes. They also use tags to rerun only a failing section instead of the whole playbook during debugging.",
+    "code_lang": "yaml",
+    "code": "- hosts: web\n  tasks:\n    - name: Install package\n      yum:\n        name: nginx\n        state: present\n      tags: install\n    - name: Start service\n      service:\n        name: nginx\n        state: started\n      tags: service",
+    "follow_up": "What can go wrong if a task depends on an earlier tagged task that is skipped?"
+   },
+   {
+    "question": "How do you use `delegate_to` and what problem does it solve?",
+    "answer": "`delegate_to` runs a task on a different host than the one currently being targeted, which is useful for central services like load balancers, jump hosts, or API calls from the control node. It solves coordination problems where the action should happen once or from a specific machine rather than on every managed host. The main caution is that delegation changes where the task runs, but not always where variables come from, so it can be confusing if you do not track context carefully.",
+    "real_world": "A common use is updating a load balancer or DNS record after a backend deploy. Another is copying a build artifact from the control machine to a remote host without first placing it on every node.",
+    "code_lang": "yaml",
+    "code": "- hosts: app\n  tasks:\n    - name: Update load balancer\n      command: /usr/local/bin/register {{ inventory_hostname }}\n      delegate_to: lb01\n",
+    "follow_up": "How does `delegate_to` behave with facts and registered results?"
+   },
+   {
+    "question": "What is the difference between `serial` and running a play across all hosts at once?",
+    "answer": "By default, Ansible tries to apply the play to all matching hosts in parallel, limited by its execution settings. `serial` batches hosts so you can do rolling changes and reduce blast radius, which matters when a service must stay available during updates. The trade-off is slower deployment, but you gain safer rollout behavior and easier recovery if a batch fails.",
+    "real_world": "This is common for web tiers behind a load balancer, where you take a few instances out of rotation, update them, then move to the next batch. Without batching, a bad task can impact every node at once.",
+    "code_lang": "yaml",
+    "code": "- hosts: web\n  serial: 2\n  tasks:\n    - name: Deploy app\n      copy:\n        src: app.tar.gz\n        dest: /opt/app/app.tar.gz",
+    "follow_up": "How would you combine `serial` with health checks or rollback steps?"
+   },
+   {
+    "question": "How do you debug a playbook when a task succeeds on one host and fails on another?",
+    "answer": "First compare the host-specific inputs: inventory vars, facts, network reachability, and any conditions that change execution. Then look at the module result with increased verbosity or a temporary `debug` task to inspect what differed between hosts. Many intermittent failures come from missing packages, divergent state, or assumptions that only hold on some machines.",
+    "real_world": "This often appears after a partial manual change leaves one node slightly different from the rest. A task like package installation or service restart works everywhere except the outlier because its baseline is not actually uniform.",
+    "code_lang": "yaml",
+    "code": "- name: Show result\n  debug:\n    var: mytask_result\n- name: Check package\n  package:\n    name: nginx\n    state: present",
+    "follow_up": "What specific evidence would you gather before changing the playbook?"
+   },
+   {
+    "question": "When would you use `block`, `rescue`, and `always` in a playbook?",
+    "answer": "Use them when a set of tasks needs explicit error handling, similar to try/catch/finally. `block` groups the main work, `rescue` runs if something inside fails, and `always` runs no matter what, which is useful for cleanup or reporting. This is especially helpful when you need to leave a system in a known state after a partially completed change.",
+    "real_world": "A migration workflow might stop a service, apply changes, and restart it, but if the migration fails, the rescue section can start the service again and alert the team. That prevents a failed deploy from leaving production down longer than necessary.",
+    "code_lang": "yaml",
+    "code": "- block:\n    - command: /opt/app/upgrade\n  rescue:\n    - command: /opt/app/rollback\n  always:\n    - debug:\n        msg: \"Upgrade attempt finished\"",
+    "follow_up": "How do you decide what belongs in `rescue` versus a separate rollback playbook?"
+   },
+   {
+    "question": "How do you test Ansible changes before they reach production?",
+    "answer": "Use a mix of syntax checks, dry runs where appropriate, and real test environments that mirror production closely enough to catch drift. Unit-style checks can catch YAML and basic logic issues, but they do not prove the remote state transitions work, so an integration environment matters too. The key trade-off is speed versus confidence: the more realistic the test environment, the more trustworthy the result, but the more time it takes to run and maintain.",
+    "real_world": "Teams often gate merges on linting and syntax checks, then run the playbook against ephemeral test machines or a staging cluster. This catches template errors, missing variables, and privilege problems before production rollout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts of a role are easiest to test automatically, and what parts usually need live infrastructure?"
+   },
+   {
+    "question": "How do Ansible handlers interact with task failures and changed status in a play, and what can surprise people there?",
+    "answer": "Handlers only run if they are notified by a task that reports changed, and they run at the end of the play by default. If a later task fails, the play may stop before handlers fire, which can leave a service reconfigured but not restarted. That matters when a config file changed but the daemon keeps running with the old state. If you need a restart even after a failure, you have to structure the play carefully, often with blocks and explicit handler flushing.",
+    "real_world": "A team updates nginx config across many hosts and expects a restart, but a later validation task fails and the restart never happens. The servers are left with new files on disk but old running config.",
+    "code_lang": "yaml",
+    "code": "- name: Update config\n  template:\n    src: app.conf.j2\n    dest: /etc/app.conf\n  notify: restart app\n\n- name: Validate service\n  command: appctl check",
+    "follow_up": "When would you use meta: flush_handlers, and what are the risks?"
+   },
+   {
+    "question": "How should you think about Ansible variable precedence when inventory, group vars, role defaults, and extra vars all define the same setting?",
+    "answer": "Ansible resolves variables by precedence, so the same name can mean different things depending on where it comes from. In practice, role defaults are meant to be lowest priority and easy to override, while extra vars are typically used for ad hoc runs and have very high priority. The trade-off is flexibility versus predictability: if you reuse the same variable name everywhere, it becomes hard to know which value wins. Clear naming and a documented source of truth reduce surprises.",
+    "real_world": "A deployment works in staging but fails in production because an extra var from the CI job silently overrides a group var. Debugging often starts by printing the final resolved value on the host.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design role variables to make overrides intentional and easy to reason about?"
+   },
+   {
+    "question": "What is the difference between `import_tasks` and `include_tasks`, and when does that difference matter?",
+    "answer": "`import_tasks` is processed statically when the playbook is parsed, while `include_tasks` is evaluated at runtime. That means imported tasks are better when you want the playbook structure to be known up front, and included tasks are better when the choice depends on variables, conditions, or loops. The practical difference shows up in how `when` applies and whether the included file is visible to tooling and syntax checks. If you need dynamic behavior, use include; if you want static composition, use import.",
+    "real_world": "A team tries to loop over task files for different OS families and finds that `import_tasks` does not behave the way they expected. Switching to a runtime include makes the conditional branching work per host.",
+    "code_lang": "yaml",
+    "code": "- name: Load OS-specific tasks\n  include_tasks: \"{{ ansible_os_family }}.yml\"\n  when: ansible_os_family is defined",
+    "follow_up": "What limitations do dynamic includes create for debugging or linting?"
+   },
+   {
+    "question": "How do you decide between using a loop and writing separate tasks or roles in Ansible?",
+    "answer": "Use a loop when the repeated action is truly the same operation over a small set of similar items, like creating several users or packages. Use separate tasks or a role when the items need different logic, different handlers, or clearer error reporting. Loops reduce duplication, but they can make failures harder to read and variable scoping more confusing. Separate tasks are often easier to maintain when the behavior starts to diverge.",
+    "real_world": "A provisioning play loops over 20 configuration fragments, but one failure in the middle is hard to diagnose from the output. The team eventually splits the work into clearer tasks because the loop hid too much detail.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What debugging issues have you seen with nested loops or loop variables?"
+   },
+   {
+    "question": "What happens if you use `run_once` in a play, and when is it safe or unsafe to combine it with delegation?",
+    "answer": "`run_once` executes a task only on one host in the current play, but the result is still available to the rest of the hosts in that play. It is useful for shared work like generating a token or querying an external system once instead of per host. It becomes unsafe if the task depends on host-specific state, because the chosen host may not represent the others. When combined with delegation, you have to be explicit about where the action really runs and which host facts or variables are in scope.",
+    "real_world": "A play contacts a database only once to fetch a shared secret instead of doing it 200 times. If the task accidentally uses a host-local path, the first host may succeed while the rest inherit a result that does not fit their environment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you make a run-once task's result available to all hosts without creating hidden dependencies?"
+   },
+   {
+    "question": "How do you handle sensitive data in Ansible so it does not leak into logs or play output?",
+    "answer": "Use Ansible Vault for stored secrets and mark sensitive task output as no_log when needed. Vault protects data at rest in the repository, while no_log reduces the chance of secrets appearing in stdout, callbacks, or failure traces. The trade-off is that no_log also hides useful debugging information, so you should apply it narrowly. In real projects, secrets management usually combines Vault with an external secret source when rotation and access control matter.",
+    "real_world": "A deployment task prints a database password in verbose CI logs, which becomes a security incident. The fix is usually both encrypted secret storage and stricter logging on the task that consumes the secret.",
+    "code_lang": "yaml",
+    "code": "- name: Set database password\n  no_log: true\n  template:\n    src: db.conf.j2\n    dest: /etc/db.conf\n",
+    "follow_up": "When would you prefer fetching secrets from a secret manager instead of storing them in Vault?"
+   },
+   {
+    "question": "What is the purpose of fact caching, and what trade-offs does it introduce?",
+    "answer": "Fact caching lets Ansible reuse gathered facts across runs instead of rediscovering them every time. That can speed up large inventories and reduce load on hosts, especially when fact gathering is expensive or network-heavy. The trade-off is staleness: cached facts can become wrong if the host changes between runs, which can lead to bad decisions in conditionals. It works best when you know which facts are safe to reuse and how often they should expire.",
+    "real_world": "A team runs the same environment checks across hundreds of servers and fact gathering becomes a bottleneck. Caching speeds up the run, but they later discover a stale IP-based decision because the cache outlived a host reconfiguration.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which facts would you be careful not to cache?"
+   },
+   {
+    "question": "How would you troubleshoot a task that works in check mode but fails in a real run, or the other way around?",
+    "answer": "Check mode is only a prediction for many tasks, so a task may report changed or succeed without actually performing the real operation. If a task behaves differently, inspect whether the module fully supports check mode and whether later tasks depend on side effects that never happened. I would compare the registered values and task results between modes, then verify the real state on the host. The key is to treat check mode as a planning tool, not a full simulation.",
+    "real_world": "A play passes in dry run but fails during deployment because a later command expects a file that would have been created earlier. That usually means the earlier task does not model its side effects in check mode.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a preflight step that is actually trustworthy?"
+   },
+   {
+    "question": "What is the difference between asserting state with a module like `assert` and just relying on task failures later in the play?",
+    "answer": "An explicit assertion checks assumptions early and fails with a clear message before the play does more work. That is better than letting a later task fail in a less obvious place, because the cause is closer to the detection point. Assertions are especially useful for required variables, OS families, version gates, and preconditions for destructive changes. The trade-off is extra verbosity, but it usually saves debugging time.",
+    "real_world": "A role expects a feature flag to be set, but without an early assertion it fails 20 tasks later in a confusing template error. Teams often add assertions at the top of a role to make the contract obvious.",
+    "code_lang": "yaml",
+    "code": "- name: Require supported OS\n  assert:\n    that:\n      - ansible_os_family == 'RedHat'\n    fail_msg: \"This role only supports RedHat-family systems\"",
+    "follow_up": "What kinds of checks belong in asserts versus in normal task conditions?"
+   },
+   {
+    "question": "How do you make Ansible runs faster in a real codebase without sacrificing reliability?",
+    "answer": "The biggest wins usually come from avoiding unnecessary fact gathering, limiting work with hosts patterns or tags, and preventing repeated remote commands inside loops. You can also reduce expensive SSH churn by reusing connections and keeping tasks targeted to the hosts that actually need them. At the same time, overly aggressive optimization can hide drift or skip important validations. The goal is to cut avoidable work while still preserving clear state changes and useful failures.",
+    "real_world": "A deployment that touched only ten hosts was still spending most of its time gathering facts from a thousand. After the team narrowed the play and removed repeated shell probes, the run time dropped substantially.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you measure whether a change made the playbook faster or just less verbose?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how Ansible actually executes a task on a remote host, from the controller to the module result coming back?",
+    "answer": "By default the controller renders task arguments locally, copies a small module payload to the target over the connection plugin, executes it remotely, and reads structured JSON back on stdout. Most built-in modules are effectively short-lived programs, so each task has setup, transfer, execution, and cleanup overhead. That matters because playbook latency is often dominated by connection churn and per-task process startup rather than the module logic itself. Pipelining, persistent SSH connections, and reducing task count usually help more than micro-optimizing YAML.",
+    "real_world": "On fleets with thousands of hosts, people often blame a slow package task when the real bottleneck is opening SSH sessions and transferring module code for hundreds of tiny tasks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do connection plugins, pipelining, and ControlPersist change that execution path?"
+   },
+   {
+    "question": "How do Ansible strategies like `linear` and `free` change behavior under failure and concurrency, and when would you choose one over the other?",
+    "answer": "`linear` keeps hosts roughly in lockstep per task, which makes ordering easier to reason about and reduces cross-host drift during a play. `free` lets each host run ahead independently, so fast hosts finish sooner, but failures and notifications become less synchronized and debugging can be harder. I choose `linear` for coordinated rollouts or when later tasks assume the whole batch finished earlier tasks, and `free` for large independent fleets where throughput matters more than strict phase alignment.",
+    "real_world": "If you push config to app servers and then update a shared load balancer entry, `free` can create windows where some hosts have new config and others do not, which may or may not be acceptable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does `serial` interact with the chosen strategy during a rolling deployment?"
+   },
+   {
+    "question": "What are the main scaling bottlenecks when running Ansible against thousands of hosts, and how would you address them?",
+    "answer": "The usual bottlenecks are controller CPU, SSH connection setup, remote Python startup, inventory/plugin latency, and expensive fact gathering. I start by profiling task count and wall time, then reduce unnecessary facts, enable persistent connections, tune forks carefully, and avoid chatty task patterns like many small shell calls. Dynamic inventory and API-backed lookups should be cached if possible, because external systems often become the real bottleneck. Past a certain scale, teams also split runs by environment or service to keep blast radius and controller load manageable.",
+    "real_world": "A common incident is a CI runner launching a play against 5,000 hosts with high forks and overwhelming the bastion, DNS, or inventory API long before the targets themselves are busy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you collect from the controller to tell whether forks should be increased or reduced?"
+   },
+   {
+    "question": "What can go wrong with `async` and `poll` in Ansible, and how do you use them safely?",
+    "answer": "Async tasks decouple launch from completion, so the main risks are losing visibility into the final state, colliding with later dependent tasks, and leaving partial work running after the play fails elsewhere. `poll: 0` is true fire-and-forget, so you usually need a later status check and clear correlation to the launched job. I use async for long-running package operations, reboots, or drains, but only when I can define explicit readiness checks instead of assuming completion after a timeout.",
+    "real_world": "Teams often launch service restarts asynchronously to save time, then immediately run health checks and get flaky failures because half the hosts are still stopping or warming up.",
+    "code_lang": "yaml",
+    "code": "- name: Start long task\n  command: /usr/local/bin/migrate\n  async: 1800\n  poll: 0\n  register: job\n\n- name: Wait for completion\n  async_status:\n    jid: \"{{ job.ansible_job_id }}\"\n  register: result\n  until: result.finished\n  retries: 60",
+    "follow_up": "How would you make that pattern safe across controller restarts or reruns?"
+   },
+   {
+    "question": "How do you think about failure thresholds like `any_errors_fatal` and `max_fail_percentage` in production rollouts?",
+    "answer": "They are blast-radius controls, not just convenience flags. `any_errors_fatal` is appropriate when partial rollout is dangerous, like schema or protocol changes that must stay synchronized; `max_fail_percentage` is better when independent hosts can fail and you want to continue until a threshold suggests a systemic issue. The trade-off is between availability and consistency: stopping early limits damage, but it may leave a mixed fleet that requires deliberate recovery logic.",
+    "real_world": "During a certificate rollout, one bad template can fail on only a subset of hosts due to local state; a sane failure threshold prevents silently breaking hundreds more while still surfacing whether the issue is isolated or systemic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design rollback or containment when a play stops halfway through a batch?"
+   },
+   {
+    "question": "What are the risks of using `shell` or `command` for state management in advanced playbooks, even when the command itself is simple?",
+    "answer": "The biggest issue is that Ansible loses semantic understanding of state, so change reporting, check mode, error handling, and idempotence become your responsibility. A command can succeed while doing nothing, fail after partially changing state, or report change on every run unless you add guards like `creates`, `removes`, or explicit condition checks. That makes large playbooks noisier and less predictable, especially for handlers and auditing. I use shell only when no module expresses the state well enough or the operational context is too custom.",
+    "real_world": "Production incidents often come from a shell task that always reports changed, which triggers restarts on every run and turns a harmless config deploy into recurring churn.",
+    "code_lang": "yaml",
+    "code": "- name: Better than raw shell for one-time init\n  command: /usr/local/bin/init-db\n  args:\n    creates: /var/lib/myapp/.initialized",
+    "follow_up": "When you must use shell, how do you make its changed and failed conditions reliable?"
+   },
+   {
+    "question": "How do dynamic inventory plugins affect correctness and performance, and what failure modes do you plan for?",
+    "answer": "Dynamic inventory moves host discovery into code or API calls, which is powerful but adds latency, caching concerns, and dependence on external systems. Correctness problems usually come from stale data, inconsistent tagging, missing group composition, or inventory changing mid-run so the controller and operators reason about different target sets. I prefer inventory sources with clear caching controls, deterministic grouping, and validation in CI, because bad inventory is effectively a deployment to the wrong hosts. You also need a plan for API throttling and partial inventory failures.",
+    "real_world": "A cloud tag typo can put a canary host into the production group, and Ansible will do exactly what inventory says unless you have guardrails like assertions on environment metadata.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What checks would you add to fail fast if the inventory returned an unexpectedly small or large target set?"
+   },
+   {
+    "question": "What is the difference between pushing configuration with Ansible and using pull-based configuration management, and how does that affect architecture at scale?",
+    "answer": "Push gives the controller immediate orchestration and ordering, which is great for coordinated changes, but it centralizes capacity, credentials, and network reachability requirements. Pull-based systems spread execution out and can tolerate intermittent connectivity better, but they make cross-node coordination and exact rollout timing harder. At scale, the trade-off is usually between operational simplicity for orchestration versus resilience and decentralization for steady-state convergence. Many teams use Ansible for orchestration and bootstrap, then let another agent handle continuous drift correction.",
+    "real_world": "In restricted networks, a central controller may not be able to reach every node directly, while a pull model can still converge from inside the environment on a schedule.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose Ansible AWX or Automation Controller instead of a pure GitOps or agent-based model?"
+   },
+   {
+    "question": "How do you handle reboots in Ansible without creating race conditions or false success?",
+    "answer": "A reboot is a state transition, not just a command, so the safe pattern is to trigger it, wait for disconnect, wait for reconnect, and then verify the service or host-level readiness you actually care about. Simply running `shutdown -r now` and sleeping is brittle because boot times, SSH availability, and application readiness are different things. The dedicated reboot workflow also helps preserve idempotence and produce clearer failures when the host never comes back. I usually pair reboot handling with post-restart assertions, not just connection success.",
+    "real_world": "A host can accept SSH before mounts, networking, or application dependencies are ready, so naive reboot automation often passes and then the next task fails intermittently.",
+    "code_lang": "yaml",
+    "code": "- name: Reboot host safely\n  reboot:\n    reboot_timeout: 1800\n\n- name: Verify app is listening\n  wait_for:\n    port: 8443\n    timeout: 300",
+    "follow_up": "How would you reboot only the hosts that actually need it during a kernel or config rollout?"
+   },
+   {
+    "question": "What edge cases have you seen with Ansible change reporting, and why does that matter in mature automation?",
+    "answer": "Changed status drives handlers, reporting, and operator trust, so inaccurate change reporting becomes an operational bug. Common edge cases are modules that report changed because metadata drifted, shell tasks that always mark changed, or custom logic that ignores differences which should trigger remediation. At scale, false positives cause unnecessary restarts and alert fatigue, while false negatives hide drift and make rollouts look clean when they were not. Mature teams treat `changed_when` and `failed_when` as part of the contract, not cosmetic output.",
+    "real_world": "I've seen routine runs bounce stateful services every night because one task always returned changed, which looked harmless in logs until it caused repeated failovers.",
+    "code_lang": "yaml",
+    "code": "- name: Run probe without triggering handlers\n  command: /usr/local/bin/check-config\n  register: probe\n  changed_when: false\n  failed_when: probe.rc != 0",
+    "follow_up": "How would you audit a large codebase for tasks with misleading change semantics?"
+   },
+   {
+    "question": "How does Ansible decide which connection plugin and Python interpreter to use on a host, and what production issues can that cause?",
+    "answer": "Connection selection comes from inventory, play context, and defaults, while interpreter discovery depends on host settings and what Python exists remotely. The common failure mode is heterogeneity: the same role works on one image and fails on another because the module lands on a different interpreter path or an unexpected shell environment. For reliability, pin connection variables and interpreter paths where your fleet is not uniform, especially across older Linux, network devices, and minimal images. Auto-discovery is convenient, but explicit settings reduce surprise during upgrades.",
+    "real_world": "Teams often hit this during OS migrations: half the fleet has one Python path, the other half another, and modules start failing only on newly provisioned hosts. It also shows up in ephemeral cloud images that omit Python until a bootstrap step runs.",
+    "code_lang": "yaml",
+    "code": "- hosts: all\n  vars:\n    ansible_connection: ssh\n    ansible_python_interpreter: /usr/bin/python3\n  tasks:\n    - ping:",
+    "follow_up": "When would you deliberately avoid setting `ansible_python_interpreter` globally and let discovery happen?"
+   },
+   {
+    "question": "What is the difference between `roles:`, `import_role`, and `include_role`, and why does it matter in advanced playbooks?",
+    "answer": "`roles:` and `import_role` are largely static: tasks are parsed up front, so tags, task listing, and syntax validation are more predictable. `include_role` is dynamic, so it can depend on runtime conditions or loop values, but that also means less visibility at parse time and different behavior for variables and tags. The trade-off is flexibility versus predictability. In large codebases, static inclusion is usually easier to reason about unless you truly need per-host runtime composition.",
+    "real_world": "This matters when a deployment only includes a role for a subset of hosts based on discovered state. Dynamic role inclusion can solve that, but it also makes CI and `--list-tasks` less informative, which complicates review and incident response.",
+    "code_lang": "yaml",
+    "code": "tasks:\n  - import_role:\n      name: webserver\n\n  - include_role:\n      name: tenant_config\n    when: multi_tenant | bool",
+    "follow_up": "How do tags behave differently when a role is brought in statically versus dynamically?"
+   },
+   {
+    "question": "How do you manage cross-host dependencies in Ansible without creating ordering bugs or stale data?",
+    "answer": "Cross-host logic is where Ansible’s host-by-host execution model can bite you. If one host needs data produced on another, you need to be explicit about ordering, persistence, and where the data lives, using things like delegated tasks, cached facts, or an external source of truth. Relying on `hostvars` alone is fragile if the producing host has not executed yet or facts are stale. A safer pattern is to separate discovery from consumption into distinct plays or store shared state outside the run.",
+    "real_world": "A classic failure is generating a load balancer config from app host facts before those hosts have updated their registration data, so the balancer deploys a partial backend list. That can create intermittent 503s during rolling deploys.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you had to build a cluster from scratch in one run, how would you sequence leader election and follower configuration?"
+   },
+   {
+    "question": "What are the important differences between `local_action`, `delegate_to: localhost`, and running a separate localhost play?",
+    "answer": "All three execute work on the controller side, but they differ in clarity and variable context. `local_action` is mostly shorthand; `delegate_to: localhost` is explicit and keeps the task attached to the current remote host’s loop and condition context; a separate localhost play is better when the controller-side workflow is substantial and deserves its own inventory and failure handling. The main gotcha is accidentally mixing controller state with per-host state and producing duplicated or conflicting side effects. For complex orchestration, a dedicated localhost play is easier to reason about.",
+    "real_world": "This comes up when talking to cloud APIs, DNS providers, or load balancers while also configuring instances. Teams often discover they created the same DNS record N times because a controller-side task still ran once per host.",
+    "code_lang": "yaml",
+    "code": "- name: Update DNS once per host context\n  delegate_to: localhost\n  uri:\n    url: \"https://api.example/dns\"\n    method: POST",
+    "follow_up": "How would you prevent a delegated localhost task from racing when many hosts hit it concurrently?"
+   },
+   {
+    "question": "How do you design Ansible for network devices or other targets without a normal POSIX shell, and what changes operationally?",
+    "answer": "You stop assuming Python modules and shell semantics are available remotely. Many network and appliance workflows use specialized connection plugins and modules that render and send commands through APIs or CLI transports, so privilege escalation, idempotence, diff support, and error handling can behave differently from Linux hosts. The operational change is that you must validate device-specific module behavior carefully and avoid generic Unix patterns. It also pushes you to separate inventories and roles by platform because transport assumptions leak into task design.",
+    "real_world": "A team can have reliable Linux automation and still break switches because a command-oriented module reports changes differently or requires explicit save operations. Incident-wise, that often shows up as config drift after a reboot because running config changed but startup config did not.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you look for before trusting a network module’s changed status in a production rollout?"
+   },
+   {
+    "question": "When do you use `raw`, and what are the risks compared with normal modules?",
+    "answer": "`raw` is for the bootstrap edge: targets without Python, broken interpreters, or environments where you need a very early command before normal module execution works. It bypasses the module subsystem, so you lose idempotence support, structured return data, check mode behavior, and much of Ansible’s safety net. That makes it powerful but easy to misuse as a permanent escape hatch. Use it narrowly, usually to install prerequisites so you can switch back to real modules.",
+    "real_world": "This is common on minimal cloud images where Python is absent and every normal task fails until the first bootstrap command runs. If teams keep using `raw` afterward, drift and hidden errors accumulate because Ansible can no longer model state well.",
+    "code_lang": "yaml",
+    "code": "- hosts: new_nodes\n  gather_facts: false\n  tasks:\n    - raw: test -e /usr/bin/python3 || apt-get update && apt-get install -y python3",
+    "follow_up": "How would you make that bootstrap task safer and less likely to report false success?"
+   },
+   {
+    "question": "How do `changed_when` and `failed_when` alter Ansible semantics, and what mistakes do senior engineers still make with them?",
+    "answer": "They override Ansible’s default interpretation of a task result, which is useful when a module or command does not describe reality well enough. The danger is that you are rewriting control flow: handlers, retries, rescue blocks, and rollout logic all depend on changed and failed status. Overusing these conditions can hide real faults or trigger side effects on every run. A good rule is to keep the conditions narrow, tied to concrete output, and documented where they affect orchestration.",
+    "real_world": "A bad `changed_when: true` on a config generation step can restart a service across hundreds of hosts on every run. The opposite mistake, masking failure because a command returns noisy nonzero codes, can silently skip broken deploys until customers notice.",
+    "code_lang": "yaml",
+    "code": "- command: appctl reload\n  register: r\n  changed_when: \"'reloaded' in r.stdout\"\n  failed_when:\n    - r.rc != 0\n    - \"'already running' not in r.stderr\"",
+    "follow_up": "What would you review before approving a PR that uses `failed_when: false`?"
+   },
+   {
+    "question": "How do you handle inventory and variable layout when multiple teams share the same Ansible codebase across many environments?",
+    "answer": "At scale, the key is separating reusable role logic from environment ownership and making variable boundaries explicit. Shared roles should expose a small input surface with sane defaults, while environment-specific inventories or vars repositories own topology, secrets references, and policy choices. The failure mode is a monolithic variable tree where nobody knows which team owns a setting or why one environment behaves differently. Clear layering and naming conventions matter more than clever templating.",
+    "real_world": "Without discipline, production incidents become archaeology: a service limit changed in one environment through an ad hoc group var and no one can find it quickly. Large platform teams often split role code and inventory data into separate review paths for this reason.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you enforce that a role only consumes a documented set of inputs and not arbitrary inventory variables?"
+   },
+   {
+    "question": "What are the trade-offs between storing rendered artifacts in Git versus rendering them at deploy time with Ansible?",
+    "answer": "Committing rendered artifacts improves auditability and can simplify emergency rollback because the exact bytes are reviewed and stored. Rendering at deploy time reduces duplication and keeps the source of truth at the template plus variables, but it makes the final output depend on runtime context and current inventory. The trade-off is reproducibility versus flexibility. In regulated or high-blast-radius systems, teams often prefer stronger artifact traceability even if it adds build complexity.",
+    "real_world": "This matters for firewall rules, generated proxy configs, or large application manifests where a tiny variable change can alter hundreds of lines. During an incident, having the rendered artifact tied to a release can make rollback far faster than reconstructing what variables were live at the time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you render at deploy time, how would you make the exact rendered output reproducible later for an audit?"
+   },
+   {
+    "question": "How would you make an Ansible rollout safe when the managed service has eventual consistency or delayed health signals?",
+    "answer": "You need to treat configuration completion and service readiness as separate states. A task can finish successfully while the system behind it is still converging, so the playbook should encode waits, health checks, and rollback gates that reflect real readiness rather than just command exit codes. The trade-off is slower runs versus fewer false positives and cascading failures. For distributed systems, I prefer explicit health assertions between rollout batches instead of assuming the service is ready because the config was applied.",
+    "real_world": "This shows up with DNS, load balancers, service registries, and clustered databases. Teams that skip readiness checks often complete a rollout successfully in Ansible while users still hit broken nodes for minutes afterward.",
+    "code_lang": "yaml",
+    "code": "- name: Wait for app health\n  uri:\n    url: \"http://{{ inventory_hostname }}:8080/health\"\n    status_code: 200\n  register: health\n  retries: 12\n  delay: 10\n  until: health.status == 200",
+    "follow_up": "How would you distinguish a transient slow-start from a rollout that should halt after the first batch?"
+   }
+  ]
+ }
+}

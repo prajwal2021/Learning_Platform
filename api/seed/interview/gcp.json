@@ -1,0 +1,477 @@
+{
+ "slug": "gcp",
+ "name": "Google Cloud Platform",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Google Cloud Platform, and when would you choose it over running servers yourself?",
+    "answer": "Google Cloud Platform is a set of managed cloud services for compute, storage, networking, databases, and more. You use it when you want to avoid buying and maintaining physical servers, scale up and down quickly, and rely on managed services instead of handling everything yourself. The trade-off is less direct control, but much faster provisioning and usually better operational flexibility.",
+    "real_world": "A team moving a web app from a single on-prem server to the cloud might use GCP to deploy faster and scale during traffic spikes without buying new hardware.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main categories of services GCP provides?"
+   },
+   {
+    "question": "What is a project in GCP?",
+    "answer": "A project is the basic container for GCP resources, billing, and permissions. Most resources live inside a project, so it is how you separate environments like dev, staging, and production. It matters because IAM, quotas, and billing are all managed at the project level.",
+    "real_world": "A company often creates separate projects for development and production so a mistake in a test environment does not affect production data or permissions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do billing and IAM relate to a project?"
+   },
+   {
+    "question": "What is IAM in Google Cloud, and why is it important?",
+    "answer": "IAM stands for Identity and Access Management, and it controls who can do what on which resource. In GCP, you usually grant roles to users, groups, or service accounts instead of giving everyone broad access. It matters because least-privilege access reduces the blast radius of mistakes and security incidents.",
+    "real_world": "A junior engineer needing read-only access to logs should get a narrow role rather than owner access, which would be risky if their account were compromised.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a primitive role and a predefined role?"
+   },
+   {
+    "question": "What is Cloud Storage, and when would you use it instead of a database?",
+    "answer": "Cloud Storage is object storage for files, backups, media, logs, and other unstructured data. You use it when you want to store blobs rather than query rows and columns. A database is better for structured data and transactions, while Cloud Storage is better for durable file storage and simple retrieval by object name.",
+    "real_world": "A photo upload service often stores the uploaded images in Cloud Storage and keeps metadata like owner and timestamp in a database.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between object storage and block storage?"
+   },
+   {
+    "question": "What is a Compute Engine VM?",
+    "answer": "A Compute Engine VM is a virtual machine running in Google Cloud that you manage more directly than a fully managed service. It is useful when you need custom software, full OS access, or compatibility with apps that expect a traditional server. The trade-off is that you handle more maintenance, such as patching, scaling, and configuration.",
+    "real_world": "A legacy application that needs a specific Linux package or background process may be easier to lift and shift onto a VM first.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a managed platform like Cloud Run instead?"
+   },
+   {
+    "question": "What is Cloud Run?",
+    "answer": "Cloud Run is a managed service for running containerized applications without managing servers. You deploy a container, and Google handles scaling, routing, and the underlying infrastructure. It is a good fit for HTTP services, APIs, and background jobs that can run in containers, especially when you want simple deployment and automatic scaling.",
+    "real_world": "A small API team can package their app in a container and deploy it to Cloud Run instead of setting up and maintaining a Kubernetes cluster.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of applications are not a great fit for Cloud Run?"
+   },
+   {
+    "question": "What is the difference between a region and a zone in GCP?",
+    "answer": "A region is a geographic area, and a zone is a smaller isolated location within that region. You choose regions for latency, data residency, and disaster recovery, while zones matter for high availability inside a region. Spreading resources across zones can reduce the impact of a zone failure.",
+    "real_world": "If you run a production service in one zone only, a zonal outage can take it down; using multiple zones helps keep it available.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why would you pick one region over another?"
+   },
+   {
+    "question": "What is a VPC in Google Cloud?",
+    "answer": "A VPC, or Virtual Private Cloud, is a private network for your GCP resources. It lets you control IP ranges, routing, firewall rules, and how systems talk to each other and to the internet. This matters because network isolation is a core part of securing cloud workloads.",
+    "real_world": "A team may place databases in private subnets and allow only application servers to reach them through tightly controlled firewall rules.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do firewall rules work in a GCP VPC?"
+   },
+   {
+    "question": "How do you think about billing in GCP, and what is a common beginner mistake?",
+    "answer": "GCP billing is usage-based, so you pay for the resources you consume rather than a fixed server package. A common beginner mistake is leaving resources running, such as VMs, disks, or load balancers, and forgetting they still generate charges. It is important to track ownership, use labels, and delete unused resources promptly.",
+    "real_world": "Teams sometimes get a surprise bill after a test VM or Cloud SQL instance is left running over a weekend or month-end.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools would you use to monitor and control cloud spend?"
+   },
+   {
+    "question": "What is the difference between Compute Engine, GKE, and Cloud Run?",
+    "answer": "Compute Engine gives you raw virtual machines, so you manage the OS and most of the runtime yourself. GKE runs containers on Kubernetes and is best when you need orchestration, service discovery, and more control over container workloads. Cloud Run is simpler: you deploy a container and Google handles scaling and most infrastructure concerns. The trade-off is control versus operational overhead.",
+    "real_world": "A team often starts on Cloud Run for a small API, then moves to GKE when they need more control over networking, sidecars, or multiple tightly managed services.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you pick GKE over Cloud Run for a new service?"
+   },
+   {
+    "question": "What is a service account, and how is it different from a user account?",
+    "answer": "A service account represents an application or workload, not a person. You grant it IAM permissions so code can access Google Cloud resources without using a human's login. User accounts are for people and usually go through interactive sign-in, while service accounts are meant for automation. A common mistake is giving a service account more permissions than the app needs.",
+    "real_world": "CI jobs, VMs, and Cloud Run services often use service accounts to read secrets, write logs, or access storage without hard-coded credentials.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you give a workload only the minimum permissions it needs?"
+   },
+   {
+    "question": "What is Cloud IAM, and what are roles and permissions?",
+    "answer": "IAM controls who can do what on Google Cloud resources. Permissions are the individual actions, like reading or creating a resource, and roles are bundles of permissions you grant to a user or service account. Predefined roles cover common needs, while custom roles are for tighter control. The key idea is to assign access at the smallest practical scope.",
+    "real_world": "If a developer can deploy an app but should not delete databases, IAM lets you separate those powers cleanly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between an inherited permission and a direct one on a resource?"
+   },
+   {
+    "question": "What is Cloud Storage, and what are the main storage classes used for?",
+    "answer": "Cloud Storage is object storage for files and blobs, not a file system or relational database. You use different storage classes to balance cost and access frequency: frequently accessed data should be cheaper to retrieve quickly, while archival data should be cheaper to store but slower or more expensive to access. The main trade-off is storage cost versus access cost and latency. A common mistake is putting active application data into object storage when a database or disk is a better fit.",
+    "real_world": "Teams often keep user uploads, backups, and build artifacts in Cloud Storage because those are naturally blob-like and easy to move around.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose object storage over a managed database?"
+   },
+   {
+    "question": "What is Cloud Load Balancing, and why would you use it?",
+    "answer": "Cloud Load Balancing distributes incoming traffic across multiple backends so one instance or zone is not a single point of failure. It improves availability, helps scale traffic, and can route users to healthier or closer backends. You use it in front of web apps, APIs, and global services that need a stable entry point. The trade-off is extra configuration and cost versus much better resilience.",
+    "real_world": "If one VM crashes or one zone has trouble, the load balancer can keep serving requests from other healthy backends.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems does a load balancer solve that DNS alone does not?"
+   },
+   {
+    "question": "What is a GCP region, and how do you choose one for a workload?",
+    "answer": "A region is a geographic area where Google Cloud resources run. You choose a region based on latency to users, data residency needs, and the location of other dependent services. Keeping related resources in the same region usually reduces latency and cross-region network costs. The common beginner mistake is spreading resources across regions without a clear reason.",
+    "real_world": "If your customers are mostly in Europe, placing the application and database in a nearby region usually improves response times.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you deliberately place resources in more than one region?"
+   },
+   {
+    "question": "What is a firewall rule in Google Cloud, and what is it used for?",
+    "answer": "A firewall rule controls allowed or denied traffic to resources in a VPC. You use it to restrict which IPs, protocols, or ports can reach your instances or services. In Google Cloud, firewall rules are an important layer of network security because access is not open by default in the way many beginners assume. A common mistake is allowing broad inbound access when only a narrow source range is needed.",
+    "real_world": "An admin may allow SSH only from the office network and block everything else to reduce exposure of a VM.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test whether a firewall rule is blocking traffic?"
+   },
+   {
+    "question": "What is Cloud Monitoring, and what do you look at first when something is wrong?",
+    "answer": "Cloud Monitoring collects metrics and lets you chart, alert on, and inspect the health of your services and infrastructure. When something is wrong, I first look at the relevant service's error rate, latency, and resource usage, then check logs for the specific failure. Metrics tell you whether there is a problem and logs often tell you why. The key is to have alerts tied to symptoms users feel, not just machine-level noise.",
+    "real_world": "A spike in latency or 5xx errors can show up in Monitoring before customers start complaining, which helps teams react faster.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a metric and a log?"
+   },
+   {
+    "question": "What is a Google Cloud API, and why do you need to enable one before using a service?",
+    "answer": "A Cloud API is the programmatic interface for managing or using a Google Cloud service. You usually need to enable it in a project so Google knows the service is allowed to be used there and can track usage and permissions correctly. This is a common setup step for both console use and code that talks to the service. Beginners often forget this and see errors that look like permissions problems but are really disabled APIs.",
+    "real_world": "A deployment script may fail until the Storage API or Compute Engine API is enabled in the target project.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you check if a service says the API is disabled but IAM looks correct?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How would you design private connectivity between a GCP workload and an on-premises network, and when would you choose VPN over Interconnect?",
+    "answer": "Cloud VPN is usually the simpler choice: it is faster to set up, cheaper, and good for lower or moderate traffic. Cloud Interconnect is for higher bandwidth, lower latency, and more predictable connectivity, but it takes more planning and often a provider relationship. The main trade-off is operational complexity versus performance and reliability. For either option, you still need to think about routing, overlap in IP ranges, and how failover works.",
+    "real_world": "This comes up when a company moves only part of an app to GCP but still needs access to databases or internal services in a data center. A common failure mode is a VPN that works in testing but becomes a bottleneck once real traffic starts flowing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to use dynamic routing with BGP for that setup?"
+   },
+   {
+    "question": "What is the difference between a managed instance group and a single Compute Engine VM, and why would you use a group?",
+    "answer": "A single VM is simple, but it is a single point of failure and manual to replace or scale. A managed instance group lets GCP keep a set of identical VMs running, replace unhealthy instances, and scale based on load or schedule. The trade-off is that your app has to be more stateless and configurable so instances can be recreated safely. If the workload needs durability and horizontal scaling, a managed group is usually the better fit.",
+    "real_world": "Teams use managed instance groups for web servers, batch workers, and legacy apps that cannot yet move to containers. They matter when a failed VM would otherwise mean a production outage or a long manual recovery.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you change in the application if you were moving it from a singleton VM to a managed instance group?"
+   },
+   {
+    "question": "How do you decide between Cloud SQL and running your own database on Compute Engine?",
+    "answer": "Cloud SQL gives you managed backups, patching, replication options, and easier operations, which is usually worth it for standard relational databases. Running your own database on Compute Engine gives more control, but you own upgrades, backups, failover, and tuning the whole stack. The key trade-off is flexibility versus operational burden and reliability. If your team does not need special database-level customization, managed service is usually the safer choice.",
+    "real_world": "This matters when a startup grows from a prototype to a production service and suddenly needs backups, recovery testing, and maintenance windows. It also comes up when an app team blames the database, but the real issue is that the self-managed VM setup was never hardened.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you look at first if a Cloud SQL instance becomes slow under load?"
+   },
+   {
+    "question": "How do GCP service accounts differ from workload identity or key-based access in practice, and what are the security trade-offs?",
+    "answer": "The safest pattern is to let workloads use attached service accounts without long-lived downloaded keys. That reduces the risk of credential leakage, because there is no static secret sitting on disk or in a repo. Key-based access is easier to start with, but keys are hard to rotate and easy to misuse. The trade-off is convenience versus blast radius; modern GCP setups try to avoid static keys whenever possible.",
+    "real_world": "This matters when a key is accidentally committed to source control or copied into a shared build machine. In real incidents, the key itself becomes the incident because it can be reused outside the original environment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you audit an existing GCP environment for service account key risk?"
+   },
+   {
+    "question": "What happens if you delete a GCP project, and how would you avoid accidentally losing data?",
+    "answer": "Deleting a project removes the resources in it, but some resources may have retention behavior or separate billing implications, so you should not assume everything disappears instantly in a useful way. The safe pattern is to treat project deletion as a last step after backups, export, and verification that nothing valuable is still attached elsewhere. In practice, teams use separate projects for environments and protect important resources with explicit review and lifecycle controls. The main risk is accidental deletion of shared infrastructure or data that was not backed up elsewhere.",
+    "real_world": "This comes up during environment cleanup or after a migration, when someone thinks a project is temporary and deletes it too early. It can take down shared logs, secrets, or test data that other systems still depend on.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What controls would you put in place to prevent accidental project deletion in production?"
+   },
+   {
+    "question": "How do you choose between Cloud Storage and a database for application data that users upload?",
+    "answer": "Cloud Storage is best for blobs like images, videos, backups, and exported files where you store and retrieve the object as a whole. A database is better when you need indexing, transactions, filtering, or frequent partial updates on the data itself. The common pattern is to store the file in Cloud Storage and keep metadata or ownership records in a database. That gives you cheap object storage without forcing a database to do a job it is not meant for.",
+    "real_world": "This matters for upload-heavy products like media apps or document platforms. Teams often hit scaling problems when they put large files in the database and then backups, restores, and queries become slow and expensive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make uploaded objects private but still accessible to authorized users?"
+   },
+   {
+    "question": "What is the purpose of a load balancer health check in GCP, and what can go wrong if it is misconfigured?",
+    "answer": "A health check tells the load balancer whether a backend instance is ready to receive traffic. If it is too strict, healthy instances can be marked unhealthy and traffic gets dropped or shifted away unnecessarily. If it is too loose, broken instances can keep receiving requests and cause user-facing errors. The key is to check the right endpoint and make sure it reflects real readiness, not just that the process is running.",
+    "real_world": "This is a common production issue during deploys: the app process starts, but dependencies are not ready yet, so traffic arrives too early. It also shows up when security groups or firewall rules block the health check source ranges.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a readiness endpoint that works well with health checks?"
+   },
+   {
+    "question": "How do autoscaling signals differ between CPU-based scaling and request-driven scaling, and what are the trade-offs?",
+    "answer": "CPU-based scaling is simple and works well when CPU correlates with demand, but it can miss queues, I/O wait, or bursty request patterns. Request-driven scaling is often closer to actual user load, but it depends on the platform and the shape of traffic. The trade-off is accuracy versus simplicity and portability. In practice, you pick the metric that best matches the real bottleneck, then validate it with load tests.",
+    "real_world": "This matters when an API slows down even though CPU looks fine, because the real bottleneck is database latency or thread exhaustion. Teams often discover that the wrong scaling metric causes either overprovisioning or user-visible lag.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metric would you choose for a queue worker, and why?"
+   },
+   {
+    "question": "How would you debug a case where a GCP service cannot reach another service in the same VPC even though both are running?",
+    "answer": "I would check layer by layer: whether the source and destination are in the right network, whether firewall rules allow the traffic, whether the target listens on the expected port, and whether there is a routing or DNS issue. In GCP, being in the same VPC does not automatically mean all traffic is allowed. I would also verify the service account or identity if the connection uses authenticated APIs rather than raw network access. The pattern is to separate network reachability from application-level failure before changing too much at once.",
+    "real_world": "This is a common incident during a migration where two services are “in the same cloud” but still cannot talk. The root cause is often a blocked port, wrong hostname, or an assumption that internal traffic is automatically open.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools or logs would you check first to prove whether it is a network problem or an application problem?"
+   },
+   {
+    "question": "When would you use Cloud Build or another CI/CD pipeline in GCP, and what should you test before deploying?",
+    "answer": "Use CI/CD when you want repeatable builds, automated tests, and a controlled deployment path instead of manual releases. Before deploying, you should at least run unit tests, build validation, and some form of integration or smoke test if the service has external dependencies. The trade-off is slower feedback during the pipeline versus far fewer broken releases in production. Good pipelines also make rollbacks and promotion between environments easier to reason about.",
+    "real_world": "This matters when manual deploys start causing inconsistent releases or forgotten steps. Teams usually adopt CI/CD after one too many production incidents caused by “it worked on my machine” or a missed migration.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a pipeline so that a failed deploy does not leave the system in a half-updated state?"
+   },
+   {
+    "question": "How do you think about choosing between a zonal and a regional GCP resource for a production service?",
+    "answer": "Use zonal resources when you want lower cost and simpler setup and you can tolerate an outage if that zone fails. Use regional resources when availability matters enough that you want the service to survive a zone-level failure, even if it costs more or has more moving parts. The trade-off is resilience versus complexity and price. The choice depends on the failure domain you are trying to survive, not just on performance.",
+    "real_world": "This comes up with disks, managed instance groups, and load-balanced services. A team often discovers too late that a single-zone design is fine in dev but creates a full outage during a zone incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of data or workloads would you insist be regional from day one?"
+   },
+   {
+    "question": "When would you use a custom IAM role instead of a predefined role in GCP?",
+    "answer": "Use a predefined role when it already matches the job, because it is maintained by Google and easier to reason about. Use a custom role when predefined roles are too broad and you want to follow least privilege for a specific application or team. The trade-off is tighter security versus more maintenance, because custom roles need review when permissions change. In practice, teams often start with predefined roles and narrow them once they understand the access pattern.",
+    "real_world": "This matters when an app only needs read access to one bucket or one database instance, but the predefined role would grant access to much more. Overbroad roles are a common source of audit findings and accidental data exposure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug a permission denied error if the principal already has a seemingly correct role?"
+   },
+   {
+    "question": "What is the difference between Cloud NAT and a public IP on a VM, and when would you pick one over the other?",
+    "answer": "A public IP lets the VM be directly reachable from the internet, while Cloud NAT lets instances without external IPs make outbound connections without exposing them inbound. Use Cloud NAT when you want private instances to reach package repositories, APIs, or update servers without assigning public addresses. The trade-off is reduced exposure and simpler security posture versus a little more network setup and less direct inbound reachability. If a service needs inbound internet traffic, Cloud NAT alone is not enough.",
+    "real_world": "This is common for bastionless production VMs and private GKE nodes that still need to download updates. Teams often remove external IPs for security and then discover builds fail because outbound internet access was lost.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you troubleshoot a VM that can no longer reach the internet after you removed its external IP?"
+   },
+   {
+    "question": "How do you decide between using a Cloud SQL private IP connection and a public IP connection from an application in GCP?",
+    "answer": "Private IP is usually better when the app runs in GCP and you want database traffic to stay on private network paths. Public IP is simpler to set up and can be useful for external clients or transitional architectures, but it increases exposure and depends more on firewalling and authorized networks. The key trade-off is security and operational simplicity versus ease of connectivity. For most production services inside GCP, private IP is the safer default if your network design supports it.",
+    "real_world": "A team moving from a prototype to production often starts with public IP because it is fast, then switches to private IP once security review asks for tighter controls. The switch can surface DNS and connectivity issues that were hidden before.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What extra pieces do you need in place for private IP to work reliably across environments?"
+   },
+   {
+    "question": "What problem do VPC peering and Shared VPC solve, and how are they different?",
+    "answer": "VPC peering connects two separate VPC networks so resources can communicate privately, but each network stays owned and managed separately. Shared VPC lets multiple projects use one centrally managed VPC, which is useful when a platform team wants consistent networking and security controls across many application projects. The trade-off is autonomy versus central governance. Use peering for network-to-network connectivity, and Shared VPC when the main goal is shared infrastructure management across projects.",
+    "real_world": "This comes up in larger organizations that separate billing and ownership by project but still want common subnets, firewall policy, and routing. Without Shared VPC, teams often duplicate network setup and drift away from standards.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What limitations or operational risks would you watch for with VPC peering?"
+   },
+   {
+    "question": "How would you approach a Cloud Run service that is healthy locally but returns 500s in production only after deployment?",
+    "answer": "First compare configuration between local and production: environment variables, secret access, service account permissions, and outbound network dependencies. Then check logs, request traces, and startup behavior to see whether the error is happening during initialization or per request. A common cause is a missing permission or a dependency endpoint that is reachable locally but not from the deployed service. The important thing is to separate app bugs from deployment and infrastructure differences quickly.",
+    "real_world": "This happens often when an app reads a secret, calls a downstream API, or connects to a database only in production. The failure may appear as a generic 500 even though the root cause is an auth or networking issue.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you inspect first if the logs only show a generic internal error?"
+   },
+   {
+    "question": "What are the trade-offs between using Cloud Logging logs as a debugging tool and relying on metrics and alerts first?",
+    "answer": "Logs are best for understanding a specific failure in detail, while metrics and alerts are better for spotting patterns and impact across the system. If you start with logs for everything, you may miss systemic issues like rising latency or error rates until users complain. If you start with metrics only, you may know something is wrong but not why. Good operations use metrics to detect and logs to explain.",
+    "real_world": "During an incident, a dashboard may show elevated 5xx errors, but the logs reveal a single bad deployment or a downstream timeout. Teams that only search logs often take longer to identify the scope of the problem.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design alerts so they are useful without being noisy?"
+   },
+   {
+    "question": "When would you use Cloud Build with artifact promotion between environments instead of rebuilding separately for each environment?",
+    "answer": "Promoting the same artifact through environments is better when you want strong release consistency and to know that dev, staging, and prod are running the same build. Rebuilding for each environment is simpler at first, but it can hide differences and make it harder to reproduce bugs. The trade-off is traceability versus flexibility, especially when environment-specific configuration is injected at deploy time rather than build time. Most teams prefer one build, many deployments.",
+    "real_world": "This matters when a bug appears only in production and you need to know whether the binary changed or only the runtime config did. Reusing the same artifact makes rollbacks and audits much easier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should be environment-specific, and what should stay identical across environments?"
+   },
+   {
+    "question": "How do you think about using Cloud Scheduler with a serverless service versus building the same logic into a long-running worker?",
+    "answer": "Cloud Scheduler plus a serverless endpoint works well for periodic jobs that are simple, stateless, and okay with occasional retry behavior. A long-running worker is better when the job is continuous, stateful, or needs fine-grained control over concurrency and backpressure. The trade-off is lower operational overhead versus more control over execution and failure handling. For most cron-style tasks, the managed scheduler is simpler and less fragile.",
+    "real_world": "Teams use this for nightly cleanup jobs, report generation, or cache refreshes. Problems show up when a job grows beyond a few minutes or needs stronger delivery guarantees than a simple scheduled HTTP call provides.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if the scheduled job sometimes overlaps with itself?"
+   },
+   {
+    "question": "What is Cloud KMS used for, and what is the difference between encrypting data yourself in the application and using managed encryption features?",
+    "answer": "Cloud KMS manages encryption keys so you can control key rotation, access policy, and auditability without handling raw key material in application code. Managed encryption features protect data at rest automatically, while application-level encryption gives you more control over what the application can decrypt and when. The trade-off is simplicity versus tighter control and more responsibility for key usage and compatibility. In practice, many teams rely on managed encryption for storage and add KMS when they need customer-managed keys or stricter compliance.",
+    "real_world": "This matters for regulated workloads where auditors want clear control over key access and rotation. It also matters when different teams need separate cryptographic boundaries for the same storage system.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What operational mistakes have you seen with key rotation or key deletion?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does Google Cloud load balancing actually route traffic globally, and what failure modes do you design for behind the abstraction?",
+    "answer": "The global external HTTP(S) load balancer terminates traffic at Google's edge, then forwards over Google's backbone to a healthy backend based on URL maps, capacity and locality policies. That gives fast failover and anycast ingress, but it does not remove regional backend failure modes, cold starts, bad health checks or dependency outages. You still need backend timeouts, retries with idempotency, capacity headroom and a plan for stateful components that are not globally replicated. A common mistake is assuming a global IP means the application is globally resilient.",
+    "real_world": "Teams get surprised when one region stays reachable at the edge but serves errors because the app or database in that region is unhealthy and failover policy was never tested.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle session affinity or user state if the load balancer can send a user to a different region?"
+   },
+   {
+    "question": "If you needed near-zero-downtime deploys on GKE, what rollout strategy would you choose and what can still go wrong during the rollout?",
+    "answer": "I would start with a rolling update plus readiness probes, a PodDisruptionBudget and enough spare capacity so new pods become ready before old ones are drained. For higher-risk changes, I would use canary or blue-green with traffic splitting and automatic rollback on error-rate and latency signals. The main failures are mismatched readiness versus actual dependency readiness, long connection draining, schema changes that are not backward compatible, and autoscaler lag causing temporary under-capacity. On GKE, node-level resource pressure can also make a rollout look healthy at the deployment layer while requests still fail.",
+    "real_world": "Production incidents often happen when pods report ready before caches warm or database migrations complete, so the rollout succeeds but user traffic sees spikes in 500s.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a database migration safe across mixed old and new versions during the rollout?"
+   },
+   {
+    "question": "What happens inside Cloud NAT under high outbound connection load, and how do you diagnose port exhaustion versus an application bug?",
+    "answer": "Cloud NAT translates many private instances to fewer external IPs by allocating source ports, so the limiting factor is often available ephemeral ports per destination pattern rather than raw bandwidth. Under high fan-out or many short-lived connections, you can hit port exhaustion and see connection timeouts or resets even though the instances themselves look healthy. I would check NAT metrics, connection patterns, retry storms and whether the app is reusing connections properly. Fixes include connection pooling, more NAT IPs, spreading traffic, or reducing unnecessary outbound calls.",
+    "real_world": "This shows up in services that call third-party APIs at high QPS: CPU is fine, but outbound failures spike because every request opens a fresh connection through NAT.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does the traffic's destination distribution matter for NAT scaling?"
+   },
+   {
+    "question": "How would you design multi-region storage on GCP for a service that needs strong correctness but also low latency?",
+    "answer": "I would separate the data by consistency requirement. For critical transactional state, use a system with explicit replication and consistency semantics you understand, and accept the write-latency cost of cross-region coordination where correctness matters. For read-heavy or reconstructable data, use asynchronous replication or regional locality with failover. The trade-off is simple: stronger cross-region consistency usually means higher write latency and lower availability during partitions, while weaker consistency improves latency and resilience but shifts complexity to the application.",
+    "real_world": "Teams often over-replicate everything globally, then discover their p99 write latency jumped because every commit waits on distant replicas.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your answer differ for object storage, relational data and event streams?"
+   },
+   {
+    "question": "Suppose Pub/Sub is part of a critical pipeline. What delivery guarantees does it actually give you, and how do you build around duplicates, lag and poison messages?",
+    "answer": "Pub/Sub is designed around at-least-once delivery, so consumers must be idempotent and able to handle redelivery and out-of-order processing where ordering is not enforced. I would use dead-letter handling, bounded retries, explicit monitoring of subscription backlog and age, and flow control so one slow consumer does not cause runaway lag. Exactly-once behavior has to be achieved at the application boundary, usually with deduplication keys or transactional sinks. The dangerous assumption is treating acknowledgment as proof that downstream side effects happened exactly once.",
+    "real_world": "A common incident is a downstream database slowdown causing backlog growth; autoscaling adds more consumers, which increases contention and makes the lag worse unless flow control is tuned.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you alert on first for Pub/Sub consumer health?"
+   },
+   {
+    "question": "What are the real trade-offs between GKE Autopilot and standard GKE for a large production platform team?",
+    "answer": "Autopilot reduces node management and enforces safer defaults, which is valuable for many teams, but it gives less control over node shape, daemon-level customization and some low-level scheduling or performance tuning. Standard GKE takes more operational work but is better when you need custom node pools, specialized hardware, tight bin-packing, or agents that need host-level access. The trade-off is operational simplicity versus control and cost optimization. At scale, the right choice depends on whether your bottleneck is platform engineering capacity or workload-specific tuning.",
+    "real_world": "Teams moving observability agents, service meshes or GPU jobs often discover late that their assumptions about host access or scheduling flexibility differ between the modes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of a workload that looks container-friendly but is a poor fit for Autopilot?"
+   },
+   {
+    "question": "How do preemptible or Spot VMs change system design on GCP, and what workloads are a bad fit even if the cost looks attractive?",
+    "answer": "They are great for fault-tolerant batch, stateless workers and elastic capacity, but you have to design for abrupt loss of instances, partial progress and noisy rescheduling. I would use checkpointing, queue-based work distribution, anti-affinity with regular nodes for baseline capacity, and disruption-aware autoscaling. They are a bad fit for singleton stateful services, latency-critical systems with little headroom, or workloads with expensive warm-up where frequent interruption destroys efficiency. Cheap compute is only cheaper if the work survives interruption cleanly.",
+    "real_world": "A batch team can cut costs heavily with Spot VMs, but a stateful cache tier on them often turns into cascading misses and much higher total spend elsewhere.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you mix Spot and on-demand capacity in a GKE cluster safely?"
+   },
+   {
+    "question": "How would you troubleshoot a GCP production incident where p99 latency doubled but CPU, memory and error rate all look normal?",
+    "answer": "I would assume queueing, network, dependency or storage latency before compute saturation. The first checks are request concurrency, load balancer metrics, per-hop traces, database lock or slow query metrics, NAT or DNS symptoms, and whether autoscaling hit a hidden limit like max instances or connection pools. p99 can degrade long before averages or CPU show it because one constrained dependency creates long tails. I also look for recent deploys, config changes and cross-zone or cross-region shifts in traffic.",
+    "real_world": "This pattern often comes from a connection pool bottleneck or a single slow dependency shard: the service is 'healthy' on host metrics but users still feel the tail latency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals help you distinguish queueing inside the app from latency in an external dependency?"
+   },
+   {
+    "question": "Can you explain eventual consistency and stale reads in GCP systems, and how you prevent them from causing user-visible bugs?",
+    "answer": "Many distributed systems expose windows where a write is accepted but not yet reflected everywhere, or where independent replicas disagree briefly. The fix is not to avoid distribution; it is to define where you require read-after-write or monotonic behavior and choose the storage path accordingly. For the rest, design UX and workflows to tolerate lag with versioning, idempotent retries, conditional writes and explicit reconciliation. Bugs happen when teams assume every read path has the same freshness guarantees as the write path.",
+    "real_world": "You see this when a user updates a record and immediately reloads through a different path, then thinks their change was lost because that path reads from a lagging replica or cache.",
+    "code_lang": "sql",
+    "code": "UPDATE orders\nSET status = 'paid', version = version + 1\nWHERE id = 42 AND version = 7;",
+    "follow_up": "How would you decide which operations need strong read-after-write guarantees and which can tolerate staleness?"
+   },
+   {
+    "question": "How do quotas and control-plane limits on GCP affect production architecture, and why do strong teams treat them as a design concern rather than an admin task?",
+    "answer": "Quotas are part of the system's failure model: scaling events, retries, deploys and disaster recovery can all fail because the control plane or an API limit becomes the bottleneck. I plan capacity not just for runtime resources but for rate-limited operations like instance creation, API calls and provisioning dependencies, and I pre-raise quotas for peak and failover scenarios. Good designs degrade gracefully when they cannot create more resources instantly. If you only notice quotas during an incident, recovery gets slower exactly when you need it fastest.",
+    "real_world": "A regional failover can require a burst of resource creation; if quotas or API rate limits are too low, the standby region cannot scale out quickly enough and the outage extends.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What quota-related checks would you automate before a game day or failover test?"
+   },
+   {
+    "question": "How does Private Google Access actually let a VM without an external IP reach Google APIs, and what are the common failure modes?",
+    "answer": "Private Google Access works by letting instances send traffic to Google API endpoints over Google's network even when the VM has no external IP. It is a subnet-level capability, so the route, DNS resolution, and egress path all have to line up; a common mistake is assuming it bypasses firewall, DNS, or organization policy issues. It only solves access to supported Google services, not arbitrary internet egress. In practice, the main debugging points are subnet settings, DNS choices such as restricted or private API domains, and whether traffic is accidentally forced through an appliance or proxy that cannot reach those endpoints.",
+    "real_world": "A common production outage is removing external IPs for hardening, then package pulls, Secret Manager calls, or Artifact Registry access suddenly fail because the subnet or DNS was not updated. Teams also break it by inserting centralized egress inspection without validating Google API routes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use Private Service Connect for Google APIs instead of relying on Private Google Access alone?"
+   },
+   {
+    "question": "What is the difference between GKE Ingress and the Gateway API in practice, and why might a platform team migrate?",
+    "answer": "Ingress is the older, narrower model: mostly HTTP routing with controller-specific annotations, which tends to accumulate provider-specific behavior over time. Gateway API separates concerns more cleanly between infrastructure owners and app teams, supports richer traffic policy, and is easier to reason about as a platform contract. The trade-off is migration complexity and feature parity checks, because not every existing annotation or workflow maps cleanly. A senior team migrates when they want clearer ownership boundaries, more portable policy, and less annotation-driven drift.",
+    "real_world": "At scale, Ingress objects often become a pile of implicit behavior that only a few operators understand. Platform teams move to Gateway-style resources to standardize TLS, traffic policy, and shared load balancer ownership across many namespaces.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What migration risks would you look for if hundreds of services already depend on controller-specific Ingress annotations?"
+   },
+   {
+    "question": "If a GKE cluster suddenly cannot schedule pods even though node CPU and memory look available, what would you check first?",
+    "answer": "I would check the scheduler constraints before raw utilization: unschedulable taints, node selectors, affinity rules, topology spread, pod disruption budgets during rollout, and max-pods or IP allocation limits. On GKE, IP exhaustion is a frequent hidden limiter because pods need allocatable addresses from the node or subnet design, so the cluster can look half empty and still fail scheduling. I would also verify resource requests versus actual usage, because oversized requests fragment capacity. The key is distinguishing compute exhaustion from placement or networking exhaustion.",
+    "real_world": "This shows up in incidents where autoscaling keeps adding nodes but pending pods remain pending because no node matches labels, or because secondary IP ranges are exhausted. Teams often misread it as a CPU problem and scale the wrong thing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does VPC-native alias IP design affect maximum pod density and cluster scaling?"
+   },
+   {
+    "question": "How do you decide between regional and zonal GKE control planes, and what does that choice not protect you from?",
+    "answer": "A regional control plane improves control-plane availability by distributing replicas across zones, which matters for upgrades, zonal failures, and routine management operations. A zonal cluster is cheaper and simpler, but a zone issue can take out the API server path or delay operations even if workloads elsewhere still run. That said, a regional control plane does not make your application itself multi-zone or multi-region; node pools, stateful dependencies, and traffic steering still need their own resilience design. The mistake is assuming control-plane HA equals workload HA.",
+    "real_world": "Teams have been surprised when a regional cluster stayed manageable during a zonal event, but the service still failed because all stateful pods or a single-zone database backend were pinned to one zone. The control plane survived; the architecture did not.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What extra design steps would you take for stateful workloads so a regional cluster meaningfully improves availability?"
+   },
+   {
+    "question": "What actually happens during a rolling update of a managed instance group, and what are the edge cases that cause user-visible errors?",
+    "answer": "A rolling update replaces instances according to the update policy, health checks, and capacity settings, so the real behavior depends on readiness timing and whether old and new versions can coexist. User-visible errors usually come from startup taking longer than expected, health checks passing before the app is truly ready, connection draining being too short, or instance templates changing something non-backward-compatible. If the group is autoscaled, scaling actions can interact with the rollout in surprising ways. The safe pattern is to treat health checks, warmup, and drain time as part of the release, not just infrastructure defaults.",
+    "real_world": "A classic outage is a new version that binds its port quickly but takes another minute to warm caches or fetch secrets; the load balancer starts sending traffic immediately and 502s spike. Another is a schema or protocol mismatch between old and new instances during partial rollout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure health checks and startup sequencing so they reflect true readiness rather than process liveness?"
+   },
+   {
+    "question": "When using Terraform with GCP at scale, what are the failure modes around state, parallelism, and eventual consistency?",
+    "answer": "The main risks are state contention, partial applies, and APIs that report success before dependent resources are actually usable. GCP has many asynchronous control-plane operations, so creating a resource and immediately attaching something else can fail intermittently unless the provider handles polling correctly or the configuration models dependencies cleanly. High parallelism can also trigger quota issues or surface hidden ordering bugs. Strong teams treat Terraform runs as distributed systems work: lock state, make plans deterministic, separate blast radiuses, and design for retries without leaving drift.",
+    "real_world": "Large organizations often hit flaky applies when dozens of projects, networks, and IAM changes run together. A failed mid-run apply can leave resources created but not fully wired, and the next run may need import, cleanup, or careful reconciliation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you organize Terraform state boundaries for Shared VPC, project factory, and per-service application stacks?"
+   },
+   {
+    "question": "What are the practical trade-offs between using Google-managed SSL certificates and bringing your own certificates on GCP load balancers?",
+    "answer": "Google-managed certificates reduce operational toil because issuance and renewal are handled for you, which is ideal for standard public domains and common web use cases. Bringing your own certificate gives you control over issuance policy, trust chains, wildcard coverage, private PKI integration, and compliance requirements, but you now own rotation and expiration risk. The operational trade-off is convenience versus control. I would choose managed certs by default unless there is a clear requirement around custom PKI, nonstandard validation, or centralized enterprise certificate governance.",
+    "real_world": "Production incidents here are often self-inflicted: an imported certificate expires, or a manual rotation is missed during an ownership handoff. Managed certificates eliminate that class of outage for many internet-facing services.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you check if a newly attached managed certificate stays in provisioning instead of becoming active?"
+   },
+   {
+    "question": "How would you explain hierarchical firewall policies versus VPC firewall rules, and where do teams get burned?",
+    "answer": "Hierarchical firewall policies apply higher in the resource hierarchy and are useful for organization-wide guardrails, while VPC firewall rules are more local to a network's intended behavior. The power is central governance, but the danger is hidden precedence and ownership confusion: an app team changes a VPC rule and nothing happens because an org- or folder-level policy is overriding it. Effective use requires clear layering, logging, and documentation of who owns which tier of control. Otherwise troubleshooting becomes a permissions and policy archaeology exercise.",
+    "real_world": "This matters in enterprises where security teams block broad egress or sensitive ports globally. Application teams often spend hours debugging a service-level connectivity issue that is really caused by a higher-level deny they cannot see in their normal workflow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design policy ownership so central security can enforce guardrails without turning every network change into a ticket queue?"
+   },
+   {
+    "question": "What is Binary Authorization solving on GKE, and what are its operational trade-offs in a real delivery pipeline?",
+    "answer": "Binary Authorization enforces that only images meeting defined attestation or policy requirements can be deployed, which turns software supply chain checks into an admission control gate instead of a best-effort CI convention. It improves provenance and reduces the chance of unreviewed or tampered images reaching production. The trade-off is pipeline complexity and failure handling: if attestors, signing steps, or policy rollout are mismanaged, deploys can block at the worst time. You need an explicit break-glass path with auditing, or security controls become an availability risk.",
+    "real_world": "This is valuable after organizations realize a compromised build step or mis-tagged image can go straight to prod if Kubernetes trusts any image reference. It also causes incidents when emergency hotfixes fail because the signing path is down or the policy was tightened without testing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a break-glass process that preserves auditability but still works during an incident?"
+   },
+   {
+    "question": "If a GCP service relies heavily on metadata server tokens, what can go wrong under load or during dependency issues, and how do you make it robust?",
+    "answer": "The metadata server is usually fast and local, but code that fetches tokens on every request or from too many concurrent workers can create avoidable latency and failure amplification. The right pattern is to cache and refresh credentials before expiry, use client libraries that already do this well, and avoid synchronized refresh storms across threads or processes. You also need to handle startup and transient metadata failures gracefully rather than treating them as impossible. This is really a concurrency and dependency-management problem disguised as authentication.",
+    "real_world": "Teams sometimes introduce a token fetch into a hot path and then see tail latency jump during bursts, even though the app CPU looks fine. In worse cases, a refresh bug causes many workers to stampede the metadata service at once and self-inflict an outage.",
+    "code_lang": "python",
+    "code": "from google.auth.transport.requests import Request\nfrom google.auth import default\n\ncreds, _ = default(scopes=[\"https://www.googleapis.com/auth/cloud-platform\"])\nif not creds.valid:\n    creds.refresh(Request())\n\ndef auth_header():\n    if creds.expired:\n        creds.refresh(Request())\n    return {\"Authorization\": f\"Bearer {creds.token}\"}\n",
+    "follow_up": "What would you change in a multi-process service to avoid all workers refreshing credentials at the same moment?"
+   }
+  ]
+ }
+}

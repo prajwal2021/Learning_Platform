@@ -1,0 +1,362 @@
+{
+  "slug": "notification-sent-twice",
+  "title": "Every user got the email twice",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "queues",
+    "idempotency",
+    "background-jobs",
+    "email",
+    "deploys"
+  ],
+  "scenario": "A background worker sends order confirmation emails from a queue. The handler calls the email provider, then marks the job done. During a deploy, workers received SIGTERM and were killed 10 seconds later. Several workers had already sent emails but had not marked their jobs done, so after restart the queue redelivered those in-flight jobs and customers received two order confirmation emails.",
+  "goal": "Prevent duplicate order confirmation emails without losing confirmations when workers crash or providers have transient failures.",
+  "concepts": [
+    {
+      "key": "background-worker",
+      "name": "Background worker",
+      "summary": "A process that runs jobs outside the user request path. It usually reads tasks from a queue and performs slow or retryable work.",
+      "used_here": "It sends order confirmation emails asynchronously after orders are placed."
+    },
+    {
+      "key": "queue-acknowledgement",
+      "name": "Queue acknowledgement",
+      "summary": "An acknowledgement tells a queue that a job finished successfully. If the acknowledgement is not recorded, the queue may deliver the job again.",
+      "used_here": "The worker acknowledged the job only after sending the email, so a crash before acknowledgement made the job eligible to run again."
+    },
+    {
+      "key": "visibility-timeout",
+      "name": "Visibility timeout",
+      "summary": "A visibility timeout hides a delivered job from other workers for a limited time. If the job is not acknowledged before the timeout, it becomes available again.",
+      "used_here": "After the killed worker failed to acknowledge the job, the queue made the same email job visible again."
+    },
+    {
+      "key": "at-least-once-delivery",
+      "name": "At-least-once delivery",
+      "summary": "At-least-once delivery means a job should not be silently lost, but it may be delivered more than once. Consumers must be safe to run more than once.",
+      "used_here": "The queue retried unacknowledged email jobs after the deploy crash."
+    },
+    {
+      "key": "retry",
+      "name": "Retry",
+      "summary": "A retry repeats work after a failure or unknown outcome. Retries improve completion but can repeat side effects if the handler is not designed for that.",
+      "used_here": "Retries are needed for transient email failures, but repeated sends must not create repeated customer emails."
+    },
+    {
+      "key": "idempotent-handler",
+      "name": "Idempotent handler",
+      "summary": "An idempotent handler can process the same input multiple times with the same final effect. It is a common requirement for queue consumers.",
+      "used_here": "The email job must be safe if the same order confirmation task is delivered again."
+    },
+    {
+      "key": "durable-state",
+      "name": "Durable state",
+      "summary": "Durable state is data stored somewhere that survives process crashes and restarts. A database row is durable; a local variable is not.",
+      "used_here": "The worker needs persistent notification state so retries can continue from a known point."
+    },
+    {
+      "key": "idempotency-key",
+      "name": "Idempotency key",
+      "summary": "An idempotency key is a client-provided identifier used by some APIs when handling repeated requests. It lets retries refer to the same intended operation instead of a new one.",
+      "used_here": "The email provider call can use a stable key so a repeated send attempt does not create another accepted email."
+    },
+    {
+      "key": "database-transaction",
+      "name": "Database transaction",
+      "summary": "A database transaction groups multiple reads and writes so they commit together or roll back together. It protects state changes from partial updates.",
+      "used_here": "The worker uses transactions when creating or updating notification records."
+    },
+    {
+      "key": "database-constraint",
+      "name": "Database constraint",
+      "summary": "A database constraint is a rule the database enforces on stored data. It is stronger than an application-only check because it still applies under races.",
+      "used_here": "It keeps notification state consistent when multiple workers see the same logical email task."
+    },
+    {
+      "key": "concurrency",
+      "name": "Concurrency",
+      "summary": "Concurrency means multiple workers or requests can act on related data at the same time. Code that is correct with one worker can fail when two workers race.",
+      "used_here": "Duplicate deliveries or overlapping workers can both try to process the same order confirmation."
+    },
+    {
+      "key": "sigterm",
+      "name": "SIGTERM",
+      "summary": "SIGTERM is a signal asking a process to terminate. Well-behaved services use it to start shutdown cleanup before the platform forcefully kills them.",
+      "used_here": "The deploy sent SIGTERM before killing workers 10 seconds later."
+    },
+    {
+      "key": "graceful-shutdown",
+      "name": "Graceful shutdown",
+      "summary": "Graceful shutdown stops accepting new work and gives in-progress work time to finish or be returned safely. It reduces work interrupted during deploys.",
+      "used_here": "Workers should stop taking new email jobs on SIGTERM and handle in-flight jobs deliberately."
+    },
+    {
+      "key": "monitoring",
+      "name": "Monitoring",
+      "summary": "Monitoring tracks production signals such as counts, errors, latency, and unusual events. It helps confirm a fix works after deployment.",
+      "used_here": "The team watches send attempts, provider accepts, retries, and duplicate suppression after the change."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Find the first hard signal",
+      "question": "Right after the incident, you need to determine whether the second email came from a new order event or from the same queued job running again. Where should you look first?",
+      "concept_keys": [
+        "background-worker",
+        "queue-acknowledgement",
+        "visibility-timeout"
+      ],
+      "options": [
+        {
+          "text": "Start by checking whether customers clicked the email twice and triggered a second confirmation flow.",
+          "correct": false,
+          "hint": "Customer actions happen after the email is received. The incident is about two sends, so first inspect the system that initiated the sends.",
+          "id": "a"
+        },
+        {
+          "text": "Compare web request logs for duplicate checkout submissions from the affected customers during the deploy.",
+          "correct": false,
+          "hint": "Duplicate orders would create separate order IDs or order events. The key question is whether one queued task was delivered more than once.",
+          "id": "b"
+        },
+        {
+          "text": "Compare queue delivery records, worker logs, and job acknowledgements for the same job IDs around the deploy window.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Start by checking whether the email template renderer produced the same HTML for all affected orders.",
+          "correct": false,
+          "hint": "Template output can explain bad content, but it will not show whether the same side effect was triggered twice. Look for evidence tied to delivery and completion of the job.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Queue delivery records and acknowledgements show whether the same job ID was delivered before shutdown and again after restart. That directly tests the suspected crash window: email sent, job not acknowledged, then redelivery after the visibility timeout. Checkout or template logs may be useful later, but they do not prove whether the queue repeated the same work."
+    },
+    {
+      "title": "Interpret the redelivery",
+      "question": "The logs show job `confirm-email-8472` was delivered at 14:01:55, the provider accepted the email at 14:01:57, the worker was killed at 14:02:00, and the job was delivered again at 14:12:01. What does that tell you?",
+      "concept_keys": [
+        "at-least-once-delivery",
+        "queue-acknowledgement",
+        "visibility-timeout",
+        "idempotent-handler"
+      ],
+      "options": [
+        {
+          "text": "The deploy created a new confirmation job because the second delivery happened after the workers restarted.",
+          "correct": false,
+          "hint": "A new job would normally have a different job identity or enqueue event. Here the same job ID appears again after it was not acknowledged.",
+          "id": "a"
+        },
+        {
+          "text": "The email provider duplicated the message because it accepted one request and delivered two emails from that request.",
+          "correct": false,
+          "hint": "The timeline shows the application made the same job run again after restart. Do not blame the downstream provider before accounting for the second handler execution.",
+          "id": "b"
+        },
+        {
+          "text": "The queue is broken because a delivered job should never appear again after any worker starts it.",
+          "correct": false,
+          "hint": "Most production queues do not treat delivery as completion. They require an acknowledgement before permanently removing or completing the job.",
+          "id": "c"
+        },
+        {
+          "text": "The queue is behaving like an at-least-once system, so the email handler must tolerate the same job running again.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "This is normal at-least-once queue behavior: a job that is delivered but not acknowledged can be redelivered after the visibility timeout. The queue is protecting against lost jobs, not guaranteeing single execution. The tempting provider explanation does not fit the same job ID being run twice."
+    },
+    {
+      "title": "Avoid the dangerous shortcut",
+      "question": "A teammate suggests disabling retries for confirmation email jobs so duplicates cannot happen again. What is the best response?",
+      "concept_keys": [
+        "retry",
+        "at-least-once-delivery",
+        "idempotent-handler"
+      ],
+      "options": [
+        {
+          "text": "Disable retries only for deploy windows, because crashes are the only time duplicate sends can happen.",
+          "correct": false,
+          "hint": "Crashes are not limited to deploys. Network timeouts, worker restarts, and provider errors can all leave the outcome uncertain.",
+          "id": "a"
+        },
+        {
+          "text": "Acknowledge each job before sending the email, because then the queue cannot redeliver it after a crash.",
+          "correct": false,
+          "hint": "Acknowledging before the side effect trades duplicates for lost confirmations. If the worker dies after the acknowledgement and before the send, the queue will not retry.",
+          "id": "b"
+        },
+        {
+          "text": "Shorten the visibility timeout to one minute, because faster redelivery reduces the duplicate window.",
+          "correct": false,
+          "hint": "A shorter timeout can make overlap and duplicate execution more likely if a job is still running. It does not make the send operation safe to repeat.",
+          "id": "c"
+        },
+        {
+          "text": "Keep retries, because removing them can lose emails; make the handler safe when the same job is attempted again.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Retries are necessary because email sends can fail or have unknown outcomes, and order confirmations should not be silently lost. Acknowledging before sending is especially tempting, but it creates the opposite failure: a crash after acknowledgement means no retry and no email. The durable fix is to keep retries and make repeated execution safe."
+    },
+    {
+      "title": "Close the crash window",
+      "question": "You now need a fix for this exact failure: the provider accepts the email, then the worker dies before local state says the email was sent. Which design handles that without duplicate emails or lost confirmations?",
+      "concept_keys": [
+        "durable-state",
+        "idempotency-key",
+        "retry",
+        "idempotent-handler"
+      ],
+      "options": [
+        {
+          "text": "Create or load durable notification state, call the provider with the same deterministic request key for that notification, then mark sent after acceptance.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Before calling the provider, write `sent` in the database; on retry, skip because the local record already exists.",
+          "correct": false,
+          "hint": "Marking success before the external call can lose emails. If the worker crashes after the database write but before the provider accepts the request, later attempts will incorrectly skip.",
+          "id": "b"
+        },
+        {
+          "text": "Generate a fresh request identifier for each provider call and store the latest identifier after the provider accepts it.",
+          "correct": false,
+          "hint": "A new identifier on each attempt makes each retry look like a new operation to the provider. The retry needs to be tied to the same intended send.",
+          "id": "c"
+        },
+        {
+          "text": "After every provider success, write a durable `sent` record; on retry, skip the send if that `sent` record exists.",
+          "correct": false,
+          "hint": "This works only if the worker lives long enough to write the record. The incident is specifically about dying after the external side effect but before the local write.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The local database alone cannot distinguish “provider accepted but the worker crashed before recording it” from “provider was never called.” A stable provider request key closes that gap: the retry repeats the same intended provider operation, then records the result locally after acceptance. Writing `sent` only after success is still useful, but by itself it does not cover the crash window shown in the incident."
+    },
+    {
+      "title": "Handle two workers racing",
+      "question": "The crash fix uses durable notification state. Now assume the same logical confirmation can be observed by two workers at nearly the same time because of duplicate delivery or a long-running attempt. How should the durable state be protected?",
+      "concept_keys": [
+        "database-transaction",
+        "database-constraint",
+        "concurrency",
+        "durable-state"
+      ],
+      "options": [
+        {
+          "text": "Use a process-local mutex around the send path so only one thread in the worker can create notification state.",
+          "correct": false,
+          "hint": "A local mutex does not coordinate across different worker processes, hosts, or restarted containers. The race is not limited to threads in one process.",
+          "id": "a"
+        },
+        {
+          "text": "Add a short random sleep before creating notification state so concurrent workers are unlikely to insert together.",
+          "correct": false,
+          "hint": "Random delay lowers the chance of a race but does not remove it. Production correctness cannot depend on timing luck.",
+          "id": "b"
+        },
+        {
+          "text": "Use a transaction with a database-enforced uniqueness rule for the notification identity; workers that lose the race load the existing row.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Check for an existing notification row, and if none is found, insert one in a later statement without a database rule.",
+          "correct": false,
+          "hint": "A check-then-insert sequence can race when two workers both check before either inserts. The protection must live where both workers contend.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The database must enforce the single notification identity because multiple workers can race from different processes or machines. A transaction plus a database constraint gives one winner and makes the others use the same durable state and provider request key. A process-local lock is tempting, but it disappears on restart and does not coordinate with other workers."
+    },
+    {
+      "title": "Make deploys less disruptive",
+      "question": "Even with the duplicate-safe send path, you want deploys to interrupt fewer jobs. What should the worker do when it receives SIGTERM?",
+      "concept_keys": [
+        "sigterm",
+        "graceful-shutdown",
+        "queue-acknowledgement",
+        "visibility-timeout"
+      ],
+      "options": [
+        {
+          "text": "Stop taking new jobs, let in-flight jobs finish and acknowledge if they complete, and otherwise let unfinished jobs be retried safely.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Keep pulling new jobs during the grace period so the worker remains fully utilized until it is killed.",
+          "correct": false,
+          "hint": "During shutdown, starting more work increases the number of jobs that can be interrupted. The goal is to drain, not to add new in-flight work.",
+          "id": "b"
+        },
+        {
+          "text": "Ignore SIGTERM and rely on the platform to send SIGKILL after the grace period expires.",
+          "correct": false,
+          "hint": "That recreates the original failure pattern. The process should use the grace period to reduce interrupted work.",
+          "id": "c"
+        },
+        {
+          "text": "Immediately acknowledge all in-flight jobs on SIGTERM, then exit quickly so the deploy can continue.",
+          "correct": false,
+          "hint": "Acknowledgement says the work is complete. If the email was not actually accepted, this can lose confirmations.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Graceful shutdown reduces the number of jobs killed in the middle of a side effect: stop fetching, finish what can complete, acknowledge only completed work, and allow unfinished work to retry. It does not replace idempotency, because a worker can still crash outside deploys. Immediately acknowledging in-flight jobs is dangerous because it can convert an interrupted send into a lost email."
+    },
+    {
+      "title": "Prove the fix works",
+      "question": "What confirmation gives the strongest evidence that the new design handles the original incident safely?",
+      "concept_keys": [
+        "monitoring",
+        "idempotency-key",
+        "retry",
+        "durable-state"
+      ],
+      "options": [
+        {
+          "text": "Wait for one visibility timeout after deploy and confirm that no job IDs remain invisible in the queue.",
+          "correct": false,
+          "hint": "Visibility state shows queue progress, not whether duplicate external sends were suppressed. The original issue involved a job becoming visible again and running safely or unsafely.",
+          "id": "a"
+        },
+        {
+          "text": "Run a unit test that the handler returns success when the provider mock returns success once.",
+          "correct": false,
+          "hint": "That tests the happy path, not the uncertain outcome that caused the incident. The important case is interruption between the external side effect and local state update.",
+          "id": "b"
+        },
+        {
+          "text": "Run a crash test that kills the worker after provider acceptance but before the local sent update; verify the retry uses the same provider key, only one email is accepted, and local state ends as sent.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Check that queue depth returns to zero after the next deploy and that workers report no unhandled exceptions.",
+          "correct": false,
+          "hint": "Empty queues and clean logs do not prove customers received only one email. You need evidence about repeated attempts and the provider-side effect.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The strongest test recreates the exact crash window: provider accepted the request, but the worker died before recording `sent`. The expected result is one provider-side accepted email for the stable key, followed by a retry that completes the durable local state. Queue depth and exception counts are useful monitoring, but they do not prove the side effect was not duplicated."
+    }
+  ],
+  "takeaway": "Queues that acknowledge after work usually provide at-least-once execution, not exactly-once side effects. For external effects like email, keep retries but make the handler idempotent with durable notification state and a stable provider idempotency key. Graceful shutdown reduces interrupted jobs during deploys, but it is only a mitigation, not the correctness guarantee.",
+  "review_issues": []
+}

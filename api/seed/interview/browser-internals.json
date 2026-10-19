@@ -1,0 +1,477 @@
+{
+ "slug": "browser-internals",
+ "name": "Browser and DOM internals",
+ "category": "Frontend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the DOM, and how is it different from the HTML you write in a file?",
+    "answer": "The DOM is the browser’s in-memory tree representation of the page after it parses the HTML. HTML is the source text you author; the DOM is the live object model the browser creates from it and updates as scripts run. This matters because JavaScript usually interacts with the DOM, not the raw HTML file.",
+    "real_world": "If you change an element with JavaScript and inspect the page, you are seeing the DOM update immediately. Bugs often come from assuming the DOM still matches the original HTML string.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does the browser build the DOM from HTML?"
+   },
+   {
+    "question": "What is the difference between `document.querySelector` and `document.getElementById`?",
+    "answer": "`getElementById` finds a single element by its `id`, while `querySelector` uses a CSS selector and returns the first matching element. `querySelector` is more flexible, but `getElementById` is simpler and often clearer when you already have an id. Both can return `null` if nothing matches.",
+    "real_world": "Teams often use `querySelector` for class-based selection and `getElementById` for stable root nodes like a form or modal container.",
+    "code_lang": "javascript",
+    "code": "const title = document.getElementById('title');\nconst firstButton = document.querySelector('.toolbar button');",
+    "follow_up": "What is returned if no element matches, and how should you handle that?"
+   },
+   {
+    "question": "What happens when a browser encounters a `<script>` tag in the middle of the HTML?",
+    "answer": "By default, parsing can pause while the script is fetched and executed, because the script may read or modify the DOM. That can delay rendering and make the page feel slower. Using `defer` or placing scripts near the end of the body helps avoid blocking the initial parse.",
+    "real_world": "A common performance issue is putting large scripts in the head and slowing first paint on slow networks. Another common bug is code running before the elements it needs exist.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use `defer` versus `async`?"
+   },
+   {
+    "question": "What does `addEventListener` do, and why is it preferred over setting `onclick`?",
+    "answer": "`addEventListener` registers a handler for an event without overwriting other handlers on the same element. It also supports multiple event types, options like capture and once, and keeps behavior separate from markup. `onclick` is simpler, but it is limited and easier to accidentally replace.",
+    "real_world": "In a larger app, several features may need to listen to the same click. Using event listeners avoids one feature breaking another by overwriting the handler.",
+    "code_lang": "javascript",
+    "code": "button.addEventListener('click', () => {\n  console.log('clicked');\n});",
+    "follow_up": "What is event bubbling, and how does it affect click handlers?"
+   },
+   {
+    "question": "What is event bubbling in the DOM?",
+    "answer": "Event bubbling means an event starts at the target element and then propagates up through its ancestors. This lets a parent element handle events from many children, which is useful for things like lists or menus. It also means a child click can trigger parent handlers unless you stop propagation or structure handlers carefully.",
+    "real_world": "Event delegation uses bubbling to handle clicks on many rows with one listener on the table body. A common bug is a modal closing when a button inside it is clicked because the click bubbles to the backdrop handler.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is event delegation, and why can it be more efficient?"
+   },
+   {
+    "question": "What is the difference between `textContent`, `innerText`, and `innerHTML`?",
+    "answer": "`textContent` gets or sets the raw text of the node and its descendants. `innerText` is more layout-aware and reflects what is visibly rendered, so it can be slower and depends on styling. `innerHTML` treats the string as HTML markup, which is powerful but unsafe if the content is untrusted.",
+    "real_world": "Developers often use `innerHTML` to render user input and accidentally create an XSS vulnerability. For plain text updates, `textContent` is usually the safest choice.",
+    "code_lang": "javascript",
+    "code": "el.textContent = 'Hello';\nel.innerHTML = '<strong>Hello</strong>';",
+    "follow_up": "Why can `innerHTML` be dangerous with user-provided data?"
+   },
+   {
+    "question": "What does `document.createElement` do, and why would you use it instead of building HTML strings?",
+    "answer": "`createElement` makes a new DOM node in memory, which you can configure and insert into the page. It is usually safer than string-building because you avoid accidental HTML injection and can set properties directly. It can also make code easier to reason about when you are constructing complex UI pieces.",
+    "real_world": "When rendering comments or search results from user data, creating nodes and assigning `textContent` helps prevent script injection. Teams also use it for dynamic components that are updated often.",
+    "code_lang": "javascript",
+    "code": "const li = document.createElement('li');\nli.textContent = 'Item';\ndocument.body.appendChild(li);",
+    "follow_up": "What is the difference between `appendChild` and `append`?"
+   },
+   {
+    "question": "What is the difference between a CSS class and an HTML id?",
+    "answer": "A class is meant to be reused across many elements, while an id should be unique on the page. Classes are commonly used for styling and selecting groups of elements; ids are often used for a single specific element. In JavaScript, ids are convenient for one-off targets, but classes are better when the same behavior applies to many elements.",
+    "real_world": "A junior mistake is using the same id on multiple elements, which can make selectors behave unpredictably. That can break labels, anchors, and DOM queries.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does this affect `querySelector`, `getElementById`, and CSS specificity?"
+   },
+   {
+    "question": "What is the `DOMContentLoaded` event, and when would you use it?",
+    "answer": "`DOMContentLoaded` fires when the HTML has been parsed and the DOM is ready, without waiting for images and other subresources. It is useful when your script needs to touch DOM elements as soon as possible. If your script is loaded with `defer`, you often do not need it, because deferred scripts run after parsing.",
+    "real_world": "This is commonly used on pages where scripts live in the head but need to bind UI handlers after the DOM exists. It prevents `null` element errors from running too early.",
+    "code_lang": "javascript",
+    "code": "document.addEventListener('DOMContentLoaded', () => {\n  const form = document.querySelector('form');\n  form.addEventListener('submit', onSubmit);\n});",
+    "follow_up": "How is this different from waiting for the `load` event?"
+   },
+   {
+    "question": "What is a live collection versus a static collection in the DOM?",
+    "answer": "A live collection updates automatically when the DOM changes, while a static collection keeps the elements it found at the time of selection. This matters because adding or removing elements can change the contents of a live collection unexpectedly. In many cases, a static snapshot is easier and safer to work with.",
+    "real_world": "A bug can happen when code loops over a live list and modifies the DOM at the same time, causing elements to be skipped or processed twice. That can be hard to reproduce because it depends on the order of changes.",
+    "code_lang": "javascript",
+    "code": "const items = document.querySelectorAll('li'); // static\nconst live = document.getElementsByTagName('li'); // live",
+    "follow_up": "Why can iterating over a live collection be risky?"
+   },
+   {
+    "question": "What is the difference between `window` and `document` in browser JavaScript?",
+    "answer": "`window` is the global browser object: it represents the tab or frame and exposes browser APIs like timers, location, and history. `document` is the DOM document loaded in that window, so it is where you read and change the page structure. In practice, `document` is a property of `window`, but they serve different roles. You use `window` for browser-level behavior and `document` for page content.",
+    "real_world": "This matters when a bug is about navigation or timers versus a bug about missing elements. For example, resizing the browser uses `window`, while updating a button label uses `document`.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are some common properties you access on `window` versus `document`?"
+   },
+   {
+    "question": "What does `document.readyState` tell you, and when would you check it?",
+    "answer": "`document.readyState` tells you how far the page has loaded, usually one of `loading`, `interactive`, or `complete`. It is useful when code may run before the DOM is ready and you need to decide whether to run immediately or wait for an event. It helps avoid attaching logic too late or too early. In most app code, you either run after the DOM is ready or gate on this state.",
+    "real_world": "Teams use this in scripts that may be loaded in different places, especially on pages with third-party embeds or legacy code. It prevents timing bugs where initialization runs before required elements exist.",
+    "code_lang": "javascript",
+    "code": "if (document.readyState === 'loading') {\n  document.addEventListener('DOMContentLoaded', init);\n} else {\n  init();\n}\n\nfunction init() {\n  console.log('ready');\n}",
+    "follow_up": "How is this different from just listening for `DOMContentLoaded`?"
+   },
+   {
+    "question": "What is the difference between `getAttribute` and a DOM property like `element.value` or `element.checked`?",
+    "answer": "Attributes are what you write in HTML; properties are the live JavaScript values on the element object. For many elements they look similar, but properties can change while the attribute stays the same. This matters for form controls, where `value` and `checked` reflect the current state, not just the original markup. If you want the current UI state, use the property; if you want the HTML attribute, use `getAttribute`.",
+    "real_world": "A common bug is reading a checkbox’s `checked` attribute and getting the wrong answer after the user clicks it. Another is setting `value` and expecting the HTML attribute in the source to change.",
+    "code_lang": "javascript",
+    "code": "const input = document.querySelector('input');\nconsole.log(input.getAttribute('value'));\nconsole.log(input.value);\ninput.value = 'new text';",
+    "follow_up": "When would you prefer `setAttribute` over assigning a property?"
+   },
+   {
+    "question": "What is event delegation, and why is it useful?",
+    "answer": "Event delegation means attaching one listener to a parent element and using event bubbling to handle events from its children. It is useful when you have many similar elements or elements added later, because you do not need to register a listener on each one. It reduces memory use and makes dynamic UIs easier to maintain. The trade-off is that you need to inspect the event target carefully.",
+    "real_world": "This is common in lists, tables, menus, and todo apps where items are created and removed frequently. It avoids bugs where newly added items do not respond because they were never given a listener.",
+    "code_lang": "javascript",
+    "code": "document.querySelector('#list').addEventListener('click', (e) => {\n  if (e.target.matches('button.remove')) {\n    e.target.closest('li').remove();\n  }\n});",
+    "follow_up": "How do you handle clicks on nested elements inside the button?"
+   },
+   {
+    "question": "What is a `NodeList`, and how is it different from an `Array`?",
+    "answer": "A `NodeList` is a collection of DOM nodes returned by some DOM methods. It is array-like, but it is not a real Array, so array methods may not work unless you convert it or it already has the method you need. This matters because beginners often expect to call every Array method directly. When needed, you can convert it with `Array.from` or the spread operator.",
+    "real_world": "This shows up when iterating over selected elements or manipulating groups of nodes. A common mistake is calling `map` on a `NodeList` and getting an error in older environments.",
+    "code_lang": "javascript",
+    "code": "const nodes = document.querySelectorAll('li');\nArray.from(nodes).forEach(li => li.classList.add('active'));\nconsole.log(nodes.length);",
+    "follow_up": "How does a `NodeList` differ from an HTMLCollection?"
+   },
+   {
+    "question": "What does `classList` do, and why is it better than changing `className` directly?",
+    "answer": "`classList` provides methods for adding, removing, toggling, and checking CSS classes. It is safer than editing `className` as a string because you do not have to manually manage spaces or risk overwriting unrelated classes. It also makes the intent clearer. Use `classList` when you are changing classes one at a time or based on conditions.",
+    "real_world": "This is common for dropdowns, modal dialogs, validation states, and active navigation links. String-based class changes often break when another class gets added later.",
+    "code_lang": "javascript",
+    "code": "button.classList.add('active');\nbutton.classList.remove('disabled');\nbutton.classList.toggle('open');\nif (button.classList.contains('open')) {\n  console.log('open');\n}",
+    "follow_up": "When might you still use `className`?"
+   },
+   {
+    "question": "What does `element.remove()` do, and what should you know about removing DOM nodes?",
+    "answer": "`element.remove()` detaches that element from its parent in the DOM. Once removed, it is no longer visible or part of the document, but any JavaScript references to the element can still exist. That means removal does not automatically clear event listeners if your code still holds references elsewhere. It is a simple way to delete UI elements without manually finding the parent and child index.",
+    "real_world": "This is used for dismissible alerts, removing list items, and cleaning up temporary UI. A leak can happen if app code keeps references to removed nodes in arrays or caches.",
+    "code_lang": "javascript",
+    "code": "const modal = document.querySelector('.modal');\nmodal.remove();\n// modal is still a JS reference, but it is no longer in the DOM",
+    "follow_up": "How would you remove an element if you only have a reference to the parent?"
+   },
+   {
+    "question": "What is the browser event loop at a high level, and why does it matter for DOM code?",
+    "answer": "The event loop is how the browser schedules JavaScript, events, and rendering work. JavaScript runs on one main thread, so long-running code can delay user input and screen updates. This matters because DOM updates and event handlers share that same thread, so blocking code makes the page feel frozen. Keeping handlers short and splitting heavy work helps the UI stay responsive.",
+    "real_world": "A page can feel broken if a click handler does too much work before returning. In production, this often shows up as laggy typing, delayed button clicks, or janky scrolling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of browser work can be delayed when JavaScript blocks the main thread?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "What happens when you change the DOM many times in a loop, and how do you avoid making the page slow?",
+    "answer": "Each DOM write can force the browser to recalculate style, layout, and sometimes paint, so many small updates in a loop can become expensive. The usual fix is to batch changes: build content off-DOM with a `DocumentFragment`, update text or attributes together, and avoid interleaving reads like `offsetHeight` with writes. If you must measure after writing, separate reads and writes to reduce layout thrashing.",
+    "real_world": "This shows up when rendering long lists, chat messages, or table rows and the UI starts janking. A team often fixes a slow filter or infinite scroll by batching updates instead of touching the live DOM on every iteration.",
+    "code_lang": "javascript",
+    "code": "const frag = document.createDocumentFragment();\nfor (const item of items) {\n  const li = document.createElement('li');\n  li.textContent = item.name;\n  frag.appendChild(li);\n}\nlist.appendChild(frag);",
+    "follow_up": "How would you tell whether the bottleneck is DOM work, JavaScript, or painting?"
+   },
+   {
+    "question": "How does `requestAnimationFrame` help when you are updating the UI from JavaScript?",
+    "answer": "`requestAnimationFrame` schedules work to run before the browser’s next paint, which makes it a better fit for visual updates than a timer. It helps align DOM writes with rendering and avoids wasting work when the tab is hidden or the browser is busy. It is not for background logic; it is for animations and frame-based UI updates.",
+    "real_world": "Teams use this for smooth drag-and-drop, scroll-linked effects, and progress indicators. Without it, animations often stutter because updates land at awkward times relative to layout and paint.",
+    "code_lang": "javascript",
+    "code": "function step() {\n  box.style.transform = `translateX(${x}px)`;\n  x += 2;\n  if (x < 300) requestAnimationFrame(step);\n}\nrequestAnimationFrame(step);",
+    "follow_up": "When would you choose `requestAnimationFrame` over CSS animations or transitions?"
+   },
+   {
+    "question": "What is the difference between setting `element.style` and adding a CSS class, and when would you prefer each?",
+    "answer": "Setting `element.style` applies inline styles directly to one element, while a class lets you keep styling in CSS and reuse it consistently. Classes are usually better for state changes like open/closed or error/success because they separate behavior from presentation and scale better. Inline styles are useful for dynamic values that are truly per-element, like a computed width or transform.",
+    "real_world": "This matters in component code where state toggles styles frequently. Using classes usually makes the UI easier to test and maintain, while direct style changes can become scattered and harder to override.",
+    "code_lang": "javascript",
+    "code": "panel.classList.toggle('is-open');\n// vs\npanel.style.height = `${contentHeight}px`;",
+    "follow_up": "How do CSS specificity and inline styles affect which rule wins?"
+   },
+   {
+    "question": "What is event capturing, and how is it different from bubbling?",
+    "answer": "Capturing is the phase where an event travels from the window/document down to the target before the target handles it. Bubbling is the phase after the target, where the event moves back up through ancestors. Most app code relies on bubbling, but capturing is useful when you need to observe or intercept events early.",
+    "real_world": "This comes up when building wrappers like modals, menus, or analytics hooks around large parts of the page. A bug can appear when a parent listener assumes bubbling will always happen, but another listener stops propagation earlier.",
+    "code_lang": "javascript",
+    "code": "document.addEventListener('click', onDocClick, true);\nbutton.addEventListener('click', onButtonClick);\n\nfunction onDocClick(e) {}\nfunction onButtonClick(e) {}",
+    "follow_up": "What do `stopPropagation` and `stopImmediatePropagation` actually prevent?"
+   },
+   {
+    "question": "When would you use `MutationObserver`, and what are its limits?",
+    "answer": "Use `MutationObserver` when you need to react to DOM changes made by other code, such as inserted nodes, attribute changes, or removed elements. It is better than polling because the browser batches notifications efficiently. The trade-off is that it observes changes after they happen, so it is not a replacement for controlling your own rendering logic.",
+    "real_world": "This is common in integrations with third-party widgets, content editors, and micro-frontends where you do not own all DOM writes. It can also help when a legacy script mutates the page in ways your app needs to track.",
+    "code_lang": "javascript",
+    "code": "const obs = new MutationObserver(records => {\n  for (const record of records) console.log(record.type);\n});\nobs.observe(document.body, { childList: true, subtree: true });",
+    "follow_up": "How would you avoid creating performance problems with a `MutationObserver`?"
+   },
+   {
+    "question": "What is the difference between `offsetWidth`, `clientWidth`, and `getBoundingClientRect()`?",
+    "answer": "`offsetWidth` includes the element’s border and is rounded to an integer, while `clientWidth` excludes borders and scrollbars and is also layout-based. `getBoundingClientRect()` returns the element’s size and position relative to the viewport, including fractional values. Which one you use depends on whether you care about layout box size, visible content area, or on-screen position.",
+    "real_world": "This matters when positioning tooltips, popovers, and drag handles. Choosing the wrong measurement can cause off-by-one alignment bugs or make overlays clip at the viewport edge.",
+    "code_lang": "javascript",
+    "code": "const r = el.getBoundingClientRect();\nconsole.log(el.offsetWidth);\nconsole.log(el.clientWidth);\nconsole.log(r.left, r.top, r.width, r.height);",
+    "follow_up": "Why can reading these properties repeatedly during writes slow the page down?"
+   },
+   {
+    "question": "What does setting `innerHTML` do from a correctness and security standpoint?",
+    "answer": "`innerHTML` parses a string as HTML and replaces the element’s contents, so it is convenient but risky if the string includes untrusted input. It can also destroy existing nodes and their event listeners because the subtree is rebuilt. In most app code, safer alternatives are text nodes, DOM APIs, or trusted templating with escaping.",
+    "real_world": "This is a common source of XSS in comment boxes, search highlights, and CMS previews. It also breaks widgets when a developer re-renders a container and suddenly all child listeners disappear.",
+    "code_lang": "javascript",
+    "code": "// Unsafe if userInput is untrusted\ncontainer.innerHTML = `<p>${userInput}</p>`;\n\n// Safer\nconst p = document.createElement('p');\np.textContent = userInput;\ncontainer.replaceChildren(p);",
+    "follow_up": "How do template libraries reduce the risks around HTML insertion?"
+   },
+   {
+    "question": "Why do some changes to form inputs not update the UI the way you expect until the next event or render?",
+    "answer": "Form controls have both DOM properties and browser-managed UI state, and not every change is reflected instantly in every place. For example, changing a value property updates the control, but framework state, validation messages, or derived UI may not update until your code reacts to the event. In real apps, the fix is to treat the DOM input as the source of events and synchronize app state deliberately.",
+    "real_world": "This appears in controlled form components, validation flows, and autofill edge cases. A team might think the input is “stuck” when the actual issue is that state and DOM value are out of sync.",
+    "code_lang": "javascript",
+    "code": "input.value = 'abc';\ninput.dispatchEvent(new Event('input', { bubbles: true }));",
+    "follow_up": "How would you debug a case where the displayed value and application state disagree?"
+   },
+   {
+    "question": "What causes a memory leak in DOM-heavy JavaScript code?",
+    "answer": "Leaks usually happen when JavaScript still holds references to DOM nodes or closures after the nodes are removed from the document. Common causes include global arrays of elements, forgotten timers, event listeners on long-lived objects, and observers that are never disconnected. The fix is to release references, remove listeners, and clean up observers when the component or page section is torn down.",
+    "real_world": "This shows up in single-page apps where navigation keeps creating new views but memory keeps growing. Over time, the page gets slower because old components are still retained even though they are no longer visible.",
+    "code_lang": "javascript",
+    "code": "function mount() {\n  const onResize = () => {};\n  window.addEventListener('resize', onResize);\n  return () => window.removeEventListener('resize', onResize);\n}",
+    "follow_up": "How would you use browser devtools to confirm that removed nodes are still retained?"
+   },
+   {
+    "question": "How do you test DOM code without relying on a real browser, and what are the trade-offs?",
+    "answer": "You can test DOM logic in a headless environment with a simulated DOM, which is fast and good for checking structure, text, and event handling. The trade-off is that it does not perfectly match real browser behavior for layout, scrolling, accessibility, or edge cases in rendering. For those cases, you still want a smaller set of end-to-end tests in a real browser.",
+    "real_world": "Teams use this split to keep unit tests fast while still covering critical user flows in integration tests. It helps catch regressions in rendering logic without making the whole suite slow and flaky.",
+    "code_lang": "javascript",
+    "code": "test('adds item', () => {\n  document.body.innerHTML = '<ul id=\"list\"></ul>';\n  addItem('A');\n  expect(document.querySelectorAll('li')).toHaveLength(1);\n});",
+    "follow_up": "Which kinds of DOM behavior would you avoid testing only in a simulated environment?"
+   },
+   {
+    "question": "What is a DocumentFragment, and when would you use it instead of appending nodes directly to the page?",
+    "answer": "A DocumentFragment is an in-memory container for DOM nodes. You build up a subtree in it and then append the fragment once, which moves its children into the document. This is useful when creating many elements because it avoids repeated reflow and repaint work while you are assembling the UI. The trade-off is that it is just a temporary container, so you cannot style or measure it like real page content until it is inserted.",
+    "real_world": "Teams use this when rendering long lists, tables, or chat messages to avoid the page becoming sluggish during bulk updates. It also helps keep initialization code cleaner because you separate construction from insertion.",
+    "code_lang": "javascript",
+    "code": "const frag = document.createDocumentFragment();\nfor (const name of ['A', 'B', 'C']) {\n  const li = document.createElement('li');\n  li.textContent = name;\n  frag.appendChild(li);\n}\ndocument.querySelector('ul').appendChild(frag);",
+    "follow_up": "How is this different from building a string of HTML and assigning it once?"
+   },
+   {
+    "question": "How do you think about forcing layout in browser code, and what kind of code patterns trigger it?",
+    "answer": "Forcing layout happens when JavaScript reads layout-dependent values after making DOM changes that invalidate layout. Examples include reading properties like size or position right after changing styles or content. The browser may have to flush pending style and layout work immediately, which can make code much slower. The usual fix is to batch reads before writes, or separate measurement and mutation into different frames.",
+    "real_world": "This often shows up in animation code or UI code that measures an element and then immediately changes many styles. The result is jank that is hard to see in small tests but obvious on slower devices.",
+    "code_lang": "javascript",
+    "code": "const box = document.querySelector('.box');\nconst w = box.getBoundingClientRect().width;\nbox.style.width = `${w + 20}px`;\n// Avoid doing many read/write pairs in a tight loop.",
+    "follow_up": "What is layout thrashing, and how would you detect it in a performance profile?"
+   },
+   {
+    "question": "What is event delegation, and when can it break down in a real app?",
+    "answer": "Event delegation attaches one listener to an ancestor and uses event bubbling to handle events from many child elements. It is a good fit for lists or dynamic content because you do not need to rebind listeners as items are added or removed. It can break down when the event does not bubble, when you need very different behavior per child, or when the target is inside complex composed DOM like shadow DOM. The main trade-off is simpler listener management versus more logic in the handler.",
+    "real_world": "A product list that supports filtering, sorting, and infinite scroll often uses delegation so newly rendered rows work automatically. Problems appear when clicks are intercepted by nested controls like buttons inside links.",
+    "code_lang": "javascript",
+    "code": "list.addEventListener('click', (e) => {\n  const item = e.target.closest('[data-action]');\n  if (!item || !list.contains(item)) return;\n  handleAction(item.dataset.action);\n});",
+    "follow_up": "How would you handle delegation if nested elements can also stop propagation?"
+   },
+   {
+    "question": "What is the difference between a node and an element in the DOM?",
+    "answer": "A node is the broader DOM concept; elements are one kind of node. Text nodes, comment nodes, and document fragments are also nodes, but only elements have tag names and element-specific APIs like `classList`. This matters because many DOM APIs operate on any node, while others expect elements only. When debugging, it helps explain why `childNodes` can include text nodes but `children` does not.",
+    "real_world": "This comes up when a loop over `childNodes` unexpectedly hits whitespace text nodes and code fails because it assumes every child has `classList`. It is a common source of subtle bugs in custom rendering or parsing code.",
+    "code_lang": "javascript",
+    "code": "const el = document.querySelector('div');\nconsole.log(el.childNodes.length);   // includes text nodes\nconsole.log(el.children.length);     // elements only\nconsole.log(el.firstChild.nodeType);  // may be text",
+    "follow_up": "Why would `childNodes` be a better choice in some DOM algorithms?"
+   },
+   {
+    "question": "How do custom data attributes help in frontend code, and what should you avoid with them?",
+    "answer": "Custom data attributes let you store small bits of metadata on elements, usually for behavior or state that the UI needs to read. They are useful for delegation, analytics hooks, and connecting markup with JavaScript without inventing extra classes. You should avoid using them as the main source of application state if the data is large or changes frequently, because the DOM is not a great data store. Keep them descriptive and shallow, not as a second database.",
+    "real_world": "A team might mark buttons with `data-action` or cards with `data-id` so one handler can route user interactions. Bugs happen when too much business logic is encoded in attributes and becomes hard to keep in sync with app state.",
+    "code_lang": "javascript",
+    "code": "<button data-action=\"save\" data-id=\"42\">Save</button>\n\nbutton.addEventListener('click', () => {\n  console.log(button.dataset.action, button.dataset.id);\n});",
+    "follow_up": "What is the difference between reading from `dataset` and reading a normal DOM property?"
+   },
+   {
+    "question": "What happens if you add the same event listener multiple times, and how do you prevent duplicate handlers?",
+    "answer": "If you register the same handler repeatedly, the browser may keep multiple registrations unless the exact same function and options are recognized as a duplicate. In practice, repeated mounting or rerendering can cause the same action to fire more than once. The usual fix is to centralize listener setup, use stable function references, or remove listeners before re-adding them. This matters because duplicate handlers create bugs that look like backend or state issues but are really DOM wiring problems.",
+    "real_world": "This often appears in single-page apps when components mount more than once during navigation or hot reload. A button click suddenly submits twice, or analytics events are counted multiple times.",
+    "code_lang": "javascript",
+    "code": "function onClick() {}\nbutton.removeEventListener('click', onClick);\nbutton.addEventListener('click', onClick);",
+    "follow_up": "When would you prefer event delegation over attaching and removing listeners directly?"
+   },
+   {
+    "question": "What is the difference between `replaceChild`, `replaceWith`, and updating `innerHTML` for swapping UI content?",
+    "answer": "`replaceChild` and `replaceWith` work with actual nodes, while `innerHTML` reparses a string into new DOM. Node-based replacement is safer when you already have elements and want to preserve control over what is being inserted. `innerHTML` is often shorter, but it can destroy existing nodes, event listeners, and state inside the replaced subtree. The trade-off is convenience versus precision and security.",
+    "real_world": "This matters when updating a card or modal that contains interactive controls. Using `innerHTML` may make dropdowns, input state, or attached handlers disappear unexpectedly.",
+    "code_lang": "javascript",
+    "code": "const oldPanel = document.querySelector('.panel');\nconst newPanel = document.createElement('section');\nnewPanel.textContent = 'Updated';\noldPanel.replaceWith(newPanel);",
+    "follow_up": "What state is lost when you replace a subtree instead of patching it?"
+   },
+   {
+    "question": "What is a shadow DOM, and why would a team choose it?",
+    "answer": "Shadow DOM creates a boundary around a component’s internal markup and styles. It helps encapsulate implementation details so outside CSS and DOM queries do not accidentally interfere with the component. That makes reusable UI easier to package, but it also adds complexity for styling, testing, and event handling. The trade-off is stronger encapsulation versus less transparency to the rest of the app.",
+    "real_world": "Design system components often use shadow DOM so local styles do not leak into the rest of the site. Debugging can be tricky when a selector that works elsewhere no longer reaches inside the component.",
+    "code_lang": "javascript",
+    "code": "const host = document.querySelector('x-widget');\nconst shadow = host.attachShadow({ mode: 'open' });\nshadow.innerHTML = `<button>Click</button>`;",
+    "follow_up": "How do events and CSS behave differently across a shadow boundary?"
+   },
+   {
+    "question": "How would you debug a DOM update that looks correct in the JavaScript state but not on the screen?",
+    "answer": "First check whether the state change actually reaches the code that mutates the DOM. Then inspect whether the DOM node you are updating is still the one on screen, since rerenders or replacement can leave you holding a stale reference. Also look for async timing issues, CSS overrides, and code that updates state but forgets to write it back to the DOM. Good debugging usually means verifying state, node identity, and rendering order separately.",
+    "real_world": "This happens in forms, live search, and component frameworks when user actions update state but the visible UI lags or shows old values. A stale element reference can make the code look fine in logs while the page does nothing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prove whether the problem is stale references or a missed render step?"
+   },
+   {
+    "question": "What should you test in DOM-heavy code, and what is usually better left to integration tests?",
+    "answer": "Unit tests should cover the logic that decides what DOM changes to make, especially edge cases like empty input, duplicate items, or invalid state. Integration tests are better for user-visible behavior such as focus changes, keyboard interaction, and whether the right elements appear or disappear. You do not need to test browser internals, but you do need confidence that event wiring and accessibility behavior work together. The trade-off is speed and isolation versus realism.",
+    "real_world": "A team might unit test a component’s rendering decisions in jsdom and reserve browser-based tests for keyboard navigation and modal focus trapping. This balances fast feedback with catching real browser behavior that fake DOMs miss.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of bugs do you expect a non-browser DOM test environment to miss?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you walk me through the browser rendering pipeline from parsing to pixels, and where JavaScript can interrupt it?",
+    "answer": "At a high level the browser parses HTML into the DOM, parses CSS into style data, matches styles, builds a render tree, computes layout, then paints and composites layers to the screen. JavaScript can interrupt this by blocking parsing, mutating DOM or styles, or reading layout after writes and forcing synchronous work. Not every change triggers the full pipeline: some are style-only, some require layout, and some can be handled in compositing. The performance win is knowing which stage your code invalidates and keeping hot-path updates in the cheapest stage possible.",
+    "real_world": "A common production issue is a smooth page turning janky because an animation changed layout-affecting properties instead of transform or opacity, pushing work from compositing back into layout and paint.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which CSS or DOM changes typically stay in the compositor, and which ones force layout or paint?"
+   },
+   {
+    "question": "What actually happens when you read layout information like `getBoundingClientRect()` after writing styles in the same task?",
+    "answer": "If the browser has pending style or layout work, a layout read can force it to flush those updates synchronously so it can return an accurate value. That creates a read-after-write hazard often called layout thrashing when it happens repeatedly in a loop. The fix is to batch reads together, batch writes together, and avoid interleaving them across many elements. This matters because the cost scales with DOM size and invalidation scope, not just the single element you touched.",
+    "real_world": "Teams hit this in virtualized lists and drag interactions: one innocent measurement inside a per-item loop turns into dozens or hundreds of forced layouts per frame.",
+    "code_lang": "javascript",
+    "code": "const items = [...document.querySelectorAll('.item')];\nconst widths = items.map(el => el.getBoundingClientRect().width); // read phase\nfor (const [i, el] of items.entries()) {\n  el.style.width = widths[i] + 10 + 'px'; // write phase\n}",
+    "follow_up": "How would you measure whether a forced reflow is happening in production or in DevTools?"
+   },
+   {
+    "question": "How do microtasks and macrotasks affect DOM timing, especially with promises, events, and rendering?",
+    "answer": "Event handlers, timers, and message events run as tasks, while promise callbacks and mutation observer callbacks run as microtasks. After a task finishes, the browser drains the microtask queue before it gets a chance to render, so a long chain of microtasks can delay paint just like long synchronous code. That means `Promise.resolve().then(...)` is not a free yield to the UI. The trade-off is microtasks are useful for consistency and ordering, but they can starve rendering if abused.",
+    "real_world": "A production incident pattern is code that breaks work into many promise callbacks expecting responsiveness, but the page still freezes because rendering cannot happen until the microtask queue empties.",
+    "code_lang": "javascript",
+    "code": "button.onclick = () => {\n  box.textContent = 'A';\n  Promise.resolve().then(() => {\n    box.textContent = 'B';\n  });\n  setTimeout(() => {\n    box.textContent = 'C';\n  }, 0);\n};",
+    "follow_up": "If you need to let the browser paint before continuing work, what scheduling options would you consider?"
+   },
+   {
+    "question": "What are the trade-offs between `display: none`, `visibility: hidden`, `content-visibility`, and removing nodes from the DOM?",
+    "answer": "`display: none` removes the element from layout and paint, `visibility: hidden` keeps layout but skips visibility, and removing nodes drops them from the document entirely. `content-visibility` can let the browser skip rendering work for off-screen content while preserving structure, but it changes measurement and lifecycle assumptions. Removing nodes can save the most memory and event cost, but re-creating them has CPU and state-management overhead. The right choice depends on whether you optimize for toggling speed, layout stability, memory, or initial render cost.",
+    "real_world": "Large dashboards often become memory-heavy because hidden panels stay mounted with listeners and layout participation; teams switch to unmounting or windowing when tabs contain thousands of nodes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to virtualize, hide, or unmount a long list?"
+   },
+   {
+    "question": "Why can `position: sticky` or `position: fixed` behave unexpectedly inside transformed or scrolling containers?",
+    "answer": "These positioning modes depend on containing blocks, scroll containers, and stacking contexts, and transforms can change those relationships. A transformed ancestor can establish a new containing context that changes where fixed descendants are positioned relative to, and sticky only sticks within the relevant scroll container and constraints. The result is UI that looks correct in simple pages but breaks when nested inside animated or overflowed containers. The fix is usually architectural: simplify containment or move the overlay or sticky element to a different part of the tree.",
+    "real_world": "This shows up in modals, tooltips, and sticky headers inside app shells where a parent uses `transform` for animation or `overflow` for scrolling, and suddenly overlays drift or sticky stops sticking.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do stacking contexts interact with this, and why do z-index fixes often fail?"
+   },
+   {
+    "question": "How does the browser hit-testing process affect event targeting, and what DOM or CSS features commonly change the result?",
+    "answer": "Before dispatching pointer events, the browser performs hit-testing against the painted visual tree, not just DOM order. Properties like `pointer-events`, stacking order, transforms, clipping, opacity, and overlapping composited layers can all change which element is targeted. Shadow DOM and retargeting then affect what listeners observe as the event path. This matters because event bugs are often caused by visual-layer rules rather than listener logic.",
+    "real_world": "A classic incident is a transparent overlay or pseudo-element intercepting clicks in production while everything looks visually fine, leading teams to chase JavaScript when the real bug is hit-testing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools or APIs would you use to debug why a click is landing on the wrong element?"
+   },
+   {
+    "question": "What are the browser-level costs of very large DOM trees, and when do you decide to virtualize or paginate?",
+    "answer": "Large DOMs increase memory use, style recalculation scope, layout cost, accessibility tree size, and sometimes event and hit-testing overhead. The pain is usually nonlinear: a page can feel fine until interactions or global style invalidations start touching thousands of nodes. Virtualization trades implementation complexity and measurement edge cases for lower steady-state rendering cost, while pagination reduces both data and DOM size but changes UX. I decide based on visible window size, interaction patterns, SEO or accessibility constraints, and whether the bottleneck is initial load, scroll, or updates.",
+    "real_world": "In enterprise tables, the incident is rarely just slow initial render; it's sort, filter, or row selection suddenly taking hundreds of milliseconds because every update invalidates a huge live tree.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What edge cases make virtualization hard in real apps?"
+   },
+   {
+    "question": "How do browser observers like `ResizeObserver` and `IntersectionObserver` fit into rendering, and what failure modes should you watch for?",
+    "answer": "They provide asynchronous signals tied to rendering-related changes so you can avoid polling and many manual measurements. `ResizeObserver` reports element size changes and `IntersectionObserver` reports visibility relative to a root, but both are delivered on the browser's schedule rather than immediately at mutation time. The main failure modes are feedback loops, stale assumptions about exact timing, and doing too much work in callbacks. They're powerful because they reduce forced layout patterns, but they don't replace careful scheduling.",
+    "real_world": "Teams use these for sticky sidebars, lazy loading, and virtualized lists, but it's easy to create resize loops or callback storms when the observer itself mutates size or visibility.",
+    "code_lang": "javascript",
+    "code": "const ro = new ResizeObserver(entries => {\n  for (const entry of entries) {\n    const w = entry.contentRect.width;\n    entry.target.classList.toggle('narrow', w < 400);\n  }\n});\nro.observe(document.querySelector('.panel'));",
+    "follow_up": "Why can a `ResizeObserver` callback cause a loop, and how would you break it?"
+   },
+   {
+    "question": "What are the tricky parts of focus management and selection in complex DOM updates?",
+    "answer": "Focus and text selection are browser-managed state tied to specific nodes, so replacing nodes can silently drop focus, reset selection, or confuse screen readers even if the UI looks identical. Reordering DOM can also change tab order and scroll position in ways frameworks do not automatically preserve. In advanced UIs you often need to preserve focus explicitly, avoid replacing active elements unnecessarily, and coordinate updates with accessibility semantics. The trade-off is between simple full re-rendering and more careful patching of interactive regions.",
+    "real_world": "This matters in editors, search boxes, and data-entry apps where a seemingly harmless rerender causes the caret to jump or the focused control to disappear mid-typing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you preserve cursor position in an input or contenteditable element across an update?"
+   },
+   {
+    "question": "How do iframes change the DOM and event model, and what constraints matter for architecture and debugging?",
+    "answer": "An iframe has its own document, global object, event loop boundaries for many practical purposes, and often a different origin, so DOM access and event handling do not work like a single tree. Events do not bubble from inside an iframe into the parent DOM, and cross-origin restrictions prevent direct inspection or mutation without explicit messaging. That isolation is useful for security and embedding, but it complicates sizing, focus, analytics, and coordinated interactions. Architecturally, you usually need a message protocol rather than shared DOM assumptions.",
+    "real_world": "Real incidents include embedded checkout or editor flows where parent shortcuts, click tracking, or focus trapping fail because the active interaction is inside a cross-origin iframe.",
+    "code_lang": "javascript",
+    "code": "// parent window\nwindow.addEventListener('message', e => {\n  if (e.origin !== 'https://child.example') return;\n  console.log(e.data);\n});\niframe.contentWindow?.postMessage({ type: 'init' }, 'https://child.example');",
+    "follow_up": "What would you include in a safe `postMessage` design between a parent page and an iframe?"
+   },
+   {
+    "question": "How does style invalidation actually work in the browser, and why can one class change be cheap in one app but expensive in another?",
+    "answer": "A DOM or attribute change does not automatically recompute styles for the whole page; the engine marks affected elements as invalid and tries to limit recalculation using selector dependencies and tree relationships. The cost depends on your CSS: simple, locally scoped selectors usually invalidate a small set, while broad descendant selectors, stateful pseudo-classes, or changes near the root can fan out widely. The key trade-off is expressive CSS versus predictable invalidation cost. In large apps, CSS architecture can matter as much as JavaScript when a UI update feels slow.",
+    "real_world": "Teams hit this when toggling a top-level theme class or app state attribute causes a large style recalc across thousands of nodes. Profilers often show \"Recalculate Style\" dominating even though the JavaScript change was tiny.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What selector patterns tend to make style recalculation harder for the browser to contain?"
+   },
+   {
+    "question": "What is layout thrashing, and how would you recognize and fix it in a production frontend?",
+    "answer": "Layout thrashing happens when code repeatedly interleaves DOM writes that invalidate layout with reads that require up-to-date layout, forcing the browser to sync work over and over in one frame. You recognize it in performance traces as repeated style/layout work inside a loop or event handler, often around scroll, resize, or drag code. The fix is to batch reads together, then batch writes, and move visual updates onto frame boundaries when possible. Sometimes the real fix is changing the algorithm so it stops measuring every item every time.",
+    "real_world": "A common incident is a virtualized list or tooltip system that measures each row after changing styles, turning smooth scrolling into long frames. It may only appear in production data sizes, not local demos.",
+    "code_lang": "javascript",
+    "code": "const widths = items.map(el => el.offsetWidth); // read phase\nrequestAnimationFrame(() => {\n  items.forEach((el, i) => {\n    el.style.width = widths[i] + 10 + 'px'; // write phase\n  });\n});",
+    "follow_up": "If you truly need to measure after a write, how do you keep that from exploding into O(n) forced layouts?"
+   },
+   {
+    "question": "When does using `cloneNode`, `adoptNode`, or moving existing nodes matter, and what subtle behavior changes come with each approach?",
+    "answer": "Moving an existing node preserves its identity, state stored on the element object, and attached listeners, while removing it from the old position. `cloneNode` creates a new node tree with copied attributes and inline content, but not runtime state like JavaScript object identity or listeners added separately. `adoptNode` matters when transferring nodes across documents, such as between an iframe and the main document, because ownership changes. The trade-off is convenience versus preserving state and avoiding accidental duplication bugs.",
+    "real_world": "This shows up in drag-and-drop builders, portals, or editors that move UI between containers. A clone can silently lose behavior, while moving a live node can unexpectedly tear it out of the old component lifecycle.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of element state are preserved when you move a node but lost or reset when you clone it?"
+   },
+   {
+    "question": "Can you explain the difference between the DOM tree, the accessibility tree, and the render tree, and why mismatches between them cause real bugs?",
+    "answer": "The DOM tree is the programmatic document structure, the render tree is the subset and form used for layout and painting, and the accessibility tree is the semantic representation exposed to assistive technologies. They overlap but are not identical: hidden nodes may stay in the DOM but drop from rendering or accessibility, and CSS can change visual order without changing DOM order. Bugs happen when engineers assume one tree stands in for the others. Good UI architecture respects that semantics, visual presentation, and script structure are related but separate concerns.",
+    "real_world": "A page can look correct visually while keyboard navigation or screen readers become unusable because focus order still follows DOM order. Production regressions often come from CSS reordering, `aria-hidden` misuse, or offscreen rendering tricks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How can CSS properties that change visual order create accessibility or focus issues even when the DOM is unchanged?"
+   },
+   {
+    "question": "What are the real differences between `input`, `change`, `beforeinput`, and composition events, and why do mature editors care so much about them?",
+    "answer": "`input` tells you the value changed, `change` is later and more commit-like, and `beforeinput` is the interception point before the DOM mutation is applied. Composition events represent IME text entry, where intermediate states do not behave like simple key presses. Mature editors care because naive keydown logic breaks for languages, mobile keyboards, autocomplete, undo, and rich text commands. The trade-off is complexity for correctness across input methods and platforms.",
+    "real_world": "This matters in search boxes, form validation, and especially custom editors where handling only keyboard events causes dropped characters or corrupted selection for IME users. These bugs often escape teams that test only with US keyboards.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you avoid breaking IME users when adding real-time validation or formatting to an input?"
+   },
+   {
+    "question": "How do DOM updates interact with the JavaScript garbage collector, and why can detached subtrees stay alive much longer than people expect?",
+    "answer": "Removing a node from the document only makes it eligible for collection if nothing else still references it. Closures, caches, maps, timers, pending promises, observer callbacks, and library internals can all keep detached subtrees reachable. Garbage collection is also nondeterministic, so memory may not drop immediately even after cleanup. The main trade-off is retaining references for speed or convenience versus allowing the engine to reclaim large UI structures.",
+    "real_world": "Single-page apps often leak modal contents, old route trees, or list rows because code stores element references in registries or listeners outlive the page section. The symptom is memory growing after navigation cycles rather than a single dramatic crash.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you investigate whether a leak is caused by detached DOM nodes versus plain JavaScript objects?"
+   },
+   {
+    "question": "What are the internals and trade-offs behind using `Range` and `Selection` APIs for rich text or annotation features?",
+    "answer": "`Range` represents DOM boundary points, not just whole nodes, and `Selection` models the user's active selection, which may move as the DOM mutates. They are powerful for editors, comments, and highlighting, but fragile because text node splits, normalization, and async re-renders can invalidate assumptions about offsets. The trade-off is precise native behavior versus having to maintain stable mapping between document model and DOM positions. Production editors usually need a layer that translates between logical document positions and browser selection state.",
+    "real_world": "Annotation tools and rich text editors often fail when a re-render moves text nodes, causing highlights to shift or cursor positions to jump. These issues are notoriously browser-sensitive and hard to reproduce.",
+    "code_lang": "javascript",
+    "code": "const range = document.createRange();\nrange.setStart(textNode, 2);\nrange.setEnd(textNode, 5);\nconst sel = window.getSelection();\nsel.removeAllRanges();\nsel.addRange(range);",
+    "follow_up": "What breaks if your framework re-renders the text nodes underneath an active selection?"
+   },
+   {
+    "question": "How do custom elements actually upgrade, and what timing or lifecycle edge cases matter when mixing them with server rendering or frameworks?",
+    "answer": "A custom element created before its class is defined starts as an unknown element and upgrades later when the definition is registered. During upgrade, lifecycle callbacks run and properties or children may already exist, so initialization code must handle both parser-created and programmatically created cases. This timing matters with SSR and frameworks because hydration may touch elements before or during upgrade, leading to duplicate work or lost state if ownership is unclear. The trade-off is encapsulation and native integration versus stricter lifecycle discipline.",
+    "real_world": "Teams see flaky startup bugs when a framework renders attributes first, then the custom element upgrades and overwrites internal DOM or reprocesses props. It can also affect first interaction if the element is present but not yet upgraded.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a custom element so it behaves correctly whether properties are set before or after definition?"
+   },
+   {
+    "question": "What does it mean that the DOM is single-threaded from page JavaScript’s perspective, and where do concurrency-like bugs still come from?",
+    "answer": "Page JavaScript cannot mutate the DOM from multiple threads at the same instant; DOM access is serialized on the main thread. But concurrency-like bugs still appear because async tasks interleave, browser subsystems complete work later, and stale assumptions survive across awaits, events, observers, and framework scheduling. So the hard problems are ordering, reentrancy, cancellation, and reading state that changed since you last yielded. The trade-off is simpler memory safety than true shared-memory UI code, but plenty of timing hazards remain.",
+    "real_world": "A component may measure an element, await data, then apply layout based on stale geometry after the user resized or navigated. These race conditions look like concurrency bugs even though only one JS task runs at a time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are some patterns you use to make async DOM code resilient to stale reads and out-of-order completion?"
+   },
+   {
+    "question": "How would you reason about the performance and correctness trade-offs of rendering tens of thousands of interactive DOM nodes versus using canvas or partial virtualization?",
+    "answer": "A large DOM gives you native semantics, accessibility hooks, CSS layout, selection, and easier event handling, but each node adds cost to style calculation, layout, memory, and sometimes startup. Canvas can reduce DOM overhead and improve raw draw throughput for dense visuals, but you must rebuild hit-testing, accessibility, text behavior, and state mapping yourself. Partial virtualization sits in the middle: keep only visible or near-visible DOM, but handle measurement, focus, find-in-page, and scroll anchoring carefully. The right choice depends on interaction richness, accessibility requirements, and update patterns, not just raw item count.",
+    "real_world": "Data grids, timelines, design tools, and logs often reach the point where a naive all-DOM approach becomes janky or memory-heavy. Teams then choose between aggressive virtualization and a canvas-based renderer depending on whether cells behave like real controls or mostly like pixels.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What user-facing behaviors often regress first when a team adds aggressive virtualization to a complex list or grid?"
+   }
+  ]
+ }
+}

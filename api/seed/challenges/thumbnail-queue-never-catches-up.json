@@ -1,0 +1,359 @@
+{
+  "slug": "thumbnail-queue-never-catches-up",
+  "title": "Thumbnail generation is six hours behind with workers at 100%",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "queues",
+    "workers",
+    "retries",
+    "dlq",
+    "backpressure"
+  ],
+  "scenario": "A new import path adds 2 million images in 20 minutes, and the thumbnail queue grows from 5,000 to 1.4 million messages. Thumbnail workers are at 100% CPU. Normal JPEGs usually finish in 120 ms, but some 400 MB TIFFs do not finish before the queue's 30-second visibility timeout and then appear again for another worker. The queue has no dead-letter queue and only one priority class.",
+  "goal": "Find the cause of the backlog, restore progress for normal thumbnails, and make the system safe for future imports.",
+  "concepts": [
+    {
+      "key": "message-queue",
+      "name": "Message queue",
+      "summary": "A message queue stores work items so workers can process them asynchronously. It helps absorb bursts, but it can hide failures if messages keep returning to the queue.",
+      "used_here": "The thumbnail queue holds image processing jobs created by the import path."
+    },
+    {
+      "key": "worker-pool",
+      "name": "Worker pool",
+      "summary": "A worker pool is a group of processes that pull jobs and perform work. More workers increase capacity only if the jobs can complete successfully.",
+      "used_here": "Thumbnail workers pull image jobs from the queue and generate thumbnails."
+    },
+    {
+      "key": "queue-depth",
+      "name": "Queue depth",
+      "summary": "Queue depth is the number of messages waiting or in flight. It shows backlog size, but not why work is not completing.",
+      "used_here": "The queue grew from 5,000 to 1.4 million messages during the import."
+    },
+    {
+      "key": "queue-age",
+      "name": "Queue age",
+      "summary": "Queue age is how long the oldest unprocessed message has been waiting. It is often a better user-impact signal than raw queue size.",
+      "used_here": "The system is about six hours behind, so users are waiting hours for thumbnails."
+    },
+    {
+      "key": "visibility-timeout",
+      "name": "Visibility timeout",
+      "summary": "A visibility timeout hides a queue message after a worker receives it. If the worker does not delete the message before the timeout, the queue makes it visible again for retry.",
+      "used_here": "The 400 MB TIFF jobs run longer than 30 seconds, so the same jobs keep reappearing."
+    },
+    {
+      "key": "retry",
+      "name": "Retry",
+      "summary": "A retry runs failed or timed-out work again. Retries help transient failures, but repeated retries can waste all worker capacity on work that will never succeed.",
+      "used_here": "Timed-out TIFF jobs are retried indefinitely."
+    },
+    {
+      "key": "poison-message",
+      "name": "Poison message",
+      "summary": "A poison message is a work item that repeatedly fails and prevents the queue from making progress. It is dangerous because it looks like normal work but consumes capacity forever.",
+      "used_here": "Large TIFF jobs behave like poison messages for the thumbnail workers."
+    },
+    {
+      "key": "dead-letter-queue",
+      "name": "Dead-letter queue",
+      "summary": "A dead-letter queue stores messages that failed too many times. It protects the main queue while preserving failed jobs for inspection or manual repair.",
+      "used_here": "The current queue has no dead-letter queue, so failed TIFF jobs return to the main backlog forever."
+    },
+    {
+      "key": "max-receive-count",
+      "name": "Max receive count",
+      "summary": "A max receive count limits how many times a message can be delivered before it is treated as failed. It is commonly used with a dead-letter queue.",
+      "used_here": "A limit would stop the same TIFF job from consuming workers indefinitely."
+    },
+    {
+      "key": "input-validation",
+      "name": "Input validation",
+      "summary": "Input validation checks data before accepting it for processing. It keeps known-bad or unsupported work from entering the normal path.",
+      "used_here": "The import path should check image type and size before enqueueing thumbnail jobs."
+    },
+    {
+      "key": "idempotency",
+      "name": "Idempotency",
+      "summary": "An idempotent operation can be retried or run more than once without creating incorrect duplicate effects. Distributed queues usually require this because duplicate delivery can happen.",
+      "used_here": "Thumbnail generation should safely handle repeated deliveries of the same image job."
+    },
+    {
+      "key": "backoff",
+      "name": "Backoff",
+      "summary": "Backoff waits longer between retry attempts after failures. It reduces pressure from repeated failures and gives transient problems time to clear.",
+      "used_here": "Expensive or failing media should not retry immediately at full speed."
+    },
+    {
+      "key": "priority-queue",
+      "name": "Priority queue",
+      "summary": "A priority queue lets more important or faster work run before lower-priority work. It prevents one class of jobs from starving another.",
+      "used_here": "Normal JPEG thumbnails should keep moving even when expensive TIFF jobs need special handling."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the right evidence",
+      "question": "The queue is 1.4 million messages deep and workers are at 100% CPU. What should you inspect first to distinguish a capacity problem from a retry problem?",
+      "concept_keys": [
+        "message-queue",
+        "worker-pool",
+        "queue-depth",
+        "queue-age",
+        "visibility-timeout",
+        "retry"
+      ],
+      "options": [
+        {
+          "text": "Sample database write latency for thumbnail records and check whether inserts are blocking worker threads.",
+          "correct": false,
+          "hint": "Database latency can cause slow workers, but the scenario includes repeated visibility timeout behavior. Look for evidence that the same work is being attempted many times.",
+          "id": "a"
+        },
+        {
+          "text": "Compare worker completion rate, timeout/error rate, and receive-count distribution by image type and file size.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Increase the worker count for 30 minutes and watch whether CPU stays at 100% under the larger fleet.",
+          "correct": false,
+          "hint": "More workers can hide the symptom, but it does not explain whether jobs are completing or being repeated. First separate successful throughput from repeated attempts.",
+          "id": "c"
+        },
+        {
+          "text": "Check only the import service logs to confirm whether it really enqueued all 2 million image jobs.",
+          "correct": false,
+          "hint": "The import burst explains why the queue grew, but it does not explain why workers cannot catch up afterward. The worker side can reveal whether processing is completing.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The useful first split is completed work versus repeated work. Receive counts, timeouts, and file characteristics show whether a small class of messages is cycling through the queue instead of being finished. Simply adding workers is tempting with a 1.4 million backlog, but if many attempts are the same timed-out jobs, more workers just spend more CPU on retries."
+    },
+    {
+      "title": "Interpret the pattern",
+      "question": "The data shows normal JPEG jobs complete in about 120 ms. Jobs for 400 MB TIFF files run for 30 seconds, hit the visibility timeout, and later show receive counts of 50 or more. What is the most likely root cause of the six-hour lag?",
+      "concept_keys": [
+        "visibility-timeout",
+        "retry",
+        "poison-message",
+        "worker-pool"
+      ],
+      "options": [
+        {
+          "text": "The import burst exceeded steady-state worker capacity, so the only issue is not enough workers for 2 million images.",
+          "correct": false,
+          "hint": "A burst can create backlog, but it should drain if the work completes quickly. The high receive counts point to repeated attempts on the same messages.",
+          "id": "a"
+        },
+        {
+          "text": "The 30-second visibility timeout is too short for every image type, so all messages are being retried equally.",
+          "correct": false,
+          "hint": "The numbers differ sharply by image type. JPEGs finish in 120 ms, far below 30 seconds, while the large TIFFs cross that boundary.",
+          "id": "b"
+        },
+        {
+          "text": "Large TIFF jobs are poison messages that time out and repeatedly consume worker capacity without completing.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The queue service is losing delete acknowledgements, so completed thumbnails are being delivered again.",
+          "correct": false,
+          "hint": "Lost deletes would cause duplicates after successful processing. Here the expensive jobs are not reaching a successful delete before the timeout.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The TIFF jobs are poison messages for this worker path: they run until the 30-second visibility timeout and then reappear. Receive counts of 50 or more mean the same jobs have consumed many worker slots without producing thumbnails. The import size matters, but normal 120 ms JPEGs should drain once workers stop being tied up by jobs that never finish."
+    },
+    {
+      "title": "Restore forward progress",
+      "question": "You need an immediate production-safe mitigation so normal JPEG thumbnails start draining today. Which action best addresses the retry loop while preserving failed TIFF jobs for follow-up?",
+      "concept_keys": [
+        "dead-letter-queue",
+        "max-receive-count",
+        "retry",
+        "poison-message",
+        "message-queue"
+      ],
+      "options": [
+        {
+          "text": "Double the worker fleet and keep the same queue settings until the queue returns below 5,000 messages.",
+          "correct": false,
+          "hint": "Extra workers do not change the behavior of a job that always times out. The repeated failures need a boundary so they stop competing with normal work.",
+          "id": "a"
+        },
+        {
+          "text": "Create a dead-letter queue, set a small max receive count for thumbnail jobs, and move over-limit failures out of the main queue.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Raise the visibility timeout from 30 seconds to 10 minutes for the entire queue and leave retries unlimited.",
+          "correct": false,
+          "hint": "A longer timeout may reduce duplicate attempts, but it also lets impossible jobs hold worker slots much longer. Unlimited retry still has no safe stopping point.",
+          "id": "c"
+        },
+        {
+          "text": "Delete all TIFF messages from the queue without recording which images failed thumbnail generation.",
+          "correct": false,
+          "hint": "This may free capacity, but it loses work and removes the ability to remediate affected images. A production fix should isolate failures without making them invisible.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A dead-letter queue plus a max receive count stops endlessly failing TIFF jobs from returning to the main queue while keeping them available for inspection and remediation. With retries bounded, normal JPEGs can use worker capacity and the backlog can drain. Increasing the visibility timeout alone is tempting, but with unlimited retries it only changes how slowly the same bad jobs cycle."
+    },
+    {
+      "title": "Stop adding bad work",
+      "question": "After the main queue begins draining, you need to prevent the import path from enqueueing more jobs the current thumbnail workers cannot handle. What change should be made before a thumbnail job is placed on the normal queue?",
+      "concept_keys": [
+        "input-validation",
+        "message-queue",
+        "priority-queue"
+      ],
+      "options": [
+        {
+          "text": "Validate image type and size, reject unsupported media or route oversized TIFFs to a separate handling path before enqueueing.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Accept all images into the normal queue and let workers decide whether each file is too large to process.",
+          "correct": false,
+          "hint": "By the time a worker decides, the job has already consumed queue and worker capacity. The normal path should not be the first place unsupported work is discovered.",
+          "id": "b"
+        },
+        {
+          "text": "Temporarily pause the entire import path whenever the thumbnail queue has more than 100,000 messages.",
+          "correct": false,
+          "hint": "Pausing can reduce pressure, but it treats all media the same. The incident was caused by a specific unsupported or expensive class of inputs.",
+          "id": "c"
+        },
+        {
+          "text": "Compress all uploaded files inside the import service and then enqueue the compressed result as a normal job.",
+          "correct": false,
+          "hint": "Compression may itself be expensive and can fail on the same media. You still need a clear rule for what the normal thumbnail path supports.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The normal queue should receive only work the normal workers are expected to complete. Validating type and size before enqueueing keeps known-expensive TIFF jobs from becoming poison messages again, while still allowing a separate path for remediation or slower processing. Letting workers discover unsupported media is tempting, but it repeats the same failure mode under load."
+    },
+    {
+      "title": "Make retries safe",
+      "question": "Even after failed jobs are bounded, the queue can still deliver a message more than once. What worker behavior is required so duplicate delivery does not corrupt thumbnail state?",
+      "concept_keys": [
+        "idempotency",
+        "retry",
+        "message-queue"
+      ],
+      "options": [
+        {
+          "text": "Rely on worker process memory to remember which image IDs have already been processed by that worker.",
+          "correct": false,
+          "hint": "Worker memory disappears on restart and is not shared across the fleet. Duplicate delivery can happen on a different worker.",
+          "id": "a"
+        },
+        {
+          "text": "Disable all retries in the queue so a thumbnail job can never run more than once after the first receive.",
+          "correct": false,
+          "hint": "Queues can still redeliver messages after crashes or network failures. Removing retries also turns transient worker failures into permanent missing thumbnails.",
+          "id": "b"
+        },
+        {
+          "text": "Store a random output filename for every attempt so duplicate runs cannot overwrite one another.",
+          "correct": false,
+          "hint": "Avoiding overwrites is not enough if users or records point to multiple inconsistent outputs. Duplicate attempts should converge on one correct result.",
+          "id": "c"
+        },
+        {
+          "text": "Make thumbnail generation idempotent by deriving the output key from the image version and atomically marking the job complete once the correct thumbnail exists.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Idempotency makes retries and duplicate deliveries converge on the same correct thumbnail instead of creating conflicting records or files. Deriving the output from the image version and completing atomically lets a repeated attempt observe that the work is already done. Disabling retries is tempting, but production queues still have duplicate delivery cases and transient failures should not permanently drop thumbnails."
+    },
+    {
+      "title": "Handle expensive media without starving normal work",
+      "question": "The product still wants thumbnails for large TIFFs, but they can be delayed and may need heavier machines. What design best prevents expensive media from starving normal JPEG processing during future imports?",
+      "concept_keys": [
+        "priority-queue",
+        "backoff",
+        "worker-pool",
+        "message-queue"
+      ],
+      "options": [
+        {
+          "text": "Use one shared FIFO queue and rely on the larger files being a small percentage of total imports.",
+          "correct": false,
+          "hint": "A small percentage can still dominate capacity when each attempt is hundreds of times slower. The incident already showed that one shared class lets expensive work block normal work.",
+          "id": "a"
+        },
+        {
+          "text": "Use separate queues or priority classes for normal and expensive media, with dedicated capacity and retry backoff for the expensive path.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Put all workers on high-memory instances and process every image type from the same queue in arrival order.",
+          "correct": false,
+          "hint": "Bigger machines may help TIFFs, but arrival order still couples slow work to fast work. Normal thumbnails need isolation from expensive jobs.",
+          "id": "c"
+        },
+        {
+          "text": "Keep one queue but randomly skip TIFF jobs when the queue age exceeds 30 minutes.",
+          "correct": false,
+          "hint": "Random skipping makes outcomes hard to reason about and can lose fairness. A stable design should explicitly control which class of work gets which capacity.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Separate queues or priority classes isolate fast JPEG work from expensive TIFF work, so normal thumbnails continue to make progress during mixed imports. Dedicated capacity and retry backoff let TIFF processing proceed at a controlled rate without hammering the main worker pool. Relying on TIFFs being rare is tempting, but rare jobs can still dominate when each one burns 30 seconds or more."
+    },
+    {
+      "title": "Confirm the fix",
+      "question": "After deploying the mitigation and validation, which result best confirms the system is healthy while preserving visibility into failures?",
+      "concept_keys": [
+        "queue-depth",
+        "queue-age",
+        "dead-letter-queue",
+        "worker-pool"
+      ],
+      "options": [
+        {
+          "text": "The dead-letter queue stays empty, worker logs show no errors, and the main queue drains only after imports are paused.",
+          "correct": false,
+          "hint": "An empty failure path can mean failures are hidden or no longer being recorded. The fix should allow normal work to proceed even when bad or expensive inputs exist.",
+          "id": "a"
+        },
+        {
+          "text": "Main queue age and depth fall steadily, JPEG completion rate returns near expected throughput, and failed TIFF jobs are visible in the dead-letter or expensive-media path.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "The import service reports all 2 million images accepted, and the thumbnail workers keep retrying until every job succeeds.",
+          "correct": false,
+          "hint": "Acceptance is not the same as completed thumbnails. Unbounded retry was the mechanism that prevented progress.",
+          "id": "c"
+        },
+        {
+          "text": "Worker CPU remains at 100%, the main queue depth stays flat, and the oldest message age remains near six hours.",
+          "correct": false,
+          "hint": "High CPU alone does not prove useful throughput. A healthy recovery should show the backlog and user-visible delay moving in the right direction.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A healthy recovery shows the main queue getting younger and smaller while normal JPEG throughput returns to the 120 ms-class behavior. Failed or oversized TIFFs should not disappear; they should be visible in the dead-letter queue or the separate expensive-media path for remediation. CPU at 100% is not enough, because the incident had high CPU while little useful work was completed."
+    }
+  ],
+  "takeaway": "When a queue will not catch up, separate useful completions from repeated attempts. Poison messages need bounded retries, a dead-letter path, and input validation so they cannot consume the whole worker pool. For mixed-cost work, isolate expensive jobs and make processing idempotent so retries are safe.",
+  "review_issues": []
+}

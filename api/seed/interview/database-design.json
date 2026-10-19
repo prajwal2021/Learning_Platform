@@ -1,0 +1,477 @@
+{
+ "slug": "database-design",
+ "name": "Database design, indexing and transactions",
+ "category": "Databases",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a primary key and a foreign key?",
+    "answer": "A primary key uniquely identifies a row in its own table, while a foreign key stores a value that references a primary key in another table. The primary key must be unique and not null; the foreign key is used to link tables and enforce referential integrity. This prevents orphaned rows and keeps relationships consistent.",
+    "real_world": "A user profile table might use user_id as its primary key, and an orders table might store user_id as a foreign key so every order belongs to a real user.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE users (\n  id INT PRIMARY KEY\n);\nCREATE TABLE orders (\n  id INT PRIMARY KEY,\n  user_id INT,\n  FOREIGN KEY (user_id) REFERENCES users(id)\n);",
+    "follow_up": "What happens if you try to insert a foreign key value that does not exist in the referenced table?"
+   },
+   {
+    "question": "What does indexing do in a database?",
+    "answer": "An index is a separate data structure that helps the database find rows faster without scanning the whole table. It improves read performance for lookups, joins, and sorting on indexed columns, but it adds storage overhead and makes inserts, updates, and deletes slower because the index must also be maintained. You usually index columns you filter or join on often.",
+    "real_world": "If a log table grows to millions of rows, an index on created_at or user_id can make dashboard queries go from seconds to milliseconds.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would adding an index make a query slower overall?"
+   },
+   {
+    "question": "What is normalization, and why do databases use it?",
+    "answer": "Normalization is organizing data to reduce duplication and avoid update anomalies. Instead of repeating the same facts in many rows, you split data into related tables and connect them with keys. This makes updates safer and storage more efficient, though sometimes systems later denormalize for faster reads.",
+    "real_world": "A company may store customer details once in a customers table instead of copying the address into every order, so changing the address updates one row instead of many.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of a problem caused by storing the same data in multiple places?"
+   },
+   {
+    "question": "What is a transaction?",
+    "answer": "A transaction is a group of database operations that are treated as one unit of work. Either all of the changes are committed, or none of them are if something fails. Transactions are used when partial success would leave data inconsistent, like moving money between accounts.",
+    "real_world": "In an e-commerce checkout, creating the order and reducing inventory should usually happen in one transaction so you do not charge a customer without reserving stock.",
+    "code_lang": "sql",
+    "code": "BEGIN;\nUPDATE accounts SET balance = balance - 50 WHERE id = 1;\nUPDATE accounts SET balance = balance + 50 WHERE id = 2;\nCOMMIT;",
+    "follow_up": "What is the difference between COMMIT and ROLLBACK?"
+   },
+   {
+    "question": "What are the ACID properties of transactions?",
+    "answer": "ACID stands for atomicity, consistency, isolation, and durability. Atomicity means all or nothing; consistency means the database moves between valid states; isolation means concurrent transactions do not interfere in unsafe ways; durability means committed data survives a crash. These properties explain why transactions are reliable for critical data changes.",
+    "real_world": "Banking, payments, and inventory systems rely on ACID so a crash or concurrent update does not create impossible balances or duplicate stock counts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which of the ACID properties is most directly related to handling concurrent users?"
+   },
+   {
+    "question": "What is the difference between a clustered and a non-clustered index?",
+    "answer": "A clustered index determines the physical order of rows in the table, so the table data is stored around that index order. A non-clustered index is separate from the table data and stores pointers to the rows. The exact behavior depends on the database, but the key idea is that clustered affects storage order while non-clustered is an additional lookup structure.",
+    "real_world": "A table with many range queries on a date column may benefit from clustering by date, while lookups on multiple different columns may use separate non-clustered indexes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why might a table have only one clustered index but several non-clustered indexes?"
+   },
+   {
+    "question": "What is a composite index, and when is it useful?",
+    "answer": "A composite index is an index on more than one column. It is useful when queries filter or sort by those columns together, because the database can use the indexed order instead of scanning or combining separate indexes. The column order matters, so you should match it to the most common query patterns.",
+    "real_world": "If most queries search by last_name and first_name together, a composite index on those two columns can be much more efficient than two separate indexes.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX idx_users_last_first\nON users (last_name, first_name);",
+    "follow_up": "What happens if a query filters only on the second column of a composite index?"
+   },
+   {
+    "question": "What is the difference between DELETE and TRUNCATE?",
+    "answer": "DELETE removes rows, usually one at a time logically, and can include a WHERE clause to delete only some rows. TRUNCATE removes all rows from a table much more quickly in many databases because it is a bulk operation rather than row-by-row deletion. TRUNCATE usually has more restrictions and is less flexible, so DELETE is safer when you need selective removal.",
+    "real_world": "A cleanup job might use DELETE for old rows older than a date, but TRUNCATE for a temporary staging table that needs to be emptied completely.",
+    "code_lang": "sql",
+    "code": "DELETE FROM sessions WHERE expires_at < NOW();\nTRUNCATE TABLE staging_import;",
+    "follow_up": "Why can DELETE be slower than TRUNCATE on a large table?"
+   },
+   {
+    "question": "What is a deadlock in a database?",
+    "answer": "A deadlock happens when two transactions each hold a lock the other needs, so neither can continue. Databases detect deadlocks and usually abort one transaction so the other can finish. To reduce deadlocks, keep transactions short and access shared tables or rows in a consistent order.",
+    "real_world": "Two users transferring money between the same pair of accounts in opposite directions can deadlock if each transaction locks the rows in a different order.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you change application code to reduce the chance of deadlocks?"
+   },
+   {
+    "question": "What does an EXPLAIN plan tell you?",
+    "answer": "An EXPLAIN plan shows how the database intends to execute a query, including whether it uses indexes, scans tables, joins tables, and the estimated cost of each step. It helps you understand why a query is slow and whether an index or query rewrite would help. You use it to validate performance changes instead of guessing.",
+    "real_world": "When a query suddenly slows down in production, EXPLAIN can reveal that the database stopped using an index and started doing a full table scan.",
+    "code_lang": "sql",
+    "code": "EXPLAIN SELECT *\nFROM orders\nWHERE user_id = 42;",
+    "follow_up": "What is the difference between an index scan and a full table scan?"
+   },
+   {
+    "question": "How do you decide which columns to index first in a table?",
+    "answer": "Start with the columns most often used to filter, join, or sort large result sets. Good index candidates are columns with many distinct values and queries that return a small fraction of the table. Avoid indexing everything, because each index slows inserts, updates, and deletes and uses storage. The best index is the one that matches your most important query patterns.",
+    "real_world": "A team adds indexes only after looking at slow queries in production, because a few carefully chosen indexes can remove seconds of latency. Over-indexing a write-heavy table can make bulk imports or checkout flows noticeably slower.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX idx_orders_customer_created\nON orders (customer_id, created_at);",
+    "follow_up": "How do you tell whether an existing index is actually being used by your queries?"
+   },
+   {
+    "question": "What is a foreign key constraint, and why would you use one?",
+    "answer": "A foreign key ensures that a value in one table refers to an existing row in another table. It protects referential integrity, so you cannot create orphaned child rows that point to missing parents. It can also define what happens on delete or update, such as blocking the change or cascading it. Use it when the relationship is part of the data model, not just the application logic.",
+    "real_world": "Without foreign keys, a deleted customer row can leave behind orders that no longer belong to anyone. That creates reporting bugs and makes cleanup harder later.",
+    "code_lang": "sql",
+    "code": "ALTER TABLE orders\nADD CONSTRAINT fk_orders_customer\nFOREIGN KEY (customer_id) REFERENCES customers(id);",
+    "follow_up": "What are cascade delete and restrict, and when would you choose each?"
+   },
+   {
+    "question": "Why is it usually a bad idea to store everything in one huge table?",
+    "answer": "A huge table with repeated data wastes space and makes updates harder because the same fact must be changed in many rows. It also increases the chance of inconsistent data and makes some queries slower because the database has to scan and process more duplicated values. Splitting data into related tables lets you model real relationships and reduce redundancy. The trade-off is that queries may need joins.",
+    "real_world": "A product catalog that stores category names on every row becomes painful when category names change. Normalizing the data makes the rename one update instead of thousands.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you intentionally denormalize a schema?"
+   },
+   {
+    "question": "What is the difference between INNER JOIN, LEFT JOIN, and RIGHT JOIN?",
+    "answer": "An INNER JOIN returns only rows that match in both tables. A LEFT JOIN returns all rows from the left table and matching rows from the right, filling missing right-side columns with nulls. A RIGHT JOIN does the same in the opposite direction, though many people avoid it and rewrite as a LEFT JOIN for readability. Choose the join based on which table’s rows must be preserved.",
+    "real_world": "This matters in reporting queries, like listing all users even if they have no orders yet. Using the wrong join can silently drop rows and make counts look smaller than they should be.",
+    "code_lang": "sql",
+    "code": "SELECT u.id, o.id\nFROM users u\nLEFT JOIN orders o ON o.user_id = u.id;",
+    "follow_up": "What happens to rows that do not match in a LEFT JOIN?"
+   },
+   {
+    "question": "What is a covering index?",
+    "answer": "A covering index contains all the columns needed for a query, so the database can answer it from the index without reading the table rows. That can be faster because it reduces disk reads and random access. The trade-off is a larger index and more work on writes. It is most useful for frequent read queries with a narrow, predictable column set.",
+    "real_world": "A dashboard that repeatedly shows a few columns from a large table can benefit a lot from a covering index. The team gets faster responses without rewriting the query logic.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX idx_orders_status_total\nON orders (status, total_amount);",
+    "follow_up": "How does a covering index differ from a regular index in practice?"
+   },
+   {
+    "question": "What does it mean to commit a transaction versus roll it back?",
+    "answer": "Committing a transaction makes all of its changes permanent. Rolling it back cancels the changes made in that transaction and restores the database to the previous state. This matters when part of a multi-step operation fails, because you want either all steps to succeed or none of them to apply. It prevents half-finished updates from reaching users.",
+    "real_world": "In a money transfer, you do not want the debit to succeed if the credit fails. Transactions let the application undo the partial work and retry safely.",
+    "code_lang": "sql",
+    "code": "BEGIN;\nUPDATE accounts SET balance = balance - 50 WHERE id = 1;\nUPDATE accounts SET balance = balance + 50 WHERE id = 2;\nCOMMIT;",
+    "follow_up": "What should an application do if an error happens after BEGIN but before COMMIT?"
+   },
+   {
+    "question": "Why do databases use locks?",
+    "answer": "Locks prevent conflicting operations from corrupting data when multiple transactions access the same rows or tables at once. A read or write may block other operations so the database can preserve consistency. The trade-off is reduced concurrency, so overly broad locks can hurt performance. Good schema design and short transactions help keep locking manageable.",
+    "real_world": "A checkout flow that updates inventory and orders may lock the same rows briefly to stop two customers from buying the last item simultaneously. Without locking, race conditions can create negative stock or duplicate reservations.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between row-level locking and table-level locking?"
+   },
+   {
+    "question": "What is a rollback journal or write-ahead log used for?",
+    "answer": "It is a recovery log that records changes before they are fully applied, so the database can restore a consistent state after a crash. This helps the database replay committed work and undo incomplete work. The key idea is durability: once the transaction is committed, the database can recover it even if power is lost immediately afterward. Different databases implement this differently, but the purpose is the same.",
+    "real_world": "After a server crash, the database must not lose a payment that was already committed. Write-ahead logging is what makes crash recovery possible.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is this related to the D in ACID?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide whether to denormalize a schema in a real application?",
+    "answer": "Denormalize when the read pattern benefits are clear and the write cost is acceptable. The usual reasons are fewer joins, simpler queries, or lower latency for hot paths, but you pay with duplicated data and harder consistency guarantees. I’d only do it after measuring a real bottleneck, and I’d document which column is the source of truth. If the duplicated value changes often, denormalization tends to create more problems than it solves.",
+    "real_world": "A product catalog might copy a category name into an item table so the browse page can render faster. The team then needs a job or transaction logic to keep names in sync when categories are renamed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you keep denormalized fields consistent without hurting write performance too much?"
+   },
+   {
+    "question": "What happens when you add an index to a table that is written to heavily?",
+    "answer": "Reads that can use the index usually get faster, but writes get slower because every insert, update, or delete must also update the index. More indexes also mean more storage and more work for the optimizer to maintain and choose from. The trade-off is that an index is only worth it if the read savings outweigh the write overhead. On a high-write table, I’m usually conservative and index only the queries that matter most.",
+    "real_world": "An events table might be ingesting thousands of rows per second, and adding several extra indexes can push the ingestion pipeline behind or increase lock time. Teams often discover this after a feature launch that added a “helpful” search index.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether an index is helping enough to keep it?"
+   },
+   {
+    "question": "Why can an index sometimes make a query slower instead of faster?",
+    "answer": "If the query returns a large fraction of the table, a sequential scan can be cheaper than bouncing through the index and then fetching many rows. An index can also be a bad fit if the predicate is not selective, if the optimizer estimates poorly, or if the query needs lots of columns not covered by the index. Another common case is when the index exists but the filter applies a function or expression that prevents its use. So an index is a tool for selectivity, not a guarantee of speed.",
+    "real_world": "A dashboard query that filters almost the entire current month may slow down after an index is added because the planner still chooses the index and then does many random reads. Engineers often need to compare the indexed plan with a table scan.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of query patterns tend to be poor candidates for indexing?"
+   },
+   {
+    "question": "What is the difference between optimistic and pessimistic concurrency control?",
+    "answer": "Pessimistic concurrency assumes conflicts are likely, so it locks data up front and prevents others from changing it. Optimistic concurrency assumes conflicts are rare, so it lets transactions proceed and checks for conflicts at commit time or with a version column. Pessimistic control reduces retries but can increase blocking and deadlocks; optimistic control scales better when contention is low but needs retry logic. The right choice depends on how often concurrent updates actually collide.",
+    "real_world": "An inventory system may use pessimistic locking during checkout to prevent overselling the last item, while a profile editor might use optimistic checks because conflicts are rare. In practice, teams often mix both patterns in different parts of the product.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement optimistic locking in an application?"
+   },
+   {
+    "question": "What isolation anomalies are you trying to prevent with transaction isolation levels?",
+    "answer": "The main anomalies are dirty reads, non-repeatable reads, and phantom reads. Dirty reads happen when you see uncommitted data; non-repeatable reads happen when the same row changes between two reads in one transaction; phantom reads happen when the set of matching rows changes. Higher isolation prevents more anomalies but usually reduces concurrency and can increase blocking or retries. In real systems, you choose the weakest level that still preserves correctness for the use case.",
+    "real_world": "A reporting job that reads the same account balance twice can produce inconsistent totals if another transaction updates the rows in between. A checkout flow or ledger update often needs stronger isolation than a search page.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where repeatable reads are enough and another where they are not?"
+   },
+   {
+    "question": "How would you debug a query that uses an index on paper but still runs slowly in production?",
+    "answer": "First I’d check the actual execution plan, not just the query text, because the optimizer may choose a different path than expected. Then I’d look for stale statistics, low selectivity, parameter-sensitive plans, functions on indexed columns, or an index that does not match the filter and sort order. I’d also compare production data distribution with test data, since skew is a common reason plans differ. Often the fix is to change the index shape, rewrite the predicate, or refresh statistics rather than adding more indexes.",
+    "real_world": "A query that is fast in staging may become slow in production because one tenant has far more rows than all the others combined. Teams often spend time chasing “bad indexing” when the real issue is skewed data or a misleading plan choice.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What symptoms would make you suspect stale statistics rather than a bad index definition?"
+   },
+   {
+    "question": "When would you choose a unique index instead of a separate validation check in application code?",
+    "answer": "A unique index is the reliable place to enforce uniqueness because it is enforced by the database under concurrency. Application-side checks can race: two requests can both see that a value is free and then both insert it. I’d still validate in the app for a better error message, but the database constraint should be the source of truth. This is especially important for usernames, email addresses, and idempotency keys.",
+    "real_world": "A signup flow that only checks for existing email in application code can create duplicate accounts under load. A unique index turns that race into a deterministic constraint error instead of corrupted data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle the error path cleanly when a unique constraint fails?"
+   },
+   {
+    "question": "What is an idempotent write, and why does it matter for transactions and retries?",
+    "answer": "An idempotent write can be repeated without changing the final outcome beyond the first successful attempt. It matters because network timeouts, deadlocks, and serialization failures often require retries, and retries are dangerous if the operation can double-charge, double-insert, or double-send. Common patterns are unique request IDs, upserts, or storing processed message IDs. Without idempotency, retry logic can create exactly the kind of duplication it was meant to prevent.",
+    "real_world": "Payment and message-processing systems rely on idempotency so a client or worker can safely retry after a timeout. Otherwise, a transient database failure can produce duplicate orders or duplicate side effects.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design an idempotency key table or constraint?"
+   },
+   {
+    "question": "Why might an upsert be preferable to a read-then-insert pattern?",
+    "answer": "An upsert avoids the race between checking for existence and inserting the row. With read-then-insert, two concurrent requests can both see no row and then collide on insert; the upsert lets the database resolve that conflict atomically. It also reduces round trips and usually simplifies retry logic. The trade-off is that you need to be clear about which columns are updated on conflict and whether the operation should create or preserve existing data.",
+    "real_world": "A session store or daily counter often needs atomic create-or-update behavior under concurrency. Using a separate existence check can break under load even if it looked correct in testing.",
+    "code_lang": "sql",
+    "code": "INSERT INTO users (email, name)\nVALUES ('a@example.com', 'A')\nON CONFLICT (email)\nDO UPDATE SET name = EXCLUDED.name;",
+    "follow_up": "What edge cases would you test around an upsert?"
+   },
+   {
+    "question": "How do foreign keys affect write performance and data integrity in practice?",
+    "answer": "Foreign keys add overhead because the database has to verify referenced rows on insert, update, and delete. That cost is often worth it when you want strong referential integrity and fewer orphan records, but it can become noticeable on very hot write paths or large cascades. They also influence locking behavior during deletes and updates, which can surprise teams during peak traffic. I’d keep them for core relationships and be cautious with bulk-loading workflows.",
+    "real_world": "A delete in a parent table can suddenly block many child rows if the relationship uses cascading rules. Teams sometimes disable or defer constraints during imports, but then they need a reliable cleanup and validation step afterward.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you avoid a foreign key even if the relationship exists logically?"
+   },
+   {
+    "question": "How do B-tree indexes actually help a database find rows faster, and when are they less useful?",
+    "answer": "A B-tree index keeps keys ordered, so the database can jump to a range of values and then scan nearby entries instead of reading the whole table. That helps equality lookups and range queries on the leftmost columns of the index. It is less useful when the query touches a large fraction of the table, or when the predicate cannot use the indexed order, such as wrapping the column in a function. The trade-off is faster reads versus extra storage and slower writes.",
+    "real_world": "This shows up when a team adds an index and expects every query to get faster, but a reporting query still scans most of the table. It also matters when a hot write path slows down because every insert must update multiple indexes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes one query able to use a B-tree index and another query miss it?"
+   },
+   {
+    "question": "What is a partial index, and when would you use one instead of indexing the whole table?",
+    "answer": "A partial index stores entries only for rows that match a condition, so it is smaller and cheaper to maintain than a full-table index. It is useful when most queries target a narrow subset of rows, like active users or open orders. The main trade-off is that the query must match the index condition well enough for the planner to use it. It is a good fit when the filtered subset is stable and commonly queried.",
+    "real_world": "A support dashboard that only shows unresolved tickets can benefit from a partial index on open tickets rather than indexing every ticket row. That keeps the index smaller and reduces write overhead on closed tickets.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX idx_open_tickets_created_at\nON tickets(created_at)\nWHERE status = 'open';",
+    "follow_up": "How would you tell whether a partial index is actually being used by your common queries?"
+   },
+   {
+    "question": "Why can inserting rows in primary-key order be faster than inserting them in random order?",
+    "answer": "When inserts follow the index order, the database is more likely to append near the end of the index and touch fewer pages. Random inserts can force page splits and more scattered I/O, which increases fragmentation and write amplification. This matters most on large tables with heavy write traffic. The trade-off is that the ideal insert order is not always the natural order of your application data.",
+    "real_world": "A bulk import job that writes rows sorted by timestamp often finishes much faster than the same data loaded in random order. Teams sometimes reorder batch imports to reduce index churn and lock time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What symptoms would make you suspect page splits or index fragmentation in production?"
+   },
+   {
+    "question": "How do you think about choosing between one wide table and splitting data into multiple related tables?",
+    "answer": "A wide table can be simpler to query, but it often creates lots of sparse columns, repeated data, and larger rows than necessary. Splitting data into related tables improves storage efficiency and update locality when parts of the data change at different rates. The trade-off is more joins and more schema complexity. In practice, I split when the data has different lifecycle or access patterns, not just to be more 'normalized' in the abstract.",
+    "real_world": "User profiles often mix stable account data with optional profile fields and login history. Separating those into different tables can reduce row size and avoid rewriting cold data on every hot update.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of access patterns would push you back toward combining tables?"
+   },
+   {
+    "question": "What is a transaction isolation level, and how does it change what concurrent queries can see?",
+    "answer": "Isolation level controls how much one transaction can observe changes made by others before they commit. Lower isolation improves concurrency but can allow anomalies like non-repeatable reads or phantom rows, while higher isolation gives stronger guarantees at a performance cost. The right choice depends on the business rule, not just on avoiding bugs in general. For example, financial or inventory operations often need stronger isolation than a read-heavy feed or analytics page.",
+    "real_world": "A checkout flow that reads stock and then decrements it can oversell if the isolation level is too weak. On the other hand, using the strongest level everywhere can create unnecessary contention and slow requests under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose an isolation level for a checkout or booking system?"
+   },
+   {
+    "question": "What is a phantom read, and why is it different from a non-repeatable read?",
+    "answer": "A non-repeatable read happens when the same row changes between two reads in one transaction. A phantom read happens when a repeated query returns a different set of rows because another transaction inserted or deleted rows that match the predicate. The difference is row mutation versus changing membership in the result set. This matters when business logic depends on counts, ranges, or uniqueness checks inside a transaction.",
+    "real_world": "A seat reservation system that counts available seats can be broken by phantom rows if another transaction inserts a matching booking between two checks. That can lead to double booking even though each individual row read looked consistent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What database features or patterns can prevent phantom reads in practice?"
+   },
+   {
+    "question": "When would you use a savepoint inside a transaction?",
+    "answer": "A savepoint lets you roll back part of a transaction without losing all earlier work. It is useful when you want to keep the outer transaction alive but recover from a smaller failure, such as one bad optional step in a multi-step workflow. The trade-off is extra complexity, and not every database or application framework uses savepoints the same way. They are most helpful when one request needs partial rollback behavior.",
+    "real_world": "An order flow might create the order header, then try to reserve inventory, then write an audit record. If the audit write fails, a savepoint can undo only that step while preserving the order and reservation logic.",
+    "code_lang": "sql",
+    "code": "SAVEPOINT before_optional_step;\n-- optional work here\nROLLBACK TO SAVEPOINT before_optional_step;\n-- continue or commit outer transaction",
+    "follow_up": "How is a savepoint different from opening a second transaction?"
+   },
+   {
+    "question": "What is a long-running transaction, and why can it hurt the rest of the system?",
+    "answer": "A long-running transaction keeps locks or row versions alive for longer, which can block writers, increase contention, and delay cleanup of old data. It can also make replication lag or vacuum work worse depending on the database. The key issue is not just duration, but holding onto resources while waiting on application logic or network calls. In production, short transactions are usually easier to scale and reason about.",
+    "real_world": "A request handler that opens a transaction before calling an external service can stall unrelated updates for seconds. That often shows up as lock waits and a sudden spike in slow requests during an outage or dependency slowdown.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What code patterns commonly cause transactions to stay open too long?"
+   },
+   {
+    "question": "How do you tell whether a query is being slowed down by bad indexing or by too much data being returned?",
+    "answer": "First check whether the database is doing a selective lookup or scanning a large part of the table, then compare rows examined versus rows returned. If the access path is good but the query still feels slow, the bottleneck may be sorting, network transfer, or application-side processing of a large result set. Indexes help finding rows, but they do not make returning huge result sets cheap. The trade-off is often between narrowing the query and adding more indexing.",
+    "real_world": "An endpoint that returns thousands of rows may look fast in the plan but still be slow because serialization and network transfer dominate. Teams sometimes misdiagnose this as an indexing problem when the real fix is pagination or projection.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you change first if an API endpoint returns too many rows?"
+   },
+   {
+    "question": "What is a unique constraint vs a unique index, and why might you care which one you use?",
+    "answer": "Both enforce uniqueness, but a unique constraint expresses the rule at the schema level, while a unique index is the physical structure the database uses to enforce it. In some databases they are closely related, but the constraint is clearer for documenting intent and for tools that inspect schema rules. The practical question is whether you want a business rule or just an access-path optimization that happens to be unique. I prefer the constraint when uniqueness is a real invariant.",
+    "real_world": "A team storing usernames or email addresses should enforce uniqueness in the database, not only in application code. Otherwise, concurrent requests can pass a pre-check and still create duplicates.",
+    "code_lang": "sql",
+    "code": "ALTER TABLE users\nADD CONSTRAINT uq_users_email UNIQUE (email);",
+    "follow_up": "When would you still keep an application-level uniqueness check even with a database constraint?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does MVCC actually work under the hood, and what costs does it introduce at scale?",
+    "answer": "MVCC lets readers see a consistent snapshot without blocking writers by keeping multiple row versions and deciding visibility from transaction metadata. The upside is much higher read/write concurrency; the cost is extra storage, more work on updates, and cleanup pressure because old versions must be retained until no active snapshot needs them. At scale, long-lived transactions are especially harmful because they prevent garbage collection of old versions and inflate table and index bloat. It also means secondary indexes may point to row versions that still need a visibility check.",
+    "real_world": "A common production incident is a reporting transaction left open for hours, which causes version cleanup to stall, disk usage to spike, and ordinary queries to slow down because they scan through dead tuples or old row versions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect and mitigate MVCC bloat in production?"
+   },
+   {
+    "question": "What is write skew, and why can it still happen under snapshot isolation?",
+    "answer": "Write skew happens when two transactions read the same predicate, each sees a valid state, then they update different rows in a way that violates a cross-row invariant. Snapshot isolation prevents many conflicts, but if the transactions do not update the same row, they may both commit because there is no direct write-write conflict to detect. The fix is usually serializable isolation, explicit locking of the rows or predicate range involved, or redesigning the invariant so conflicting transactions touch the same locked record.",
+    "real_world": "This shows up in scheduling and quota systems, like two doctors both going off call or two workers both reserving the last available slot based on the same snapshot.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you enforce a cross-row business rule without paying the cost of serializable isolation everywhere?"
+   },
+   {
+    "question": "How do next-key or predicate locks prevent phantoms, and what trade-offs do they introduce?",
+    "answer": "To prevent phantoms, the database must protect not just existing rows but the key ranges matched by a predicate, so inserts into that range are blocked or detected as conflicts. Some engines do this with next-key or gap locks, while others track read/write dependencies and abort one transaction at commit. The benefit is correctness for range-based invariants; the cost is reduced concurrency, more blocking or retries, and surprising contention on hot key ranges even when rows do not yet exist.",
+    "real_world": "An orders system that checks 'no overlapping bookings for this resource between t1 and t2' needs range protection; otherwise concurrent inserts can both pass validation and create invalid overlap.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of queries tend to create the widest lock ranges and the worst contention?"
+   },
+   {
+    "question": "What makes a secondary index expensive on an update-heavy table beyond just extra disk space?",
+    "answer": "Every relevant insert, update, or delete must also maintain the secondary index, which means extra random I/O or memory churn, more WAL or redo generation, and more page splits if keys arrive out of order. Updates that change indexed columns are often effectively delete-plus-insert in the index structure. Secondary indexes can also reduce the effectiveness of batching and increase replication lag because every logical row change fans out into multiple physical writes. The total cost is often dominated by write amplification rather than raw bytes on disk.",
+    "real_world": "Teams often discover that adding 'just one more index' to support a dashboard doubles p99 write latency on a hot table and pushes replicas behind during traffic spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you estimate whether a new index is worth its write cost before adding it?"
+   },
+   {
+    "question": "Why does keyset pagination usually scale better than OFFSET pagination, and what are the design constraints?",
+    "answer": "OFFSET forces the database to walk past N rows before returning the next page, so the work grows with page number even if an index exists. Keyset pagination uses a stable sort key and a WHERE clause like 'greater than last seen key', so the index can seek directly to the next page. It scales much better for deep pagination, but it requires a deterministic ordering, usually with a tie-breaker, and it does not support arbitrary jumps to page 500 as naturally.",
+    "real_world": "Infinite-scroll feeds and admin listings often look fine in testing, then become slow in production when users reach deep pages and OFFSET queries scan millions of index entries.",
+    "code_lang": "sql",
+    "code": "SELECT id, created_at, title\nFROM posts\nWHERE (created_at, id) < (?, ?)\nORDER BY created_at DESC, id DESC\nLIMIT 50;",
+    "follow_up": "What can go wrong if the sort column is not unique or can change after a row is created?"
+   },
+   {
+    "question": "How would you choose between hash partitioning and range partitioning for a large transactional table?",
+    "answer": "Range partitioning is good when queries and lifecycle operations follow the partition key, such as time-based retention, pruning, or backfills. Hash partitioning spreads writes and storage more evenly and can reduce hotspots, but it is weaker for pruning and operational tasks like dropping old data. The right choice depends on whether your dominant pain is skew and write concentration or query locality and data management. You also need to account for how unique constraints, joins, and cross-partition transactions behave in your engine.",
+    "real_world": "Event tables often use time ranges because dropping a whole old partition is far cheaper than deleting billions of rows, while high-write tenant tables may hash by tenant to spread load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems appear when the partition key does not match the most common query filters?"
+   },
+   {
+    "question": "What are the failure modes of two-phase commit, and why do many teams avoid it for distributed transactions?",
+    "answer": "Two-phase commit gives atomic commit across participants, but the coordinator becomes critical and participants can be left blocked if it fails after prepare and before the final decision is known. It also adds latency because each participant must durably record state before commit, and it interacts poorly with partitions and long lock holds. Many teams avoid it because operational complexity and reduced availability outweigh the convenience of global atomicity. They often prefer sagas, outbox patterns, or designing around eventual consistency.",
+    "real_world": "A service can end up with rows locked in prepared state or work waiting on an uncertain transaction outcome, turning one coordinator incident into a broad availability problem.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is the outbox pattern a better fit than distributed 2PC, and what guarantees does it change?"
+   },
+   {
+    "question": "How do hot keys or hotspot rows show up in a relational system, and what can you do about them?",
+    "answer": "A hotspot appears when many concurrent transactions contend on the same row, page, or index key, causing lock waits, latch contention, or repeated retries under optimistic schemes. Typical examples are a single counter row, one tenant receiving most traffic, or monotonically growing keys concentrating inserts on the right edge of an index. Mitigations include sharding the logical key, using striped counters, batching updates, changing the key distribution, or moving that access pattern to a different data structure. The right fix depends on whether the bottleneck is logical locking or physical page contention.",
+    "real_world": "A 'global unread count' row or a popular inventory item can dominate database time while the rest of the cluster looks idle, because all threads pile onto the same small set of pages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish row-lock contention from B-tree page latch contention?"
+   },
+   {
+    "question": "What is index-only scanning, and why does it sometimes still hit the table?",
+    "answer": "An index-only scan can satisfy a query from the index if all required columns are present there, but that is not always enough. The engine may still need to visit the base row to verify visibility or fetch columns not safely available from the index under its storage model. Whether it stays truly index-only depends on the database internals, maintenance state, and how recent the row versions are. So a plan that says 'index-only' can still degrade if visibility metadata or storage conditions are unfavorable.",
+    "real_world": "After heavy write bursts, a query that was fast from cache may suddenly perform many heap lookups and slow down, even though the SQL and index definition did not change.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What maintenance or schema changes can improve the chances that index-only scans stay truly index-only?"
+   },
+   {
+    "question": "How do you model and enforce a uniqueness rule that includes NULL-like optional values without creating subtle duplicates?",
+    "answer": "You need to decide the business semantics first, because databases differ in how unique constraints treat NULLs and optional fields. If 'missing value' should still participate in uniqueness, you usually normalize the representation or use an expression-based key so logically equivalent values map to the same indexed value. If the rule only applies when the optional column is present, a conditional or filtered uniqueness rule is often the cleanest approach. The main risk is assuming application-level checks will match database behavior under concurrency.",
+    "real_world": "A user table with optional email often ends up with multiple 'no email' or case-variant duplicates unless the schema makes the intended equality and uniqueness rules explicit.",
+    "code_lang": "sql",
+    "code": "CREATE UNIQUE INDEX uq_users_email_norm\nON users (LOWER(COALESCE(email, '')));",
+    "follow_up": "What are the drawbacks of encoding business semantics into expression-based unique indexes?"
+   },
+   {
+    "question": "How do you choose between a surrogate primary key and a natural key in a high-scale transactional system?",
+    "answer": "A surrogate key keeps joins and secondary indexes smaller and more stable, which matters when keys are repeated across many indexes and foreign keys. Natural keys can enforce real business identity directly, but they often change, are wider, or have messy edge cases like formatting and reuse. A common pattern is a surrogate primary key plus a separate unique constraint on the natural business key. The trade-off is one more index and one more lookup path in exchange for operational safety and simpler schema evolution.",
+    "real_world": "Teams often regret using email or account number as the primary key when the business later allows changes, merges, or regional formatting differences. Re-keying large tables and all referencing tables is expensive and risky.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you deliberately choose a natural key anyway?"
+   },
+   {
+    "question": "What actually happens during a page split in a B-tree index, and why does it matter for latency?",
+    "answer": "When a target leaf page is full, the engine has to allocate a new page, move roughly half the entries, update parent pointers, and log the change for crash recovery. That extra work increases write latency and can cascade upward if parent pages also need splitting. Frequent splits also increase fragmentation, which hurts cache locality and range-scan performance. The severity depends on engine internals, fill patterns, and whether inserts are random or append-like.",
+    "real_world": "A service that switched from sequential IDs to random UUID primary keys often sees higher p99 insert latency and larger indexes because writes spread across the tree and trigger more page splits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What schema or key design choices reduce page split frequency without losing correctness?"
+   },
+   {
+    "question": "How would you design indexes for a query that filters on one set of columns, sorts on another, and only needs the top N rows?",
+    "answer": "I’d try to build one index that matches the selective filters first and then the sort order, so the engine can stop after reading N rows instead of sorting a large intermediate result. Equality predicates usually help most before range predicates; once you hit a range, later columns are often less useful for ordered retrieval. I also check whether the selected columns can be served from the index to avoid extra lookups. If one perfect index would be too expensive for writes, I optimize for the hottest query shape and accept a sort for the rest.",
+    "real_world": "This comes up in feeds, job queues, and dashboards where `ORDER BY created_at LIMIT 50` is cheap only if the engine can walk an ordered index rather than sort thousands of candidate rows.",
+    "code_lang": "sql",
+    "code": "SELECT id, created_at\nFROM orders\nWHERE tenant_id = ? AND status = 'open'\nORDER BY created_at DESC\nLIMIT 50;",
+    "follow_up": "How would your answer change if the filter included a broad date range predicate?"
+   },
+   {
+    "question": "What is lock escalation, and how can it surprise you in production?",
+    "answer": "Lock escalation is when the database replaces many fine-grained locks with a coarser lock, like a page or table lock, to reduce lock-management overhead. That saves memory and bookkeeping, but it can suddenly block unrelated transactions that would have coexisted under row-level locking. It is especially surprising during large updates, deletes, or batch maintenance jobs. Whether and how it happens depends on the database engine and configuration.",
+    "real_world": "A backfill that updates millions of rows in one transaction can unexpectedly stall user traffic because the system escalates to broader locks, turning a targeted change into a table-wide contention event.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What operational techniques would you use to avoid triggering it during a backfill?"
+   },
+   {
+    "question": "How do deferred constraints change transaction behavior, and when are they useful?",
+    "answer": "Deferred constraints are checked at commit time instead of at each statement, so a transaction can temporarily hold an invalid intermediate state. That is useful for bulk loads, cyclical foreign-key relationships, or multi-step updates where statement-by-statement validation would fail even though the final state is valid. The trade-off is that errors appear later, and the commit can become more expensive because validation work is concentrated there. They also make debugging harder if many rows are involved.",
+    "real_world": "This matters when importing related records from another system: inserting parent and child rows in convenient batches may need deferred checks to avoid artificial ordering constraints.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of bugs become harder to diagnose when constraint checking is deferred?"
+   },
+   {
+    "question": "What is a lost update, and how do you prevent it without serializing all writers?",
+    "answer": "A lost update happens when two transactions read the same value, both compute a new value, and the later write overwrites the earlier one. You can prevent it with compare-and-set style updates using a version column or previous value in the `WHERE` clause, so only one write succeeds. Another option is a single atomic `UPDATE` that changes the value relative to its current state instead of read-modify-write in application code. This preserves concurrency better than forcing every writer through a fully serial schedule.",
+    "real_world": "Inventory counters, wallet balances, and quota usage often get corrupted by lost updates when application servers cache state briefly and then write back stale values.",
+    "code_lang": "sql",
+    "code": "UPDATE accounts\nSET balance = balance - 100,\n    version = version + 1\nWHERE id = 42 AND version = 7;",
+    "follow_up": "How would you handle the retry path when that update affects zero rows?"
+   },
+   {
+    "question": "How do you decide whether a secondary index should include a monotonically increasing timestamp column, given write amplification and query needs?",
+    "answer": "Including the timestamp can be very valuable if queries filter or sort by recency, especially for top-N retrieval and time-bounded scans. But every extra indexed column increases index size, cache pressure, and write cost on inserts and updates. A timestamp with low selectivity by itself is often not useful, while as a trailing column behind a highly selective key it can be excellent. I decide based on measured query frequency, whether it removes a sort or heap lookup, and whether the table is write-bound.",
+    "real_world": "On an event table, adding `created_at` to a tenant-focused index may turn a slow sort-heavy dashboard into an index walk, but on a hot ingestion path it can also push storage and I/O costs up noticeably.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals in production metrics would tell you the added column was not worth the write cost?"
+   },
+   {
+    "question": "What are the trade-offs between enforcing referential integrity in the database versus only in application logic in a sharded system?",
+    "answer": "Database-enforced integrity gives stronger guarantees and simpler local reasoning, but it becomes hard or impossible when related rows live on different shards or services. Application-level enforcement is more flexible and can span boundaries, but it is vulnerable to races, partial failures, and drift unless you build compensating workflows and reconciliation. In practice, many systems keep hard constraints within a shard and use asynchronous checks or repair jobs across shards. The trade-off is correctness guarantees versus scalability and architectural freedom.",
+    "real_world": "Teams splitting a monolith into tenant shards often discover that cross-shard foreign keys do not exist, so deletes and moves need explicit workflows to avoid orphaned data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely delete a parent record when children may exist on other shards?"
+   },
+   {
+    "question": "How do gapless sequences differ from ordinary generated IDs, and why are they hard to scale?",
+    "answer": "Ordinary generated IDs are mainly about uniqueness, not continuity, so gaps appear naturally from rollbacks, caching, crashes, or concurrent allocation. A truly gapless sequence requires serial coordination around number assignment and often around commit outcome, which adds contention and failure complexity. That makes it a poor fit for high-throughput distributed writes. If the business asks for no gaps, I first check whether they actually need ordering, auditability, or human-friendly numbering instead.",
+    "real_world": "Invoice systems often request gapless numbering for compliance, but implementing it naively on a busy shared table can create a central bottleneck and painful incident paths during failover.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What design would you propose if the business needs legally auditable invoice numbers but the write path must stay scalable?"
+   },
+   {
+    "question": "How would you migrate a very large table to a new primary key or partitioning scheme with minimal downtime?",
+    "answer": "I’d avoid a stop-the-world rewrite by using an expand-migrate-contract approach: add new columns or tables, backfill in chunks, dual-write or capture changes, validate consistency, then cut reads over and finally remove the old path. The hard parts are preserving correctness under concurrent writes, controlling replication lag and lock duration, and making the cutover reversible. For partitioning, I also check query routing, unique-key semantics, and maintenance jobs before switching traffic. The plan is mostly about limiting blast radius and having measurable checkpoints.",
+    "real_world": "Large rekeys and repartitioning projects fail when teams underestimate long-running locks, replica catch-up time, or the complexity of keeping old and new representations synchronized during cutover.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you validate before cutover to be confident dual-write divergence has not occurred?"
+   }
+  ]
+ }
+}

@@ -1,0 +1,433 @@
+Integration and APIs (INT)
+Level 1 (in the core path)
+* Lab 3, calling an outside API:
+   * Reading a response part by part
+   * Tokens, a higher limit, a wrong token
+   * Following the link header through every page
+   * Reaching the rate limit (429, Retry-After)
+   * Errors you can retry and errors you can’t
+   * A list that changes while you page through it
+   * Asking only for what changed (ETag and 304)
+* Lab 5, receiving events:
+   * One delivery from the change to the database row
+   * Checking the signature
+   * The same delivery twice
+   * Answering within 10 seconds
+   * The receiver down
+   * Deliveries in the wrong order
+   * A scheduled pull that finds what the events missed
+* Lab 6, the outbox:
+   * A change and its message saved in one transaction
+   * Redis down without losing the job
+   * A relay that sends a row twice, and a consumer that ignores the repeat
+* Labs 8 and 10, idempotency keys:
+   * A payment that survives a crash at each step
+   * A retry without a key that charges twice
+   * A repeated request with the same Idempotency-Key gets the first answer back
+Level 2
+* Lab 10 (core), your own API:
+   * Reading an endpoint from route to SQL
+   * Validation and one error shape (422, 404)
+   * Cursor against offset paging
+   * Versions with ETag and If-Match (412, 428)
+   * A long task answered with 202 and cancelled
+   * Tests first, testing against a fake
+   * Catching an AI change that edited a test instead of the code
+* Lab 11 (core), caching and rate limits:
+   * Hit, miss and expiry
+   * Stale reads and two ways to clear them
+   * Eviction under a memory limit
+   * Many misses at once (a lock)
+   * Your own token-bucket rate limit
+   * Redis stopped or paused: fail open or closed
+* Lab 12 (core), a second source:
+   * Requesting a bulk export and waiting for it
+   * Polling with a growing interval
+   * CSV files that aren’t clean
+   * Two systems mapped into one shape
+   * Links between systems
+   * A contract test against a saved sample
+* Lab 13 (core), writing back:
+   * A change that must reach another system
+   * Applied, then timed out
+   * Writing without an idempotency key
+   * Your own change coming back as a webhook
+   * The other side refuses
+   * Many writes at once
+* Lab 14 (core), design patterns:
+   * The patterns already in the code
+   * One instance per process
+   * An interface with two implementations
+   * Factory Method, Strategy, State
+   * When not to use a pattern
+* INT-1, GraphQL as a client:
+   * Queries
+   * Cursor pagination
+   * Query cost limits
+   * Errors inside a 200 reply
+Level 3
+* Lab 22, RabbitMQ beside arq:
+   * A work queue with two workers
+   * A worker stopped, then killed, during a task
+   * The broker restarted
+   * The same message twice
+   * A forgotten acknowledgement
+* Lab 23, SQS behavior with ElasticMQ:
+   * Receiving with and without deleting
+   * The visibility timeout
+   * A message that always fails, and the dead-letter queue
+   * A long job
+   * A consumer killed mid-message
+* Lab 30, network faults with Toxiproxy:
+   * A steady state measured first
+   * Latency on the database link
+   * A link that hangs or resets
+   * A slow GitHub
+   * Timeouts, retries, a circuit breaker
+* INT-2, sagas: a change written to two outside systems, the second fails, and a compensating step undoes the first.
+* INT-3, change data capture: PostgreSQL logical decoding read by a consumer, compared with the outbox.
+* INT-4, an API gateway: routing, rate limits and token checks in front of the API.
+* INT-5, integration architecture (reading and design):
+   * Choreography against orchestration
+   * Anti-corruption layer, strangler fig
+   * Domain-driven design (bounded contexts, aggregates)
+   * Clean and hexagonal architecture
+   * Backends for frontends
+   * API versioning, contract-first design with OpenAPI
+* INT-6, Kafka:
+   * Consumer groups
+   * A rebalance when a consumer joins
+   * Replay from an earlier offset
+Level 4
+* INT-7, gRPC and Protocol Buffers: contracts, streaming modes and versioning (reading, small demo).
+Data and databases (DATA)
+Level 1
+* Lab 4 (core):
+   * Tables and SQL typed by hand
+   * Insert against upsert (a pull that is safe to run again)
+   * Changes-only pulls
+   * A lost update in two sessions, and four ways to prevent it
+   * Two pulls at once with an advisory lock
+   * An old copy written over a new one
+* Lab 10 (core): SQL sent from an API.
+* DATA-8, where data lives in a company:
+   * Application databases (OLTP) against reporting (OLAP)
+   * Warehouses and lakes
+   * Batch against stream processing
+Level 2
+* Lab 20, O3 (core): a slow query found with pg_stat_statements, read with EXPLAIN (ANALYZE, BUFFERS) and fixed with an index.
+* DATA-1, indexes and query plans:
+   * Composite, partial and covering indexes
+   * Join algorithms
+   * The planner’s statistics
+* DATA-2, isolation levels:
+   * Read Committed, Repeatable Read and Serializable in two sessions
+   * A non-repeatable read
+   * Write skew
+   * A serialization failure retried
+* DATA-3, an ORM: SQLAlchemy over the same tables, the SQL it sends, the N+1 query pattern and eager loading.
+* DATA-4, bulk data with Pandas: profiling, cleaning, mapping and merging Lab 12’s export.
+Level 3
+* Lab 25, PgBouncer:
+   * Running out of connections
+   * Pools that multiply
+   * Transaction mode
+   * An advisory lock through the pooler
+   * A setting that leaks between sessions
+   * Prepared statements
+* Lab 26, read replicas:
+   * A streaming replica serving reads
+   * “My edit disappeared” (replication lag) and fixes
+   * Lag under load
+   * A replication slot left behind
+* Lab 27, partitioning and sharding:
+   * Monthly partitions, and dropping a month
+   * Two shards with two possible keys
+   * A query without the shard key
+   * A hot shard
+* Lab 28, schema changes without downtime:
+   * A lock queue
+   * A migration linter
+   * A rename in expand-and-contract steps across two API versions
+   * Constraints and indexes added safely
+   * Moving a database with logical replication, with a reverse plan
+* DATA-5, MVCC, vacuum and bloat: row versions, a long transaction that holds back vacuum, and table statistics.
+Level 4
+* DATA-6, storage engines and data models:
+   * B-tree against LSM tree
+   * Document and key-value modeling
+   * A DynamoDB single-table design
+* DATA-7, event sourcing and CQRS: an event log, projections and replay.
+System design (SYS)
+Level 1
+* SYS-1, requirements and estimates:
+   * Throughput and latency
+   * SLOs and SLAs
+   * Rough capacity estimates
+* SYS-2, computer and network basics:
+   * CPU, memory, disk and cache speeds
+   * DNS and TCP
+   * HTTP/1.1, HTTP/2 and HTTP/3
+   * TLS
+Level 2
+* Labs 1 and 11 (core), caching:
+   * Cache-aside with expiry
+   * Stale values
+   * Invalidation, eviction, stampedes
+* Lab 2 (core), queues and workers:
+   * A job followed through Redis
+   * Workers stopped or killed mid-job
+   * Redis restarted with jobs waiting
+   * Two workers
+   * Time limits and retries
+   * Jobs that are safe to repeat
+   * A second queue
+* Lab 18 (core): a reverse proxy, one origin, timeouts.
+* SYS-3, load balancing:
+   * Two API replicas
+   * Layer 4 against Layer 7
+   * Health checks
+   * A replica stopped during requests
+Level 3
+* Lab 31, HTTP caching and a CDN:
+   * Files that never change
+   * Revalidation
+   * A shared cache, serving stale while refreshing
+   * A private page in a shared cache
+   * An optional real CDN
+* SYS-4, consistency models, CAP and PACELC, and quorums (with a demo on Lab 26’s replica).
+* SYS-5, consistent hashing: a hash ring in Python, a node added, the keys that move, virtual nodes.
+* SYS-6, six design write-ups:
+   * Rate limiter
+   * Notification system
+   * Job scheduler
+   * Payment system with a ledger
+   * Web crawler
+   * URL shortener
+Level 4
+* SYS-7, distributed systems theory:
+   * Raft, and Paxos at the level of intuition
+   * Two-phase commit
+   * Vector clocks and CRDTs
+* SYS-8, six more designs: chat, key-value store, news feed, collaborative editor, search autocomplete, file sync.
+Frontend (FE)
+Level 1
+* FE-8, how a page reaches the screen: HTML, CSS, JavaScript, the DOM and the browser’s developer tools.
+Level 2
+* Lab 15 (core), the dashboard:
+   * CORS and a same-origin proxy
+   * Loading, empty and error states
+   * Keyboard use and screen reader checks
+   * An older answer replacing a newer one
+   * Watching and cancelling a run
+   * Two tabs editing one issue
+   * A result not known yet
+   * Routes
+* Lab 16 (core), how a browser app is put together:
+   * Where the app starts
+   * A form built from data
+   * node modules and the lock file
+   * The same things in Angular
+   * Reading someone else’s app
+* FE-1, server state: TanStack Query, refetching and optimistic updates.
+Level 3
+* Lab 29, server-sent events and WebSockets behind a proxy:
+   * A stream direct and through the proxy
+   * A stream with no events
+   * A WebSocket through nginx
+   * Two API processes
+   * A restart
+   * Many tabs
+* FE-2, rendering strategies: the same page rendered on the client, on the server and at build time.
+* FE-3, web performance:
+   * Core Web Vitals (LCP, CLS, INP)
+   * Code splitting and lazy loading
+   * The critical rendering path
+   * Virtualized long lists
+* FE-7, accessibility in depth: a WCAG 2.2 audit, keyboard and screen reader testing, and what automated checks miss.
+* FE-4, Angular in depth (optional):
+   * Change detection and OnPush
+   * Signals and zoneless change detection
+   * Lazy-loaded routes
+   * Dependency injection
+   * RxJS subjects
+Level 4
+* FE-5, design systems and component libraries.
+* FE-6, micro-frontends, service workers and progressive web apps.
+Platform, operations and cloud (OPS, CLD)
+Level 1
+* Lab 0 (core):
+   * Windows, WSL 2 and Ubuntu
+   * Docker Engine and Compose in Ubuntu
+   * Docker without sudo
+   * The editor and project folder
+   * WSL’s memory limit
+   * Day-to-day WSL and Docker commands
+* Lab 1 (core):
+   * Compose services and .env
+   * The check script
+   * The API’s /docs page
+   * Logs, SQL and Redis prompts
+   * Restarting and scaling services
+   * Stop, down and up
+   * Backup and a restore test
+Level 2
+* Lab 18 (core), proxy and TLS:
+   * nginx serving one origin
+   * A lab certificate authority trusted by Windows
+   * Headers behind a proxy
+   * Proxy timeouts (502, 504)
+* Lab 19 (core), pipeline, release and rollback:
+   * Numbered migrations
+   * The pipeline run locally
+   * A secret in Git history
+   * Version tags
+   * A second environment
+   * Deploy and roll back
+* Lab 20 (core), operate:
+   * Alive and ready checks
+   * One request followed through the logs
+   * The slow query
+   * Backup, loss and restore
+   * A scheduled run that never ran
+   * A runbook entry and a postmortem
+* OPS-1, metrics and traces: OpenTelemetry, Prometheus, Grafana, and one request traced end to end.
+* OPS-2, SLOs, error budgets and alerts: an SLO for the API, a burn-rate alert and a runbook entry.
+* CLD-1, an AWS account set up safely:
+   * The Free plan
+   * MFA, an IAM user
+   * One region, tags, teardown
+   * Actions that move the account to paid
+* CLD-2, S3 and IAM from code:
+   * Exports written to S3 with boto3
+   * A least-privilege policy
+   * Object, block and file storage
+   * A local stand-in first, then AWS
+Level 3
+* Lab 24, queue depth as a scaling signal:
+   * A backlog forming
+   * Two ways to scale
+   * Waiting work against computing work
+   * A worker killed during the backlog
+* OPS-3, Docker internals: namespaces, cgroups, image layers and multi-stage builds.
+* OPS-4, Kubernetes: the sync service on a local cluster with Deployments, Services, ConfigMaps, Secrets and probes.
+* OPS-5, Kubernetes scaling and jobs:
+   * A HorizontalPodAutoscaler
+   * A CronJob
+   * KEDA scaling the runner
+* OPS-6, infrastructure as code: Terraform or OpenTofu, state, modules and drift.
+* OPS-7, Vault: dynamic database credentials and rotation.
+* OPS-8, deployment strategies: blue-green, canary and feature flags.
+* CLD-3, SQS and Lambda for the runner’s work.
+* CLD-4, the sync service on AWS: containers, managed PostgreSQL, logs and alarms.
+Level 4
+* OPS-9: service mesh, multi-region designs, Kubernetes internals and cost management.
+Security and identity (SEC)
+Level 1
+* SEC-1, fundamentals check:
+   * OWASP Top 10
+   * Hashing against encryption
+   * Symmetric and public-key cryptography
+   * Password hashing with Argon2
+   * TLS
+Level 2
+* Lab 17 (core), sign-in and roles:
+   * An OIDC sign-in with PKCE, step by step
+   * What the tokens say
+   * Roles, and a missing role check
+   * Another user’s data
+   * A machine client
+   * Token lifetimes and refresh
+   * A job acting for a person
+* Lab 18 (core): TLS and a certificate authority.
+* SEC-2, web attacks and fixes: cross-site scripting, cross-site request forgery, SQL injection and an object read without an ownership check, each exploited, fixed and tested; CSP and cookie flags.
+Level 3
+* SEC-3, a STRIDE threat model of the sync service.
+* SEC-4, supply chain checks on AI-written code:
+   * Dependency audit
+   * Static analysis
+   * Container scan
+   * SBOM
+* SEC-5, authorization models: attribute-based and relationship-based rules in a policy engine.
+* SEC-6, service-to-service trust: mutual TLS and the zero-trust model.
+Level 4
+* SEC-7, payment security and key management: PCI DSS scope, tokenization and envelope encryption with a key management service.
+Applied AI engineering (AI)
+Level 1
+* AI-1, how language models behave:
+   * Tokens and context windows
+   * Temperature and top-p
+   * Hallucination
+   * Embeddings and similarity
+   * With a local model
+* AI-2, prompting and structured output: instructions and examples, a system prompt, and output checked against a Pydantic model.
+Level 2
+* AI-3, a model call in the sync service:
+   * Classifying and summarizing issues
+   * Timeouts, retries, validation
+   * Token counts and cost logged
+* AI-4, tool calling and streaming:
+   * The model calling API routes
+   * Streaming to the dashboard
+   * A token budget
+* AI-5, prompt injection: instructions planted in an issue’s text, what they cause, and the guardrails that limit it.
+Level 3
+* AI-6, retrieval:
+   * Chunking
+   * pgvector embeddings in PostgreSQL
+   * Hybrid search with full-text search
+   * Reranking
+* AI-7, evaluating AI features:
+   * A regression set
+   * A model as judge with a rubric
+   * RAG metrics
+   * Tracing and cost per request
+   * Prompt versions released to part of the traffic
+* AI-8, an MCP server: tools that list issues and start a run, with read-only and write tools kept apart.
+* AI-9, an agent with an approval step:
+   * A tool loop with limits
+   * Memory
+   * A write-back only after approval
+   * Failures caused on purpose
+Level 4
+* AI-10:
+   * Multi-agent orchestration
+   * HyDE and agentic retrieval
+   * Fine-tuning with LoRA
+   * Inference speed and cost (batching, quantization, prompt caching)
+Interview preparation (PREP)
+Level 1
+* PREP-1, Big-O and when each of the ten patterns applies: two pointers, sliding window, binary search, trees with BFS and DFS, graphs, dynamic programming, heaps, stacks, backtracking, tries.
+* PREP-2, the 6 Easy problems: Valid Palindrome, Best Time to Buy Stock, Binary Search, Invert Binary Tree, Climbing Stairs, Valid Parentheses.
+* PREP-5, Python drill:
+   * Iterators and generators
+   * Decorators
+   * Dataclasses and dunder methods
+   * Async
+   * Type hints
+Level 2
+* PREP-3, the 30 Medium problems, among them Task Scheduler, Course Schedule, LRU Cache, Number of Islands and Coin Change.
+* PREP-6, backend and SQL drill:
+   * MVCC, isolation levels, indexes
+   * Idempotency, the outbox
+   * OAuth with PKCE
+   * The strangler fig, SOLID, the testing pyramid
+   * REST against gRPC
+* PREP-8, behavioral STAR stories from your own work (personal copy).
+Level 3
+* PREP-4, the 12 Hard problems, among them Trapping Rain Water, Median of Two Sorted Arrays, Word Ladder, Edit Distance, N-Queens and Merge K Sorted Lists.
+* PREP-7, system design interviews: the SYS-6 designs in 45 minutes against a rubric.
+* PREP-9, résumé drill from your own work and lab results (personal copy).
+Level 4
+* PREP-10, a full mock interview loop.
+Out
+* Distributed systems and network internals:
+   * Time-series databases
+   * NewSQL internals and global clocks
+   * MapReduce and HDFS
+   * Failure detectors, chain replication, three-phase commit
+   * TCP congestion control and QUIC internals
+* Designs: the stock exchange, ride-hailing and video streaming designs.
+* ML engineering: classical ML, deep learning training, fine-tuning infrastructure, MLOps platforms.
+* AI tools: most AI frameworks and named model versions.
+* .NET: out unless your work needs it.

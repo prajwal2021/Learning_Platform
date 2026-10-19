@@ -1,0 +1,453 @@
+{
+ "slug": "ruby",
+ "name": "Ruby",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a variable and a constant in Ruby?",
+    "answer": "A variable is used for values that can change, and Ruby variables are written in lowercase or snake_case. A constant is written with an initial capital letter, like `MAX_SIZE`, and is meant to stay the same by convention, though Ruby only warns if you reassign it. Use variables for normal changing data and constants for values you want to treat as fixed configuration or shared definitions.",
+    "real_world": "Teams use constants for things like API base URLs or limits so the intent is clear. A common bug is reassigning a constant during debugging and leaving confusing warnings in production logs.",
+    "code_lang": "ruby",
+    "code": "MAX_RETRIES = 3\nretries = 0\nretries += 1",
+    "follow_up": "How does Ruby treat a local variable that is referenced before assignment?"
+   },
+   {
+    "question": "What are the main Ruby collection types you use as a beginner?",
+    "answer": "The common ones are arrays for ordered lists, hashes for key-value pairs, and ranges for sequences of values. Arrays are good when order matters and you access by index; hashes are good when you need fast lookup by key; ranges are useful for representing a span of values or iterating over a bounded set. Choosing the right one makes code simpler and easier to read.",
+    "real_world": "You might store user IDs in an array when order matters, but use a hash for looking up a user by email. Beginners often use arrays for everything and then struggle with awkward searches and duplicate data.",
+    "code_lang": "ruby",
+    "code": "numbers = [1, 2, 3]\nuser = { name: 'Ava', age: 20 }\nletters = 'a'..'f'",
+    "follow_up": "When would you choose a hash over an array?"
+   },
+   {
+    "question": "What does interpolation mean in Ruby strings?",
+    "answer": "Interpolation means embedding the value of an expression inside a double-quoted string with `#{...}`. It is useful when you want to build messages or output dynamically without converting values manually. It works in double-quoted strings and similar syntaxes, but not in single-quoted strings.",
+    "real_world": "This shows up in log messages, error messages, and user-facing strings. A common mistake is using single quotes and wondering why `#{name}` prints literally instead of the variable value.",
+    "code_lang": "ruby",
+    "code": "name = 'Sam'\nage = 21\nputs \"#{name} is #{age} years old\"",
+    "follow_up": "What is the difference between single-quoted and double-quoted strings?"
+   },
+   {
+    "question": "How do `each` and `map` differ?",
+    "answer": "`each` iterates for side effects, like printing or updating something outside the loop. `map` transforms each element and returns a new array with the results. If you want a new collection, use `map`; if you just want to visit items, use `each`.",
+    "real_world": "A beginner often uses `each` and expects a transformed array back, which leads to nil or unchanged data. In production code, using the wrong one can make intent unclear and introduce bugs when refactoring.",
+    "code_lang": "ruby",
+    "code": "nums = [1, 2, 3]\nnums.each { |n| n * 2 }\nnums.map { |n| n * 2 }",
+    "follow_up": "What does `each` return?"
+   },
+   {
+    "question": "What does a method return in Ruby if you do not use an explicit `return`?",
+    "answer": "A Ruby method returns the value of the last expression evaluated. You only need `return` when you want to exit early or make the control flow clearer. This keeps simple methods concise, but beginners should still be careful to make the last expression the one they intend to return.",
+    "real_world": "This is common in helper methods and data formatting code. A frequent bug is adding a logging line at the end of a method and accidentally changing the returned value.",
+    "code_lang": "ruby",
+    "code": "def double(n)\n  n * 2\nend",
+    "follow_up": "When would you use an explicit `return` anyway?"
+   },
+   {
+    "question": "How do `if`, `elsif`, and `else` work in Ruby?",
+    "answer": "`if` starts a conditional branch, `elsif` adds another condition if earlier ones were false, and `else` is the fallback when none of the earlier conditions matched. Ruby evaluates them from top to bottom and runs only the first matching branch. This is the basic way to express different outcomes based on a value.",
+    "real_world": "This is used in validation, feature flags, and branching business rules. A common beginner issue is writing overlapping conditions in the wrong order and getting unexpected behavior.",
+    "code_lang": "ruby",
+    "code": "score = 85\nif score >= 90\n  puts 'A'\nelsif score >= 80\n  puts 'B'\nelse\n  puts 'C'\nend",
+    "follow_up": "What is the difference between `if` and `unless`?"
+   },
+   {
+    "question": "What is the difference between `break`, `next`, and `redo` in Ruby loops?",
+    "answer": "`break` exits the loop completely, `next` skips to the next iteration, and `redo` repeats the current iteration without re-checking the loop condition. `break` and `next` are common in everyday code, while `redo` is much rarer and easy to misuse. Knowing the difference helps you control loop behavior precisely instead of nesting extra conditionals.",
+    "real_world": "This matters when processing records and you need to skip bad data or stop early after finding a match. Using the wrong keyword can cause extra work, missed records, or accidental infinite loops.",
+    "code_lang": "ruby",
+    "code": "[1, 2, 3].each do |n|\n  next if n == 2\n  puts n\nend",
+    "follow_up": "When would you choose a `while` loop instead of `each`?"
+   },
+   {
+    "question": "What is the difference between a symbol and a string in Ruby, and when would you choose one over the other?",
+    "answer": "A string is mutable text data, while a symbol is an immutable identifier-like value. Symbols are commonly used for hash keys, method names, and labels because the same symbol value is reused, which makes equality checks simple. Use strings when the content is user-facing or meant to be edited; use symbols when you need a stable name or key.",
+    "real_world": "This comes up a lot in Rails parameter hashes and configuration objects, where keys are usually symbols. Using strings where symbols are expected can lead to subtle lookup bugs.",
+    "code_lang": "ruby",
+    "code": "name = \"ruby\"\nkey = :name\nputs name.class\nputs key.class\nh = { name: 1 }\nputs h[:name]",
+    "follow_up": "How do symbols behave differently from strings when you compare or modify them?"
+   },
+   {
+    "question": "What does `nil` mean in Ruby, and how is it different from `false`?",
+    "answer": "`nil` represents the absence of a value, while `false` is an actual boolean value. In conditionals, both are treated as falsey, but they are not the same object and they communicate different intent. `nil` usually means “nothing was found” or “not set,” while `false` means a real yes/no result.",
+    "real_world": "A common production bug is assuming a method returns `false` when it actually returns `nil`, which can break logic that checks for a specific boolean. This matters in validations, lookups, and optional fields.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the safest way to handle a method that might return `nil`?"
+   },
+   {
+    "question": "How do you define a method in Ruby, and what is the difference between an instance method and a class method?",
+    "answer": "You define a method with `def name ... end`. An instance method belongs to objects created from a class, while a class method belongs to the class itself and is often used for factory-style behavior or utilities tied to the class. You call instance methods on an object and class methods on the class name.",
+    "real_world": "Junior developers often try to call an instance method directly on the class and get a `NoMethodError`. Knowing the difference helps when reading Rails models and helpers.",
+    "code_lang": "ruby",
+    "code": "class User\n  def greet\n    \"hi\"\n  end\n\n  def self.version\n    1\n  end\nend",
+    "follow_up": "When would you choose a class method instead of an instance method?"
+   },
+   {
+    "question": "What do `==` and `=` mean in Ruby, and what is a common mistake with them?",
+    "answer": "`=` assigns a value to a variable, while `==` compares two values for equality. A common mistake is accidentally using `=` inside a condition, which changes the variable instead of checking it. Ruby also has other comparison methods like `===` and `eql?`, but `==` is the usual value comparison.",
+    "real_world": "This mistake can cause a conditional to always behave incorrectly and is hard to spot in code review if the expression is short. It is a classic beginner bug in if statements and loops.",
+    "code_lang": "ruby",
+    "code": "x = 3\nputs x == 3\n# if x = 3\n#   puts \"always runs\"\n# end",
+    "follow_up": "How does `eql?` differ from `==` in Ruby?"
+   },
+   {
+    "question": "How do `while` and `until` loops differ in Ruby?",
+    "answer": "A `while` loop keeps running while its condition is true, and an `until` loop keeps running until its condition becomes true. They are opposites, so you choose the one that reads more naturally for the condition you have. Both are useful when you do not know in advance how many iterations you need.",
+    "real_world": "These loops show up in polling, retries, and simple input loops. Picking the clearer form makes intent obvious to the next person reading the code.",
+    "code_lang": "ruby",
+    "code": "count = 0\nwhile count < 3\n  count += 1\nend\n\ncount = 0\nuntil count == 3\n  count += 1\nend",
+    "follow_up": "When would a `for` loop be less suitable than `while` or `until`?"
+   },
+   {
+    "question": "What does `chomp` do on a Ruby string, and why would you use it?",
+    "answer": "`chomp` removes the trailing record separator, usually the newline at the end of input, if it is present. It is commonly used when reading from `gets` so you do not keep the line break in the string. It does not remove all whitespace, only the matching ending separator.",
+    "real_world": "This matters in CLI tools and scripts that read user input or files line by line. Without `chomp`, comparisons and string formatting can fail because of hidden newlines.",
+    "code_lang": "ruby",
+    "code": "name = gets.chomp\nputs \"Hello, #{name}!\"",
+    "follow_up": "How is `chomp` different from `strip`?"
+   },
+   {
+    "question": "What does `to_s` do in Ruby, and when do you need it?",
+    "answer": "`to_s` converts an object to its string representation. Ruby often converts automatically in string interpolation, but you need `to_s` when you want an explicit string or when combining values in a context that does not coerce automatically. It is also useful for debugging and formatting output.",
+    "real_world": "A common issue is trying to concatenate a number directly onto a string and getting a type error. Converting explicitly makes the code intention clear.",
+    "code_lang": "ruby",
+    "code": "age = 10\nputs \"Age: \" + age.to_s\nputs \"Age: #{age}\"",
+    "follow_up": "What is the difference between `to_s` and `inspect`?"
+   },
+   {
+    "question": "How does Ruby treat truthy and falsey values in conditionals?",
+    "answer": "In Ruby, only `false` and `nil` are falsey; everything else is truthy. That means empty strings, empty arrays, and zero are all treated as true in an `if` statement. This is important because Ruby does not use the same truthiness rules as some other languages.",
+    "real_world": "Beginners often expect an empty array or `0` to behave like false and write conditions that never skip the branch. This shows up in validations and guard clauses.",
+    "code_lang": "ruby",
+    "code": "if []\n  puts \"truthy\"\nend\nif 0\n  puts \"also truthy\"\nend",
+    "follow_up": "How would you check specifically for an empty array or empty string?"
+   },
+   {
+    "question": "What is a block in Ruby, and what is it used for?",
+    "answer": "A block is a chunk of code you pass to a method, usually for iteration or customization. Blocks are a core Ruby pattern for saying “do this for each item” or “run this code inside the method’s behavior.” They make APIs flexible without needing lots of callback objects.",
+    "real_world": "You see blocks everywhere in Ruby and Rails, such as file handling, iteration, and configuration. Understanding them is necessary to read idiomatic Ruby code.",
+    "code_lang": "ruby",
+    "code": "[1, 2, 3].each do |n|\n  puts n * 2\nend",
+    "follow_up": "What is the difference between a block, a Proc, and a lambda?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "When would you use `Enumerable#select` instead of `Enumerable#reject` or `Enumerable#filter_map` in Ruby?",
+    "answer": "Use `select` when you want to keep elements that satisfy a condition. Use `reject` when it is easier to express the inverse condition, and `filter_map` when you need to both filter and transform in one pass. The main trade-off is readability versus combining steps: `filter_map` can be more efficient and concise, but `select` is often clearer when the predicate is simple. In production code, clarity usually matters more unless you are processing large data sets.",
+    "real_world": "A team cleaning API results might use `select` to keep only active records, but switch to `filter_map` when they need to drop invalid rows and extract one field at the same time. That avoids a separate `select` followed by `map`.",
+    "code_lang": "ruby",
+    "code": "users = [\n  {active: true,  email: 'a@x.com'},\n  {active: false, email: 'b@x.com'}\n]\nactive_emails = users.filter_map do |u|\n  u[:email] if u[:active]\nend",
+    "follow_up": "What is the difference between `map` and `filter_map` when the block can return `nil`?"
+   },
+   {
+    "question": "How do `==`, `eql?`, and `equal?` differ in Ruby, and why does that matter?",
+    "answer": "`==` checks value equality and is the operator most code uses. `eql?` is stricter and is used by `Hash` to compare keys, so objects that are `==` may still not be `eql?`. `equal?` checks object identity, meaning it is true only when both references point to the same object. This matters when debugging hash lookups or unexpected comparisons between custom objects.",
+    "real_world": "A bug can appear when a custom class is used as a `Hash` key and two objects with the same visible data fail to match because `eql?` and `hash` were not implemented consistently. Another common case is comparing strings and noticing two equal values are not the same object.",
+    "code_lang": "ruby",
+    "code": "a = 'hi'\nb = 'hi'\n[a == b, a.eql?(b), a.equal?(b)]\n# => [true, true, false]",
+    "follow_up": "How do `hash` and `eql?` need to work together for custom `Hash` keys?"
+   },
+   {
+    "question": "What happens when you mutate a string argument inside a method in Ruby?",
+    "answer": "Ruby passes object references by value, so the method gets its own reference to the same object. If the method mutates the string in place, the caller sees that change. If the method reassigns the parameter to a new string, the caller is unaffected because only the local reference changed. This is important for avoiding unintended side effects, especially when methods receive objects from shared state.",
+    "real_world": "A helper that calls `upcase!` on a request parameter can accidentally change data used later in the request. Teams often defend against this by duplicating input before mutating it.",
+    "code_lang": "ruby",
+    "code": "def shout(name)\n  name.upcase!\nend\nx = 'alice'\nshout(x)\n# x is now 'ALICE'",
+    "follow_up": "How would you write the method so it does not modify the caller's string?"
+   },
+   {
+    "question": "When would you use a `begin...rescue` block, and what is a common mistake with exception handling in Ruby?",
+    "answer": "Use `begin...rescue` when an operation can fail in a recoverable way, such as parsing input or calling an external service. A common mistake is rescuing too broadly and swallowing bugs that should fail fast, or rescuing `StandardError` without handling the specific error meaningfully. Another mistake is using exceptions for normal control flow. Good code rescues the narrowest error that it expects and either retries, returns a fallback, or re-raises with context.",
+    "real_world": "In production, a network timeout might be recoverable, but rescuing every exception around a job can hide programming errors and make failures hard to debug. Teams usually log the error and only continue when they know the operation is safe to skip.",
+    "code_lang": "ruby",
+    "code": "begin\n  Integer(params[:age])\nrescue ArgumentError, TypeError\n  nil\nend",
+    "follow_up": "How do `retry` and rescuing inside a loop differ in behavior?"
+   },
+   {
+    "question": "What is the trade-off between using a plain Ruby array and a hash for lookups?",
+    "answer": "An array is simple and good for ordered lists or small data sets, but searching by key usually requires scanning through the elements. A hash gives average constant-time lookup by key, which is much better when you repeatedly fetch by identifier. The trade-off is that hashes use more memory and require you to choose and manage keys carefully. For lookups by ID, hashes are usually the better tool; for ordered iteration, arrays are simpler.",
+    "real_world": "A service that repeatedly checks whether a user ID is in a list can become slow if it keeps using an array and calling `include?` on large data. Converting the list to a hash or set can remove that bottleneck.",
+    "code_lang": "ruby",
+    "code": "ids = [10, 20, 30]\nlookup = {10 => true, 20 => true, 30 => true}\nids.include?(20)\nlookup[20]",
+    "follow_up": "When would a `Set` be a better choice than a hash or array?"
+   },
+   {
+    "question": "How do `Proc`, `lambda`, and blocks differ in Ruby?",
+    "answer": "A block is an anonymous chunk of code passed to a method. A `Proc` is a block turned into an object, so it can be stored and passed around, while a `lambda` is a special kind of `Proc` with stricter argument checking and method-like return behavior. The trade-off is mostly semantics and control flow: lambdas behave more predictably for reusable callables, while blocks are idiomatic for APIs like iterators. Use the simplest form that matches the API design.",
+    "real_world": "A custom DSL or callback system often needs a callable object that can be saved and invoked later, which is where `Proc` or `lambda` helps. If an API only needs a one-off callback during iteration, a block is usually cleaner.",
+    "code_lang": "ruby",
+    "code": "f = ->(x) { x * 2 }\np = Proc.new { |x| x * 2 }\n[f.call(3), p.call(3)]",
+    "follow_up": "What happens to `return` inside a lambda versus inside a plain `Proc`?"
+   },
+   {
+    "question": "What is the difference between `require`, `load`, and `require_relative` in Ruby?",
+    "answer": "`require` loads a file once and searches the load path, so it is the usual choice for libraries and dependencies. `require_relative` also loads a file once, but resolves the path relative to the current file, which is useful for app code. `load` executes the file every time you call it, so it is better for reloading code in development than for normal dependency loading. The trade-off is convenience versus repeated execution and potential duplication.",
+    "real_world": "A bug can happen when a script is moved and a plain relative path breaks, or when a file gets loaded twice and constants are redefined. Teams often use `require_relative` inside application code and `require` for gems or shared libraries.",
+    "code_lang": "ruby",
+    "code": "require 'json'\nrequire_relative 'services/payments'\nload './tmp/debug_helper.rb'",
+    "follow_up": "How does Ruby decide whether a `require`d file should be loaded again?"
+   },
+   {
+    "question": "How would you debug a `NoMethodError` when the object looks correct in logs?",
+    "answer": "First confirm the actual class of the object at the failing line, because logs can be misleading if the value is `nil` or a different type than expected. Then check whether the object can be `nil`, whether a method name changed, or whether you are calling a method on a proxy or plain hash instead of the model you expected. I also look at the full backtrace to find the real origin, not just the crash site. The goal is to separate a data problem from a code-path problem.",
+    "real_world": "In API code, a payload field may arrive as a hash one day and as `nil` the next, causing a method call to fail far away from where the data was parsed. Teams often add guards or use safe navigation only where `nil` is truly acceptable.",
+    "code_lang": "ruby",
+    "code": "obj.class\nobj.inspect\nobj&.name\n# if obj is nil, this returns nil instead of raising",
+    "follow_up": "When is safe navigation `&.` a good fix, and when does it hide a bug?"
+   },
+   {
+    "question": "What should you test in a Ruby method that uses randomness, time, or external services?",
+    "answer": "You should avoid testing the unstable dependency directly and instead test the behavior around it. For randomness and time, inject the dependency or stub it so the test is deterministic. For external services, verify your code handles success, failure, and timeout cases rather than relying on the real network in unit tests. This keeps tests fast, repeatable, and focused on your code’s logic instead of the environment.",
+    "real_world": "A job that sends scheduled emails can fail tests intermittently if it depends on the real clock or live HTTP calls. Teams typically freeze time in tests and replace external clients with doubles or fixtures.",
+    "code_lang": "ruby",
+    "code": "def greeting(now)\n  now.hour < 12 ? 'morning' : 'afternoon'\nend\n# test with a fixed Time object\n# greeting(Time.new(2026, 1, 1, 9, 0, 0))",
+    "follow_up": "What is the difference between mocking and stubbing in Ruby tests?"
+   },
+   {
+    "question": "When would you use a `Hash` with a default value or default proc instead of checking for missing keys yourself?",
+    "answer": "Use a default value when missing entries should behave like an empty accumulator or a zero count, because it removes repetitive guard code. A default proc is better when the fallback depends on the key, such as creating nested hashes on demand. The trade-off is that automatic defaults can hide missing-data bugs if you really meant to distinguish “absent” from “present but empty.”",
+    "real_world": "This comes up in counters, grouping, and nested configuration builders. Teams often use a default proc to build deep structures without a lot of `if` checks, but it can also mask typos in keys.",
+    "code_lang": "ruby",
+    "code": "counts = Hash.new(0)\n%w[a b a].each { |k| counts[k] += 1 }\n\nnested = Hash.new { |h, k| h[k] = {} }\nnested[:user][:name] = \"Ada\"",
+    "follow_up": "How do `Hash.new(0)` and `Hash.new { |h, k| h[k] = [] }` differ when you mutate the returned value?"
+   },
+   {
+    "question": "How do you choose between `map`, `select`, and `reduce` in Ruby?",
+    "answer": "Use `map` when you want one output element per input element, `select` when you want to filter items, and `reduce` when you want to combine many items into one result. `reduce` is powerful, but it is easier to read when the accumulation logic is simple and explicit. In production code, picking the clearest Enumerable method usually matters more than squeezing out a small performance difference.",
+    "real_world": "This matters in data-processing code, report generation, and background jobs where readability affects maintenance. A common bug is using `map` when the real intent was filtering, which leaves unwanted `nil`s in the result.",
+    "code_lang": "ruby",
+    "code": "nums = [1, 2, 3, 4]\nevens = nums.select { |n| n.even? }\nsquares = nums.map { |n| n * n }\nsum = nums.reduce(0) { |acc, n| acc + n }",
+    "follow_up": "When would you prefer `reduce` over `sum`, `count`, or `join`?"
+   },
+   {
+    "question": "What happens when a method modifies an object passed in from the caller, and how do you avoid surprises?",
+    "answer": "Ruby passes object references by value, so the method can mutate the same object the caller holds if that object is mutable. That is useful for performance and for in-place updates, but it can create hidden side effects if the caller expects a function-style API. To avoid surprises, either document mutation clearly, return a new object, or make a defensive copy before changing data.",
+    "real_world": "This often shows up in service objects that normalize arrays or hashes and accidentally change the original params object. The bug is hard to track because the caller sees different data later in the request.",
+    "code_lang": "ruby",
+    "code": "def add_tag(tags)\n  tags << \"new\"\nend\n\narr = [\"old\"]\nadd_tag(arr)\n# arr is now [\"old\", \"new\"]",
+    "follow_up": "When would `dup` be enough, and when do you need a deeper copy?"
+   },
+   {
+    "question": "What is the difference between `dup` and `clone` in Ruby, and when does it matter?",
+    "answer": "Both make a shallow copy, but `clone` preserves more of the original object’s state, such as frozen status and singleton methods, while `dup` makes a looser copy. In everyday application code, `dup` is often the safer choice when you just want a mutable copy of data. The trade-off is that neither method copies nested mutable objects, so inner arrays or hashes are still shared.",
+    "real_world": "This matters when you copy records or configuration objects and then mutate them. A team may think they isolated state, but nested objects still leak changes across requests or tests.",
+    "code_lang": "ruby",
+    "code": "s = \"hi\".freeze\ns2 = s.dup\ns3 = s.clone\n\n# s2 is typically mutable copy\n# s3 keeps frozen state",
+    "follow_up": "How would you copy a nested hash safely if later code mutates inner arrays?"
+   },
+   {
+    "question": "How do you decide whether to use a `Struct`, a plain hash, or a custom class for a small data object?",
+    "answer": "Use a hash when the shape is dynamic or loosely structured, a `Struct` when you want a lightweight fixed set of fields, and a custom class when the object has behavior or invariants. `Struct` is convenient for simple data transfer, but it is less expressive than a real class. A custom class is worth it when validation, methods, or future growth matter more than brevity.",
+    "real_world": "This comes up in service code that passes data between layers. Many teams start with hashes, then move to classes when key names become inconsistent or business rules need to live with the data.",
+    "code_lang": "ruby",
+    "code": "Person = Struct.new(:name, :age)\np = Person.new(\"Ada\", 37)\n\nclass Account\n  attr_reader :id\n  def initialize(id) = @id = id\nend",
+    "follow_up": "What are the trade-offs of using keyword arguments instead of a data object?"
+   },
+   {
+    "question": "What is the difference between `module include` and `extend` in Ruby?",
+    "answer": "`include` mixes instance methods from a module into a class, while `extend` adds the module’s methods to a single object or to a class object as class methods. `include` is for behavior that instances should share; `extend` is for adding one-off or class-level behavior. The main trade-off is choosing the right method lookup target so the API feels natural and avoid confusing scope bugs.",
+    "real_world": "This is common in Rails concerns, mixins, and helper modules. A frequent mistake is including a module when the intended methods are supposed to be called on the class itself.",
+    "code_lang": "ruby",
+    "code": "module Trackable\n  def track; \"tracked\"; end\nend\n\nclass Job\n  include Trackable\nend",
+    "follow_up": "How does `prepend` differ from `include`, and why would you use it?"
+   },
+   {
+    "question": "What happens if a `rescue` clause is too broad, and how do you handle errors more safely?",
+    "answer": "A broad `rescue` can catch exceptions you did not intend to handle, which can hide bugs and make failures look like success. It is safer to rescue specific exception classes and either recover, re-raise, or wrap them with context. In production code, swallowing unexpected errors is usually worse than letting them fail loudly.",
+    "real_world": "This often causes silent data corruption in background jobs or API clients that keep going after a bad response. Teams discover it only after missing records or partial updates show up later.",
+    "code_lang": "ruby",
+    "code": "begin\n  parse_config\nrescue JSON::ParserError => e\n  warn e.message\n  raise\nend",
+    "follow_up": "When is it appropriate to rescue `StandardError`, and when is it not?"
+   },
+   {
+    "question": "How do you make Ruby code that depends on time easier to test?",
+    "answer": "Wrap direct calls to `Time.now` or `Time.current` behind a method, injectable dependency, or test helper so tests can control the value. That makes assertions stable and avoids flaky failures around midnight, time zones, or daylight saving changes. The trade-off is a little extra indirection, but it pays off in reliable tests and simpler setup.",
+    "real_world": "This matters in expiration logic, token generation, and scheduled jobs. Without control of time, tests can fail intermittently or force awkward sleeps.",
+    "code_lang": "ruby",
+    "code": "class Report\n  def initialize(clock = Time)\n    @clock = clock\n  end\n\n  def generated_at\n    @clock.now\n  end\nend",
+    "follow_up": "How would you test code that depends on both time and random values?"
+   },
+   {
+    "question": "What is the practical difference between `map(&:method_name)` and using a block, and when can the shorthand be misleading?",
+    "answer": "`map(&:name)` is shorthand for calling one method on each element, and it is concise when the method name is simple and the argument is obvious. A block is clearer when you need extra logic, multiple calls, or nil handling. The shorthand can be misleading if the method is not available on every element, because it can obscure where the failure comes from.",
+    "real_world": "This shows up in data cleanup code and view helpers where teams like concise Ruby. It can become a debugging headache when one item in a collection is `nil` or a different type than expected.",
+    "code_lang": "ruby",
+    "code": "users = [User.new(\"a\"), User.new(\"b\")]\nusernames = users.map(&:name)\n# clearer when extra logic is needed:\n# users.map { |u| u.name.strip.downcase }",
+    "follow_up": "What do you do if some elements can be `nil` and you still want a compact expression?"
+   },
+   {
+    "question": "How would you debug a performance issue in Ruby code that processes a large collection?",
+    "answer": "First identify whether the bottleneck is algorithmic, object allocation, or I/O, because the fix depends on the source. In Ruby, repeated nested iteration, unnecessary conversions, and building large intermediate arrays are common causes of slow code. I would measure before changing anything, then simplify the hot path by reducing passes over the data and avoiding extra allocations.",
+    "real_world": "This comes up in report generation, CSV imports, and API transformations. A common production issue is a job that gets slower as input grows because it repeatedly scans the same collection.",
+    "code_lang": "ruby",
+    "code": "# Prefer one pass when possible\nresult = []\nitems.each do |item|\n  next unless item.active?\n  result << item.id\nend",
+    "follow_up": "What tools or techniques would you use to measure where the time is actually going?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how Ruby method lookup actually works, including prepended modules, included modules, singleton classes, and `super`?",
+    "answer": "Ruby searches the receiver’s singleton class first, then the class, then prepended modules attached to that class, then included modules, then superclasses with the same pattern. `prepend` puts a module ahead of the class in the ancestor chain, which makes it useful for wrappers and instrumentation; `include` puts it behind the class. `super` calls the next matching method in that lookup chain, not necessarily the superclass implementation. This matters because behavior can change a lot once gems add mixins or define singleton methods at runtime.",
+    "real_world": "A production incident can come from a gem using `prepend` for tracing and accidentally changing control flow or argument handling. Teams often inspect `obj.singleton_class.ancestors` or `Class#ancestors` to understand why the wrong method is running.",
+    "code_lang": "ruby",
+    "code": "module M\n  def call; [:m, super]; end\nend\nclass A\n  def call; :a; end\nend\nclass B < A\n  prepend M\nend\np B.new.call  # [:m, :a]",
+    "follow_up": "What are the trade-offs between using `prepend` and alias-method wrapping for monkey patches?"
+   },
+   {
+    "question": "What are the performance and correctness implications of monkey patching core classes in Ruby?",
+    "answer": "Monkey patching changes behavior globally, so the biggest risk is breaking assumptions in code you do not control. It also affects maintainability and can interfere with optimizations, inline caches, or method invalidation because redefining methods forces Ruby to throw away cached lookup state. In advanced codebases, refinements or small wrapper objects are usually safer when the scope can be limited. If you do patch, keep it minimal, version-pinned, and covered by tests against the exact Ruby and gem versions you deploy.",
+    "real_world": "A common failure mode is redefining `Hash#to_json` or `Time#to_s` and then breaking a library that depended on standard semantics. Large Rails apps sometimes see latency regressions after startup code reopens hot classes and invalidates method caches.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use refinements instead, and what limitations do they have?"
+   },
+   {
+    "question": "How does Ruby’s garbage collector affect application latency, and what coding patterns tend to make GC pressure worse?",
+    "answer": "Ruby’s GC is generational, so lots of short-lived allocations are usually cheap until the heap grows or old-generation objects accumulate and major collections become expensive. Code that creates many transient strings, arrays, hashes, or closures in hot paths increases allocation rate and can show up as latency spikes even if CPU looks moderate. Reducing object churn, reusing buffers where reasonable, freezing static data, and avoiding unnecessary intermediate collections can help more than micro-optimizing arithmetic. You should verify with allocation and GC profiling rather than guessing.",
+    "real_world": "API endpoints that serialize large responses often degrade because each request allocates thousands of temporary objects, causing more frequent GC pauses. Teams usually catch this by comparing request latency with allocation counts and GC time under production-like traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you measure whether a slowdown is caused by CPU work or by object allocation and GC?"
+   },
+   {
+    "question": "What does the GVL mean in CRuby, and how does it change your concurrency design for CPU-bound versus I/O-bound work?",
+    "answer": "In CRuby, the Global VM Lock means only one thread executes Ruby bytecode at a time within a process, so threads do not give true parallelism for CPU-bound Ruby code. Threads are still useful for I/O-bound tasks because the VM can switch while one thread waits on network or file operations. For CPU-heavy work, you typically use multiple processes, native extensions that release the lock, or a different Ruby implementation if it fits. The trade-off is simpler shared-memory concurrency with threads versus real parallelism with more memory and coordination overhead.",
+    "real_world": "A team may add threads to speed up JSON-heavy request processing and see no throughput gain because the bottleneck is CPU under the GVL. The same service can still benefit from threads for making multiple slow HTTP calls in parallel.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What new failure modes appear when you switch from threads to multiple worker processes?"
+   },
+   {
+    "question": "What are the semantic and performance trade-offs between using symbols, strings, and frozen strings as hash keys in modern Ruby?",
+    "answer": "Symbols are immutable and have stable identity, which makes them convenient as internal keys, but strings are often the natural boundary type when data comes from JSON, HTTP, or databases. Converting everything to symbols can add overhead and, if done carelessly on untrusted input, can create long-lived entries and memory pressure depending on Ruby version and object lifetime. Frozen string keys can avoid repeated allocations when you control the source and want string semantics without mutation. The main rule is to normalize keys at boundaries and avoid mixing key types inside the same data path.",
+    "real_world": "A common production bug is params parsed with string keys while application code looks up symbols, causing subtle nils and branching errors. Teams often standardize one key type per layer and convert once at the edge.",
+    "code_lang": "ruby",
+    "code": "h = {\"id\" => 1}\np h[:id]    # nil\np h[\"id\"]  # 1",
+    "follow_up": "How would you design a boundary layer so the rest of the app does not care whether input used string or symbol keys?"
+   },
+   {
+    "question": "How do exceptions compare with returning result objects in Ruby, especially on hot paths and in service boundaries?",
+    "answer": "Exceptions are good for exceptional failures because they separate happy-path code from error handling, but raising them is relatively expensive and can obscure expected control flow if used for common cases. Result objects or explicit return values make failure part of the contract, which is often better at service boundaries, validation layers, or retry logic. The trade-off is ergonomics versus predictability: exceptions are concise, while result types are noisier but easier to reason about in bulk workflows. On hot paths, using exceptions for normal branching is usually a performance and readability smell.",
+    "real_world": "If a parser raises on common invalid input, a busy endpoint can spend a lot of time allocating exception objects and backtraces. Many teams use explicit success/error objects around external APIs so retries and metrics are consistent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What exceptions would you still allow to bubble up rather than wrapping into a result type?"
+   },
+   {
+    "question": "What are the hidden costs of using metaprogramming like `method_missing` and `define_method`, and when is it justified?",
+    "answer": "`method_missing` is flexible but slow relative to normal dispatch, and it breaks tooling, stack traces, and introspection unless you also implement `respond_to_missing?` correctly. `define_method` is usually better when you can generate methods up front, though closures can capture surrounding state and allocate more than a plain `def` in some cases. Metaprogramming is justified when it removes large amounts of repetitive code or expresses a stable DSL, not when it hides straightforward behavior. Prefer generated real methods when the method set is knowable.",
+    "real_world": "ORMs and serializers often use generated methods because they are faster and easier to introspect than routing everything through `method_missing`. Production debugging gets much harder when logs show missing-method fallbacks instead of explicit method bodies.",
+    "code_lang": "ruby",
+    "code": "class C\n  def method_missing(name, *)\n    return 42 if name == :answer\n    super\n  end\n  def respond_to_missing?(name, incl = false)\n    name == :answer || super\n  end\nend",
+    "follow_up": "How would you benchmark whether `method_missing` is actually a bottleneck in your case?"
+   },
+   {
+    "question": "What actually happens when you `fork` a Ruby process, and what should you watch for with memory, database connections, and threads?",
+    "answer": "`fork` creates a child process with a copy-on-write view of the parent’s memory, which is efficient at first but gets more expensive as either process mutates pages. After a fork, you must usually reopen or reconnect resources like database sockets because file descriptors and connection state were inherited in a way the client library may not safely share. Forking a multithreaded process is especially risky because only the calling thread survives in the child, leaving locks or runtime state in a bad state. Preloading can save memory, but only if you avoid mutating too much shared state afterward.",
+    "real_world": "App servers often preload the app before forking workers to reduce boot time and memory, then reconnect to the database in each worker. Teams get bitten when background threads started in the parent leave inherited child state inconsistent or metrics clients duplicate events.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does preloading sometimes fail to save as much memory as expected over time?"
+   },
+   {
+    "question": "How would you reason about the cost of creating many Ruby objects versus using simpler data structures in a hot path?",
+    "answer": "Each Ruby object carries overhead beyond its payload, so millions of tiny objects can hurt both memory use and cache locality, not just allocation time. Rich domain objects improve readability and encapsulation, but in parsing, ETL, or serialization hot paths a flatter representation like arrays, hashes, or structs can be materially cheaper. The right choice depends on whether the path is truly hot and whether object behavior justifies the cost. Measure retained memory, allocation counts, and end-to-end throughput before trading away clarity.",
+    "real_world": "A batch job that instantiates an object per CSV cell can balloon memory and spend most of its time in GC. Teams often keep richer objects at boundaries and switch to denser representations inside tight loops.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you collect to decide whether object overhead is the real bottleneck?"
+   },
+   {
+    "question": "What are the main failure modes when using Ruby threads with shared mutable state, even with the GVL?",
+    "answer": "The GVL does not make compound operations atomic or shared state safe; it only limits simultaneous Ruby bytecode execution. You can still get races, lost updates, inconsistent reads, deadlocks, and visibility problems around IO, C extensions, or code that releases the lock. Mutable hashes, arrays, memoization caches, and lazy initialization are common trouble spots. Use immutability where possible, and otherwise protect critical sections with `Mutex`, thread-safe queues, or process isolation.",
+    "real_world": "A classic incident is a memoized configuration or in-memory cache being initialized by multiple threads at once, producing duplicate work or partially built objects. Another is a shared hash being modified during iteration and crashing only under load.",
+    "code_lang": "ruby",
+    "code": "count = 0\nthreads = 10.times.map do\n  Thread.new { 10_000.times { count += 1 } }\nend\nthreads.each(&:join)\np count  # often less than 100000",
+    "follow_up": "How would you fix that example, and when would you choose a queue or separate process instead of a mutex?"
+   },
+   {
+    "question": "How does Ruby constant lookup actually work, and where do people get surprised by lexical scope versus inheritance?",
+    "answer": "Ruby resolves constants primarily through lexical nesting first, then other lookup paths such as ancestors depending on how the reference is written. The common surprise is that `Module.nesting` and where code is defined can matter more than the receiver you call from. `A::B::C` also behaves differently from an unqualified `C` inside a nested body. This matters because refactors that move code between modules can silently change which constant is found.",
+    "real_world": "A production bug can appear after extracting code into a concern or moving a class under a namespace: the app still boots, but it now picks up a different constant with the same name.",
+    "code_lang": "ruby",
+    "code": "module A\n  X = :a\n  module B\n    X = :b\n    class C\n      p X\n    end\n  end\nend",
+    "follow_up": "How would you make constant resolution explicit enough to survive refactors?"
+   },
+   {
+    "question": "What is the difference between `include`, `prepend`, and inheritance from a runtime and maintenance perspective?",
+    "answer": "Inheritance puts behavior in the superclass chain, `include` inserts a module after the class in the ancestor chain, and `prepend` inserts it before the class so it can wrap methods transparently. `prepend` is useful for instrumentation or cross-cutting behavior because `super` still works, but it also makes call chains harder to reason about. Deep ancestor chains add method lookup overhead and debugging complexity, even if the absolute per-call cost is usually small compared with app logic. The bigger trade-off is maintainability and surprising overrides.",
+    "real_world": "Teams often use `prepend` for metrics, retries, or auth checks around SDK clients; incidents happen when multiple prepends stack in the wrong order and change behavior.",
+    "code_lang": "ruby",
+    "code": "module Log\n  def call(*)\n    puts \"before\"\n    super\n  end\nend\nclass S\n  prepend Log\n  def call = puts(\"work\")\nend",
+    "follow_up": "When would you choose composition over `prepend` for cross-cutting behavior?"
+   },
+   {
+    "question": "What are the trade-offs between `class_eval`, `instance_eval`, and `define_method`, especially for performance and correctness?",
+    "answer": "`class_eval` and `instance_eval` execute code in a changed context, while `define_method` installs a method from a block or proc. `define_method` closes over surrounding variables, which is powerful but can accidentally retain objects and allocate more than a normal `def`. Methods defined with `def` generally have simpler semantics and are easier for tools and humans to follow. I use dynamic definition when the API shape is truly data-driven; otherwise explicit methods are usually safer and faster enough.",
+    "real_world": "A DSL-heavy codebase can leak memory because dynamically defined methods capture large config objects that were meant to be temporary.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can closures created by `define_method` change object lifetime?"
+   },
+   {
+    "question": "How do you think about Ruby JITs like YJIT or MJIT in production, and what workloads benefit or regress?",
+    "answer": "JITs can speed up hot Ruby code paths by reducing interpreter overhead, but gains depend heavily on call patterns, object shapes, and how much time is already spent in C extensions, I/O, or the database. They also consume memory, and warmup behavior matters in short-lived jobs or aggressively recycled workers. I treat JIT as a benchmarked deployment choice, not a free win: measure throughput, p95 latency, boot time, and RSS under production-like traffic. Code with stable hot paths often benefits more than highly dynamic or mostly I/O-bound workloads.",
+    "real_world": "On API servers, a JIT can improve request throughput, but on memory-constrained containers it may reduce worker count enough to erase the gain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you compare before and after enabling YJIT on a Rails service?"
+   },
+   {
+    "question": "What happens when you call a method with keyword arguments through wrappers, and what Ruby edge cases have bitten teams during upgrades?",
+    "answer": "Keyword arguments are distinct from positional hashes in modern Ruby, so wrappers that forward arguments incorrectly can change behavior or raise. The main pitfall is writing delegation layers that accept `*args` but forget to preserve keywords and blocks during forwarding. This matters in libraries, instrumentation, and service objects because they often sit between callers and implementations. During upgrades, code that relied on implicit hash-to-keyword conversion is a common breakage point.",
+    "real_world": "A tracing wrapper around HTTP clients can work for years, then fail after a Ruby upgrade because it drops keywords like timeouts or headers in certain call paths.",
+    "code_lang": "ruby",
+    "code": "def target(a:, b: 1) = [a, b]\n\ndef wrap(*args, **kwargs, &blk)\n  target(*args, **kwargs, &blk)\nend\n\np wrap(a: 2)",
+    "follow_up": "How would you write a delegation helper that is safe across Ruby versions you support?"
+   },
+   {
+    "question": "Can you explain Ruby refinements and why they are rarely used in large systems despite looking safer than monkey patches?",
+    "answer": "Refinements provide scoped method changes activated with `using`, so they avoid globally mutating core classes. The catch is that the scope is lexical and can be non-obvious across files, method definitions, and library boundaries, so teams often find them harder to reason about than they expect. Tooling, debugging, and framework interoperability are also less straightforward than with plain methods or wrappers. They are useful for narrowly scoped DSLs or experiments, but they are not a general replacement for good object design.",
+    "real_world": "A team may try refinements to change string formatting in one subsystem, then discover that callbacks or library code invoked from there do not see the refined behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you use instead if you need safer local behavior changes in application code?"
+   },
+   {
+    "question": "How do Fibers fit into Ruby concurrency, and what problem do they solve that threads do not?",
+    "answer": "Fibers are lightweight cooperative execution units: they let you structure concurrency without a native thread per task. They are useful when a scheduler or event loop can pause work at blocking points and resume other fibers, which reduces thread overhead and can simplify high-concurrency I/O. Unlike threads, fibers do not give you parallel CPU execution on CRuby, and they require libraries to cooperate with the scheduling model. The trade-off is scalability for I/O versus ecosystem compatibility and operational familiarity.",
+    "real_world": "High-connection-count services or proxies can handle many slow sockets more efficiently with fibers than with a large thread pool, assuming the network stack and libraries are scheduler-aware.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What goes wrong if one library in a fiber-based stack performs blocking I/O without cooperating?"
+   },
+   {
+    "question": "What are the semantics of `Marshal` in Ruby, and why is it dangerous to treat it as a general persistence or interchange format?",
+    "answer": "`Marshal` serializes Ruby object graphs in a Ruby-specific binary format, preserving things that JSON does not, but it is tightly coupled to class definitions and Ruby internals. It is not a safe format for untrusted input, and it is brittle across code changes because renaming classes or changing instance variables can break deserialization. It is fine for ephemeral trusted caches when you control producer and consumer versions. For long-lived storage or cross-service exchange, explicit schemas are much safer.",
+    "real_world": "A deploy can invalidate a cache layer or background job payloads if marshaled objects refer to classes that moved or changed shape.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you inherited a cache full of marshaled objects, how would you migrate away safely?"
+   },
+   {
+    "question": "How does `at_exit` behave in Ruby, and what are the reliability trade-offs of using it for cleanup in production services?",
+    "answer": "`at_exit` registers code to run when the process exits normally, and handlers run in reverse registration order. It is useful for flushing metrics or temporary files, but it is not a guarantee under crashes, hard kills, or environments that terminate processes abruptly. Exceptions during shutdown can also complicate ordering and visibility. I treat it as best-effort cleanup, not as the primary place for critical commits or durable state changes.",
+    "real_world": "A worker may rely on `at_exit` to flush buffered events, then lose data when the container is SIGKILLed during autoscaling or an OOM kill.",
+    "code_lang": "ruby",
+    "code": "at_exit { puts \"first\" }\nat_exit { puts \"second\" }\n# exits printing:\n# second\n# first",
+    "follow_up": "What would you use instead for cleanup that must happen before a job is acknowledged?"
+   },
+   {
+    "question": "How do Ractors change Ruby’s concurrency model, and what trade-offs make them hard to adopt in existing applications?",
+    "answer": "Ractors aim for parallel execution by isolating object ownership, so mutable objects generally cannot be shared freely between ractors. That avoids many shared-state bugs and can bypass the limits of thread concurrency for CPU work, but it requires message-passing design and careful attention to what is shareable or copied. Existing gems and app architectures often assume shared objects, globals, and thread-local patterns, which makes migration expensive. In practice, they are most plausible for isolated compute components, not as a drop-in replacement for threads.",
+    "real_world": "A CPU-heavy data transformation service may benefit from ractor-style isolation, but a typical Rails app with many mutable globals and non-ractor-safe gems usually cannot adopt it cheaply.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kind of workload would you carve out first if you wanted to experiment with Ractors safely?"
+   }
+  ]
+ }
+}

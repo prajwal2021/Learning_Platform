@@ -1,0 +1,469 @@
+{
+ "slug": "django",
+ "name": "Django",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Django, and what problem does it solve?",
+    "answer": "Django is a high-level Python web framework for building server-side web applications quickly and safely. It provides common web app pieces like routing, templates, forms, ORM, authentication, and admin out of the box. The main trade-off is that Django is opinionated, which helps with speed and consistency but gives you less freedom than a minimal framework.",
+    "real_world": "A team uses Django when they want to ship a CRUD app, internal dashboard, or content site without assembling every component themselves. It reduces the amount of glue code needed for common web features.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does Django mean by being 'opinionated'? "
+   },
+   {
+    "question": "What is the difference between a Django project and a Django app?",
+    "answer": "A project is the overall Django site configuration, while an app is a smaller module that does one job, like blog, accounts, or inventory. A project can contain multiple apps, and apps can be reused across projects. Beginners often mix them up; the project is the container, and the app is the feature unit.",
+    "real_world": "In a growing codebase, separating features into apps helps keep code organized and easier to test. For example, authentication and billing are usually separate apps.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you split a feature into its own app? "
+   },
+   {
+    "question": "What is the purpose of `manage.py`?",
+    "answer": "`manage.py` is the command-line entry point for a Django project. It lets you run commands like starting the development server, creating migrations, and opening the shell while making sure Django uses the correct settings module. It is mainly a convenience script that wraps Django management commands.",
+    "real_world": "Developers use it every day to run `runserver`, create admin users, and apply database migrations. If the wrong settings are loaded, commands can affect the wrong database or environment.",
+    "code_lang": "bash",
+    "code": "python manage.py runserver\npython manage.py makemigrations\npython manage.py migrate",
+    "follow_up": "What is a Django management command? "
+   },
+   {
+    "question": "What is a Django model?",
+    "answer": "A model is a Python class that defines the structure of data in the database. Each model maps to a table, and each field maps to a column. Django’s ORM uses models so you can work with Python objects instead of writing SQL for most common operations.",
+    "real_world": "A product catalog might have a `Product` model with fields like name, price, and stock. Changes to the model structure are usually captured in migrations so the database stays in sync.",
+    "code_lang": "python",
+    "code": "from django.db import models\n\nclass Book(models.Model):\n    title = models.CharField(max_length=200)\n    published = models.DateField(null=True, blank=True)",
+    "follow_up": "What is the difference between a model field option like `null` and `blank`? "
+   },
+   {
+    "question": "What are Django migrations, and why do you need them?",
+    "answer": "Migrations are Django’s way of tracking changes to models and applying those changes to the database schema. They let you evolve tables safely over time, instead of manually editing the database. You usually create them with `makemigrations` and apply them with `migrate`.",
+    "real_world": "When a team adds a new field or renames a model, migrations make the change repeatable across local machines, staging, and production. Without them, environments drift and deployments become risky.",
+    "code_lang": "bash",
+    "code": "python manage.py makemigrations\npython manage.py migrate",
+    "follow_up": "What can go wrong if you edit the database manually instead of using migrations? "
+   },
+   {
+    "question": "What is the Django ORM?",
+    "answer": "The ORM is Django’s object-relational mapper, which lets you query and update the database using Python code. It translates model operations into SQL for you. The benefit is productivity and readability; the trade-off is that you still need to understand the generated queries for performance-sensitive code.",
+    "real_world": "A developer can fetch all published posts without writing SQL. In production, poor ORM usage can cause slow pages if it creates too many queries.",
+    "code_lang": "python",
+    "code": "posts = Post.objects.filter(published=True)\nfor post in posts:\n    print(post.title)",
+    "follow_up": "How would you check how many SQL queries a view is making? "
+   },
+   {
+    "question": "What is the `urls.py` file used for in Django?",
+    "answer": "`urls.py` maps URL patterns to views. It is how Django decides which code should handle a request like `/about/` or `/posts/123/`. Good URL design makes the app easier to understand and maintain.",
+    "real_world": "If a route is missing or misconfigured, users get a 404 even though the view exists. Teams often keep URL patterns stable because links, tests, and bookmarks depend on them.",
+    "code_lang": "python",
+    "code": "from django.urls import path\nfrom .views import hello\n\nurlpatterns = [\n    path('hello/', hello),\n]",
+    "follow_up": "What is the difference between `path()` and `re_path()`? "
+   },
+   {
+    "question": "What is the Django admin, and when would you use it?",
+    "answer": "The admin is a built-in interface for managing model data through a web UI. It is useful for internal tools, content management, support workflows, and quick inspection of data during development. You would not usually build customer-facing features with it, but it is very helpful for trusted users.",
+    "real_world": "A support team may use the admin to fix records, review orders, or moderate content without asking engineers to write a custom dashboard. It saves time when the workflow is simple and role-based access is enough.",
+    "code_lang": "python",
+    "code": "from django.contrib import admin\nfrom .models import Book\n\nadmin.site.register(Book)",
+    "follow_up": "How do you restrict who can access the admin? "
+   },
+   {
+    "question": "What is a Django view, and what does it do in the request-response cycle?",
+    "answer": "A view is the code that handles a request and returns a response. It can be a function or a class-based view, and it usually reads data, applies logic, and chooses what to return, such as HTML, JSON, or a redirect. In Django, views sit between URLs and templates/models, so they are where most of the app-specific behavior lives.",
+    "real_world": "A common bug is putting business logic in templates instead of the view, which makes debugging and testing harder. Teams often use views to build API endpoints or render pages from database data.",
+    "code_lang": "python",
+    "code": "from django.http import HttpResponse\n\ndef hello(request):\n    return HttpResponse(\"Hello, world!\")",
+    "follow_up": "When would you choose a function-based view over a class-based view?"
+   },
+   {
+    "question": "What is a Django template, and why not return HTML directly from every view?",
+    "answer": "A template is a file with placeholders and logic for generating HTML dynamically. Using templates keeps presentation separate from Python code, which makes pages easier to maintain and reuse. Returning raw HTML from every view works for tiny examples, but it becomes hard to read and update as the app grows.",
+    "real_world": "Teams use templates for pages like dashboards or profile screens where the same layout repeats with different data. Without templates, small design changes can require editing many views.",
+    "code_lang": "html",
+    "code": "<h1>Hello, {{ name }}</h1>\n{% if is_admin %}\n  <p>Admin access</p>\n{% endif %}",
+    "follow_up": "What is template inheritance in Django?"
+   },
+   {
+    "question": "How do Django forms help with handling user input?",
+    "answer": "Forms let Django validate, clean, and process input from users. They reduce manual work by checking required fields, data types, and common errors before your code uses the data. They also help protect against bad input by centralizing validation in one place.",
+    "real_world": "A signup form that accepts invalid emails or missing required fields can create broken accounts and support issues. Forms are also used to generate HTML inputs consistently in server-rendered apps.",
+    "code_lang": "python",
+    "code": "from django import forms\n\nclass SignupForm(forms.Form):\n    email = forms.EmailField()\n    age = forms.IntegerField(required=False)",
+    "follow_up": "What is the difference between a regular Form and a ModelForm?"
+   },
+   {
+    "question": "What is middleware in Django?",
+    "answer": "Middleware is code that runs before and/or after a view for every request. It is used for cross-cutting concerns like authentication, session handling, security, logging, and compression. You use middleware when the behavior should apply broadly across many views instead of being repeated in each one.",
+    "real_world": "A team might add middleware to record request timing or attach a correlation ID for tracing. Misconfigured middleware can cause authentication or session bugs that affect the whole site.",
+    "code_lang": "python",
+    "code": "MIDDLEWARE = [\n    'django.middleware.security.SecurityMiddleware',\n    'django.contrib.sessions.middleware.SessionMiddleware',\n    'django.middleware.common.CommonMiddleware',\n]",
+    "follow_up": "What is the order of middleware execution important for?"
+   },
+   {
+    "question": "What is the difference between `GET` and `POST` in a Django view?",
+    "answer": "`GET` is used to request data, while `POST` is used to submit data that changes server state, like creating a record or logging in. In Django, you usually read query parameters from `request.GET` and submitted form data from `request.POST`. Using the right method matters for browser behavior, security, and how caching or bookmarks work.",
+    "real_world": "Search pages usually use GET so the results URL can be shared or refreshed safely. Password changes and form submissions should use POST so they are not exposed in the URL.",
+    "code_lang": "python",
+    "code": "def search(request):\n    term = request.GET.get('q', '')\n    return HttpResponse(term)\n\n# POST data would be read from request.POST",
+    "follow_up": "Why should state-changing actions not be done with GET?"
+   },
+   {
+    "question": "What is CSRF protection in Django, and why is it important?",
+    "answer": "CSRF protection helps prevent attackers from tricking a logged-in user’s browser into sending an unwanted request. Django includes CSRF protection for unsafe requests like POST, and forms usually need a CSRF token. It matters because without it, actions like changing an email or posting a comment could be forged from another site.",
+    "real_world": "A classic production issue is a form that suddenly fails with a CSRF error after a frontend change because the token was omitted. APIs and browser-based forms often need different CSRF handling depending on how they authenticate.",
+    "code_lang": "html",
+    "code": "<form method=\"post\">\n  {% csrf_token %}\n  <button type=\"submit\">Save</button>\n</form>",
+    "follow_up": "When would a CSRF token not be needed?"
+   },
+   {
+    "question": "What are Django static files, and how do they differ from media files?",
+    "answer": "Static files are assets your app ships with, such as CSS, JavaScript, and images used by the UI. Media files are user-uploaded content, like profile photos or documents. The distinction matters because they are managed and served differently, especially in production.",
+    "real_world": "A common mistake is treating uploads like static files, which can cause user content to disappear on deploys. Teams usually store media separately from code and generated static assets.",
+    "code_lang": "html",
+    "code": "{% load static %}\n<link rel=\"stylesheet\" href=\"{% static 'styles.css' %}\">",
+    "follow_up": "How does Django find static files in development and production?"
+   },
+   {
+    "question": "What is the purpose of `settings.py` in a Django project?",
+    "answer": "`settings.py` holds configuration for the project, such as installed apps, middleware, database settings, templates, and debug mode. It controls how the project behaves in different environments like development, testing, and production. Keeping configuration separate from application code makes the app easier to deploy and maintain.",
+    "real_world": "A deployment issue often comes from a bad settings value, like the wrong database or missing allowed host. Teams usually split settings by environment to avoid shipping debug or local-only configuration to production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What settings would you expect to change between local development and production?"
+   },
+   {
+    "question": "What is the difference between `null` and `blank` on a Django model field?",
+    "answer": "`null` controls whether the database column can store `NULL`, while `blank` controls whether a form will accept the field as empty. They solve different problems: database storage versus validation. For most text fields, people often use `blank=True` and avoid `null=True` unless they have a specific reason.",
+    "real_world": "A common mistake is setting both without understanding the difference, which can lead to inconsistent data and awkward checks in code. This matters when a field is optional in the UI but still needs a clear database representation.",
+    "code_lang": "python",
+    "code": "class Profile(models.Model):\n    bio = models.TextField(blank=True)\n    age = models.IntegerField(null=True, blank=True)",
+    "follow_up": "Why is `null=True` usually discouraged for CharField and TextField?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide between using `select_related` and `prefetch_related` in Django, and what problem are they solving?",
+    "answer": "They both reduce the N+1 query problem, but they work differently. `select_related` uses SQL joins and is best for single-valued relationships like `ForeignKey` and `OneToOneField`, while `prefetch_related` does separate queries and combines the results in Python, which fits many-to-many and reverse foreign key relations. The trade-off is fewer queries versus more complex result handling; `select_related` can make one query large, while `prefetch_related` uses extra queries but avoids exploding joins.",
+    "real_world": "This comes up when a page lists orders with customer names and line items. Without the right relation loading, the page may issue hundreds of queries and become slow under real traffic.",
+    "code_lang": "python",
+    "code": "orders = (\n    Order.objects\n    .select_related('customer')\n    .prefetch_related('items')\n)\nfor order in orders:\n    print(order.customer.name, order.items.count())",
+    "follow_up": "How would you confirm from logs or Django debug tooling that you fixed an N+1 query issue?"
+   },
+   {
+    "question": "When would you use `F()` expressions instead of reading a value into Python, modifying it, and saving it back?",
+    "answer": "Use `F()` when the update should happen in the database based on the current stored value, especially for counters, stock levels, or any concurrent update. It avoids race conditions where two requests read the same value, both modify it, and one update gets lost. It also saves a round trip because the database performs the arithmetic directly.",
+    "real_world": "A voting or inventory system often breaks if multiple requests update the same row at once. Using `F()` makes increment/decrement operations much safer under load.",
+    "code_lang": "python",
+    "code": "from django.db.models import F\n\nProduct.objects.filter(pk=pk).update(stock=F('stock') - 1)",
+    "follow_up": "What are the limitations of `F()` expressions, especially if you need the updated value in Python right away?"
+   },
+   {
+    "question": "What is the difference between `get_queryset()` and `get_object()` in Django class-based views, and when would you customize each?",
+    "answer": "`get_queryset()` controls the base set of objects a view works with, while `get_object()` returns the single object for detail-style views. You customize `get_queryset()` when filtering, ordering, or optimizing the data source for the whole view, and `get_object()` when the lookup logic itself needs to change, such as using a slug, tenant scoping, or permission checks. The main trade-off is keeping query logic centralized versus adding special-case lookup behavior.",
+    "real_world": "In a multi-tenant app, one customer should never be able to fetch another customer’s record by guessing an ID. Overriding the lookup path is often part of enforcing that boundary.",
+    "code_lang": "python",
+    "code": "class BookDetailView(DetailView):\n    def get_queryset(self):\n        return Book.objects.filter(published=True)\n\n    def get_object(self):\n        return get_object_or_404(self.get_queryset(), slug=self.kwargs['slug'])",
+    "follow_up": "How would you handle object-level permissions in a class-based detail view?"
+   },
+   {
+    "question": "What happens if you mutate a shared class attribute on a Django class-based view during a request?",
+    "answer": "You can leak state across requests because the class attribute is shared by all instances of the view, not created fresh per request. That can cause surprising bugs under concurrency, where one user’s request changes data that another request sees. Request-specific state should live in local variables, instance attributes set during the request, or the context you return, not in mutable class-level objects.",
+    "real_world": "A common bug is appending to a class-level list or modifying a class-level dictionary in `get()` and seeing duplicated or cross-user data later. These issues are intermittent and hard to reproduce locally.",
+    "code_lang": "python",
+    "code": "class MyView(View):\n    items = []  # bad if mutated\n\n    def get(self, request):\n        self.items.append(request.user.username)\n        return JsonResponse({'items': self.items})",
+    "follow_up": "What kinds of state are safe to keep as class attributes on a Django view?"
+   },
+   {
+    "question": "How do you decide between a custom model manager and a custom queryset method?",
+    "answer": "A custom queryset method is best for reusable filtering and chaining, because it works naturally with `filter()`, `exclude()`, and other queryset operations. A manager is useful when you want a custom entry point like `Model.objects.published()`, or when you need to expose multiple querysets through different managers. In practice, many teams put the logic on a queryset subclass and have the manager delegate to it so the API stays composable.",
+    "real_world": "If several views need the same “active and visible” filter, copying the logic everywhere leads to drift and bugs. A shared queryset method keeps that rule consistent.",
+    "code_lang": "python",
+    "code": "class BookQuerySet(models.QuerySet):\n    def published(self):\n        return self.filter(is_published=True)\n\nclass Book(models.Model):\n    objects = BookQuerySet.as_manager()",
+    "follow_up": "When would you prefer a manager method over a queryset method?"
+   },
+   {
+    "question": "How do `Transaction.atomic()` and `select_for_update()` differ, and why would you use both together?",
+    "answer": "`Transaction.atomic()` groups database operations so they either all commit or all roll back. `select_for_update()` additionally locks the selected rows until the transaction ends, which prevents another transaction from changing them at the same time. You use both when the code needs to read a row, make a decision from that value, and then update it safely under concurrency.",
+    "real_world": "This matters for payment capture, booking seats, and inventory reservation. Without a lock, two requests can both see the same available balance or stock and oversubscribe it.",
+    "code_lang": "python",
+    "code": "from django.db import transaction\n\nwith transaction.atomic():\n    order = Order.objects.select_for_update().get(pk=pk)\n    order.status = 'paid'\n    order.save()",
+    "follow_up": "What are the risks of holding locks too long inside a transaction?"
+   },
+   {
+    "question": "What is the difference between `clean()`, `full_clean()`, and `ModelForm` validation in Django?",
+    "answer": "`clean()` is where you put model-level validation logic, but it is not called automatically on `save()`. `full_clean()` runs field validation, model `clean()`, and uniqueness checks, so it is the full model validation path if you call it yourself. `ModelForm` validation applies form-level and model-level checks during form processing, which is why it is common in request handling, while raw model saves skip that unless you explicitly validate.",
+    "real_world": "A team may assume invalid data can’t reach the database because the model has a `clean()` method, but that is false if code saves the model directly. That mismatch often shows up in background jobs or admin custom actions.",
+    "code_lang": "python",
+    "code": "obj = Invoice(total=-1)\nobj.full_clean()  # raises validation error\nobj.save()        # would not call clean() automatically",
+    "follow_up": "Where would you put validation that depends on multiple fields or related objects?"
+   },
+   {
+    "question": "How do Django signals differ from calling a function directly from your model or service code, and when should you avoid signals?",
+    "answer": "Signals decouple the sender from the receiver, so code that saves a model does not need to know about side effects like audit records or notifications. That flexibility can be useful, but it also makes behavior implicit and harder to trace, especially when debugging or testing. In many business flows, an explicit service function is clearer because the side effects are visible in one place; signals fit best for cross-cutting concerns that truly should happen automatically.",
+    "real_world": "A common production issue is a signal sending duplicate emails because the receiver fires from multiple code paths or during test setup. Teams often remove signals when they want predictable, explicit behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you make signal-driven behavior testable and avoid accidental duplicate work?"
+   },
+   {
+    "question": "What are the main trade-offs between using a custom user model and extending `User` with a profile model?",
+    "answer": "A custom user model is better if you need to change authentication identifiers, required fields, or the core user schema, because it becomes the canonical identity model. A profile model is simpler when you only need extra optional data and want to keep authentication untouched. The key trade-off is flexibility versus migration cost: a custom user model is harder to introduce late in a project, so it is best decided early.",
+    "real_world": "Teams often regret not choosing a custom user model at the start when product requirements change from username-based login to email-based login. Retrofitting that change later can be expensive and risky.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the safest way to reference the user model throughout a Django project?"
+   },
+   {
+    "question": "How would you debug a Django page that is suddenly slow in production, and what would you look for first?",
+    "answer": "I would first separate whether the slowdown is in database access, template rendering, external services, or middleware. In Django, the most common issue is too many queries or an expensive query plan, so I would inspect the query count, the slowest queries, and whether related data is being loaded efficiently. If the database looks fine, I would check cache misses, serialization cost, and any per-request network calls.",
+    "real_world": "This is a typical on-call problem: a page feels fine in development but slows down with real data volume. The root cause is often one endpoint that triggers hundreds of queries or scans far more rows than expected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What specific steps would you take to identify an N+1 query pattern on that page?"
+   },
+   {
+    "question": "How do Django model `ForeignKey`, `OneToOneField`, and `ManyToManyField` differ in the database and in day-to-day code?",
+    "answer": "A `ForeignKey` stores a many-to-one relationship, usually as a column on the child table. `OneToOneField` is basically a unique foreign key and is used when each row can have at most one related row, often for optional profile data. `ManyToManyField` uses a join table and is for symmetric many-to-many relationships like tags or categories. The main trade-off is how you model ownership and how often you need to query across the relation.",
+    "real_world": "This matters when you realize a “profile” should not be another nullable column set on `User`, or when product tags need to be shared across many objects. Picking the wrong field type often leads to awkward queries or unnecessary schema changes later.",
+    "code_lang": "python",
+    "code": "class Profile(models.Model):\n    user = models.OneToOneField(User, on_delete=models.CASCADE)\n\nclass Order(models.Model):\n    customer = models.ForeignKey(User, on_delete=models.PROTECT)\n\nclass Article(models.Model):\n    tags = models.ManyToManyField(Tag)",
+    "follow_up": "How do `related_name` and reverse relations work for these fields?"
+   },
+   {
+    "question": "How do `on_delete` behaviors affect data integrity, and how do you choose between `CASCADE`, `PROTECT`, and `SET_NULL`?",
+    "answer": "`on_delete` controls what happens to dependent rows when the referenced row is deleted. `CASCADE` deletes dependents too, `PROTECT` blocks the delete, and `SET_NULL` keeps the row but clears the relationship, which requires the field to allow nulls. The choice depends on whether the child data has value on its own and whether deleting the parent should be reversible or blocked for safety. In real systems, `PROTECT` is common for billing or audit data, while `CASCADE` is fine for disposable children like comments in some apps.",
+    "real_world": "A team deleting a customer account can accidentally wipe invoices if the relationship is set to cascade. In regulated domains, that’s often a production incident, not a minor bug.",
+    "code_lang": "python",
+    "code": "class Invoice(models.Model):\n    customer = models.ForeignKey(\n        Customer,\n        on_delete=models.PROTECT,\n    )",
+    "follow_up": "What would change if `customer` were optional and you wanted to preserve invoices after deletion?"
+   },
+   {
+    "question": "When would you use `annotate()` and `aggregate()`, and what is the difference between them?",
+    "answer": "`annotate()` adds computed values to each row in the queryset, while `aggregate()` collapses the queryset down to a single summary result. Use `annotate()` when you want things like per-user post counts or latest dates alongside each object. Use `aggregate()` when you only need totals, averages, or other overall metrics. The trade-off is database work versus Python loops: both are usually better done in SQL than fetching rows and counting them in application code.",
+    "real_world": "This comes up in dashboards, reporting pages, and APIs that need counts without N+1 queries. If you do the counting in Python, the page may work in development and time out with production data.",
+    "code_lang": "python",
+    "code": "User.objects.annotate(post_count=Count('posts'))\nPost.objects.aggregate(total=Count('id'))",
+    "follow_up": "How does `annotate()` interact with `filter()` and `values()`?"
+   },
+   {
+    "question": "Why might a Django query still be inefficient even if you already used `select_related()` or `prefetch_related()`?",
+    "answer": "Those tools only solve relationship loading; they do not automatically reduce the amount of data you fetch or the cost of the SQL itself. A query can still be slow because of a missing index, filtering on unindexed columns, returning too many rows, or doing expensive annotations. They can also be misused: `select_related()` on a wide join can make rows much larger, and `prefetch_related()` can pull in far more objects than you need. The key is to inspect the actual query shape, not just the number of queries.",
+    "real_world": "A page may go from dozens of queries to three and still be slow because one join returns millions of rows. Teams often discover this only after looking at the database slow query log or `EXPLAIN` output.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide whether the bottleneck is query count, join size, or an index issue?"
+   },
+   {
+    "question": "What problem does `exists()` solve, and why is it usually better than evaluating a queryset in a boolean context when you only need to know if rows exist?",
+    "answer": "`exists()` asks the database for a minimal yes/no answer instead of loading rows. If you do `if queryset:`, Django may evaluate the queryset and fetch data you do not need. That matters for large tables or expensive filters because it reduces both database work and memory use. If you later need the objects anyway, then checking truthiness may be fine because the result will be reused.",
+    "real_world": "This shows up in permission checks and feature flags where the code only needs to know whether anything matches. Using the wrong form can make a cheap check unexpectedly expensive under load.",
+    "code_lang": "python",
+    "code": "if Order.objects.filter(user=request.user, status='open').exists():\n    ...",
+    "follow_up": "When would `count()` be the right choice instead?"
+   },
+   {
+    "question": "How do you handle a race condition when two requests try to create or update the same logical record at the same time?",
+    "answer": "You should enforce correctness at the database level first, usually with a unique constraint or another invariant the database can check. Then handle the failure path in application code, often by catching the integrity error and retrying or returning a clean response. If the operation depends on reading and then writing the current state, use a transaction and, when needed, row locking to serialize the critical section. Application-only checks are not enough because two requests can pass them at the same time.",
+    "real_world": "This is common in signup flows, inventory reservation, and idempotent webhook handlers. Without database enforcement, duplicate rows and double charges appear only under concurrency in production.",
+    "code_lang": "python",
+    "code": "try:\n    with transaction.atomic():\n        obj, created = Cart.objects.get_or_create(user=user)\nexcept IntegrityError:\n    obj = Cart.objects.get(user=user)",
+    "follow_up": "When would you prefer an optimistic approach over locking rows?"
+   },
+   {
+    "question": "What are the trade-offs between putting logic in a model method, a form, a view, or a separate service layer?",
+    "answer": "Put logic where it matches the level of responsibility. Model methods are good for behavior tied to one object, forms for input validation and normalization, views for request handling, and a service layer for workflows spanning multiple models or side effects. Keeping complex business processes out of views and models can make them easier to test and reuse, but too many layers can also make simple code harder to follow. The practical rule is to avoid duplicating business rules across HTTP handlers and admin/forms.",
+    "real_world": "Teams often start with logic in views and later need the same operation from an API, admin action, and cron job. A service function can keep those entry points consistent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of logic that belongs in a model versus a service?"
+   },
+   {
+    "question": "How do you use Django’s test client and factory-style setup to test a view without making the test brittle?",
+    "answer": "Use the test client to exercise the request/response behavior instead of calling the view directly, because that covers routing, middleware, auth, and templates together. Set up only the data the test needs, and assert on behavior that matters, like status code, redirected URL, rendered content, or database changes. Keep tests independent of exact HTML structure unless that structure is the contract you care about. The trade-off is between realism and speed, so use a smaller integration-style test for the critical path and narrower unit tests for pure logic.",
+    "real_world": "This helps when a refactor changes implementation details but not the user-visible behavior. Overly specific tests can become expensive to maintain and block safe refactors.",
+    "code_lang": "python",
+    "code": "client = Client()\nclient.force_login(user)\nresp = client.get('/dashboard/')\nassert resp.status_code == 200",
+    "follow_up": "When would you mock a dependency in a Django test, and when would you avoid mocking?"
+   },
+   {
+    "question": "What happens when a Django form or model field receives invalid data, and how do you present validation errors cleanly to users or API clients?",
+    "answer": "Validation should fail before saving, and Django collects errors on the form or serializer rather than throwing a generic exception at the user. In forms, invalid fields get attached errors and `is_valid()` returns false; in model-level validation, you typically call `full_clean()` explicitly if you want those checks outside a form. For APIs, you usually translate validation errors into a structured response rather than exposing stack traces. The key is to validate close to the input boundary and keep error messages specific enough to fix the problem.",
+    "real_world": "This matters when bad imports, admin edits, or API payloads would otherwise create partial records or obscure 500s. Good validation keeps user-facing errors understandable and prevents corrupt data from entering the database.",
+    "code_lang": "python",
+    "code": "form = SignupForm(request.POST)\nif form.is_valid():\n    form.save()\nelse:\n    return render(request, 'signup.html', {'form': form})",
+    "follow_up": "How would you handle cross-field validation, like requiring one field only when another is set?"
+   },
+   {
+    "question": "How do you make a Django endpoint idempotent, and why is that important for retries and webhooks?",
+    "answer": "An idempotent endpoint can be called multiple times with the same effect as calling it once. In Django, that usually means identifying the request by a unique business key, checking whether the work was already done, and making the database enforce uniqueness where possible. This matters because retries happen in load balancers, client code, and webhook delivery systems, and you do not want duplicate side effects like double orders or repeated emails. The design trade-off is that you often need extra state or a deduplication table to make repeated requests safe.",
+    "real_world": "Payment providers and message queues often deliver the same event more than once. If your handler is not idempotent, customers can be charged twice or records can be duplicated.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What database constraint or transaction pattern would you use to support that safely?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does Django's app registry and model loading process work at startup, and what kinds of bugs come from getting it wrong?",
+    "answer": "On startup, Django populates the app registry in stages: it imports app configs, imports models, then runs each app's ready() hook. Code that touches models, queries the database, or imports other apps too early can trigger circular imports or AppRegistryNotReady errors. The safe pattern is to keep module import side effects minimal and defer cross-app lookups with apps.get_model() or by importing inside functions when needed. ready() is for wiring, not for doing per-process business work.",
+    "real_world": "A common production incident is a deploy that works locally but fails under gunicorn because one app imports another app's models at module import time, causing startup order problems. Another is duplicated background consumers because ready() starts threads in every worker process.",
+    "code_lang": "python",
+    "code": "from django.apps import apps\n\ndef get_invoice_model():\n    return apps.get_model(\"billing\", \"Invoice\")\n\n\ndef create_invoice(data):\n    Invoice = get_invoice_model()\n    return Invoice.objects.create(**data)\n",
+    "follow_up": "What would you put in AppConfig.ready(), and what would you explicitly avoid putting there?"
+   },
+   {
+    "question": "What actually happens when you evaluate a Django QuerySet, and how do caching and repeated evaluation affect performance?",
+    "answer": "A QuerySet is lazy until you iterate over it, slice it with a step, call list(), len(), bool(), first(), aggregate(), or similar terminal operations. After full evaluation, it caches result objects on that QuerySet instance, so iterating the same instance again usually reuses memory rather than hitting the database. But derived QuerySets are separate, and methods like count() or exists() issue their own queries instead of using the object cache. Performance issues often come from accidental evaluation in templates, logging, or helper functions that each trigger another query.",
+    "real_world": "Teams often think they have one query because they stored qs in a variable, but then the view, serializer, and template each do their own terminal operation. Under load, that turns into several database round trips per request and a lot of Python object creation.",
+    "code_lang": "python",
+    "code": "qs = Order.objects.filter(status=\"open\")\nlist(qs)          # executes SELECT and fills qs cache\nlist(qs)          # reuses cache\nqs.count()        # separate SELECT COUNT(*)\nqs.exists()       # separate EXISTS-style query\n",
+    "follow_up": "Why can using len(qs) be much worse than qs.count() on a large result set?"
+   },
+   {
+    "question": "How would you use database constraints in Django to enforce invariants, and why is application-level validation alone not enough?",
+    "answer": "Application validation is useful for user feedback, but it is not a concurrency boundary because two processes can both validate and then write conflicting rows. For invariants that must always hold, use database constraints such as unique constraints, conditional unique constraints where supported, check constraints, and foreign keys. Then handle IntegrityError or surface it as a domain error. The trade-off is that constraints are stricter and require careful migrations, but they are the only reliable enforcement under concurrent writes.",
+    "real_world": "A classic bug is duplicate 'active subscription' rows created by two workers processing the same event. Form or serializer validation passes in both workers; the database constraint is what actually prevents corruption.",
+    "code_lang": "python",
+    "code": "from django.db import models\nfrom django.db.models import Q\n\nclass Subscription(models.Model):\n    user = models.ForeignKey(\"auth.User\", on_delete=models.CASCADE)\n    active = models.BooleanField(default=True)\n\n    class Meta:\n        constraints = [\n            models.UniqueConstraint(\n                fields=[\"user\"], condition=Q(active=True),\n                name=\"one_active_subscription_per_user\")]\n",
+    "follow_up": "How do you roll out a new unique constraint safely when production data may already violate it?"
+   },
+   {
+    "question": "What are the failure modes of using `get_or_create()` or `update_or_create()` under concurrency, and how do you make those operations safe?",
+    "answer": "Those helpers are convenient but they are not magic race-condition eliminators. Without a matching database uniqueness constraint, two concurrent requests can both not find a row and both insert one. With the constraint in place, Django can still see an IntegrityError on contention, so your code should expect retries or handle the exception cleanly. For more complex state transitions, combine constraints with atomic blocks and, if needed, row locking on the record that coordinates the operation.",
+    "real_world": "This shows up in webhook consumers and signup flows, where retries and duplicate deliveries are normal. Without uniqueness plus error handling, you get duplicate accounts, orders, or side effects.",
+    "code_lang": "python",
+    "code": "from django.db import IntegrityError, transaction\n\nwith transaction.atomic():\n    try:\n        obj, created = Customer.objects.get_or_create(email=email)\n    except IntegrityError:\n        obj = Customer.objects.get(email=email)\n        created = False\n",
+    "follow_up": "When would you prefer an explicit insert with conflict handling at the database level over `get_or_create()`?"
+   },
+   {
+    "question": "How do Django's sync and async request paths interact, and where do people accidentally lose performance or correctness?",
+    "answer": "Django supports async views, but much of the stack may still be synchronous depending on middleware, ORM usage, and third-party libraries. Calling synchronous ORM work directly from an async context can block the event loop, and bouncing repeatedly between sync and async adds overhead. Async helps most when you spend time waiting on network I/O to truly async services; it does not make CPU-heavy work or standard database access magically faster. You need to know which parts of your stack are async-safe and keep boundaries coarse rather than wrapping every small call.",
+    "real_world": "A team moves views to async expecting higher throughput, but still calls the ORM and a sync HTTP client inside them. Latency gets worse because requests now pay adaptation overhead without gaining nonblocking I/O.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "In a Django app that mostly talks to PostgreSQL, when does using async views actually make sense?"
+   },
+   {
+    "question": "How does `StreamingHttpResponse` differ from a normal response, and what production gotchas come with streaming large responses?",
+    "answer": "A normal response is fully built in memory before Django hands it off, while a streaming response yields chunks over time. That can reduce memory use and let clients start receiving data earlier, but middleware that needs the whole body may not work the same way, and error handling after bytes are sent is much harder. Streaming also ties up the worker for the duration unless your stack is designed for it, so it can hurt throughput if many clients read slowly. It is best for genuinely large or incremental payloads, not as a default optimization.",
+    "real_world": "Teams use streaming for CSV exports to avoid loading millions of rows into RAM, but then discover that a few slow clients occupy workers for minutes. The export endpoint needs separate capacity planning from normal web traffic.",
+    "code_lang": "python",
+    "code": "from django.http import StreamingHttpResponse\n\ndef stream_rows(rows):\n    yield \"id,name\\n\"\n    for r in rows.iterator(chunk_size=1000):\n        yield f\"{r.id},{r.name}\\n\"\n\ndef export_users(request):\n    return StreamingHttpResponse(stream_rows(User.objects.all()), content_type=\"text/csv\")\n",
+    "follow_up": "Why is queryset.iterator() often paired with streaming, and what trade-off does it introduce?"
+   },
+   {
+    "question": "What are the trade-offs of using Django's cache framework for correctness-sensitive data, and how do you avoid common invalidation bugs?",
+    "answer": "Caches are best treated as performance hints, not the source of truth, because entries can be stale, evicted, or missing at any time. The main design choice is cache-aside versus write-through or explicit versioning; cache-aside is simple but easy to invalidate incorrectly, especially for derived lists and permissions. You should define ownership of cache keys, use bounded TTLs where staleness is acceptable, and avoid making authorization or money movement depend solely on cached values. Also watch for cache stampedes when many requests rebuild the same hot key after expiry.",
+    "real_world": "A common incident is changing user roles in the database but serving stale permission decisions from cache for several minutes. Another is a thundering herd after a hot homepage fragment expires and every worker recomputes it at once.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent a cache stampede on an expensive queryset-backed page?"
+   },
+   {
+    "question": "How do Django sessions actually work under the different backends, and what are the scaling and failure trade-offs?",
+    "answer": "Django stores only a session key in the cookie for server-side backends, with session data kept in the database, cache, file system, or another store depending on configuration. Database-backed sessions are durable and simple but add write load and cleanup concerns; cache-backed sessions are faster but can disappear on eviction or restart unless you use a persistent cache design. Signed-cookie sessions avoid server storage but increase cookie size and expose all session data to the client, though signed against tampering. The right choice depends on durability needs, traffic shape, and whether losing a session is acceptable.",
+    "real_world": "At scale, database sessions can become a surprising source of write amplification because many requests touch session data. On the other hand, cache-only sessions can log out large numbers of users after a cache outage or node recycle.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What session access patterns in views unintentionally create extra writes or contention?"
+   },
+   {
+    "question": "What are the implications of using multiple databases in Django, especially around transactions, consistency, and routing?",
+    "answer": "Django can route reads and writes across databases, but it does not give you distributed transactions across independent databases. An atomic block only guarantees atomicity on the specific database connection it uses, so a workflow that writes to two databases can succeed on one and fail on the other. Replicas also introduce lag, so a write followed by a read from a replica may not see the new state. You need explicit routing rules, careful consistency expectations, and often compensating actions for cross-database workflows.",
+    "real_world": "This matters in sharded systems and in primary-replica setups where users submit a form and then immediately refresh a page backed by a replica. The page can appear to 'lose' the change even though the write succeeded on primary.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design around replica lag for a user flow that must read its own writes?"
+   },
+   {
+    "question": "How would you perform a zero-downtime schema change in Django when the table is large and the app stays live during deploys?",
+    "answer": "The key is to separate schema and code changes into backward-compatible steps. Typical flow is: add new nullable column or new table, deploy code that writes both old and new representations, backfill in batches outside the request path, verify, switch reads to the new field, then remove old writes and finally drop old schema later. You avoid long locks by not doing massive rewrites in one migration and by being careful with defaults, indexes, and constraints on large tables. Migrations are part of the rollout plan, not the whole plan.",
+    "real_world": "A single migration that rewrites a large table can lock writes or bloat the database enough to trigger cascading latency. Mature teams treat big backfills as operational jobs with progress tracking and throttling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can adding a non-null column with a default be risky on a large production table, and how would you de-risk it?"
+   },
+   {
+    "question": "How does Django’s `ATOMIC_REQUESTS` setting actually behave, and what are the performance and correctness trade-offs of enabling it globally?",
+    "answer": "With `ATOMIC_REQUESTS`, Django wraps each request in a database transaction for that database alias. That simplifies code that needs all-or-nothing writes, but it keeps transactions open longer, which increases lock time, bloat, and the chance of contention under load. It also does not make external side effects atomic, so sending emails or publishing events inside the request can still leave inconsistencies if the transaction rolls back. I usually prefer explicit `atomic()` blocks around the smallest critical section.",
+    "real_world": "Teams turn it on globally, then see lock waits and dead tuples grow because even read-heavy requests hold transactions open until template rendering finishes. It also causes incidents where a payment email is sent but the corresponding DB write rolls back.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when a response is streamed or when code schedules work with `transaction.on_commit()`?"
+   },
+   {
+    "question": "What actually happens inside Django when you call `prefetch_related()`, and when can it make performance worse instead of better?",
+    "answer": "`prefetch_related()` runs the main query first, then separate queries for related collections, and stitches the results together in Python using each relation’s keys. It is great for avoiding N+1 queries on reverse and many-to-many relations, but it can increase memory usage a lot because Django materializes many objects at once. It can also overfetch if you prefetch large related sets you do not end up using, or if filters on the related manager bypass the prefetched cache. You need to measure both query count and response memory/latency.",
+    "real_world": "A list endpoint can go from 500 queries to 3, but also from 200 MB to OOM if each parent row has thousands of children and the page size is large.",
+    "code_lang": "python",
+    "code": "books = (\n    Book.objects\n    .prefetch_related(\n        Prefetch(\"authors\", queryset=Author.objects.only(\"id\", \"name\"))\n    )\n)\nfor b in books:\n    names = [a.name for a in b.authors.all()]",
+    "follow_up": "How would you combine `Prefetch` with filtered related querysets without breaking correctness later in the request?"
+   },
+   {
+    "question": "If a Django process is handling many concurrent requests, what thread-safety and process-safety assumptions should you make about in-memory state?",
+    "answer": "You should assume request handlers may run concurrently in different threads, tasks, or processes depending on the server, and that worker processes do not share Python memory. Mutable module globals, class-level caches, and in-memory deduplication can therefore race within a process and be inconsistent across processes. For correctness-sensitive coordination, use the database, Redis, or another external system with clear atomic guarantees. In-memory state is fine only for best-effort caching or immutable configuration.",
+    "real_world": "A common incident is implementing an in-process 'sent webhook IDs' set that works in development but duplicates events in production because each worker has its own copy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of bugs appear when you run under Gunicorn with multiple workers versus a single-process dev server?"
+   },
+   {
+    "question": "How do `only()` and `defer()` really work in Django, and what are the gotchas when you use them to optimize large models?",
+    "answer": "They do not create partial model types; they create normal model instances with some fields deferred until first access. That can reduce row size and network cost when a model has large text or JSON fields, but touching a deferred field later triggers an extra query per instance unless it was already loaded. It also makes code harder to reason about because serializers, `__str__`, logging, or template access can silently cause N+1 queries. I use them surgically on hot paths and verify access patterns carefully.",
+    "real_world": "Teams add `only()` to speed up an index page, then a template starts reading a deferred field and query counts jump from 2 to hundreds after a harmless-looking UI change.",
+    "code_lang": "python",
+    "code": "qs = Article.objects.only(\"id\", \"title\")\narticle = qs.first()\nprint(article.title)   # loaded\nprint(article.body)    # triggers another query",
+    "follow_up": "When would you prefer `values()` or `values_list()` over `only()` for a high-throughput read endpoint?"
+   },
+   {
+    "question": "What are the trade-offs between `bulk_create` or `bulk_update` and normal `save()` loops in Django?",
+    "answer": "Bulk operations reduce round trips dramatically and are usually the right choice for large batches, but they skip most model-level behavior you may rely on in normal saves. Depending on the operation and database, you should not assume `save()` methods, signals, validation, or per-object side effects run the same way as in a loop. They also make partial failure handling and conflict behavior more explicit, which is good for control but easier to get wrong. I use bulk writes for throughput and keep side effects outside model save hooks.",
+    "real_world": "An import job that used per-row `save()` can take hours and saturate connections; switching to bulk writes can cut it to minutes, but teams sometimes silently lose audit hooks or denormalized updates.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a bulk ingestion path that still guarantees derived counters or search indexing stay correct?"
+   },
+   {
+    "question": "How do Django’s database connections behave in long-running workers or management commands, and what failures do you need to guard against?",
+    "answer": "Outside the short request lifecycle, you cannot assume connections are fresh or automatically cleaned up at the right times. Long-running code can hold stale connections after database restarts, leak idle connections if it spawns threads or subprocesses carelessly, or sit in old transactions longer than intended. It is important to keep transactions short, handle reconnect scenarios, and explicitly clean up connections at task boundaries when the runtime does not do it for you. Background workers need stricter connection hygiene than simple web requests.",
+    "real_world": "A Celery worker can run fine for days, then fail in bursts after a DB failover because existing pooled connections are dead and the task code never resets them cleanly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is different about connection lifecycle under WSGI requests, ASGI requests, and Celery tasks?"
+   },
+   {
+    "question": "What is the practical difference between `TestCase` and `TransactionTestCase`, and when does choosing the wrong one hide real bugs?",
+    "answer": "`TestCase` wraps each test in a transaction and usually resets state efficiently, which makes it fast, but that means some transaction behavior is not exercised the way production sees it. `TransactionTestCase` allows testing commit and rollback boundaries, database visibility across transactions, and lock behavior more realistically, but it is slower. If your code depends on `on_commit`, row locks, or concurrent transaction behavior, `TestCase` can give false confidence. Use the faster class by default, then switch when transactional semantics are part of the feature.",
+    "real_world": "Teams write passing tests for code that enqueues work after commit, then production breaks because the test never exposed that the callback timing depended on a real commit.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test code that uses `select_for_update()` or `transaction.on_commit()`?"
+   },
+   {
+    "question": "How do you safely evolve a Django data model when old and new application versions run at the same time during a deploy?",
+    "answer": "The key is to make schema changes backward- and forward-compatible across at least one deploy step. Additive changes are safest: add nullable columns or new tables first, deploy code that can read and write both shapes, backfill data, then enforce constraints or remove old fields later. Avoid deployments where new code requires a column before the migration is applied, or old code breaks because a field vanished. Think in expand-migrate-contract phases rather than a single migration file.",
+    "real_world": "A rolling deploy can crash half the fleet if one pod starts using a renamed column before another pod has applied the migration, even though everything worked locally.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle a field rename in a high-traffic service without breaking old workers or admin jobs?"
+   },
+   {
+    "question": "How does Django REST-style pagination interact with ORM query patterns at scale, and why can offset-based pagination become a production problem?",
+    "answer": "Offset pagination is simple, but deep offsets get expensive because the database may need to scan and discard many rows before returning the page. It is also unstable under concurrent inserts or deletes, so clients can miss or duplicate items between pages. For large, append-heavy datasets, keyset or cursor-style pagination based on a stable indexed ordering is usually better. The trade-off is more complexity and stricter ordering requirements.",
+    "real_world": "An admin export endpoint using offset pagination may look fine in staging, then become painfully slow at page 50,000 and produce duplicates while data is changing.",
+    "code_lang": "python",
+    "code": "# Better than offset for large append-only feeds\nqs = Event.objects.order_by(\"-created_at\", \"-id\")\npage = qs.filter(created_at__lt=cursor_ts)[:100]",
+    "follow_up": "What ordering properties do you need for keyset pagination to be correct and index-friendly?"
+   },
+   {
+    "question": "When would you bypass the Django ORM and use raw SQL, and how do you do it without creating a maintenance trap?",
+    "answer": "I bypass the ORM when the query shape is not expressible cleanly, when I need database-specific features, or when measured performance shows the ORM version is materially worse. The important part is to keep raw SQL isolated, parameterized, covered by tests, and explained in terms of why the ORM was insufficient. I also avoid scattering raw snippets across views; a repository or query module with clear inputs and outputs is easier to review and evolve. Raw SQL is a sharp tool, not a badge of sophistication.",
+    "real_world": "This matters for things like window functions, complex CTEs, or vendor-specific locking hints where forcing everything through the ORM leads to unreadable code and poor query plans.",
+    "code_lang": "python",
+    "code": "sql = \"\"\"\nSELECT user_id, COUNT(*) AS n\nFROM orders\nWHERE created_at >= %s\nGROUP BY user_id\n\"\"\"\nwith connection.cursor() as cur:\n    cur.execute(sql, [since])\n    rows = cur.fetchall()",
+    "follow_up": "What checks would you do before concluding the ORM is the bottleneck rather than missing indexes or a bad access pattern?"
+   }
+  ]
+ }
+}

@@ -1,0 +1,453 @@
+{
+ "slug": "flutter",
+ "name": "Flutter",
+ "category": "Mobile",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a StatelessWidget and a StatefulWidget in Flutter?",
+    "answer": "A StatelessWidget never changes its internal state after it is built, so it is best for UI that depends only on constructor inputs. A StatefulWidget has a separate State object that can change over time, and calling setState tells Flutter to rebuild that part of the UI. Use StatelessWidget whenever you can, because it is simpler and easier to reason about.",
+    "real_world": "A button counter, loading spinner, or form field with validation usually needs StatefulWidget. A screen that only displays data passed in from above can often be a StatelessWidget.",
+    "code_lang": "dart",
+    "code": "class Counter extends StatefulWidget {\n  const Counter({super.key});\n  @override\n  State<Counter> createState() => _CounterState();\n}\n",
+    "follow_up": "What does setState actually do, and what mistakes do beginners make with it?"
+   },
+   {
+    "question": "What is a Widget in Flutter?",
+    "answer": "A widget is the basic building block of a Flutter UI. Widgets describe what the interface should look like for a given state, including layout, styling, and interaction. Flutter rebuilds widgets often, so they should be lightweight descriptions rather than objects that hold lots of mutable data.",
+    "real_world": "If a team tries to store business data inside widgets, the app becomes harder to debug because the UI and state get mixed together. Keeping widgets focused on presentation makes screens easier to test and reuse.",
+    "code_lang": "dart",
+    "code": "Widget build(BuildContext context) {\n  return const Text('Hello Flutter');\n}",
+    "follow_up": "How do widgets relate to elements and render objects?"
+   },
+   {
+    "question": "What is the purpose of the BuildContext parameter?",
+    "answer": "BuildContext is a handle to where a widget sits in the widget tree. It lets you look up inherited data, themes, navigation, and other ancestors. The main thing to remember is that context is tied to a position in the tree, so you must use it from the right place and at the right time.",
+    "real_world": "A common bug is calling Navigator or Theme lookup with a context that is above the widget you want, or after the widget has been disposed. That leads to runtime errors that are often confusing for beginners.",
+    "code_lang": "dart",
+    "code": "@override\nWidget build(BuildContext context) {\n  final theme = Theme.of(context);\n  return Text('Title', style: theme.textTheme.titleLarge);\n}",
+    "follow_up": "When is it unsafe to use BuildContext after an async gap?"
+   },
+   {
+    "question": "What is the difference between mainAxisAlignment and crossAxisAlignment in a Row or Column?",
+    "answer": "mainAxisAlignment controls how children are positioned along the main axis of the layout, and crossAxisAlignment controls the perpendicular axis. In a Row, the main axis is horizontal and the cross axis is vertical. In a Column, it is the opposite. This matters because many layout bugs come from mixing up those two directions.",
+    "real_world": "A common UI issue is a Row that looks vertically centered but not horizontally spaced the way the designer expected. Knowing the axes makes it much easier to fix alignment without guessing.",
+    "code_lang": "dart",
+    "code": "Row(\n  mainAxisAlignment: MainAxisAlignment.spaceBetween,\n  crossAxisAlignment: CrossAxisAlignment.center,\n  children: const [Text('A'), Text('B')],\n)",
+    "follow_up": "What is the difference between MainAxisSize.max and MainAxisSize.min?"
+   },
+   {
+    "question": "Why do we use keys in Flutter?",
+    "answer": "Keys help Flutter identify widgets when the tree changes. They are especially useful when widgets move, get inserted, or are conditionally rebuilt, because they preserve the correct state for the right item. Without keys, Flutter may reuse state in the wrong place, which can cause surprising UI behavior.",
+    "real_world": "Keys matter in lists of editable fields or reorderable items. Without them, typing into one row can appear to affect another row after the list changes.",
+    "code_lang": "dart",
+    "code": "ListView(\n  children: const [\n    ListTile(key: ValueKey('a'), title: Text('A')),\n    ListTile(key: ValueKey('b'), title: Text('B')),\n  ],\n)",
+    "follow_up": "What is the difference between ValueKey, ObjectKey, and UniqueKey?"
+   },
+   {
+    "question": "What does setState do in a StatefulWidget?",
+    "answer": "setState marks the State object as dirty and schedules a rebuild of that widget subtree. It does not magically refresh the whole app; it tells Flutter to call build again so the UI can reflect the new state. You should keep the state change itself inside the setState callback and avoid heavy work there.",
+    "real_world": "Beginners often update a field without wrapping it in setState and wonder why the screen does not change. Another common mistake is calling setState too often or around async code that could have finished later.",
+    "code_lang": "dart",
+    "code": "setState(() {\n  count += 1;\n});",
+    "follow_up": "What happens if setState is called after dispose?"
+   },
+   {
+    "question": "What is the difference between hot reload and hot restart?",
+    "answer": "Hot reload injects changed code into the running app and preserves the current state when possible, which is great for UI iteration. Hot restart restarts the Dart app from scratch, so all in-memory state is lost. If something about app startup or initialization changed, hot restart is often needed.",
+    "real_world": "A developer may change a widget’s layout and use hot reload to see it instantly, but if they changed main() or initializers, the old state may make the app look unchanged until a restart.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you need a full rebuild instead of hot restart?"
+   },
+   {
+    "question": "What is the difference between final and const in Dart?",
+    "answer": "final means the variable can be assigned once, but the value is determined at runtime. const means the value is compile-time constant and deeply immutable when possible. In Flutter, const is useful because it can reduce rebuild work and make widget trees more efficient, but you can only use it when the value is truly constant.",
+    "real_world": "Using const constructors for unchanged widgets can reduce churn in rebuilds and make code clearer. A common beginner mistake is trying to use const with values that depend on runtime input.",
+    "code_lang": "dart",
+    "code": "const title = 'Hello';\nfinal now = DateTime.now();\n// const time = DateTime.now(); // invalid",
+    "follow_up": "What is the difference between const constructors and const variables?"
+   },
+   {
+    "question": "What is the purpose of Expanded in a Row or Column?",
+    "answer": "Expanded tells Flutter to make a child fill the remaining space along the main axis. It is used when you want flexible layout behavior instead of the child taking only its natural size. This is common for making one widget grow while others stay fixed.",
+    "real_world": "If you put a long Text next to an icon in a Row without Expanded, the text can overflow. Wrapping the text in Expanded often fixes the layout by giving it the remaining space.",
+    "code_lang": "dart",
+    "code": "Row(\n  children: const [\n    Icon(Icons.star),\n    Expanded(child: Text('A long piece of text')),\n  ],\n)",
+    "follow_up": "How is Flexible different from Expanded?"
+   },
+   {
+    "question": "What is Navigator used for in Flutter?",
+    "answer": "Navigator manages the stack of screens in an app. You push a route to move forward to a new screen and pop to go back. It is the standard way to handle screen-to-screen navigation in many Flutter apps, especially simple ones.",
+    "real_world": "A login flow may push a home screen after success, and a details page can pop back to the list. If navigation is wired incorrectly, users can get stuck or lose the expected back behavior.",
+    "code_lang": "dart",
+    "code": "Navigator.push(\n  context,\n  MaterialPageRoute(builder: (_) => const DetailsPage()),\n);",
+    "follow_up": "What is the difference between push, pop, and replace?"
+   },
+   {
+    "question": "What is the difference between MaterialApp and CupertinoApp, and when would you use each?",
+    "answer": "MaterialApp gives you Material Design defaults like theming, navigation, and common Material widgets. CupertinoApp does the same kind of app-level setup but with iOS-style look and behavior. Use MaterialApp for most cross-platform apps unless you specifically want a Cupertino-first experience, or you plan to mix both styles intentionally.",
+    "real_world": "Teams usually pick MaterialApp for Android-first or cross-platform apps because it matches common Flutter examples and packages. CupertinoApp is more common when the product is targeted at iOS users and design consistency matters.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does MaterialApp provide besides styling?"
+   },
+   {
+    "question": "What is the purpose of a Scaffold in Flutter?",
+    "answer": "Scaffold provides the basic visual layout structure for a screen, such as an app bar, body, floating action button, drawer, and bottom navigation. It is not required for every widget tree, but it is the standard container for pages built with Material Design. Without it, you can still build UI, but you must place those pieces yourself.",
+    "real_world": "If a junior developer forgets Scaffold, common widgets like SnackBar or Drawer often behave unexpectedly or have nowhere to attach. It is one of the first things added when building a new screen.",
+    "code_lang": "dart",
+    "code": "Scaffold(\n  appBar: AppBar(title: Text('Home')),\n  body: Center(child: Text('Hello')),\n);",
+    "follow_up": "When would you not use a Scaffold?"
+   },
+   {
+    "question": "What does a TextEditingController do?",
+    "answer": "A TextEditingController lets you read and change the text in a TextField or TextFormField. It is useful when you need to prefill input, clear it programmatically, or react to text changes. If you create one in a StatefulWidget, you should dispose it when the state is removed.",
+    "real_world": "This matters in login forms, search boxes, and editing screens where the app needs to show existing data or validate as the user types. Forgetting to dispose it can cause memory leaks and listener issues.",
+    "code_lang": "dart",
+    "code": "final _controller = TextEditingController();\n\nTextField(controller: _controller)\n\n// later\n_controller.text = 'Prefilled';",
+    "follow_up": "How do you avoid leaking a controller in a screen?"
+   },
+   {
+    "question": "What is the difference between TextField and TextFormField?",
+    "answer": "TextField is the basic input widget. TextFormField adds form features like validation and integration with a Form widget, which makes it easier to validate several fields together and submit them as a group. Use TextFormField when the input is part of a form with rules or error messages.",
+    "real_world": "Registration and checkout screens usually use TextFormField because they need validation before submission. Plain TextField is enough for simple search boxes or filters.",
+    "code_lang": "dart",
+    "code": "Form(\n  child: TextFormField(\n    validator: (value) => value!.isEmpty ? 'Required' : null,\n  ),\n);",
+    "follow_up": "What does the Form widget do?"
+   },
+   {
+    "question": "How do you show a message to the user with SnackBar?",
+    "answer": "A SnackBar is a temporary message shown at the bottom of the screen. In Material apps, you usually show it through ScaffoldMessenger so it appears correctly above the current Scaffold. It is good for short feedback like success, error, or undo actions.",
+    "real_world": "This is commonly used after saving a form or deleting an item. A beginner mistake is trying to show it from the wrong context and getting no visible message.",
+    "code_lang": "dart",
+    "code": "ScaffoldMessenger.of(context).showSnackBar(\n  SnackBar(content: Text('Saved')),\n);",
+    "follow_up": "When would you use a SnackBar instead of a dialog?"
+   },
+   {
+    "question": "What does MediaQuery do in Flutter?",
+    "answer": "MediaQuery gives you information about the device and screen, such as size, orientation, and text scaling. It is useful when you need responsive layouts or want to adapt to safe areas and accessibility settings. Instead of hardcoding sizes, you can use MediaQuery to make the UI fit different screens better.",
+    "real_world": "This matters when a layout looks fine on one phone but overflows on smaller screens. Teams use it to adjust spacing, switch layouts, or size elements proportionally.",
+    "code_lang": "dart",
+    "code": "final size = MediaQuery.of(context).size;\nfinal width = size.width;\nfinal height = size.height;",
+    "follow_up": "How would you use MediaQuery to make a layout responsive?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "When would you choose Provider over Riverpod or setState for state management in a real app?",
+    "answer": "Use setState for local, short-lived UI state like a checkbox or tab index. Use Provider or Riverpod when state needs to be shared across multiple widgets, outlive a single screen, or be testable and separated from UI. The main trade-off is simplicity versus structure: local state is easier, but shared app state needs dependency management, disposal, and clearer boundaries. Riverpod generally gives stronger testability and fewer context-related limitations, while Provider is simpler if your app is already built around it.",
+    "real_world": "A login session, shopping cart, or feature flag often starts as local state and quickly becomes app-wide state. Teams switch to a provider-based solution once multiple screens need the same data and rebuilding starts getting messy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide which pieces of state should be local and which should be lifted into shared state?"
+   },
+   {
+    "question": "What happens if you call setState after a widget has been disposed, and how do you prevent it?",
+    "answer": "Flutter will throw because the State object is no longer mounted and cannot rebuild. This often happens after an async call completes or a timer fires after navigation away from the screen. The fix is to check `mounted` before calling `setState`, and to cancel timers, streams, or subscriptions in `dispose()`. The broader rule is to make async work lifecycle-aware.",
+    "real_world": "This shows up when a page fetches data, the user navigates back quickly, and the response arrives later. Without guarding against disposal, you get intermittent crashes that are hard to reproduce.",
+    "code_lang": "dart",
+    "code": "if (!mounted) return;\nsetState(() {\n  isLoading = false;\n});",
+    "follow_up": "What other async cleanup would you put in `dispose()` besides guarding `setState`?"
+   },
+   {
+    "question": "How do `FutureBuilder` and `StreamBuilder` differ, and when would you use each?",
+    "answer": "`FutureBuilder` is for a single async result that completes once, like an HTTP request. `StreamBuilder` is for values over time, like a websocket, database listener, or typing updates. Both rebuild based on async snapshots, but streams can emit many events and require more attention to lifecycle and backpressure. Use the simplest one that matches the data source.",
+    "real_world": "A screen showing live order status should usually listen to a stream, while a one-time profile fetch should use a future. Choosing the wrong one often causes unnecessary complexity or stale UI updates.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle error and loading states differently for a future versus a stream?"
+   },
+   {
+    "question": "What is the practical difference between `ListView.builder` and building a list with `children: []`?",
+    "answer": "`ListView.builder` lazily creates items as they scroll into view, which is much better for large or infinite lists. A `children` list builds every child up front, which is fine for small, fixed content but becomes expensive with many items. The trade-off is convenience versus performance: the builder pattern is slightly more verbose but scales much better. It also makes pagination and dynamic data easier to manage.",
+    "real_world": "Feeds, search results, and chat histories can become sluggish or memory-heavy if every row is built at once. Teams usually switch to the builder pattern when lists grow beyond a few dozen items or need incremental loading.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What extra work do you need to do when list items have local state, like a checkbox or text input?"
+   },
+   {
+    "question": "How do you avoid unnecessary rebuilds in Flutter, and why does it matter?",
+    "answer": "You minimize rebuild cost by keeping widgets small, moving stable subtrees out of changing parents, and using `const` where possible. Rebuilds themselves are normal, but expensive layout, image decoding, or list construction inside frequently changing widgets can hurt frame performance. The key is not to prevent rebuilds entirely, but to make them cheap and local. Profiling should guide optimization, because premature micro-optimization can make code harder to read.",
+    "real_world": "A countdown timer or animation can make an entire screen rebuild many times per second. If the screen contains heavy widgets like large images or complex lists, that can lead to dropped frames.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you verify in DevTools whether a rebuild is actually causing a performance problem?"
+   },
+   {
+    "question": "When should you use `didChangeDependencies` instead of `initState` for initialization?",
+    "answer": "Use `initState` for one-time setup that does not depend on inherited widgets, like controllers or subscriptions you can create immediately. Use `didChangeDependencies` when initialization depends on `BuildContext`-provided data such as localization, theme, or an inherited model. The difference matters because inherited dependencies are not fully available in `initState`. If the dependency can change, `didChangeDependencies` may run more than once, so the code must be idempotent.",
+    "real_world": "A screen that needs a locale-specific formatter or a provider from the widget tree often cannot safely initialize that dependency in `initState`. Putting it in the wrong place can lead to context errors or stale data after dependency changes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you avoid running the same expensive setup multiple times when `didChangeDependencies` fires again?"
+   },
+   {
+    "question": "How do you decide between `Navigator.push` with a route and a named route in a production app?",
+    "answer": "Direct route construction is usually clearer for local navigation because the arguments are explicit and type-safe. Named routes can be useful when you want centralized route configuration, deep-link handling, or a single place to inspect navigation paths. The trade-off is flexibility versus indirection: named routes can help scale navigation, but they can also make refactors and argument passing less explicit. Many teams mix both, using direct routes for most app flow and named routes where routing needs centralization.",
+    "real_world": "Deep links, push notifications, and cross-team apps often benefit from centralized route definitions. Smaller features or isolated flows are usually easier to maintain with direct route pushes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you pass structured arguments safely when using named routes?"
+   },
+   {
+    "question": "How would you debug a Flutter screen that is janky only on older Android devices?",
+    "answer": "First separate build, layout, and raster issues using Flutter DevTools and the performance overlay. Check for expensive work in `build`, large images, shader compilation, overdraw, and list items that rebuild too often. On older devices, what seems fine in debug mode may still drop frames in release because the margin is smaller. The fix is usually to reduce work per frame, cache expensive resources, and keep scrolling lists lightweight.",
+    "real_world": "A feed that scrolls smoothly on flagship phones may stutter on lower-end devices once image decoding and complex card layouts pile up. Performance issues like this often appear only after real-world data and device diversity are in play.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the first two things you would inspect in DevTools for a slow screen?"
+   },
+   {
+    "question": "How should you structure widget tests for a screen with async loading and error states?",
+    "answer": "Test the screen as a user would: pump the widget, verify the loading state, complete the async work, then assert the loaded or error UI. Keep dependencies injectable so you can replace network or repository calls with fakes. Widget tests should focus on visible behavior, not implementation details like internal state fields. This gives confidence that the UI reacts correctly to async changes without requiring a full integration test.",
+    "real_world": "A login page or profile screen often has loading spinners, success states, and error banners that need regression coverage. Tests catch cases where the UI stays stuck loading or never renders the failure message.",
+    "code_lang": "dart",
+    "code": "await tester.pumpWidget(MyApp());\nexpect(find.text('Loading'), findsOneWidget);\nawait tester.pump();\nexpect(find.text('Error'), findsOneWidget);",
+    "follow_up": "How would you fake a repository or service so the widget test stays deterministic?"
+   },
+   {
+    "question": "How do you decide between lifting state up and using a dedicated state management solution in Flutter?",
+    "answer": "Lift state up when only a small part of the tree needs the data and the ownership is obvious. Move to a state management solution when the same state is read or mutated from multiple places, or when passing callbacks through several layers becomes noisy. The trade-off is simplicity versus scalability: local state is easier to reason about, but shared app state needs a clearer boundary. In real projects, the right answer is often a mix of both.",
+    "real_world": "A cart badge, product list, and checkout screen may all need the same cart state. Keeping that state in one place avoids desync bugs and makes it easier to test.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you keep local UI state separate from application state in the same screen?"
+   },
+   {
+    "question": "What happens when you use setState around async work, and how do you avoid bugs from stale results?",
+    "answer": "setState itself is synchronous, but the work around it often is not. If you start an async request, the widget can rebuild, disappear, or be replaced before the result comes back, so you can end up applying stale data. The usual fix is to check whether the widget is still mounted before updating state, and to ignore responses that are no longer relevant. This matters when users navigate quickly or trigger multiple searches in a row.",
+    "real_world": "Search-as-you-type screens often show older results after a slower network response arrives late. Guarding against stale responses prevents the UI from flickering back to outdated data.",
+    "code_lang": "dart",
+    "code": "final result = await api.fetch(query);\nif (!mounted) return;\nsetState(() {\n  items = result;\n});",
+    "follow_up": "How would you cancel the in-flight request instead of only ignoring its result?"
+   },
+   {
+    "question": "How do InheritedWidget-based solutions work conceptually, and why are they useful under the hood?",
+    "answer": "An InheritedWidget stores data high in the tree and lets descendants subscribe to it through the build context. When the inherited data changes, only the dependent widgets are marked for rebuild, instead of manually threading values down through constructors. This is the mechanism behind many higher-level patterns, including theme, localization, and several state management libraries. It matters because it gives you efficient, scoped sharing of data without global variables.",
+    "real_world": "A theme toggle or locale change needs to update many widgets without manual wiring. InheritedWidget-based propagation is what makes that possible in a predictable way.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between listening to inherited data and reading it once?"
+   },
+   {
+    "question": "What is a practical approach to separating UI, business logic, and data access in a Flutter app?",
+    "answer": "Keep widgets focused on rendering and user interaction, move business rules into a controller, notifier, bloc, or similar layer, and isolate API or database calls behind repositories. This reduces the amount of code that lives inside build methods and makes logic easier to test without pumping widgets. The trade-off is added structure and files, but that pays off once a feature has multiple states or data sources. In larger apps, this separation also makes refactoring safer.",
+    "real_world": "A checkout flow often combines validation, pricing, promotions, and payment APIs. If all of that sits in the widget tree, it becomes hard to debug and nearly impossible to reuse.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test the business logic without rendering the full UI?"
+   },
+   {
+    "question": "How do you handle errors from asynchronous operations in Flutter in a user-friendly way?",
+    "answer": "Treat errors as part of the normal state flow, not as an exception to it. For a screen that loads data, usually that means explicit loading, success, empty, and error states, with a retry action when appropriate. You should also log the error for diagnostics and show a message that tells the user what they can do next. The key trade-off is between simple code and predictable UX; explicit states are usually worth it.",
+    "real_world": "If a product page fails because the network drops, the user should see a retry button rather than a blank screen or a generic crash. That makes failures recoverable instead of fatal.",
+    "code_lang": "dart",
+    "code": "try {\n  final data = await repo.load();\n  setState(() => state = Loaded(data));\n} catch (e) {\n  setState(() => state = Failed(e));\n}",
+    "follow_up": "When would you keep the error in the UI state versus handling it in a global error handler?"
+   },
+   {
+    "question": "What is the difference between using an async method in initState and doing the same work in build?",
+    "answer": "Work in initState runs once when the State is created, while build can run many times. Putting fetching logic in build can re-trigger requests on every rebuild and cause duplicate network calls or flashing UI. The usual pattern is to start one-time initialization in initState and render based on the resulting state. If the initialization depends on inherited objects from the context, you may need a later lifecycle method instead.",
+    "real_world": "A screen that fetches user data in build may hit the API repeatedly when a parent widget rebuilds. Moving that call to initialization avoids extra network traffic and UI churn.",
+    "code_lang": "dart",
+    "code": "@override\nvoid initState() {\n  super.initState();\n  future = repo.loadProfile();\n}\n\n@override\nWidget build(BuildContext context) => FutureBuilder(future: future, builder: ...);",
+    "follow_up": "What problems can happen if you start async work directly in initState and then use context inside the callback?"
+   },
+   {
+    "question": "How do you think about repaint boundaries and other render performance optimizations in Flutter?",
+    "answer": "The goal is to keep expensive repaint work from spreading to parts of the tree that did not visually change. Flutter already does a lot for you, so optimizations should be driven by profiling, not guesswork. Repaint boundaries can help when a subtree repaints frequently but does not affect siblings, while overusing them adds complexity and can hurt memory use. The important skill is identifying whether the bottleneck is build, layout, or paint before changing code.",
+    "real_world": "An animated icon inside a long scrolling list can cause unnecessary repaints if it is not isolated well. Profiling can show whether the problem is actually paint cost rather than list building.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you use Flutter’s performance tools to confirm where the frame budget is being spent?"
+   },
+   {
+    "question": "What are the trade-offs between ListView, CustomScrollView, and a sliver-based approach?",
+    "answer": "ListView is the simplest choice for a single scrollable list and handles lazy item creation well. CustomScrollView and slivers are better when you need mixed scrollable sections, sticky headers, collapsing app bars, or fine-grained control over scroll behavior. The trade-off is complexity: slivers give you more flexibility, but the code is less straightforward. In a production app, start with the simpler list unless the layout really needs slivers.",
+    "real_world": "A feed screen with a search bar, featured carousel, and sectioned list is much easier to build with slivers than by nesting several scroll views. Using the wrong widget can also create scroll conflicts or poor performance.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When does nesting scrollable widgets become a problem, and how do you fix it?"
+   },
+   {
+    "question": "How would you make a Flutter form testable and robust in production?",
+    "answer": "Keep validation rules out of the widget tree when possible and make them easy to unit test. In the UI, use form keys and field validators for immediate feedback, but keep the business rules in a separate layer so they can be reused by API calls or other screens. In production, you also want to handle partial input, focus behavior, and disabled submit states carefully. The main trade-off is convenience versus reuse and testability.",
+    "real_world": "Registration forms often need the same password rules on mobile, web, and backend. Centralizing validation prevents one platform from accepting input that another rejects later.",
+    "code_lang": "dart",
+    "code": "TextFormField(\n  validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,\n)\n\n// In submit:\nif (_formKey.currentState!.validate()) submit();",
+    "follow_up": "How would you test that the submit button stays disabled until the form is valid?"
+   },
+   {
+    "question": "How do you handle responsive layouts in Flutter without hard-coding screen sizes everywhere?",
+    "answer": "Use constraints and layout widgets to adapt the UI to available space instead of relying on fixed device dimensions. MediaQuery can help for global screen information, but many cases are better solved with LayoutBuilder or flexible layout rules so the widget responds to its parent, not just the screen. This avoids fragile breakpoints and makes the same component reusable in different places. The trade-off is that responsive code can be more abstract, but it usually ages better.",
+    "real_world": "A settings page may look fine on a phone but break in split-screen or tablet mode if it assumes a fixed width. Constraint-based layouts reduce those surprises.",
+    "code_lang": "dart",
+    "code": "LayoutBuilder(\n  builder: (context, constraints) {\n    final wide = constraints.maxWidth > 600;\n    return wide ? DesktopLayout() : MobileLayout();\n  },\n);",
+    "follow_up": "When would you prefer MediaQuery over LayoutBuilder?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you walk me through Flutter's frame pipeline from scheduling to pixels on screen, and where jank usually comes from?",
+    "answer": "A frame starts when the engine or framework schedules it, then the UI isolate runs transient callbacks, build, layout, paint, compositing, semantics, and finally hands a layer tree to the raster thread. Jank happens when the UI isolate misses its frame budget doing Dart work like rebuilds, layout, JSON parsing, or sync I/O, or when the raster thread is overloaded by expensive clipping, shadows, image uploads, or shader compilation. The key trade-off is that Flutter gives you predictable rendering, but you own both app logic cost and render cost. I usually separate \"UI thread too busy\" from \"GPU/raster too busy\" before optimizing.",
+    "real_world": "In production, teams often fix rebuild counts and still see dropped frames because the real issue is raster work like blur-heavy cards or first-run shader compilation. DevTools frame charts help distinguish whether the spike is in build/layout or in rasterization.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prove whether a specific jank issue is on the UI isolate or the raster thread?"
+   },
+   {
+    "question": "What actually happens under the hood when a widget rebuilds, and how does Flutter decide whether to reuse or replace the underlying element and render object?",
+    "answer": "Widgets are immutable configuration objects; elements are the long-lived nodes that hold state and connect widgets to render objects. On rebuild, Flutter compares the new widget to the old one mainly by runtimeType and key to decide whether the existing element can be updated or must be replaced. If the element is reused, state and often the render object stay in place and only configuration changes are applied. This matters because replacing elements can reset local state, trigger extra layout work, and break things like focus or scroll position.",
+    "real_world": "A common production bug is a list item unexpectedly losing text input or animation state after reordering because the framework treated it as a different element. The fix is usually stable identity and understanding when subtree reuse does or does not happen.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do GlobalKey and LocalKey change that reuse behavior, and what are the costs?"
+   },
+   {
+    "question": "When would you move work off the main isolate in Flutter, and what are the limitations of isolates in practice?",
+    "answer": "I move CPU-bound work off the UI isolate when it can block frames: large JSON parsing, compression, crypto, image processing, or heavy diffing. Isolates do not share memory, so you pay serialization or transfer costs and cannot directly touch widget state or most UI-bound plugin APIs from a background isolate. The trade-off is latency versus overhead: small tasks can be slower when offloaded because setup and message passing dominate. I keep frame-critical code on the UI isolate and offload only work that is meaningfully expensive and independent.",
+    "real_world": "A real incident is scrolling freezing when a screen parses a large payload synchronously after an API call. Moving parsing to another isolate helps, but if the payload is tiny or the bottleneck is network and not CPU, it just adds complexity.",
+    "code_lang": "dart",
+    "code": "final result = await compute(parsePayload, response.body);\n\nMap<String, dynamic> parsePayload(String body) {\n  return jsonDecode(body) as Map<String, dynamic>;\n}",
+    "follow_up": "What kinds of plugin or platform-channel work cannot simply be moved to an isolate?"
+   },
+   {
+    "question": "How does the image pipeline work in Flutter, and what are the common memory and performance failure modes with images?",
+    "answer": "An ImageProvider resolves to a stream of image chunks or frames, the codec decodes compressed bytes into pixels, and decoded frames are cached in the image cache before painting. The expensive part is usually decoded size, not file size, because memory scales with width times height times bytes per pixel. Failure modes include OOMs from loading large images at full resolution, cache churn that causes repeated decode work, and scroll hitching from decode/upload on demand. The usual fix is to request images near display size, prefetch selectively, and be deliberate about cache behavior.",
+    "real_world": "Teams often ship a feed that works on flagship phones but crashes low-memory Android devices because each \"small\" photo is decoded at full camera resolution. Another common issue is placeholder flicker from aggressive cache eviction during fast scrolling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you downsample or constrain decode size for the same asset used in different layouts?"
+   },
+   {
+    "question": "Explain how platform channels actually bridge Flutter and native code, and what trade-offs matter when that boundary is hot.",
+    "answer": "Platform channels serialize a method call or event message on one side, send it through the engine bridge, and deserialize it on the other side using a codec. That boundary is fine for occasional operations, but it becomes expensive for chatty or high-frequency traffic because every hop has encoding, thread handoff, and platform scheduling overhead. For hot paths, I prefer batching, reducing message frequency, or using a more direct native integration pattern when appropriate. I also pay attention to threading because native callbacks may arrive on different threads and still need safe handoff back to Flutter.",
+    "real_world": "A common production issue is sensor or playback state updates sent dozens of times per second through a MethodChannel, causing stutter and battery drain. Batching or using event streams with lower frequency often fixes the symptom more than micro-optimizing Dart code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you choose EventChannel versus MethodChannel for a native integration?"
+   },
+   {
+    "question": "What are the failure modes around app lifecycle and navigation in Flutter, especially when async work completes after the user has moved on?",
+    "answer": "The classic failure mode is an async callback trying to update UI, show a dialog, or navigate using a context that is no longer mounted or no longer the active route. Another is duplicating side effects when lifecycle transitions trigger reloads or when a page is rebuilt and starts work again. I treat navigation and UI effects as state transitions with cancellation or staleness checks, and I make ownership explicit: which screen started the work, and does it still care about the result. That keeps late results from causing crashes, double pushes, or wrong-screen updates.",
+    "real_world": "In production, users can tap back during a slow checkout or auth flow, then the late success callback opens the next screen from a page that no longer exists. Guarding with mounted checks is necessary, but proper cancellation or request scoping is usually the real fix.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you design cancellation or staleness handling if the underlying HTTP client cannot truly cancel the server-side work?"
+   },
+   {
+    "question": "How would you reason about state restoration versus simple persistence in Flutter, and what tends to break in real apps?",
+    "answer": "State restoration is about reconstructing transient UI state after process death, like navigation stack, selected tab, scroll offset, or partially completed input, while persistence is broader app data stored for later use. Restoration works best for serializable, bounded UI state with clear ownership; it is not a substitute for domain persistence or replaying arbitrary in-memory objects. What breaks is usually incomplete restoration graphs, unstable IDs, or restoring UI to a state that no longer matches backend truth. I restore enough to preserve continuity, then reconcile with fresh data intentionally.",
+    "real_world": "On Android, the OS may kill the app in the background and users expect to return to the same flow, not the home screen. Teams get subtle bugs when a restored detail page points to an item that was deleted or when nested navigators do not restore consistently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which pieces of screen state would you explicitly choose not to restore, and why?"
+   },
+   {
+    "question": "What are the trade-offs between Skia rendering and platform views, and why do embedded native views often cause performance surprises?",
+    "answer": "Flutter-rendered content is composited within one rendering model, which makes transforms, clipping, and scrolling predictable. Platform views embed native UI components, which is useful for maps, webviews, or existing SDK views, but they can introduce composition overhead, input edge cases, and scrolling or z-order quirks depending on platform and integration mode. The trade-off is capability versus consistency: native views may be required, but they break some of Flutter's rendering assumptions. I isolate them, minimize count, and avoid putting many of them in fast-scrolling lists.",
+    "real_world": "A common incident is a feed with embedded maps or video players that scrolls smoothly in pure Flutter cells but drops frames once several platform views enter the viewport. Gesture conflicts and clipping bugs also tend to appear only on specific OS versions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you had to ship a list with many video or map previews, how would you redesign it to reduce platform-view overhead?"
+   },
+   {
+    "question": "How do you approach startup performance in a Flutter app, and what do you measure before changing architecture?",
+    "answer": "I split startup into cold, warm, and resumed launches, then measure time to first frame and time to usable interaction separately. Common costs are synchronous work before runApp, eager dependency graphs, large asset or font initialization, plugin startup, and immediate network or database work on the first screen. The trade-off is between perceived speed and early readiness: deferring too much can move the hitch from launch to first interaction. I optimize the critical path first and validate on representative low-end devices, not just a simulator or flagship phone.",
+    "real_world": "Teams often spend weeks shaving milliseconds off splash rendering while ignoring a huge blocking service locator setup that delays first interaction much more. In practice, low-end Android cold start is where architecture decisions like eager singletons become visible.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What work would you explicitly keep out of the startup path even if it feels convenient to initialize everything upfront?"
+   },
+   {
+    "question": "Suppose your Flutter app occasionally crashes with out-of-memory errors only after long sessions on a content-heavy screen. How would you investigate and narrow down the leak or memory growth source?",
+    "answer": "First I distinguish a true leak from cache growth or delayed GC by watching heap, external memory, image cache, and native allocations over repeated user flows. Then I look for common retainers: listeners not removed, controllers or stream subscriptions tied to long-lived owners, large collections accumulating, and images or platform resources kept alive longer than intended. I also check whether growth is Dart heap, decoded image memory, or native/plugin memory because the fix path differs. Reproduction with a scripted flow is important; one screenshot of memory is much less useful than a trend over time.",
+    "real_world": "In production, a screen with endless media browsing may run fine for five minutes but crash after thirty because thumbnails, video buffers, or subscriptions are never released. The root cause is often outside the visible widget tree, such as a singleton cache or native SDK holding references.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools or signals would you use to tell apart Dart-heap retention from native memory growth?"
+   },
+   {
+    "question": "How does Flutter decide which parts of the semantics tree to rebuild, and what are the performance implications of accessibility on complex screens?",
+    "answer": "Semantics are derived from the render tree, not the widget tree directly. When render objects mark semantics dirty, Flutter recomputes only affected semantics nodes, but large scrolling or highly dynamic UIs can still cause expensive updates because labels, bounds, and actions must be regenerated and sent to the platform. Merging semantics can reduce node count, while overusing it can hide structure from assistive tech. The trade-off is accessibility fidelity versus update cost, especially on screens with many animated or frequently changing elements.",
+    "real_world": "Teams often see smooth visual performance but VoiceOver or TalkBack becomes laggy on feeds with auto-updating cards, timers, or progress indicators. Profiling semantics updates can explain why accessibility users report a very different experience from sighted users.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of widgets or patterns tend to generate unexpectedly expensive semantics updates?"
+   },
+   {
+    "question": "What is the difference between `markNeedsLayout` and `markNeedsPaint`, and why does that distinction matter when writing custom render objects?",
+    "answer": "`markNeedsLayout` means the object's size or child layout may have changed, so Flutter must run layout again and often paint afterward. `markNeedsPaint` means geometry is unchanged and only the visual output needs repainting, which is much cheaper. If you call layout when only paint changed, you expand the amount of tree work and can create avoidable frame drops. In custom render objects, being precise about which phase is dirty is one of the main performance levers.",
+    "real_world": "A custom chart or editor can become janky if every cursor blink or color change triggers layout instead of paint. In production, this often appears only with deep trees or on lower-end devices where layout cost compounds.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of a property change that should trigger paint but not layout?"
+   },
+   {
+    "question": "When would you use a custom `RenderObjectWidget` instead of composing existing widgets, and what do you give up by doing that?",
+    "answer": "You reach for a custom render object when composition cannot meet performance or behavior requirements, such as custom layout rules, extremely dense drawing, or avoiding thousands of intermediate widgets. It gives you fine-grained control over layout, painting, hit testing, and semantics, but you lose a lot of ergonomics: maintainability drops, correctness is easier to get wrong, and testing usually shifts from simple widget tests to lower-level behavior checks. The bar should be high because custom render objects are harder to evolve safely.",
+    "real_world": "This matters in things like timeline editors, trading charts, or seat maps where a naive widget-per-cell approach can become too heavy. Teams often prototype with widgets first, then move hot paths into render objects after measuring bottlenecks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or symptoms would convince you that composition is no longer good enough?"
+   },
+   {
+    "question": "How do `GlobalKey`s actually affect the element tree, and why can overusing them become a production problem?",
+    "answer": "A `GlobalKey` lets Flutter identify and move an element subtree across locations in the tree while preserving state. That flexibility forces extra bookkeeping and can block some otherwise cheap tree updates, because the framework must maintain global uniqueness and handle reparenting semantics carefully. Overusing them increases rebuild cost, makes ownership less obvious, and can create subtle bugs when widgets unexpectedly retain state across moves. Most cases only need local identity with a `Key` or better state structure.",
+    "real_world": "Apps sometimes accumulate `GlobalKey`s for forms, lists, overlays, and tabs, then navigation transitions and rebuild-heavy screens get slower in ways that are hard to attribute. It also leads to fragile code where one duplicate key causes runtime failures only under certain routes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are common cases where developers use a `GlobalKey` but a simpler pattern would be better?"
+   },
+   {
+    "question": "What happens under the hood when you use `addPostFrameCallback`, and what are the common failure modes?",
+    "answer": "`addPostFrameCallback` queues a callback to run after the current frame's rendering work is finished. It's useful for work that needs laid out sizes or must happen after build, but it is still on the UI isolate, so heavy work there still blocks future frames. Common bugs are registering it repeatedly from `build`, creating callback loops, or assuming the widget is still mounted when the callback runs. It solves timing issues, not concurrency or performance issues by itself.",
+    "real_world": "A common incident is a screen that slowly degrades because every rebuild adds another post-frame callback for analytics, scrolling, or measurement. Another is navigation or dialogs firing after the widget has been removed, causing exceptions or weird route behavior.",
+    "code_lang": "dart",
+    "code": "@override\nWidget build(BuildContext context) {\n  WidgetsBinding.instance.addPostFrameCallback((_) {\n    if (!mounted) return;\n    _controller.jumpTo(0);\n  });\n  return const SizedBox();\n}",
+    "follow_up": "How would you avoid accidentally scheduling that callback on every rebuild?"
+   },
+   {
+    "question": "How do Flutter's gesture arena and hit testing interact, and what kinds of bugs show up in nested scroll and drag scenarios?",
+    "answer": "Hit testing finds the render objects under the pointer, then recognizers from those targets join a gesture arena to decide who wins based on pointer movement and recognizer rules. This is why both parent and child can see pointer events initially, but only one recognizer may ultimately claim a drag. In nested scroll views or custom draggable components, subtle recognizer competition can cause dropped drags, delayed scrolling, or widgets that feel sticky. Fixes usually involve choosing the right recognizers, axis behavior, or scroll physics rather than just wrapping more listeners around it.",
+    "real_world": "This often shows up in bottom sheets containing horizontal carousels or maps inside vertically scrolling content. The app feels fine in simple demos, but real users report that some drags scroll the wrong thing or require multiple attempts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If a horizontal child list inside a vertical parent feels hard to drag, how would you debug which recognizer is winning?"
+   },
+   {
+    "question": "What are the trade-offs between `saveLayer`-heavy effects and simpler painting in Flutter, and why do blur, opacity, and clipping sometimes hurt more than expected?",
+    "answer": "Some visual effects require offscreen rendering, often via `saveLayer`, which allocates an intermediate buffer and adds extra compositing work. Effects like blur, certain clips, and group opacity can be much more expensive than they look, especially when applied to large areas or animated continuously. The problem is not just CPU time; it can also increase GPU memory bandwidth and overdraw. A simpler visual treatment or isolating the effect to a smaller region often gives a much better frame budget.",
+    "real_world": "Teams frequently discover that translucent app bars, shadows over large images, or blurred backdrops are the real cause of jank on mid-range devices. The UI can benchmark fine on a flagship phone but miss frame deadlines badly once those effects cover most of the screen.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you verify whether an effect is causing extra layer work rather than layout or Dart-side overhead?"
+   },
+   {
+    "question": "How would you design backpressure for a Flutter screen that receives high-frequency updates from a socket or stream?",
+    "answer": "You usually should not rebuild the UI for every event if updates arrive faster than the screen can present them. A better design batches, coalesces, or samples updates to a frame-friendly rate, keeps the latest state, and drops intermediate values when exact replay is unnecessary. The decision depends on correctness requirements: a price ticker may tolerate sampling, while an audit log may require preserving every event but rendering summaries. Without backpressure, you can saturate the UI isolate with state propagation and rebuild work even if each event is small.",
+    "real_world": "Live dashboards, chats, and market data screens often look fine in staging but fall behind in production traffic bursts. Users then see delayed taps, scroll hitching, or a screen that keeps processing stale updates after they have navigated away.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you put the batching logic so it does not leak UI timing concerns into your data layer?"
+   },
+   {
+    "question": "What are the practical trade-offs between using a single long-lived isolate versus spawning short-lived isolates for background work in Flutter?",
+    "answer": "A long-lived isolate is better when you have repeated heavy work because startup and message-passing overhead are amortized, and you can keep reusable state there. Short-lived isolates are simpler for occasional expensive tasks, but repeated spawning can waste time and memory, especially for medium-sized jobs. In both cases, data transfer matters because isolates do not share mutable memory; large object graphs can make the handoff cost dominate the computation. The right choice depends on job frequency, payload size, and latency requirements.",
+    "real_world": "Image processing, local search indexing, and encryption pipelines often start with ad hoc one-off isolates, then become bottlenecks when usage scales. Teams sometimes move to a worker-style isolate after profiling shows more time spent starting isolates and copying data than doing actual work.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of data are relatively cheap or expensive to send across isolates?"
+   },
+   {
+    "question": "How do you reason about cache sizing and eviction in Flutter when you have lots of images, fonts, and other UI assets competing for memory?",
+    "answer": "You need to think in terms of total memory pressure, not just one cache. Flutter caches decoded images because decode cost is high, but decoded bitmaps are large, and if image, font, and app-level caches all grow aggressively, the process can hit memory limits long before CPU looks busy. Good strategy depends on content patterns: cap caches, prefer appropriately sized assets, avoid keeping duplicate references, and measure actual memory behavior during long sessions. Bigger caches reduce recomputation and network work, but they also make OOMs and background kills more likely.",
+    "real_world": "Content-heavy apps often optimize for smooth scrolling by increasing caching, then later see Android process deaths or iOS memory terminations after extended browsing. The failure only appears after many screens and asset variants have accumulated, so short test runs miss it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether memory growth is caused by Flutter's image cache versus your own retained references?"
+   }
+  ]
+ }
+}

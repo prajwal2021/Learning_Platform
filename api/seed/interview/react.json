@@ -1,0 +1,493 @@
+{
+ "slug": "react",
+ "name": "React",
+ "category": "Frontend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is React, and what problem does it solve?",
+    "answer": "React is a JavaScript library for building user interfaces by composing them from reusable pieces called components. It helps you describe how the UI should look for a given state, then update the DOM efficiently when that state changes. The main benefit is keeping UI code modular and predictable.",
+    "real_world": "Teams use React for dashboards, forms, and interactive apps where lots of UI state changes over time. It reduces the amount of manual DOM manipulation that often becomes hard to maintain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a component and an HTML element?"
+   },
+   {
+    "question": "What is the difference between props and state?",
+    "answer": "Props are inputs passed from a parent component to a child, and the child should treat them as read-only. State is data owned by a component that can change over time and trigger re-renders. Use props to configure a component and state to track things like user input, toggles, or fetched data.",
+    "real_world": "A button label might come from props, while whether a modal is open is usually state. Mixing the two up often leads to components that are hard to reuse or debug.",
+    "code_lang": "jsx",
+    "code": "function Greeting({ name }) {\n  const [count, setCount] = React.useState(0);\n  return <button onClick={() => setCount(count + 1)}>{name}: {count}</button>;\n}",
+    "follow_up": "When would you lift state up instead of keeping it inside a child?"
+   },
+   {
+    "question": "What is JSX, and why do people use it?",
+    "answer": "JSX is a syntax extension that lets you write UI structure in a JavaScript file using an HTML-like style. It gets compiled into React element creation calls, so it is still JavaScript underneath. People use it because it makes component code easier to read and keeps markup close to the logic that uses it.",
+    "real_world": "In a form or card component, JSX keeps the render structure visible alongside event handlers and state. This usually makes refactoring simpler than separating templates from logic.",
+    "code_lang": "jsx",
+    "code": "const title = <h1>Hello</h1>;\nfunction App() {\n  return <div>{title}</div>;\n}",
+    "follow_up": "What JavaScript expressions can you put inside JSX braces?"
+   },
+   {
+    "question": "Why does React ask you to use keys when rendering a list?",
+    "answer": "Keys give React a stable way to identify items between renders. They help React decide which list items were added, removed, or moved, so it can update the DOM correctly and preserve component state where appropriate. Using array indexes as keys can cause bugs when list order changes.",
+    "real_world": "This matters in todo lists, tables, and sortable menus. Bad keys can make an input keep the wrong text or move state to a different row after reordering.",
+    "code_lang": "jsx",
+    "code": "items.map(item => (\n  <li key={item.id}>{item.name}</li>\n));",
+    "follow_up": "When is using the array index as a key acceptable, if ever?"
+   },
+   {
+    "question": "What does useState do?",
+    "answer": "useState lets a function component store local state and update it over time. It returns the current value and a setter function; calling the setter tells React to re-render the component with the new state. It is the basic tool for interactive UI like form fields, toggles, and counters.",
+    "real_world": "A search box, checkbox, or accordion usually starts with useState. Without it, the component would not remember the user’s interaction between renders.",
+    "code_lang": "jsx",
+    "code": "function Counter() {\n  const [count, setCount] = React.useState(0);\n  return <button onClick={() => setCount(count + 1)}>{count}</button>;\n}",
+    "follow_up": "Why should you avoid mutating state directly?"
+   },
+   {
+    "question": "Why should you not mutate state directly in React?",
+    "answer": "Direct mutation can prevent React from detecting that something changed, because React relies on new object or array references to know when to re-render. Mutating in place can also create subtle bugs when different parts of the UI share the same object. Instead, create a new array or object when updating state.",
+    "real_world": "This often shows up with lists, nested form data, or objects stored in state. A team may see the UI not refresh even though the data changed in memory.",
+    "code_lang": "jsx",
+    "code": "// Wrong\nstate.items.push(newItem);\n// Right\nsetItems([...items, newItem]);",
+    "follow_up": "How would you update a nested object immutably?"
+   },
+   {
+    "question": "What is the purpose of useEffect?",
+    "answer": "useEffect runs side effects after React renders, such as fetching data, subscribing to events, or syncing with browser APIs. It is where you put code that should happen because the component rendered, not during the render itself. The dependency array controls when the effect runs again.",
+    "real_world": "A page might fetch user data after mount, or add a resize listener while a component is visible. Putting that work in render can cause bugs or repeated network calls.",
+    "code_lang": "jsx",
+    "code": "React.useEffect(() => {\n  document.title = `Count: ${count}`;\n}, [count]);",
+    "follow_up": "What happens if you leave the dependency array out?"
+   },
+   {
+    "question": "What is the difference between controlled and uncontrolled form inputs?",
+    "answer": "A controlled input gets its value from React state and updates through an onChange handler, so React is the source of truth. An uncontrolled input keeps its own internal DOM state and you usually read its value with a ref. Controlled inputs are easier to validate and sync, while uncontrolled inputs can be simpler for basic forms.",
+    "real_world": "Controlled inputs are common in sign-up forms, live search, and validation flows. Uncontrolled inputs can be useful when integrating with existing HTML form behavior or simple one-off fields.",
+    "code_lang": "jsx",
+    "code": "function Form() {\n  const [name, setName] = React.useState('');\n  return <input value={name} onChange={e => setName(e.target.value)} />;\n}",
+    "follow_up": "Why can a controlled input become read-only if you forget the onChange handler?"
+   },
+   {
+    "question": "What are fragments in React, and why would you use them?",
+    "answer": "Fragments let you return multiple sibling elements without adding an extra DOM node. They are useful when you want to keep the DOM clean, especially inside tables, lists, or layout components where extra wrapper elements can break styling or semantics. You can use the shorthand syntax when you do not need attributes.",
+    "real_world": "A table row component may need to return several cells without wrapping them in a div. Extra wrapper elements often cause invalid HTML or CSS layout problems.",
+    "code_lang": "jsx",
+    "code": "function Item() {\n  return <>\n    <h2>Title</h2>\n    <p>Description</p>\n  </>;\n}",
+    "follow_up": "When would an extra wrapper div be better than a fragment?"
+   },
+   {
+    "question": "What is lifting state up in React?",
+    "answer": "Lifting state up means moving shared state to the nearest common parent of the components that need it. The parent passes the state down as props and passes callbacks down to update it. This keeps siblings in sync and avoids duplicated sources of truth.",
+    "real_world": "If one input updates a filter and another component shows the filtered results, both need the same state. Lifting it up prevents the UI from drifting out of sync.",
+    "code_lang": "jsx",
+    "code": "function Parent() {\n  const [value, setValue] = React.useState('');\n  return <Input value={value} onChange={setValue} />;\n}",
+    "follow_up": "What is prop drilling, and how do you know when it is becoming a problem?"
+   },
+   {
+    "question": "What is a React component?",
+    "answer": "A React component is a reusable piece of UI that returns what should appear on the screen. It can be a function or, in older code, a class, but function components are the common style now. Components let you split an interface into smaller parts that are easier to understand, test, and reuse.",
+    "real_world": "A product page might be built from components like Header, ProductCard, and AddToCartButton. That makes it easier to update one part without touching the whole page.",
+    "code_lang": "jsx",
+    "code": "function Greeting({ name }) {\n  return <h1>Hello, {name}</h1>;\n}",
+    "follow_up": "What is the difference between a component and an element?"
+   },
+   {
+    "question": "What are event handlers in React, and how do you attach one?",
+    "answer": "Event handlers are functions that run when the user interacts with the UI, like clicking a button or typing in an input. In React, you pass the function itself to an event prop such as onClick or onChange. A common mistake is calling the function immediately instead of passing a reference.",
+    "real_world": "This comes up any time a button does something, such as opening a dialog or submitting a form. If the handler is attached incorrectly, the action can run during render instead of on user interaction.",
+    "code_lang": "jsx",
+    "code": "function Button() {\n  function handleClick() {\n    console.log('clicked');\n  }\n  return <button onClick={handleClick}>Save</button>;\n}",
+    "follow_up": "What is the difference between passing handleClick and handleClick()?"
+   },
+   {
+    "question": "What does conditional rendering mean in React?",
+    "answer": "Conditional rendering means showing different UI based on a condition, such as login status or loading state. You usually do this with JavaScript conditionals inside your component, like &&, the ternary operator, or an if statement before returning JSX. It matters because most UIs need to change based on state or props.",
+    "real_world": "A dashboard often shows a spinner while data loads, an error message if the request fails, and the content once the data is ready. Conditional rendering is how you switch between those views.",
+    "code_lang": "jsx",
+    "code": "function StatusMessage({ isLoading }) {\n  return isLoading ? <p>Loading...</p> : <p>Ready</p>;\n}",
+    "follow_up": "When would you choose a ternary over &&?"
+   },
+   {
+    "question": "What is the difference between state and derived data in React?",
+    "answer": "State is data your component owns and can change over time. Derived data is computed from props or state, like filtering a list or formatting a value, and you usually should not store it separately if you can calculate it during render. Keeping derived data out of state avoids duplication and bugs where values get out of sync.",
+    "real_world": "A common bug is storing both a list and a filtered version of the same list in state, then forgetting to update one of them. That can make the UI show stale results after edits or deletes.",
+    "code_lang": "jsx",
+    "code": "function List({ items }) {\n  const visibleItems = items.filter(item => item.active);\n  return <ul>{visibleItems.map(item => <li key={item.id}>{item.name}</li>)}</ul>;\n}",
+    "follow_up": "When is it reasonable to store derived data in state anyway?"
+   },
+   {
+    "question": "What is a React ref used for?",
+    "answer": "A ref lets you access a DOM element or keep a mutable value that does not trigger a re-render when it changes. You use it for things like focusing an input, measuring an element, or storing values across renders without putting them in state. Refs are for imperative escape hatches, not for regular UI data.",
+    "real_world": "Autofocusing a search box when a modal opens is a typical ref use case. Another common one is reading the size of an element before positioning a tooltip.",
+    "code_lang": "jsx",
+    "code": "import { useRef } from 'react';\n\nfunction SearchBox() {\n  const inputRef = useRef(null);\n  return <input ref={inputRef} />;\n}",
+    "follow_up": "How is a ref different from state?"
+   },
+   {
+    "question": "What does it mean to render a component, and what happens during rendering?",
+    "answer": "Rendering is the process of calling a component to figure out what UI it should show for the current props and state. React compares the new result with the previous one and updates the DOM where needed. The render step should be pure, meaning it should not cause side effects like network requests or direct DOM changes.",
+    "real_world": "If a component does work during render, it can run many times and produce bugs or slowdowns. For example, logging, fetching, or changing the page title in render can happen repeatedly when state changes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a function component pure?"
+   },
+   {
+    "question": "What is a key warning in React usually telling you?",
+    "answer": "A key warning usually means React cannot reliably identify items in a list across renders. Keys need to be stable and unique among siblings so React can match items correctly when the list changes. Using array indexes as keys can cause bugs when items are inserted, removed, or reordered.",
+    "real_world": "This often shows up in editable lists, todo apps, or tables where rows can move. Bad keys can make input values jump to the wrong row or keep the wrong component state attached to an item.",
+    "code_lang": "jsx",
+    "code": "items.map(item => (\n  <Row key={item.id} item={item} />\n))",
+    "follow_up": "Why is using the array index as a key risky?"
+   },
+   {
+    "question": "What is a prop drill, and how do people usually deal with it?",
+    "answer": "Prop drilling is passing data through several layers of components just so a deep child can use it. It works, but it can make code noisy and harder to maintain when many intermediate components only forward props. Common solutions are to lift state, use context, or restructure components so the data is closer to where it is used.",
+    "real_world": "A theme, authenticated user, or language setting often gets passed through many layers of layout components. Without a better pattern, every intermediate component needs to know about data it does not use.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose context instead of passing props?"
+   },
+   {
+    "question": "What are React forms used for, and what is a common mistake when handling them?",
+    "answer": "Forms let users enter and submit data like login details, search queries, or settings. In React, a common pattern is to keep form values in state and update them from change events. A frequent mistake is forgetting to prevent the browser’s default submit behavior when you handle submission yourself.",
+    "real_world": "Login and checkout forms are common places where this matters. If you forget the default handling, the page may reload and wipe out the data before your app processes it.",
+    "code_lang": "jsx",
+    "code": "function Form() {\n  function handleSubmit(e) {\n    e.preventDefault();\n    console.log('submit');\n  }\n  return <form onSubmit={handleSubmit}>...</form>;\n}",
+    "follow_up": "What should you validate on the client, and what still needs server-side validation?"
+   },
+   {
+    "question": "What does it mean for a component to be reusable in React?",
+    "answer": "A reusable component is one you can use in multiple places with different data or small variations. Usually that means making the component accept props for the parts that change and keeping the shared structure inside the component. Good reuse reduces duplication, but over-generalizing too early can make components harder to read.",
+    "real_world": "A Button component is often reused across an app with different labels, styles, and click actions. The team can change its appearance in one place instead of updating dozens of buttons separately.",
+    "code_lang": "jsx",
+    "code": "function Button({ label, onClick }) {\n  return <button onClick={onClick}>{label}</button>;\n}",
+    "follow_up": "How do you decide whether to make a component reusable or keep it specific?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "When would you use useMemo, and when is it just adding noise?",
+    "answer": "Use useMemo when you have an expensive derived calculation or you need a stable reference to avoid unnecessary child renders. It does not make rendering cheaper by default; it adds its own bookkeeping, so overusing it can hurt readability without a measurable gain. I would reach for it only after identifying a real performance problem or when a memoized child depends on referential equality.",
+    "real_world": "This comes up when a table filters and sorts hundreds of rows on every keystroke, or when a child component keeps re-rendering because it receives a newly created array or object each time.",
+    "code_lang": "javascript",
+    "code": "const filtered = useMemo(() => {\n  return items.filter(item => item.name.includes(query));\n}, [items, query]);",
+    "follow_up": "How is useMemo different from React.memo?"
+   },
+   {
+    "question": "How does React.memo work, and what are its trade-offs?",
+    "answer": "React.memo skips re-rendering a component when its props are shallowly equal to the previous props. It helps when a component is pure and relatively expensive to render, but it can fail to help if props change identity every render or if the component is cheap. It also adds complexity, so I would use it selectively around measured hot spots rather than as a default.",
+    "real_world": "A common case is a large item list where each row is stable but the parent updates often, such as typing in a search box or toggling a sidebar.",
+    "code_lang": "javascript",
+    "code": "const Row = React.memo(function Row({ item }) {\n  return <div>{item.name}</div>;\n});",
+    "follow_up": "When would a custom comparison function be appropriate?"
+   },
+   {
+    "question": "What problem does useCallback solve, and when should you avoid it?",
+    "answer": "useCallback returns a stable function reference between renders as long as its dependencies do not change. It matters when passing callbacks to memoized children or when a dependency array needs a stable function identity. Like useMemo, it is not free, so if nothing depends on referential equality, it usually does not improve anything.",
+    "real_world": "Teams often add it after seeing a memoized child re-render on every parent update because the handler prop is recreated each render.",
+    "code_lang": "javascript",
+    "code": "const onSelect = useCallback((id) => {\n  setSelectedId(id);\n}, []);",
+    "follow_up": "What bugs can happen if the dependency list is wrong?"
+   },
+   {
+    "question": "Why do effect dependencies matter, and how do you think about stale closures?",
+    "answer": "The dependency list tells React when to re-run an effect based on the values it uses from render scope. If you omit a changing value, the effect can keep reading old data, which is the stale closure problem. The safe rule is to include everything the effect reads, then restructure the code only when that creates a real loop or unnecessary rerun.",
+    "real_world": "This often shows up in subscriptions, timers, or data fetching code that seems to use the wrong user, filter, or token after a state change.",
+    "code_lang": "javascript",
+    "code": "useEffect(() => {\n  const id = setInterval(() => {\n    console.log(count);\n  }, 1000);\n  return () => clearInterval(id);\n}, [count]);",
+    "follow_up": "What would you do if including a dependency causes the effect to run too often?"
+   },
+   {
+    "question": "How do you prevent a race condition in a data-fetching effect?",
+    "answer": "If multiple requests can overlap, the slower response can arrive last and overwrite newer data. A common fix is to ignore outdated responses in cleanup, or to abort the previous request when the effect re-runs. The key is to make sure only the latest request updates state.",
+    "real_world": "This happens when users quickly change tabs, search terms, or selected records and the UI briefly shows the wrong details because an older fetch resolves later.",
+    "code_lang": "javascript",
+    "code": "useEffect(() => {\n  let cancelled = false;\n  fetchData(id).then(data => {\n    if (!cancelled) setData(data);\n  });\n  return () => { cancelled = true; };\n}, [id]);",
+    "follow_up": "How would you handle loading and error state for the same request?"
+   },
+   {
+    "question": "What is the difference between state updates caused by events and updates caused during rendering?",
+    "answer": "Event-driven updates happen in response to user actions or async work and are the normal place to call setState. Updating state during rendering is usually a bug because render should stay pure and deterministic; it can cause infinite loops or confusing double renders. If a value can be computed from props and state, derive it instead of storing and syncing it manually.",
+    "real_world": "A common debugging case is a component that keeps re-rendering forever because it calls setState while deciding what to display.",
+    "code_lang": "javascript",
+    "code": "function Bad({ value }) {\n  const [v, setV] = useState(value);\n  if (v !== value) setV(value);\n  return <span>{v}</span>;\n}",
+    "follow_up": "How would you rewrite this component so it does not need that syncing logic?"
+   },
+   {
+    "question": "How do you choose between local state, context, and a global store?",
+    "answer": "Use local state when only one component subtree needs the data, context when many descendants need read access to shared app-level data, and a global store when you need broader coordination, persistence, or complex updates. Context is not a replacement for all state because every value change can re-render consumers. The trade-off is simplicity versus reach and update cost.",
+    "real_world": "This matters for things like theme, auth user, feature flags, or a cart where threading props through many layers becomes hard to maintain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the downsides of putting too much data into context?"
+   },
+   {
+    "question": "Why do people split components into container and presentational pieces?",
+    "answer": "The idea is to keep data fetching and state management separate from pure UI rendering. Presentational components become easier to reuse and test because they just render props, while container components handle effects and orchestration. The trade-off is extra structure, so it helps most when the UI is non-trivial or reused in multiple places.",
+    "real_world": "Teams often use this when the same card or form UI appears in several flows but the data source and update logic differ.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where this separation would be unnecessary?"
+   },
+   {
+    "question": "What causes hydration mismatches in server-rendered React apps, and how do you debug them?",
+    "answer": "A mismatch happens when the HTML produced on the server does not match the first client render. Common causes are rendering browser-only values during render, using non-deterministic data like time or random IDs, or reading from local state too early. I debug by comparing server and client output and moving client-only logic into effects or guarded branches.",
+    "real_world": "In production, these show up as warnings plus subtle UI glitches, especially in apps that use SSR or streaming and depend on timestamps, locale formatting, or persisted preferences.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you intentionally render different content on the server and client?"
+   },
+   {
+    "question": "How would you test a React component that fetches data and shows loading, error, and success states?",
+    "answer": "I would test the user-visible states, not implementation details: loading initially, the loaded content after a successful response, and the error message when the request fails. For async UI, the test should wait for the DOM to change rather than asserting synchronously right after render. If the data layer is complex, I often mock the network boundary and keep the component test focused on behavior.",
+    "real_world": "This prevents regressions where a spinner never disappears, errors are swallowed, or the wrong empty state appears after a failed request.",
+    "code_lang": "javascript",
+    "code": "render(<UserPanel />);\nexpect(screen.getByText(/loading/i)).toBeInTheDocument();\nawait screen.findByText('Ada');\nexpect(screen.queryByText(/loading/i)).toBeNull();",
+    "follow_up": "How would you test a component that uses timers or debounced input?"
+   },
+   {
+    "question": "How do you decide whether a piece of logic should live in a custom hook instead of inside a component?",
+    "answer": "Use a custom hook when the logic is reused or when it makes a component easier to read by separating stateful behavior from UI. A hook is a good fit for data fetching, subscriptions, form behavior, or reusable interaction patterns. Keep UI-specific logic in the component if extracting it would hide important flow or make the hook too specialized. The trade-off is between reuse and indirection: too many hooks can make code harder to trace.",
+    "real_world": "A team might move scroll tracking or debounced search behavior into a hook so multiple pages share the same bug fixes. It also helps when a component has grown into a long mix of rendering and side-effect code.",
+    "code_lang": "javascript",
+    "code": "function useDebouncedValue(value, delay) {\n  const [debounced, setDebounced] = React.useState(value);\n  React.useEffect(() => {\n    const id = setTimeout(() => setDebounced(value), delay);\n    return () => clearTimeout(id);\n  }, [value, delay]);\n  return debounced;\n}",
+    "follow_up": "What are the rules of hooks, and what breaks if you violate them?"
+   },
+   {
+    "question": "What happens if you call a state setter multiple times in the same event handler?",
+    "answer": "React batches updates, so multiple setter calls may be applied together rather than causing multiple renders. If each update depends on the previous state, use the functional form so you always work from the latest value. Otherwise, repeated calls with the same captured value can overwrite each other and produce a stale result. This matters most in counters, toggles, and list updates.",
+    "real_world": "This shows up when a button increments twice or a form step advances based on an old value. Bugs often appear only after refactors when a handler starts doing more than one update.",
+    "code_lang": "javascript",
+    "code": "function Counter() {\n  const [n, setN] = React.useState(0);\n  const onClick = () => {\n    setN(v => v + 1);\n    setN(v => v + 1);\n  };\n  return <button onClick={onClick}>{n}</button>;\n}",
+    "follow_up": "When would using the non-functional setter form be safe?"
+   },
+   {
+    "question": "How do you think about whether a component should be kept purely presentational or allowed to own some state and side effects?",
+    "answer": "A purely presentational component is easier to reuse and test because it just turns props into UI. But if a component’s behavior is tightly coupled to the UI it renders, keeping state local can reduce prop plumbing and make the code simpler. In practice, the right boundary is often where the state starts being shared, reused, or tied to data fetching. The trade-off is reuse versus simplicity.",
+    "real_world": "For example, a modal often keeps its own open/close behavior locally, while the page owns the selected item and server data. Splitting too aggressively can make simple features harder to follow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals tell you state should be moved up to a parent?"
+   },
+   {
+    "question": "What is the practical difference between context and a global store in a React app?",
+    "answer": "Context is mainly a way to pass values through the tree without prop drilling, while a global store is usually designed for more complex shared state and update logic. Context works well for relatively stable values like theme, locale, or authenticated user info. If the value changes very often, putting all of it in context can cause broad re-renders unless you structure it carefully. The trade-off is simplicity versus control over update performance and state management.",
+    "real_world": "Teams often start with context for auth or feature flags, then move to a store when many screens need coordinated updates. A common symptom is unrelated components re-rendering too often after a small state change.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems do you get if you put fast-changing app state directly in context?"
+   },
+   {
+    "question": "How do you debug a React component that re-renders more often than you expect?",
+    "answer": "First identify what changed: props, local state, context, or parent renders. Then use React DevTools and add temporary logging to find which component is triggering the extra work. Common causes are passing new object or function references on every render, or putting broad state too high in the tree. The fix is usually to narrow the state boundary, memoize carefully, or simplify the prop shape.",
+    "real_world": "This comes up when typing in one field causes a whole form or page to stutter. In production, the symptom is often sluggish input rather than a clear error.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would React.memo actually help, and when would it not?"
+   },
+   {
+    "question": "What is the difference between useEffect and useLayoutEffect, and when would you choose one over the other?",
+    "answer": "useEffect runs after the browser paints, so it is the default for data fetching, subscriptions, and non-visual side effects. useLayoutEffect runs earlier, after React has committed DOM updates but before paint, which is useful when you must measure layout or synchronously adjust the DOM to avoid flicker. The trade-off is that layout effects can block painting and hurt responsiveness, so they should be used sparingly. If you do not need to read or write layout synchronously, useEffect is usually better.",
+    "real_world": "A tooltip that measures its own size may briefly flash in the wrong place if the effect runs too late. That is a common reason teams switch a measurement effect to the layout variant.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of bugs happen when you read layout in a normal effect?"
+   },
+   {
+    "question": "How would you handle a search input that fetches suggestions on every keystroke without showing stale results?",
+    "answer": "You need to cancel or ignore older requests so only the latest query can update state. A common pattern is to keep track of the current request in the effect cleanup or compare the response against the latest input before committing it. Debouncing can reduce network traffic, but it does not by itself prevent out-of-order responses. The key is to solve both user experience and correctness.",
+    "real_world": "This is a classic production bug in autocomplete and typeahead UIs, where slower network responses overwrite newer suggestions. It usually appears under poor connectivity or on busy backends.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you add debouncing without making the UI feel sluggish?"
+   },
+   {
+    "question": "What are the trade-offs between rendering a large list directly and using list virtualization?",
+    "answer": "Rendering the whole list is simpler, but it can become slow and memory-heavy when the list is large. Virtualization only renders the visible rows plus a small buffer, which greatly improves scrolling performance. The downside is added complexity, especially with dynamic row heights, accessibility, and features like search-in-page or sticky elements. Use virtualization when the list size starts affecting input latency or scrolling smoothness.",
+    "real_world": "Product tables, inboxes, and log viewers often become unusable once they contain thousands of rows. Virtualization is one of the most effective fixes for that class of performance issue.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes virtualization tricky when rows have variable height?"
+   },
+   {
+    "question": "How do you test a component that depends on browser APIs like localStorage or matchMedia?",
+    "answer": "You usually mock the API in the test environment and verify the component’s behavior, not the browser implementation itself. Keep the component logic isolated so the test can control the API responses and assert what the user sees. For code that reads on mount, remember that server rendering or test environments may not have the API at all, so the component should fail gracefully. The main trade-off is between realism and determinism in tests.",
+    "real_world": "This matters for theme toggles, responsive components, and persisted settings. Teams often discover the problem only when tests pass locally but fail in CI because the environment differs.",
+    "code_lang": "javascript",
+    "code": "beforeEach(() => {\n  Object.defineProperty(window, 'matchMedia', {\n    value: jest.fn().mockReturnValue({ matches: true, addListener() {}, removeListener() {} })\n  });\n});",
+    "follow_up": "How would you design the component so it is easy to test without heavy mocking?"
+   },
+   {
+    "question": "What is the purpose of an error boundary, and what kinds of failures does it not catch?",
+    "answer": "An error boundary lets you show a fallback UI when a component throws during rendering, in lifecycle methods, or in constructors of its child tree. It helps prevent one broken part of the UI from crashing the whole app. It does not catch errors in event handlers, asynchronous code, or errors thrown outside the React render tree. In practice, it is a containment tool, not a replacement for handling errors at the source.",
+    "real_world": "A dashboard with many widgets can use an error boundary around each widget so one bad chart does not blank the whole page. That is common in apps where partial failure is better than total failure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you place error boundaries in an app with nested pages and widgets?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how React Fiber changes the rendering model compared to the old stack reconciler, and why that matters in production?",
+    "answer": "Fiber turns rendering into interruptible work instead of one synchronous recursive pass. React can break rendering into units, pause, resume, or abandon work, which enables features like concurrent rendering and better responsiveness under heavy updates. The key trade-off is that render is no longer a one-shot guarantee, so component code must stay pure and tolerate being started more than once before commit. Commit is still atomic for a given root, which is why DOM mutations and effects happen there, not during render.",
+    "real_world": "This matters when a large tree update used to freeze typing or scrolling. With Fiber, urgent input can stay responsive while lower-priority rendering is deferred or restarted.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of bugs appear when code accidentally relies on render running exactly once?"
+   },
+   {
+    "question": "What is the difference between rendering work and committing work in React, and how does that affect where side effects are safe?",
+    "answer": "Rendering computes what the next UI should look like; it must be pure because React may re-run, pause, or discard it. Commit is when React applies changes to the host environment and runs layout and passive effects. Side effects like DOM writes, subscriptions, logging with external impact, or imperative library calls belong in commit-time hooks, not in render. If you put them in render, concurrent features can duplicate or reorder them in surprising ways.",
+    "real_world": "A common incident is analytics events or network calls firing twice because someone triggered them during render. It often only becomes obvious after enabling Strict Mode or concurrent features.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can useLayoutEffect block visual updates while useEffect usually does not?"
+   },
+   {
+    "question": "How do update priorities and lanes work in modern React, and when would you reach for startTransition?",
+    "answer": "React groups updates by priority so urgent work like typing can be processed ahead of non-urgent work like recalculating a heavy results panel. Lanes are the internal mechanism for tracking these priorities and which work can be interrupted or merged. startTransition marks updates as non-urgent, telling React it is acceptable to keep showing the old UI while preparing the new one. The trade-off is temporary visual staleness, but you avoid input lag and long main-thread stalls.",
+    "real_world": "In search or filtering screens, putting the expensive list update in a transition keeps keystrokes responsive even when rendering thousands of rows or expensive cells.",
+    "code_lang": "javascript",
+    "code": "import { startTransition, useState } from 'react';\n\nfunction Search() {\n  const [query, setQuery] = useState('');\n  const [results, setResults] = useState([]);\n  function onChange(e) {\n    const q = e.target.value;\n    setQuery(q);\n    startTransition(() => setResults(expensiveFilter(q)));\n  }\n}",
+    "follow_up": "How is startTransition different from debouncing, and when would you combine them?"
+   },
+   {
+    "question": "What does Strict Mode do in React 18 and later that often surprises teams, and what bugs is it trying to expose?",
+    "answer": "In development, Strict Mode intentionally re-runs some logic, including mounting and cleaning up effects, to catch code that is not idempotent or that leaks resources. It does not mean production will literally do the same thing, but it simulates patterns React can hit when work is restarted. The main bugs it exposes are side effects in render, missing cleanup, duplicate subscriptions, and code that assumes mount happens exactly once. If a component breaks under Strict Mode, it is usually already fragile.",
+    "real_world": "Teams often see duplicate API calls, double WebSocket connections, or third-party widgets initializing twice only in development. Those are usually signs the effect lifecycle is wrong, not that Strict Mode is broken.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a third-party imperative widget integrate safely under Strict Mode?"
+   },
+   {
+    "question": "How do Suspense and error boundaries interact, and what actually happens when a component suspends during rendering?",
+    "answer": "When a component suspends, it effectively says the render cannot finish yet, so React shows the nearest Suspense fallback for that part of the tree while waiting. If rendering throws an error instead of a suspending value, the nearest error boundary handles it. They solve different failure modes: waiting versus failure. Good boundary placement matters because coarse boundaries can blank too much UI, while fine-grained ones improve resilience but add complexity.",
+    "real_world": "A dashboard might keep navigation and previous content visible while only a chart panel shows a loading fallback. If that chart crashes, an error boundary can replace just that panel instead of taking down the whole page.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the trade-offs between one page-level Suspense boundary and several smaller boundaries?"
+   },
+   {
+    "question": "What is tearing in React, and why do external stores need special handling with useSyncExternalStore?",
+    "answer": "Tearing is when different parts of the UI observe different snapshots of shared external state during one render, so the screen becomes internally inconsistent. This can happen with concurrent rendering because React may render parts of the tree at different times unless the store provides a consistent snapshot API. useSyncExternalStore exists so React can subscribe safely and read a stable value for the current render. Without that contract, external stores can look correct in simple cases but fail under concurrency.",
+    "real_world": "This shows up in apps using custom stores, browser APIs, or sockets where one widget shows the new value while another still shows the old one for the same frame. Those bugs are rare, timing-sensitive, and hard to reproduce without load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is context alone not enough to make an arbitrary external mutable source safe under concurrent rendering?"
+   },
+   {
+    "question": "When would you use flushSync, and what are the risks of forcing React to flush updates synchronously?",
+    "answer": "flushSync is for the rare case where you must see the DOM updated immediately before the next imperative step, such as measuring layout right after a state change triggered outside React's normal event flow. It forces React to process pending work synchronously, which reduces React's ability to batch and prioritize. Overusing it can hurt responsiveness and defeat concurrent scheduling. It should be a narrow escape hatch, not a general fix for timing confusion.",
+    "real_world": "A common case is integrating with a positioning library or printing flow that needs the DOM in its latest state before measuring. If used broadly in a busy app, it can reintroduce the long blocking updates teams were trying to avoid.",
+    "code_lang": "javascript",
+    "code": "import { flushSync } from 'react-dom';\n\nfunction openAndMeasure() {\n  flushSync(() => setOpen(true));\n  const h = panelRef.current.getBoundingClientRect().height;\n  positionOverlay(h);\n}",
+    "follow_up": "What would you try before flushSync if the problem is just reading layout after a state change?"
+   },
+   {
+    "question": "How do you think about context performance at scale, especially when a provider value changes frequently?",
+    "answer": "A context update can cause all consuming components for that context to re-render, regardless of which field they read, because the subscription is to the whole value. At scale, a single provider holding frequently changing state can become a fan-out bottleneck. The usual fixes are splitting contexts by update frequency or concern, stabilizing values, or moving high-churn state to a store with selector-based subscriptions. Context is great for dependency injection and relatively stable shared values, but it is not a free global-state solution.",
+    "real_world": "A provider carrying auth, theme, feature flags, viewport data, and live notifications often becomes a performance hotspot. One noisy field can make hundreds of consumers re-render on every tick.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure providers for a large app to avoid both provider hell and broad re-render cascades?"
+   },
+   {
+    "question": "What are the main architectural trade-offs between server components and client components in React applications?",
+    "answer": "Server components let you do data fetching and heavy computation on the server and send a smaller client payload, which can improve bundle size and initial load. Client components are needed for interactivity, browser APIs, and local state. The trade-off is that server components introduce a split execution model with serialization constraints and sharper boundaries around what can cross from server to client. They can reduce client work significantly, but debugging, caching, and composition become more architectural concerns than just component concerns.",
+    "real_world": "This matters on content-heavy or commerce pages where moving non-interactive sections to the server can cut shipped JavaScript. Teams often gain performance but have to rethink data ownership and where interactivity starts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of props or values cannot be passed directly from a server component to a client component?"
+   },
+   {
+    "question": "What failure modes do you watch for when React apps integrate with imperative libraries like charts, maps, or editors?",
+    "answer": "The biggest risks are lifecycle mismatches, duplicate initialization, leaked listeners, and React and the library fighting over the same DOM. React expects declarative ownership, while imperative libraries often want to mutate elements directly and keep their own state. The safe pattern is to isolate the library behind a ref-managed boundary, initialize and dispose it carefully in effects, and update it incrementally rather than recreating it on every render. You also need to account for Strict Mode and concurrency, which can expose hidden assumptions about one-time setup.",
+    "real_world": "In production, these bugs show up as growing memory usage, phantom event handlers, broken focus, or widgets resetting on every prop change. Rich text editors and map SDKs are especially common sources of these incidents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a wrapper component around an imperative editor so parent re-renders do not constantly reset it?"
+   },
+   {
+    "question": "How does React’s reconciliation decide whether to preserve or reset a subtree’s state, and how do you intentionally control that?",
+    "answer": "React preserves state when the same component type appears in the same position in the tree with the same key. If the type changes, or the key changes, React treats it as a different instance and remounts that subtree, resetting state and effects. That matters for bugs like inputs keeping the wrong value after reordering, or state leaking between tabs that reuse the same component shape. You control it mostly with stable structure and deliberate keys when you want identity to stay the same or be reset.",
+    "real_world": "A common production bug is a form wizard showing data from the previous step because the same component instance was reused. Teams also use changing keys deliberately to reset complex third-party widgets that are hard to clean up correctly.",
+    "code_lang": "jsx",
+    "code": "function ProfilePane({ userId }) {\n  return <Editor key={userId} userId={userId} />;\n}",
+    "follow_up": "What bugs can happen if you use array indexes as keys in a reorderable list with local component state?"
+   },
+   {
+    "question": "What actually happens when React batches updates, and where do people still get surprised by batching behavior?",
+    "answer": "Batching means React groups multiple state updates and does one render/commit instead of committing after each call. In modern React, batching happens across more async boundaries than it used to, so code that assumes the DOM has updated immediately after a setter often breaks. The main surprise is reading stale state or DOM inside the same tick and expecting each setter to have taken effect separately. Use functional updates when the next state depends on the previous one, and use an effect or a synchronous escape hatch only when you truly need post-commit timing.",
+    "real_world": "Teams hit this when migrating older apps: loading flags, counters, and validation state that used to appear to update step-by-step now collapse into one render. It can also break integrations that measure layout immediately after a state change.",
+    "code_lang": "jsx",
+    "code": "setCount(c => c + 1);\nsetCount(c => c + 1);\n// one render, final increment is +2",
+    "follow_up": "How would you handle code that must read the updated DOM right after a state change?"
+   },
+   {
+    "question": "If a team says their React app feels slow, how do you separate JavaScript compute cost from React render cost from browser layout and paint cost?",
+    "answer": "I profile in layers instead of guessing. First use the browser performance timeline to see whether time is going to scripting, style/layout, paint, or network; then use the React Profiler to find which commits are expensive and which components rendered. A long commit points to too much React or DOM work, while fast React commits with slow frames often mean layout thrash, heavy CSS, or canvas work. The fix depends on the bucket: memoization and state scoping for render cost, virtualization for DOM size, and avoiding forced reflow for browser cost.",
+    "real_world": "In production, teams often optimize React components for days when the actual frame drops come from measuring DOM repeatedly in a scroll handler. The opposite also happens: a small DOM but huge commit times because a top-level state change rerenders hundreds of rows.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or profiler signals tell you a memoization change actually improved user-perceived performance?"
+   },
+   {
+    "question": "What are the trade-offs of using derived state from props, and when is it a bug versus a valid pattern?",
+    "answer": "Copying props into state is usually a bug because it creates two sources of truth that drift apart. It becomes valid when you are intentionally capturing an initial value, buffering user edits before commit, or caching something expensive that cannot be recomputed every render without a clear invalidation rule. Even then, you need an explicit sync policy instead of 'keep them in sync somehow'. Most bugs come from prop changes being ignored, or local edits being accidentally blown away by a re-render.",
+    "real_world": "A classic incident is an edit form that resets what the user typed when fresh server data arrives, because the component mirrors props into state on every change. The inverse bug is stale data in a detail panel after navigating between records because state was only initialized once.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need an editable draft derived from server data, how would you structure the reset and save behavior?"
+   },
+   {
+    "question": "How do portals behave with events, context, and layering, and what edge cases matter in production modals and overlays?",
+    "answer": "A portal moves where DOM nodes are mounted, but in React it still belongs to the same React tree. That means context still flows through, and React event propagation follows the React tree rather than the DOM ancestry. This is useful for modals and tooltips that must escape overflow or stacking contexts, but it creates edge cases around outside-click logic, focus management, and scroll locking because the DOM tree no longer matches your mental model. You usually need explicit focus trapping and careful native event handling at document level.",
+    "real_world": "Production modal bugs often come from 'click outside to close' firing incorrectly because the modal is outside the DOM subtree but still inside the React tree. Another common issue is a tooltip hidden behind transformed parents until the team moves it into a portal.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement outside-click detection for a portaled popover without breaking nested overlays?"
+   },
+   {
+    "question": "How do you reason about React context consistency and update propagation when many consumers read the same provider?",
+    "answer": "When a provider’s value changes, React schedules updates for consumers that read that context. The important point is that context is not a selector-based store by default: if the provided value object changes, many consumers can rerender even if they only use one field. React keeps reads consistent for a render, but performance can degrade if a frequently changing provider sits high in the tree. The usual fixes are splitting contexts by change frequency, stabilizing provider values, or moving hot state to an external store with selector-style subscriptions.",
+    "real_world": "Large apps often put auth, feature flags, theme, viewport state, and live data into one provider, then wonder why small updates trigger broad rerenders. Splitting a hot provider can remove visible input lag without changing product behavior.",
+    "code_lang": "jsx",
+    "code": "const value = useMemo(() => ({ theme, setTheme }), [theme]);\nreturn <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;",
+    "follow_up": "Why doesn’t useMemo on the provider value solve all context performance problems?"
+   },
+   {
+    "question": "What failure modes do you watch for with async effects during unmounts, retries, and rapid navigation?",
+    "answer": "The big ones are setting state after the component is no longer relevant, leaking subscriptions or timers, and older async work overwriting newer results. Cleanup must cancel or unsubscribe where possible, and each request should be tied to the current render intent so stale completions are ignored. Retries complicate this because backoff timers and duplicate in-flight requests can outlive the screen that created them. I also watch for loading spinners that never clear because one branch forgot to handle aborts or rejected promises consistently.",
+    "real_world": "This shows up in search, route transitions, and flaky mobile networks: users navigate quickly, and a response from the previous screen updates the next one. Memory leaks from forgotten listeners are harder to spot but can degrade long-lived dashboard tabs over hours.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you build a reusable hook for request cancellation and stale response protection?"
+   },
+   {
+    "question": "What is the difference between remounting a component and rerendering it, and why does that distinction matter for performance and correctness?",
+    "answer": "A rerender reuses the existing component instance and state, runs render again, and may update the DOM if output changed. A remount destroys the old instance, runs effect cleanup, creates a new instance, resets state, and runs mount effects again. Correctness-wise, remounting can wipe user input or restart network subscriptions; performance-wise, it is usually much more expensive because all child state and effects are recreated. Many accidental remounts come from unstable keys or defining component types inside renders.",
+    "real_world": "Teams sometimes chase 'mysterious' analytics duplicates or websocket reconnect storms that turn out to be remounts on every parent update. Another symptom is a text input losing cursor position because its subtree keeps getting recreated.",
+    "code_lang": "jsx",
+    "code": "function Parent({ items }) {\n  const Row = ({ item }) => <div>{item.name}</div>; // bad: new component type each render\n  return items.map(item => <Row key={item.id} item={item} />);\n}",
+    "follow_up": "Why does defining a component inside another component’s render create remount risk?"
+   },
+   {
+    "question": "How do you approach code-splitting in React beyond just wrapping routes in lazy, and what trade-offs do you evaluate?",
+    "answer": "I look at bundle composition, interaction paths, and the cost of extra network round trips. Route-level splitting is the baseline, but large apps often need component-level splitting for admin panels, editors, charting libraries, or rarely used flows. The trade-off is shifting work from initial load to later interaction, which can improve first load but hurt responsiveness if the split point is on a hot path or causes a waterfall. You also have to design loading and error states carefully so chunk failures degrade predictably.",
+    "real_world": "A dashboard may load much faster if heavy charting code is deferred until the chart tab opens, but if users always open that tab immediately the app can feel slower overall. Chunk load failures after a deploy are another real incident class, especially with long-lived tabs and aggressive caching.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle a failed dynamic import in a long-lived session after a new deployment invalidates old chunks?"
+   },
+   {
+    "question": "In a large React frontend, how do you decide what belongs in the URL, what belongs in client state, and what belongs on the server?",
+    "answer": "I put durable, shareable, navigation-relevant state in the URL; ephemeral UI mechanics like open popovers or hover state stay local; and canonical business data usually belongs on the server with client caching layered on top. The key trade-offs are reproducibility, back/forward behavior, cache invalidation, and the risk of duplicating server truth in the client. If state needs deep linking, bookmarking, or analytics-friendly reconstruction, the URL is usually the right home. If multiple widgets need the same remote data, centralizing fetch and cache policy beats passing snapshots through props.",
+    "real_world": "This matters when teams build search and filtering: if filters live only in component state, refresh and share links break. The opposite mistake is stuffing every transient UI flag into the URL and creating noisy history entries and brittle parsing logic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you model pagination, sorting, and free-text filters so they work well with back/forward navigation and data caching?"
+   }
+  ]
+ }
+}

@@ -1,0 +1,445 @@
+{
+ "slug": "csharp",
+ "name": "C#",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a class and an object in C#?",
+    "answer": "A class is a blueprint that defines data and behavior, while an object is an instance created from that class. You use a class to model something, and objects to represent specific things at runtime. For example, `Car` is a class, and `myCar` is an object. This distinction matters because methods and fields live on the class definition, but actual values belong to each object.",
+    "real_world": "A team might define a `User` class and create one object per logged-in person. Bugs often come from assuming changing one object's state changes all others.",
+    "code_lang": "csharp",
+    "code": "class Car { public string Model; }\nvar myCar = new Car();\nmyCar.Model = \"Civic\";",
+    "follow_up": "What is the difference between a reference type and a value type?"
+   },
+   {
+    "question": "What is the difference between `string` and `StringBuilder`?",
+    "answer": "`string` is immutable, so every change creates a new string. `StringBuilder` is used when you need to build or modify text many times, because it avoids creating lots of temporary objects. For small or one-off concatenations, `string` is usually fine and simpler. For repeated appends in loops, `StringBuilder` is more efficient.",
+    "real_world": "Log formatting and large text assembly can become slow if code repeatedly concatenates strings in a loop. Switching to `StringBuilder` can reduce allocations and improve throughput.",
+    "code_lang": "csharp",
+    "code": "var sb = new StringBuilder();\nsb.Append(\"Hello\");\nsb.Append(\" \");\nsb.Append(\"world\");\nvar text = sb.ToString();",
+    "follow_up": "Why is `string` immutable in C#?"
+   },
+   {
+    "question": "What is the difference between `ref` and `out` parameters?",
+    "answer": "Both let a method work with the caller's variable directly, but `ref` requires the variable to be assigned before the call, while `out` does not. A `ref` parameter is for input and output; an `out` parameter is for output only. With `out`, the method must assign a value before returning. They are useful when a method needs to return more than one value without creating an object.",
+    "real_world": "Parsing APIs often use `out` to return a success flag plus a parsed value. A common beginner mistake is forgetting that an `out` value must be assigned on every path.",
+    "code_lang": "csharp",
+    "code": "bool TryParseAge(string text, out int age)\n{\n    age = 0;\n    return int.TryParse(text, out age);\n}",
+    "follow_up": "When would you prefer returning a tuple instead?"
+   },
+   {
+    "question": "What is a nullable type in C# and why would you use it?",
+    "answer": "A nullable type lets a value type, such as `int` or `bool`, also hold `null`. You use it when a value may be missing or unknown, like an optional database field. The shorthand is `int?`, which is the same as `Nullable<int>`. You must handle the null case before using the value.",
+    "real_world": "This matters when reading data that may not be present, such as an optional age or a missing timestamp. If you ignore nulls, you can get runtime exceptions or incorrect defaults.",
+    "code_lang": "csharp",
+    "code": "int? score = null;\nif (score.HasValue)\n    Console.WriteLine(score.Value);\nelse\n    Console.WriteLine(\"no score\");",
+    "follow_up": "What is the difference between `null` and `default(T)`?"
+   },
+   {
+    "question": "What does `static` mean in C#?",
+    "answer": "A `static` member belongs to the type itself, not to an instance of the type. You use static members for shared behavior or data, such as helper methods or constants. A static class cannot be instantiated and can contain only static members. The trade-off is convenience versus global state, which can make code harder to test if overused.",
+    "real_world": "Teams often put formatting helpers or math utilities in static classes. Problems show up when static state is used for things like counters or caches without careful synchronization.",
+    "code_lang": "csharp",
+    "code": "static class MathUtil\n{\n    public static int Double(int x) => x * 2;\n}\nConsole.WriteLine(MathUtil.Double(4));",
+    "follow_up": "What problems can happen if you store mutable data in static fields?"
+   },
+   {
+    "question": "What is the difference between `public`, `private`, and `protected`?",
+    "answer": "These are access modifiers that control who can see a member. `public` means any code can access it, `private` means only the containing class can access it, and `protected` means the class and its derived classes can access it. You use them to enforce encapsulation and keep implementation details hidden. A common beginner mistake is making fields public when they should be private with properties.",
+    "real_world": "If internal state is left public, outside code can put objects into invalid states. That often causes bugs that are hard to trace because the bad state comes from many places.",
+    "code_lang": "csharp",
+    "code": "class BankAccount\n{\n    private decimal balance;\n    public void Deposit(decimal amount) => balance += amount;\n}",
+    "follow_up": "When would you use `internal` instead of `public`?"
+   },
+   {
+    "question": "What is the purpose of a constructor in C#?",
+    "answer": "A constructor runs when an object is created and is used to initialize its state. It usually sets required fields and helps ensure the object starts valid. Constructors can be overloaded, so a class can offer different ways to create it. If you do not define one, C# provides a default parameterless constructor in many cases.",
+    "real_world": "Constructors are important when an object needs required dependencies or valid starting values. Without them, objects can be created in incomplete states that later cause null reference bugs.",
+    "code_lang": "csharp",
+    "code": "class Person\n{\n    public string Name { get; }\n    public Person(string name) => Name = name;\n}",
+    "follow_up": "What is constructor overloading?"
+   },
+   {
+    "question": "What does `using` do in C#?",
+    "answer": "`using` is commonly used to make sure an object that holds unmanaged resources is disposed when it goes out of scope. This is important for things like files, network connections, and database resources. It wraps the object in a `try/finally` pattern so cleanup still happens even if an exception is thrown. `using` can also refer to namespace imports, but resource disposal is the important runtime behavior.",
+    "real_world": "This prevents file handles from staying open and blocking other processes. In production, missing disposal can lead to exhausted connections or locked files.",
+    "code_lang": "csharp",
+    "code": "using var file = File.OpenRead(\"data.txt\");\nvar buffer = new byte[10];\nfile.Read(buffer, 0, buffer.Length);",
+    "follow_up": "What is `IDisposable`, and how does it relate to `using`?"
+   },
+   {
+    "question": "What is an array in C#, and when would you use one?",
+    "answer": "An array is a fixed-size collection of elements of the same type. You use it when you know the number of items up front and want fast indexed access. Arrays are simple and efficient, but they are not flexible if you need to add or remove items frequently. In those cases, a `List<T>` is usually a better fit.",
+    "real_world": "Arrays are common when reading a fixed set of values from an API response or processing a known batch of data. A beginner mistake is trying to keep appending to an array and fighting its fixed size.",
+    "code_lang": "csharp",
+    "code": "int[] scores = { 10, 20, 30 };\nConsole.WriteLine(scores[1]); // 20\nscores[2] = 35;",
+    "follow_up": "What is the difference between an array and a `List<T>`?"
+   },
+   {
+    "question": "What does `foreach` do, and how is it different from `for`?",
+    "answer": "`foreach` iterates over each item in a collection without needing an index. It is best when you just want to read or process every element in order. `for` is better when you need the index, want to skip around, or need to modify positions directly. A common beginner mistake is trying to remove items from a collection inside a `foreach`, which can fail.",
+    "real_world": "This comes up when looping through database results, API data, or UI items. A team may choose `foreach` for readability, then switch to `for` when they need to update items by position.",
+    "code_lang": "csharp",
+    "code": "var names = new[] { \"Ana\", \"Bo\", \"Cy\" };\nforeach (var name in names)\n{\n    Console.WriteLine(name);\n}",
+    "follow_up": "When would you prefer a `for` loop over `foreach`?"
+   },
+   {
+    "question": "What is an `if` statement used for in C#?",
+    "answer": "An `if` statement lets your program choose between different paths based on a condition. It is used for validation, branching business logic, and handling different states. You can chain conditions with `else if` and provide a fallback with `else`. The key is that the condition must evaluate to `true` or `false`.",
+    "real_world": "Validation logic in forms and APIs often starts with `if` checks. Missing a branch can lead to unexpected behavior, such as accepting invalid input or skipping an error response.",
+    "code_lang": "csharp",
+    "code": "int age = 20;\nif (age >= 18)\n{\n    Console.WriteLine(\"Adult\");\n}\nelse\n{\n    Console.WriteLine(\"Minor\");\n}",
+    "follow_up": "What is the difference between `&&` and `||` in a condition?"
+   },
+   {
+    "question": "What is a `switch` statement in C#, and when is it useful?",
+    "answer": "A `switch` selects one of several branches based on a single value. It is useful when you have a small number of known cases, like status codes, menu options, or enum values. It often reads more clearly than a long chain of `if`/`else if` statements. Each case should be handled carefully, including a default path when appropriate.",
+    "real_world": "You see this in request handling, UI commands, or mapping enum states to behavior. It helps keep code readable when the number of branches grows.",
+    "code_lang": "csharp",
+    "code": "string color = \"red\";\nswitch (color)\n{\n    case \"red\":\n        Console.WriteLine(\"Stop\");\n        break;\n    default:\n        Console.WriteLine(\"Unknown\");\n        break;\n}",
+    "follow_up": "When would an `if` chain be better than a `switch`?"
+   },
+   {
+    "question": "What is the difference between `try`, `catch`, and `finally`?",
+    "answer": "`try` contains code that might throw an exception. `catch` handles the exception if one happens, and `finally` runs whether an exception occurred or not, which is useful for cleanup. You use this to keep the program from crashing unexpectedly and to release resources or restore state. A common mistake is using exceptions for normal control flow instead of real error cases.",
+    "real_world": "This matters when dealing with files, network calls, or parsing user input. Without proper exception handling, a small failure can terminate the whole operation or leave resources open.",
+    "code_lang": "csharp",
+    "code": "try\n{\n    int x = int.Parse(\"abc\");\n}\ncatch (FormatException)\n{\n    Console.WriteLine(\"Invalid number\");\n}\nfinally\n{\n    Console.WriteLine(\"Done\");\n}",
+    "follow_up": "What kinds of exceptions would you catch specifically versus catching a general exception?"
+   },
+   {
+    "question": "What does `return` do in a method?",
+    "answer": "`return` ends the method and optionally sends a value back to the caller. If the method has a non-`void` return type, it must return a value of the correct type on every path. In a `void` method, `return` can still be used to exit early without a value. This is useful for short-circuiting on invalid input or completed work.",
+    "real_world": "Early returns are common in validation and guard clauses, where you stop processing as soon as something is wrong. Forgetting a return value is a common compile-time error for beginners.",
+    "code_lang": "csharp",
+    "code": "int Add(int a, int b)\n{\n    return a + b;\n}",
+    "follow_up": "What is the difference between a method that returns `void` and one that returns a value?"
+   },
+   {
+    "question": "What is the difference between `const` and `readonly` in C#?",
+    "answer": "`const` is a compile-time constant, so its value must be known when the code is compiled and it can never change. `readonly` means the field can be assigned in the constructor or at declaration, and then it cannot be reassigned. Use `const` for true constants like mathematical values, and `readonly` when the value should be fixed per instance but not necessarily known at compile time. A common beginner mistake is using `const` for values that depend on runtime data.",
+    "real_world": "Teams use `readonly` for things like configuration injected at construction, and `const` for fixed application-wide values. Changing a `const` in a library can also have versioning implications because the value is embedded at compile time.",
+    "code_lang": "csharp",
+    "code": "const double Pi = 3.14159;\nreadonly int _maxItems;\n\npublic Example(int maxItems)\n{\n    _maxItems = maxItems;\n}",
+    "follow_up": "What kinds of values are safe to make `const`?"
+   },
+   {
+    "question": "What is a namespace in C#?",
+    "answer": "A namespace is a way to organize types and avoid name conflicts. It groups related classes, interfaces, and other types under a logical name, like `System.Collections.Generic`. You usually use namespaces to keep large projects structured and to make it clear where a type comes from. A `using` directive can shorten how you refer to a type inside a file.",
+    "real_world": "This matters in larger codebases where two different libraries might have the same class name. Namespaces keep the code readable and prevent ambiguity when importing types.",
+    "code_lang": "csharp",
+    "code": "namespace MyApp.Models\n{\n    class User\n    {\n    }\n}",
+    "follow_up": "What is the difference between a namespace and an assembly?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "When would you choose an interface over an abstract class in C#?",
+    "answer": "Use an interface when you want a contract that many unrelated types can implement, especially when you care about capability more than shared implementation. Use an abstract class when you need common state or base behavior that derived types should reuse. Interfaces are better for testing and dependency injection because they keep coupling low, but abstract classes are useful when there is a clear shared base concept. The trade-off is flexibility versus shared code.",
+    "real_world": "This comes up when designing services like payment processors or storage providers. Teams often start with a base class and later regret the tight coupling when they need a second inheritance tree.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you evolve an abstract base class into interfaces without breaking existing code?"
+   },
+   {
+    "question": "Why is `async`/`await` useful in C#, and what problem does it not solve?",
+    "answer": "`async`/`await` makes asynchronous code easier to read by letting you write it in a direct style instead of chaining callbacks or tasks manually. It helps avoid blocking threads while waiting on I/O, which improves scalability in servers and responsiveness in UI apps. It does not make work faster by itself, and it does not parallelize CPU-bound code automatically. You still need to think about cancellation, exception handling, and where the actual async work happens.",
+    "real_world": "This matters in web APIs that call databases or external services. Blocking on those calls can tie up request threads and cause throughput problems under load.",
+    "code_lang": "csharp",
+    "code": "public async Task<string> GetNameAsync()\n{\n    var text = await httpClient.GetStringAsync(url);\n    return text.Trim();\n}",
+    "follow_up": "What is the difference between CPU-bound and I/O-bound work in this context?"
+   },
+   {
+    "question": "What happens if you call `.Result` or `.Wait()` on a task instead of awaiting it?",
+    "answer": "Those calls block the current thread until the task completes, which can cause deadlocks in some environments and reduces scalability in server code. They also wrap exceptions differently, often hiding the original stack shape behind an aggregate exception. In UI or legacy synchronization-context environments, blocking can prevent the continuation from ever running. The safer pattern is to make the entire call chain async and use `await` end to end.",
+    "real_world": "Teams sometimes do this in controller or test code because it seems simpler. It can create intermittent hangs that are hard to reproduce and diagnose.",
+    "code_lang": "csharp",
+    "code": "// Risky\nvar value = GetDataAsync().Result;\n\n// Better\nvar value = await GetDataAsync();",
+    "follow_up": "When would blocking on a task be acceptable, if ever?"
+   },
+   {
+    "question": "What is `IDisposable`, and why is it not the same as garbage collection?",
+    "answer": "`IDisposable` is a way for an object to release unmanaged resources or expensive managed resources deterministically. Garbage collection eventually frees memory, but it does not guarantee when file handles, sockets, database connections, or timers are cleaned up. You should use `using` or `await using` for disposable resources so cleanup happens promptly, even on exceptions. The trade-off is that callers must participate in lifecycle management.",
+    "real_world": "This matters with file streams, database connections, and HTTP responses. Forgetting to dispose can hold locks, exhaust handles, or delay connection reuse.",
+    "code_lang": "csharp",
+    "code": "using var stream = File.OpenRead(path);\n// use stream here\n// disposed automatically at end of scope",
+    "follow_up": "What should a type do if it owns another `IDisposable` member?"
+   },
+   {
+    "question": "What is the difference between a `List<T>` and a `Dictionary<TKey,TValue>`?",
+    "answer": "A `List<T>` is an ordered sequence accessed by index, while a `Dictionary<TKey,TValue>` stores key-value pairs optimized for lookup by key. Use a list when order and iteration matter more than keyed lookup; use a dictionary when you need fast reads by unique key. A dictionary adds memory overhead and requires stable, well-defined keys. Choosing the wrong one usually shows up as either slow searches or awkward code.",
+    "real_world": "This matters when caching lookup tables, user sessions, or configuration values. A team that uses a list for repeated searches often discovers performance issues only at scale.",
+    "code_lang": "csharp",
+    "code": "var ages = new Dictionary<string, int>\n{\n    [\"Ada\"] = 36,\n    [\"Linus\"] = 55\n};\nvar age = ages[\"Ada\"];",
+    "follow_up": "What happens if you access a missing key in a dictionary?"
+   },
+   {
+    "question": "How do value types and reference types differ in practice?",
+    "answer": "Value types usually store the data itself, while reference types store a reference to an object on the heap. That affects copying: assigning a value type copies the value, while assigning a reference type copies the reference. The practical impact is around mutability, allocation cost, and accidental sharing. Use value types for small, immutable data and reference types for objects with identity or shared lifetime.",
+    "real_world": "This matters when passing structs around or storing them in collections. Bugs often show up when someone expects a copy but ends up modifying shared state, or vice versa.",
+    "code_lang": "csharp",
+    "code": "Point a = new Point { X = 1, Y = 2 };\nPoint b = a;\nb.X = 9;\n// a.X is still 1 if Point is a struct",
+    "follow_up": "When can a value type become more expensive than a reference type?"
+   },
+   {
+    "question": "What is boxing and unboxing in C#, and why can it hurt performance?",
+    "answer": "Boxing converts a value type to `object` or an interface type, which allocates a new object on the heap. Unboxing converts it back, and the runtime must verify the type before copying the value out. This adds allocations and CPU overhead, and repeated boxing in hot paths can create garbage collection pressure. It often happens accidentally with non-generic APIs or collections.",
+    "real_world": "A common issue is logging or collection code that boxes structs millions of times per minute. The code works, but latency and GC time grow under load.",
+    "code_lang": "csharp",
+    "code": "int n = 42;\nobject o = n;     // boxing\nint m = (int)o;   // unboxing",
+    "follow_up": "How do generics help reduce boxing?"
+   },
+   {
+    "question": "How does exception handling differ between `throw;` and `throw ex;`?",
+    "answer": "`throw;` rethrows the current exception while preserving the original stack trace. `throw ex;` resets the stack trace to the current line, which makes debugging much harder because the real source gets lost. In catch blocks, prefer `throw;` unless you are intentionally replacing the exception with a different one. Preserving the original context is usually more important than wrapping everything.",
+    "real_world": "This matters when production errors are hard to reproduce and logs are your main evidence. Resetting the stack trace can point you to the wrong code path and waste debugging time.",
+    "code_lang": "csharp",
+    "code": "try\n{\n    Work();\n}\ncatch\n{\n    throw; // preserves stack trace\n}",
+    "follow_up": "When is it appropriate to wrap an exception instead of rethrowing it?"
+   },
+   {
+    "question": "What are extension methods, and when are they a good choice?",
+    "answer": "Extension methods let you add callable methods to an existing type without modifying it or using inheritance. They are useful for helper operations, fluent APIs, and keeping utility code discoverable at the call site. They should not be used to hide core business behavior or to compensate for a bad type design, because they can make the codebase harder to understand if overused. Since they are static methods in disguise, they cannot access private state.",
+    "real_world": "This is common in LINQ-style APIs and shared utility libraries. Teams use them to keep repetitive transformations close to the types they operate on.",
+    "code_lang": "csharp",
+    "code": "public static class StringExtensions\n{\n    public static bool IsBlank(this string s) =>\n        string.IsNullOrWhiteSpace(s);\n}",
+    "follow_up": "What are the limitations of extension methods compared with instance methods?"
+   },
+   {
+    "question": "How do you decide between `IEnumerable<T>` and `IList<T>` in a method signature?",
+    "answer": "Use `IEnumerable<T>` when the method only needs to read and iterate, because it accepts more callers and keeps the API flexible. Use `IList<T>` only when you need index access, insertion, removal, or a count that implies random access. The trade-off is that `IEnumerable<T>` may hide multiple enumeration or deferred execution costs, while `IList<T>` exposes a stronger contract. In public APIs, prefer the weakest type that still describes what you need.",
+    "real_world": "This matters when a service method accepts query results from Entity Framework or another deferred sequence. A method that enumerates twice can accidentally issue two database queries or do extra work.",
+    "code_lang": "csharp",
+    "code": "void PrintNames(IEnumerable<string> names)\n{\n    foreach (var name in names)\n        Console.WriteLine(name);\n}",
+    "follow_up": "What problems can happen if you enumerate an `IEnumerable<T>` more than once?"
+   },
+   {
+    "question": "What happens if you modify a collection while iterating over it with `foreach`?",
+    "answer": "Most mutable collections throw an exception if they detect structural changes during `foreach`. That protects you from subtle bugs where the enumerator would otherwise skip or repeat items. If you need to remove items, iterate over a copy, collect items to remove and delete them afterward, or use a loop that can safely adjust the index. The exact behavior depends on the collection type, but you should assume mutation during enumeration is unsafe.",
+    "real_world": "This often appears when filtering a list in place during cleanup code. In production, it shows up as intermittent `InvalidOperationException` when a rarely hit branch removes an item mid-loop.",
+    "code_lang": "csharp",
+    "code": "var items = new List<int> { 1, 2, 3 };\nforeach (var x in items)\n{\n    if (x == 2) items.Remove(x); // usually throws\n}",
+    "follow_up": "What is a safe way to remove multiple items from a list?"
+   },
+   {
+    "question": "When would you use `var` in C#, and when would you avoid it?",
+    "answer": "Use `var` when the right-hand side makes the type obvious or when the exact type is verbose but unambiguous, such as LINQ queries or tuple creation. Avoid it when the inferred type is not clear from the expression, because readability matters more than saving keystrokes. `var` does not mean dynamic typing; the variable still has a static compile-time type. Good code uses `var` to reduce noise, not to hide important types.",
+    "real_world": "Teams often use `var` heavily in LINQ-heavy code, but avoid it in public-facing or complex business logic where the concrete type affects behavior. It helps prevent misleading assumptions during code review.",
+    "code_lang": "csharp",
+    "code": "var users = GetUsers();\nvar count = users.Count;\n// Here the inferred types are obvious from context.",
+    "follow_up": "When can `var` make debugging or maintenance harder?"
+   },
+   {
+    "question": "What is deferred execution in LINQ, and why does it matter?",
+    "answer": "Deferred execution means the query is not run when you build it; it runs when you enumerate it. This matters because the underlying data can change between query creation and execution, and because repeated enumeration can repeat the work. It is useful for composition and efficiency, but it can also cause surprises if the source has side effects or expensive access. If you need a stable snapshot, materialize the results with a list or array.",
+    "real_world": "This shows up when a LINQ query over a database context or mutable in-memory collection is passed around and evaluated later. Bugs often appear when the source is disposed or modified before the query is consumed.",
+    "code_lang": "csharp",
+    "code": "var query = numbers.Where(n => n > 10);\n// no execution yet\nvar result = query.ToList(); // execution happens here",
+    "follow_up": "How do `ToList()` and `ToArray()` change the behavior of a LINQ query?"
+   },
+   {
+    "question": "What is a closure in C#, and what bug can it cause in loops?",
+    "answer": "A closure is when a lambda or local function captures variables from the surrounding scope. The captured variable is shared, not copied, so changes to it are visible to the closure. In loops, this can cause every lambda to see the final loop value instead of the value from each iteration. The fix is to copy the loop variable into a new local inside the loop before capturing it.",
+    "real_world": "This bug appears in UI event handlers, scheduled callbacks, and test setup code that registers lambdas in a loop. It can be hard to spot because the code compiles and only misbehaves at runtime.",
+    "code_lang": "csharp",
+    "code": "var actions = new List<Action>();\nfor (int i = 0; i < 3; i++)\n{\n    int copy = i;\n    actions.Add(() => Console.WriteLine(copy));\n}",
+    "follow_up": "Why do captured variables in lambdas sometimes surprise people even outside loops?"
+   },
+   {
+    "question": "How do `Task` and `ValueTask` differ, and when would you choose one over the other?",
+    "answer": "`Task` is the standard choice and is simpler to use, cache, and compose. `ValueTask` can avoid an allocation when the result is often available synchronously, but it has more restrictions and is easier to misuse. In most application code, `Task` is the better default unless profiling shows a meaningful allocation hot spot. Choose `ValueTask` only when you understand the consumption rules and have a measured reason.",
+    "real_world": "This matters in very hot paths, like parsers or high-throughput network code, where small allocations add up. In ordinary business services, the added complexity often outweighs the savings.",
+    "code_lang": "csharp",
+    "code": "public Task<User> GetUserAsync() => Task.FromResult(user);\n// Use ValueTask only when the sync-completion case is common and measured.",
+    "follow_up": "What are the limitations of awaiting a `ValueTask` more than once?"
+   },
+   {
+    "question": "What is dependency injection, and why is it useful in C# projects?",
+    "answer": "Dependency injection means a class receives the services it needs from the outside instead of creating them itself. It improves testability, keeps classes focused, and makes swapping implementations easier, such as real vs. fake clients. The trade-off is that object wiring becomes a separate concern, often handled by a container or composition root. Good DI makes dependencies explicit and reduces hidden coupling.",
+    "real_world": "This is common in ASP.NET Core applications where controllers and services depend on logging, storage, or HTTP clients. It makes unit tests simpler because you can pass a fake implementation instead of talking to real infrastructure.",
+    "code_lang": "csharp",
+    "code": "class OrderService\n{\n    private readonly IPaymentGateway _gateway;\n    public OrderService(IPaymentGateway gateway) => _gateway = gateway;\n}",
+    "follow_up": "What problems can happen if a class has too many injected dependencies?"
+   },
+   {
+    "question": "What is the difference between `==` and `Equals` in C#, and why can it matter?",
+    "answer": "`==` is an operator that may be overloaded to define custom comparison behavior, while `Equals` is a method used for semantic equality. For reference types, the default `==` behavior is often reference equality unless overloaded, and `Equals` may be overridden to compare values. The important point is to know what a type promises, especially for strings, records, and custom domain objects. If you implement one, you should usually keep the other consistent.",
+    "real_world": "Equality bugs show up in dictionary keys, deduplication, and tests that compare domain objects. A type that overrides one form of equality but not the other can behave inconsistently in collections.",
+    "code_lang": "csharp",
+    "code": "var a = new string('x', 1);\nvar b = new string('x', 1);\nConsole.WriteLine(a == b);      // value comparison for string\nConsole.WriteLine(a.Equals(b)); // also true",
+    "follow_up": "What do you need to implement if you want a custom object to work correctly in `Dictionary<TKey,TValue>`?"
+   },
+   {
+    "question": "How do you think about `using` blocks or `using` declarations when working with disposable objects?",
+    "answer": "Use them to guarantee cleanup even when an exception is thrown. A `using` block scopes the lifetime explicitly, while a `using` declaration keeps the variable in scope until the end of the enclosing block. The main trade-off is readability and lifetime control: shorter scope is usually better because it makes resource use clearer. This matters for file handles, database connections, and other scarce resources.",
+    "real_world": "A common production issue is keeping a file or network stream open too long, causing locks or connection pool pressure. Tight `using` scope helps prevent those leaks and makes ownership obvious in code review.",
+    "code_lang": "csharp",
+    "code": "using var stream = File.OpenRead(path);\nusing var reader = new StreamReader(stream);\nvar text = reader.ReadToEnd();",
+    "follow_up": "When would you prefer an explicit `using (...) { ... }` block over a `using` declaration?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does the .NET garbage collector actually work, and what patterns in C# code tend to create GC pressure in production?",
+    "answer": "The GC is generational: most objects die young, so it collects Gen 0 frequently, promotes survivors to older generations, and treats large objects differently because moving them is expensive. GC pressure usually comes from high allocation rates, especially short-lived objects on hot paths, large arrays or strings, and accidental per-request allocations from LINQ, closures, logging, or serialization. The issue is often latency rather than raw CPU, because collections can pause managed threads and compact memory. The fix is usually to reduce allocations, reuse buffers carefully, and measure with allocation profiling instead of guessing.",
+    "real_world": "A high-throughput API can look fine in average latency but still have p99 spikes because each request allocates many temporary objects and triggers frequent Gen 0 and Gen 1 collections.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you investigate whether a latency issue is caused by GC versus thread-pool starvation?"
+   },
+   {
+    "question": "What’s the difference between `Span<T>`, `Memory<T>`, and arrays, and what are the real constraints when using them?",
+    "answer": "An array owns heap memory and is easy to store, pass around, and use asynchronously. `Span<T>` is a stack-only view over contiguous memory, so it avoids copying and enables slicing cheaply, but it cannot be boxed, captured by lambdas, stored in fields of normal classes, or used across `await`. `Memory<T>` is the heap-storable counterpart for cases where the buffer has to survive asynchronously or be stored. The trade-off is performance versus flexibility: `Span<T>` is ideal for synchronous hot paths, while `Memory<T>` is safer for pipelines and async APIs.",
+    "real_world": "Parsers, protocol handlers, and serializers often switch from substring or array-copy heavy code to `Span<T>`-based parsing to cut allocations dramatically.",
+    "code_lang": "csharp",
+    "code": "ReadOnlySpan<char> s = \"a,b,c\".AsSpan();\nint i = s.IndexOf(',');\nvar first = s[..i];\nConsole.WriteLine(first.ToString());",
+    "follow_up": "Why can’t a `Span<T>` be used across an `await` boundary?"
+   },
+   {
+    "question": "If you were reviewing a high-concurrency service, how would you choose between `lock`, `Monitor`, `SemaphoreSlim`, `ReaderWriterLockSlim`, `Interlocked`, and concurrent collections?",
+    "answer": "I’d start from the access pattern and contention level. `Interlocked` is best for simple atomic state changes, `lock` or `Monitor` for short critical sections in synchronous code, `SemaphoreSlim` when you need async-compatible throttling, and concurrent collections when the shared state matches a standard queue or map pattern. `ReaderWriterLockSlim` only helps when reads heavily dominate and the protected work is non-trivial; under real contention it can add overhead or fairness issues. The main trade-off is always correctness first, then minimizing contention and avoiding blocking on hot paths.",
+    "real_world": "A common incident is using `lock` around I/O or `await`, which turns a small synchronization need into thread starvation and request pileups.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you replace a shared mutable dictionary with message passing or partitioned state instead?"
+   },
+   {
+    "question": "Can you explain the C# memory model enough to reason about `volatile`, reordering, and when you still need locks?",
+    "answer": "The compiler, runtime, and CPU can reorder reads and writes as long as single-threaded behavior is preserved, so code that looks obvious can still be broken across threads. `volatile` gives visibility and ordering guarantees for individual reads and writes of a field, but it does not make compound operations atomic and does not protect invariants across multiple fields. Locks provide mutual exclusion plus the necessary memory barriers, which is why they’re still the default for shared mutable state. `Interlocked` sits in between for specific atomic operations like increment, exchange, or compare-and-swap.",
+    "real_world": "Double-checked initialization is a classic place where incorrect assumptions about reordering create rare startup races that only show up under load or on different hardware.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would a correct lazy initialization pattern look like if you needed it to be thread-safe and low-overhead?"
+   },
+   {
+    "question": "What are the failure modes of `CancellationToken` in real systems, and how should cancellation flow through a C# codebase?",
+    "answer": "Cancellation is cooperative, so the main failure mode is assuming it is preemptive; if code ignores the token, cancellation does nothing. Tokens should usually be accepted near the top of the call stack and passed through every async operation that supports them, but you should be deliberate about boundaries where work must finish, such as committing a transaction or cleaning up. Another common mistake is swallowing `OperationCanceledException` and treating canceled work as success, which hides client disconnects and timeout behavior. The trade-off is responsiveness versus consistency: not every operation should be cancelable at every point.",
+    "real_world": "In web services, requests may be canceled by the client, but if downstream database or HTTP calls don’t receive the token, the service keeps doing useless work and amplifies overload.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you intentionally stop propagating a cancellation token?"
+   },
+   {
+    "question": "How do iterator methods and async state machines work under the hood, and what costs do they add?",
+    "answer": "Both `yield return` and `async` methods are compiled into generated state machines that keep local state across suspensions. That makes the syntax clean, but it can introduce allocations, captured state, extra indirection, and exceptions surfacing later than the call site suggests. For `async`, costs depend on whether the operation completes synchronously or not; for iterators, deferred execution can also repeat work if you enumerate multiple times. In hot paths, those costs can matter, so sometimes a manual loop or specialized API is worth the complexity.",
+    "real_world": "Teams often discover that a seemingly harmless LINQ or async helper in a hot parser or message pump is responsible for a large share of allocations.",
+    "code_lang": "csharp",
+    "code": "IEnumerable<int> Numbers()\n{\n    Console.Write(\"start \");\n    yield return 1;\n    Console.Write(\"next \");\n    yield return 2;\n}\nforeach (var n in Numbers()) Console.Write(n + \" \");",
+    "follow_up": "What does this print, and why doesn’t the body run when `Numbers()` is called?"
+   },
+   {
+    "question": "When do generics in C# get specialized versus shared at runtime, and why does that matter for performance?",
+    "answer": "Generic code is reified in .NET, so type information is preserved at runtime, but code generation is not always one-copy-per-type. In practice, value-type instantiations often get specialized because layout and operations differ, while many reference-type instantiations can share generated code. This matters because generics usually avoid boxing and enable strongly typed APIs, but using unconstrained generic code or interface-based calls can still introduce virtual dispatch or hidden allocations in some cases. The performance trade-off is usually favorable, but it helps to know where specialization stops helping.",
+    "real_world": "A numeric library may perform very differently for `int` versus interface-driven generic abstractions because boxing and dispatch patterns change dramatically under load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How can generic constraints improve both correctness and code generation opportunities?"
+   },
+   {
+    "question": "How would you design equality and hashing for a custom type used heavily as a dictionary key?",
+    "answer": "Equality and hashing must be consistent: if two instances are equal, they must return the same hash code for the lifetime of their use as keys. I’d make the key immutable, implement `IEquatable<T>` to avoid boxing and reduce dispatch overhead, and ensure `GetHashCode` uses the same fields as equality. Mutable keys are dangerous because changing a field after insertion can make the entry effectively unreachable in a hash-based collection. The trade-off is convenience versus correctness; for keys, immutability almost always wins.",
+    "real_world": "Production bugs here are nasty because the dictionary doesn’t throw—it just starts missing entries or duplicating logically identical keys after a field changes.",
+    "code_lang": "csharp",
+    "code": "public sealed record CacheKey(string Tenant, int Id);\n\nvar map = new Dictionary<CacheKey, string>();\nmap[new CacheKey(\"a\", 1)] = \"x\";\nConsole.WriteLine(map.ContainsKey(new CacheKey(\"a\", 1)));",
+    "follow_up": "What changes if the type is a struct instead of a class?"
+   },
+   {
+    "question": "What are the main performance traps with LINQ in C#, especially in hot paths?",
+    "answer": "The big traps are hidden allocations, repeated enumeration, delegate and closure capture, poor locality from layered iterators, and using LINQ where an imperative loop would do one pass with fewer branches. LINQ is often fine for business code, but in hot paths it can amplify costs because each operator may add another iterator object or abstraction boundary. Materializing at the wrong time can also create large temporary collections, while not materializing can rerun expensive queries. The right approach is to keep LINQ for clarity until profiling shows it matters, then flatten the critical sections.",
+    "real_world": "A service that processes millions of messages per minute can spend a surprising amount of CPU in small LINQ chains and delegate invocation rather than the actual business logic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What’s a concrete example where `Any()` is better than `Count() > 0`, and when does that not matter?"
+   },
+   {
+    "question": "How do you think about `struct` design in advanced C# code: copying costs, immutability, `readonly struct`, and passing by `in`?",
+    "answer": "A struct is copied by value, so it works best when it is small, immutable, and has value semantics that callers expect. Large mutable structs are a trap because every assignment or method call can copy data, and mutations on a copy often surprise people. `readonly struct` helps the compiler and readers by enforcing immutability intent, and `in` can reduce copying for larger structs when you only need read access. The trade-off is that structs can improve locality and reduce allocations, but poor struct design can make performance and correctness worse than a class.",
+    "real_world": "Geometry, numerics, and parsing libraries often use structs successfully, but teams get burned when a large mutable struct starts bouncing around hot code paths and silently copying on every call.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What hidden copies can still happen with structs even if you try to pass them efficiently?"
+   },
+   {
+    "question": "What actually happens under the hood when you call a virtual method in C#, and when does that dispatch cost matter?",
+    "answer": "A virtual call usually goes through an indirection via the object's method table instead of a direct call target. That adds a small cost and, more importantly, can block some JIT optimizations like inlining unless the runtime can devirtualize from sealed types, exact type knowledge, or profile data. In most business code it is noise, but in hot loops or serializers it can show up because missed inlining often hurts more than the call itself. The trade-off is polymorphism and maintainability versus predictable code generation.",
+    "real_world": "Teams building high-throughput parsers or ORMs often find that replacing interface-heavy inner loops with sealed implementations or generic specialization removes a measurable CPU bottleneck.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do sealed classes, sealed overrides, and generic constraints affect the JIT's ability to devirtualize?"
+   },
+   {
+    "question": "How would you explain the allocation and execution costs of delegates and lambdas in C#, especially around captured state?",
+    "answer": "A non-capturing lambda can often be cached and behaves much like a static method reference, but a capturing lambda needs a compiler-generated closure object to hold captured variables. That means extra allocations and an extra indirection, which can be painful in hot paths or per-request code. Method group conversions and delegates themselves are also objects, so repeatedly creating them in loops can create GC pressure. The key question is whether you're on a cold path where expressiveness wins, or a hot path where avoiding captures matters.",
+    "real_world": "A common incident is a request pipeline allocating thousands of tiny closures per request from LINQ and callback registration, leading to higher Gen 0 churn and latency spikes under load.",
+    "code_lang": "csharp",
+    "code": "int x = 5;\nFunc<int> a = () => 42;   // non-capturing\nFunc<int> b = () => x;    // captures x\n\nfor (int i = 0; i < 1000; i++)\n{\n    _ = b();\n}",
+    "follow_up": "What coding patterns do you use to remove accidental captures without making the code unreadable?"
+   },
+   {
+    "question": "What are the semantics of static constructors in C#, and what production problems can they cause?",
+    "answer": "A type initializer runs once per type before first use, and the runtime guarantees that initialization is thread-safe. If it throws, the type is considered failed and later accesses typically keep failing with a type initialization error, which makes the failure sticky for the process lifetime. Static constructors also serialize first access and can create startup stalls or deadlocks if they do blocking work. They are best kept trivial and side-effect free.",
+    "real_world": "I've seen services fail every request after one bad config read in a static constructor because the affected helper type could never initialize again until the process restarted.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does the beforefieldinit behavior change initialization timing, and why should you avoid depending on it?"
+   },
+   {
+    "question": "When would you use ArrayPool<T> or ObjectPool<T> in C#, and what are the main correctness risks?",
+    "answer": "Pooling helps when repeated allocations of large or frequent objects create GC pressure, especially buffers on hot paths. ArrayPool<T> is good for temporary buffers, while object pools can help for expensive reusable objects with clear reset semantics. The risks are data leakage if you return dirty buffers, use-after-return bugs, keeping oversized arrays alive too long, and contention if the pool becomes a bottleneck. Pooling is a performance optimization, not a default design choice.",
+    "real_world": "Network services often rent byte arrays for request parsing; a missed clear or double return can leak one customer's data into another request or cause subtle corruption.",
+    "code_lang": "csharp",
+    "code": "var pool = ArrayPool<byte>.Shared;\nbyte[] buffer = pool.Rent(4096);\ntry\n{\n    int n = stream.Read(buffer, 0, buffer.Length);\n}\nfinally\n{\n    pool.Return(buffer, clearArray: true);\n}",
+    "follow_up": "How would you decide between pooling, stackalloc, and just allocating normally for temporary buffers?"
+   },
+   {
+    "question": "How do expression trees differ from delegates in C#, and why does that distinction matter in architecture and performance?",
+    "answer": "A delegate is executable code, while an expression tree is a data structure describing code. That means a delegate runs locally, but an expression tree can be inspected, transformed, or translated, which is why ORMs use it to convert predicates into SQL. The costs are higher construction and compilation overhead, plus restricted language support compared with arbitrary C# code. Architecturally, exposing expression trees ties your API to query providers and translation rules.",
+    "real_world": "A repository API that takes Func<T,bool> forces in-memory filtering, while Expression<Func<T,bool>> lets EF translate it to SQL; getting this wrong can turn one indexed query into a full table read in the app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are some common cases where an expression compiles in C# but a LINQ provider still cannot translate it?"
+   },
+   {
+    "question": "What is the difference between covariance and contravariance in C# generics and delegates, and where do people get burned by it?",
+    "answer": "Covariance lets you use a more derived type where a less derived one is expected, typically for outputs like IEnumerable<Derived> to IEnumerable<Base>. Contravariance goes the other way for inputs, like assigning an Action<Base> where Action<Derived> is expected because it can handle any derived instance. Variance only works on interfaces and delegates marked for it, and only in reference type positions that are safe. People get burned by assuming mutable collections should be variant; they are not, because that would break type safety.",
+    "real_world": "API design often benefits from returning covariant read-only abstractions, but accepting mutable variant types would allow inserting the wrong runtime type and corrupting state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is IReadOnlyList<Derived> assignable to IReadOnlyList<Base> but List<Derived> is not assignable to List<Base>?"
+   },
+   {
+    "question": "How do you think about reflection performance in modern C#, and when do you replace it with source generation or compiled accessors?",
+    "answer": "Reflection is fine for startup, tooling, and occasional code paths, but repeated member lookup and invocation in hot paths is expensive because it bypasses normal static dispatch and often involves boxing or argument arrays. The usual mitigation is caching metadata and, if needed, compiling delegates or emitted accessors once and reusing them. Source generation pushes even more work to build time, giving strong typing and less startup overhead at the cost of extra build complexity. The right choice depends on whether the workload is plugin-like and dynamic or fixed and performance-sensitive.",
+    "real_world": "Serializers and mappers often start with reflection, then move to cached delegates or source generators when p99 latency shows reflection-heavy request paths burning CPU.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What trade-offs would make you choose source generators over runtime reflection in a library?"
+   },
+   {
+    "question": "What are the main internals and trade-offs of string interning in C#, and when can it become a problem?",
+    "answer": "Interning stores one canonical instance for equal strings so identical interned strings can share memory and compare by reference. Literal strings are commonly interned by the runtime, and you can intern dynamically created strings too, but that global table tends to keep entries alive for a long time. That can save allocations for a small, repeated vocabulary, but it can also create memory retention if you intern unbounded user data. It's a niche optimization, not a general string performance strategy.",
+    "real_world": "A service that interns request IDs or user-controlled tokens can steadily grow memory usage because those strings remain reachable through the intern table far longer than expected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need deduplication for a bounded set of hot strings, what alternatives would you consider before calling String.Intern?"
+   },
+   {
+    "question": "How do constrained calls and interface dispatch on structs affect performance and boxing in C#?",
+    "answer": "When a value type is used through an interface or as object, it often boxes, creating a heap allocation and copying the value. But in generic code with suitable constraints, the compiler and runtime can emit constrained calls that invoke interface or virtual members on the struct without boxing. This is a big reason generic APIs can outperform object-based abstractions for value types. The edge case is that a small signature change, like losing the generic constraint or upcasting, can silently reintroduce boxing.",
+    "real_world": "Numeric libraries and high-frequency parsers can regress badly when a hot generic path starts treating structs as interfaces, because allocations appear where the team expected stack-only behavior.",
+    "code_lang": "csharp",
+    "code": "static string Format<T>(T value) where T : IFormattable\n    => value.ToString(null, null); // can avoid boxing\n\nIFormattable x = 42;               // boxes int\nstring s = x.ToString(null, null);",
+    "follow_up": "How would you detect accidental boxing of value types in a hot path during a performance investigation?"
+   },
+   {
+    "question": "What are the risks of exposing mutable state through properties or collections in C# APIs, and how do you design around them at scale?",
+    "answer": "Exposing mutable internals breaks encapsulation, makes invariants harder to enforce, and introduces aliasing bugs where outside code mutates state behind your back. In concurrent systems it gets worse because readers may observe torn or inconsistent object graphs unless updates are coordinated. The usual design is immutable types, defensive copies where needed, or exposing read-only views while controlling mutation through methods that preserve invariants. The trade-off is extra copying or more deliberate APIs versus lower incident risk.",
+    "real_world": "A common production bug is a cached configuration object exposing a mutable dictionary; one component mutates it at runtime and unrelated requests start behaving differently across threads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is returning IReadOnlyList<T> enough, and when do you need a true immutable collection or copy-on-write design?"
+   }
+  ]
+ }
+}

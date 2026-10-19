@@ -1,0 +1,469 @@
+{
+ "slug": "scala",
+ "name": "Scala",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a `val`, a `var`, and a `def` in Scala?",
+    "answer": "A `val` is an immutable reference assigned once, a `var` is a mutable reference you can reassign, and a `def` defines a method that is evaluated when called. Use `val` by default because it makes code easier to reason about. Use `var` only when you really need reassignment, and `def` when you want computed behavior or parameters.",
+    "real_world": "In reviews, `var` often hides state changes that make bugs hard to trace. Using `val` for most bindings helps keep service code predictable and thread-safe by default.",
+    "code_lang": "scala",
+    "code": "val x = 10\n// x = 11 // does not compile\nvar y = 10\ny = 11\ndef sum(a: Int, b: Int) = a + b",
+    "follow_up": "When would you choose a `def` over a `val` that holds a function?"
+   },
+   {
+    "question": "What is an `Option` in Scala, and why is it used instead of `null`?",
+    "answer": "`Option` represents a value that may be present or absent, with `Some(value)` and `None`. It makes missing data explicit and forces you to handle the empty case instead of risking a `NullPointerException`. You typically use it for optional return values and fields that may not exist.",
+    "real_world": "A database lookup may not find a row, and returning `Option` makes that absence part of the type. That pushes callers to handle the not-found case instead of discovering it at runtime.",
+    "code_lang": "scala",
+    "code": "def findUser(id: Int): Option[String] =\n  if (id == 1) Some(\"Alice\") else None\n\nfindUser(2).getOrElse(\"unknown\")",
+    "follow_up": "What is the difference between `getOrElse`, `map`, and `flatMap` on `Option`?"
+   },
+   {
+    "question": "How does pattern matching work in Scala?",
+    "answer": "Pattern matching lets you inspect a value and choose code based on its shape or content. It is similar to a switch statement, but much more powerful because it works with case classes, collections, and nested structures. It is commonly used with `Option`, `Either`, and algebraic data types.",
+    "real_world": "Pattern matching is often used in parsers and message handlers, where different input shapes need different handling. It also reduces a lot of fragile `if`/`else` chains.",
+    "code_lang": "scala",
+    "code": "val result: Option[Int] = Some(5)\nresult match {\n  case Some(n) => n + 1\n  case None    => 0\n}",
+    "follow_up": "What happens if none of the cases match?"
+   },
+   {
+    "question": "What is a case class, and when would you use one?",
+    "answer": "A case class is a small immutable data type that Scala generates useful methods for, such as `equals`, `hashCode`, `toString`, and `copy`. It is a good choice for modeling data that mainly stores values. Case classes also work naturally with pattern matching.",
+    "real_world": "Teams often use case classes for domain objects, API payloads, and events because they are concise and behave well in collections and tests. They reduce boilerplate compared with regular classes.",
+    "code_lang": "scala",
+    "code": "case class User(name: String, age: Int)\nval u1 = User(\"Ana\", 30)\nval u2 = u1.copy(age = 31)",
+    "follow_up": "How is a case class different from a regular class?"
+   },
+   {
+    "question": "What does immutability mean in Scala, and why is it encouraged?",
+    "answer": "Immutability means a value cannot be changed after it is created. Scala encourages it because immutable code is easier to test, easier to share across threads, and less likely to produce surprising side effects. When you need a different value, you create a new one, often with `copy` on a case class.",
+    "real_world": "In concurrent services, mutable shared state is a common source of race conditions. Immutable data makes it much safer to pass objects between threads or across async boundaries.",
+    "code_lang": "scala",
+    "code": "case class Counter(n: Int)\nval c1 = Counter(1)\nval c2 = c1.copy(n = c1.n + 1)",
+    "follow_up": "If Scala favors immutability, when is mutation still acceptable?"
+   },
+   {
+    "question": "What is a `for` comprehension in Scala?",
+    "answer": "A `for` comprehension is syntax that makes working with collections or monadic types like `Option` easier to read. It can express mapping, filtering, and chaining in a linear style. Under the hood, it usually translates to methods like `map`, `flatMap`, and `withFilter`.",
+    "real_world": "It is useful when several steps can each fail or return multiple results, and you want the code to read top to bottom. This often makes nested callbacks or nested `flatMap` chains easier to understand.",
+    "code_lang": "scala",
+    "code": "val result = for {\n  a <- Option(1)\n  b <- Option(2)\n} yield a + b",
+    "follow_up": "What methods must a type provide to be used in a `for` comprehension?"
+   },
+   {
+    "question": "What is the difference between `map` and `flatMap`?",
+    "answer": "`map` transforms each element or value and keeps the same outer structure. `flatMap` also transforms, but it flattens one level when the transform already returns a wrapped value like `Option` or a collection. Use `map` for one-to-one transformations and `flatMap` when you want to chain operations that may themselves return wrapped results.",
+    "real_world": "This comes up constantly when combining optional values or nested collections. Choosing `map` when you need `flatMap` often gives you an extra layer like `Option[Option[T]]`.",
+    "code_lang": "scala",
+    "code": "Option(1).map(_ + 1)      // Some(2)\nOption(1).flatMap(x => Some(x + 1)) // Some(2)",
+    "follow_up": "Can you give an example where `map` produces the wrong shape?"
+   },
+   {
+    "question": "What is a trait in Scala, and how is it different from an interface?",
+    "answer": "A trait is a reusable unit of behavior that classes can mix in. Compared with a Java interface, a trait can include concrete methods and shared implementation, not just abstract declarations. Use traits to model capabilities or cross-cutting behavior, like logging or serialization support.",
+    "real_world": "Traits are common for sharing logic across many classes without inheritance from a single base class. They help keep class hierarchies flatter and reduce duplicated code.",
+    "code_lang": "scala",
+    "code": "trait Logger {\n  def log(msg: String): Unit = println(msg)\n}\nclass Service extends Logger",
+    "follow_up": "What is mixin composition, and what can go wrong with trait order?"
+   },
+   {
+    "question": "What are the main collection types a beginner should know in Scala?",
+    "answer": "The core ones are `List`, `Vector`, `Set`, and `Map`. `List` is good for head/tail style access and simple immutable sequences, `Vector` is a general-purpose indexed sequence, `Set` stores unique values, and `Map` stores key-value pairs. Knowing which shape fits your data matters more than memorizing every collection type.",
+    "real_world": "A common bug is using the wrong collection and then fighting the API or performance characteristics later. Picking `Map` for lookups and `Set` for uniqueness often makes code simpler and clearer.",
+    "code_lang": "scala",
+    "code": "val names = List(\"a\", \"b\")\nval uniq = Set(1, 1, 2)\nval ages = Map(\"Ana\" -> 30)",
+    "follow_up": "When would you choose `Vector` over `List`?"
+   },
+   {
+    "question": "How do you define a class in Scala, and what does a constructor look like?",
+    "answer": "A class is defined with the `class` keyword, and the constructor parameters can appear right in the class header. Those parameters become part of construction, and if you want them as fields, you mark them with `val` or `var`. Scala also lets you put initialization code directly in the class body. This matters because Scala often combines declaration and construction more compactly than Java.",
+    "real_world": "You use this when modeling a domain object like a `User` or `Order`. A junior mistake is forgetting that plain constructor parameters are not accessible as fields unless they are marked `val` or `var`.",
+    "code_lang": "scala",
+    "code": "class User(val name: String, age: Int) {\n  println(s\"Creating $name\")\n}\nval u = new User(\"Ava\", 30)\nprintln(u.name)",
+    "follow_up": "What is the difference between a class and a companion object?"
+   },
+   {
+    "question": "What is an `object` in Scala?",
+    "answer": "An `object` is a singleton, meaning there is exactly one instance of it. It is commonly used for utility methods, constants, and the program entry point with `main`. It is different from a class because you do not create it with `new`. This is useful when state or behavior should be shared globally and not duplicated per instance.",
+    "real_world": "Teams use objects for helpers like formatters or configuration access. A common beginner bug is trying to instantiate an object with `new`, or putting mutable shared state in an object without thinking about concurrency.",
+    "code_lang": "scala",
+    "code": "object MathUtil {\n  def double(x: Int): Int = x * 2\n}\nprintln(MathUtil.double(5))",
+    "follow_up": "What is a companion object, and why is it useful?"
+   },
+   {
+    "question": "When would you use `match` versus an `if` expression in Scala?",
+    "answer": "Use `if` for a simple boolean branch, and `match` when you want to branch on several possible shapes or values. `match` is more readable when you need to handle multiple cases, especially with sealed hierarchies or collections. Scala will also warn you in some cases if the match is not exhaustive. The trade-off is that `match` is more powerful, but a simple `if` is clearer for one condition.",
+    "real_world": "This comes up when decoding API responses or handling different message types. A common production bug is forgetting a case in a `match`, which can cause a runtime `MatchError`.",
+    "code_lang": "scala",
+    "code": "val n = 2\nval result = n match {\n  case 1 => \"one\"\n  case 2 => \"two\"\n  case _ => \"other\"\n}\nprintln(result)",
+    "follow_up": "What makes a `match` exhaustive, and why does that matter?"
+   },
+   {
+    "question": "What is the purpose of a `sealed trait` in Scala?",
+    "answer": "A `sealed trait` limits which classes can extend it to the same source file. That makes the set of possible subtypes known at compile time, which helps the compiler check pattern matches for exhaustiveness. It is often used to model a closed set of domain states or messages. The key benefit is safer pattern matching and clearer modeling.",
+    "real_world": "A team might model payment states like `Pending`, `Paid`, and `Failed` this way. If a new state is added later, the compiler can point out places that need updating instead of letting a branch fail at runtime.",
+    "code_lang": "scala",
+    "code": "sealed trait Status\ncase object Open extends Status\ncase object Closed extends Status\n\ndef show(s: Status) = s match {\n  case Open => \"open\"\n  case Closed => \"closed\"\n}",
+    "follow_up": "Why would you choose `case object` instead of `case class` here?"
+   },
+   {
+    "question": "What is a Scala package, and why do you use one?",
+    "answer": "A package is a namespace for organizing code and avoiding name collisions. It helps group related classes, objects, and traits by feature or layer. In larger codebases, packages make imports clearer and code easier to navigate. The main trade-off is structure: too many tiny packages can become harder to manage than they help.",
+    "real_world": "In a service with many teams, packages keep `auth`, `billing`, and `api` code separate. Without them, two classes with the same name can collide and imports become confusing.",
+    "code_lang": "scala",
+    "code": "package com.example.api\n\nclass Controller\n\nimport com.example.api.Controller\nval c = new Controller",
+    "follow_up": "How do imports work in Scala, and what is wildcard import?"
+   },
+   {
+    "question": "What does `return` do in Scala, and should you use it?",
+    "answer": "`return` exits from the current named method immediately, but it is usually not idiomatic Scala. Most Scala code relies on the value of the last expression instead. Using `return` can make code harder to read and can interact poorly with higher-order functions. A junior should learn to write expression-oriented code first.",
+    "real_world": "You may see `return` in code translated from Java or written by newcomers. In callbacks or collections code, using `return` can be especially confusing because it may not behave like a simple loop exit.",
+    "code_lang": "scala",
+    "code": "def sign(x: Int): String = {\n  if (x > 0) \"positive\"\n  else if (x < 0) \"negative\"\n  else \"zero\"\n}",
+    "follow_up": "How does Scala decide the value of a block?"
+   },
+   {
+    "question": "What is a type annotation in Scala, and when is it useful?",
+    "answer": "A type annotation explicitly states the type of a value, parameter, or return value. Scala often infers types, but annotations are useful for public APIs, readability, and catching mistakes earlier. They are especially helpful on method results and complex expressions where inference is harder to read. The trade-off is a bit more verbosity for better clarity and maintainability.",
+    "real_world": "Teams add annotations to service methods so the contract is obvious to readers and IDEs. A common beginner issue is relying on inference in places where the compiler picks a narrower or less obvious type than expected.",
+    "code_lang": "scala",
+    "code": "val count: Int = 3\ndef greet(name: String): String = s\"Hi, $name\"\nprintln(greet(\"Sam\"))",
+    "follow_up": "When can type inference make code harder to understand?"
+   },
+   {
+    "question": "What is a collection method like `foreach`, and how is it different from `map`?",
+    "answer": "`foreach` is used for side effects and returns `Unit`, while `map` transforms each element and returns a new collection. If you want to produce a new list, use `map`; if you just want to print, log, or update something external, use `foreach`. Choosing the wrong one is a common beginner mistake because the code may compile but not do what you expect. This distinction helps keep transformation code separate from effectful code.",
+    "real_world": "You might use `map` to convert raw rows into domain objects, and `foreach` to write metrics or logs. A bug often shows up when someone uses `foreach` expecting a returned collection and gets `Unit` instead.",
+    "code_lang": "scala",
+    "code": "val nums = List(1, 2, 3)\nval doubled = nums.map(_ * 2)\nnums.foreach(println)\nprintln(doubled)",
+    "follow_up": "What is the return type of `foreach`, and why does that matter?"
+   },
+   {
+    "question": "What does `try`/`catch` do in Scala, and how is it typically used?",
+    "answer": "`try`/`catch` handles exceptions by running fallback code when an error is thrown. In Scala it is an expression, so it produces a value like any other block. You usually use it around code that can fail with exceptions from I/O, parsing, or libraries that do not return safe error types. The trade-off is that exceptions are best for exceptional failures, not normal control flow.",
+    "real_world": "This matters when reading files or parsing user input from a legacy API. A junior mistake is catching very broad exceptions and hiding the real problem instead of handling it or letting it fail fast.",
+    "code_lang": "scala",
+    "code": "val n = try {\n  \"42\".toInt\n} catch {\n  case _: NumberFormatException => 0\n}\nprintln(n)",
+    "follow_up": "When would you prefer `Option` or `Either` over exceptions?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do `Seq`, `List`, and `Vector` differ in Scala, and how do you choose between them in real code?",
+    "answer": "`List` is optimized for fast prepending and recursive processing, while `Vector` gives more balanced indexed access and updates. `Seq` is usually the abstract type you program against when you want to hide the concrete collection choice. In practice, pick the type based on the dominant operation: building at the front, random access, or generic sequence processing. If you need predictable performance under mixed access patterns, `Vector` is often the safer default than `List`.",
+    "real_world": "This matters when a team rewrites a service that processes large batches and suddenly sees slow indexing on a `List`. Choosing the wrong concrete collection can turn a harmless-looking loop into a performance hotspot.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What performance trade-offs matter when you convert between strict collections and lazy collections?"
+   },
+   {
+    "question": "How do higher-order functions show up in Scala code you’d write at work?",
+    "answer": "A higher-order function takes a function as an argument or returns one, which lets you separate the algorithm from the behavior it applies. In Scala this is common in collection operations, retry logic, validation, and middleware-style code. The main benefit is reuse and composability, but it can make control flow less explicit if overused. Good API design usually keeps the function argument small and focused.",
+    "real_world": "This is common in request processing pipelines, where the same wrapper handles timing, logging, or retries around many different business actions. It also appears in tests when you inject a function to avoid hitting real dependencies.",
+    "code_lang": "scala",
+    "code": "def withTiming[A](name: String)(op: => A): A = {\n  val start = System.nanoTime()\n  try op finally println(s\"$name took ${System.nanoTime() - start}\")\n}",
+    "follow_up": "How do function literals and method values differ when passing behavior around?"
+   },
+   {
+    "question": "What is the point of a companion object, and what can it do that the class itself cannot?",
+    "answer": "A companion object is an object with the same name as a class, defined in the same file. It is commonly used for factory methods, constants, and helper methods that should feel attached to the type. It also has access to the class’s private members, which makes it useful for controlled construction and parsing. The trade-off is that putting too much logic there can turn it into a grab bag instead of a clean API entry point.",
+    "real_world": "This is useful when a service needs a safe `fromString` or `parse` method and you want all construction to go through validation. It also helps keep public constructors small while preserving easy call sites.",
+    "code_lang": "scala",
+    "code": "final case class User private (name: String)\nobject User {\n  def from(name: String): Option[User] =\n    Option(name).filter(_.nonEmpty).map(new User(_))\n}",
+    "follow_up": "How does this interact with case class `apply` and `copy` generation?"
+   },
+   {
+    "question": "How do implicit parameters or given instances help in Scala, and what problems do they solve?",
+    "answer": "They let you pass contextual dependencies without threading them through every call site manually. Common uses include typeclass-style behavior, formatting, execution contexts, and configuration. They reduce boilerplate, but they can also make code harder to read because the real dependency is not obvious from the call. In larger codebases, that trade-off is usually worth it only when the context is genuinely cross-cutting and stable.",
+    "real_world": "Teams use this pattern for JSON encoders, loggers, and database execution contexts. A production issue often appears when the wrong implicit instance is in scope and code compiles but behaves differently than expected.",
+    "code_lang": "scala",
+    "code": "def printValue[A](a: A)(using show: Show[A]): String = show.show(a)\ntrait Show[A] { def show(a: A): String }\ngiven Show[Int] with { def show(a: Int) = a.toString }",
+    "follow_up": "How do you avoid implicit resolution surprises in a larger module?"
+   },
+   {
+    "question": "What happens if you pattern match on a case class and forget a possible shape of the data?",
+    "answer": "Scala will compile the match, but if the missing case occurs at runtime you get a `MatchError`. The risk is lower when the matched type is sealed, because the compiler can warn about non-exhaustive matches. In real code, that warning is important because it often catches future regressions when someone adds a new subtype or input form. The safe approach is to cover all known cases or provide a fallback only when it is truly correct.",
+    "real_world": "This shows up in event processing and protocol handlers, where a new message type is introduced and an old match silently misses it until production traffic hits it. Exhaustiveness warnings are one of the cheapest ways to prevent that class of outage.",
+    "code_lang": "scala",
+    "code": "sealed trait Msg\ncase class Text(s: String) extends Msg\ncase object Ping extends Msg\n\ndef handle(m: Msg) = m match {\n  case Text(s) => s\n  case Ping    => \"pong\"\n}",
+    "follow_up": "What changes if the trait is not sealed?"
+   },
+   {
+    "question": "How do `Future` and `Try` differ, and when would you use each?",
+    "answer": "`Try` represents a synchronous computation that may fail with an exception, while `Future` represents a computation that completes later, usually asynchronously. Use `Try` for immediate work like parsing or local validation, and `Future` when you are waiting on I/O or scheduling work off-thread. A common mistake is to wrap blocking code in `Future` without addressing the blocking itself, which can harm throughput. Another is to use exceptions for expected control flow when a typed result would be clearer.",
+    "real_world": "This matters when a service does input parsing before calling downstream systems, or when it chains multiple remote requests. Mixing synchronous failures and asynchronous failures without a clear boundary makes debugging much harder.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you compose multiple `Future`s without creating callback nesting?"
+   },
+   {
+    "question": "What is the difference between `lazy val` and a normal `val`, and what should you watch out for?",
+    "answer": "A normal `val` is evaluated when the instance or object is initialized, while a `lazy val` is evaluated on first access and then cached. This is useful for expensive initialization or breaking some initialization cycles. The trade-off is extra overhead on access and more subtle initialization behavior, especially if the value depends on other partially initialized members. In multithreaded code, the initialization semantics matter, so you should use it deliberately rather than by default.",
+    "real_world": "Teams use this for heavyweight clients, regexes, or derived configuration that may never be needed in a given process path. It can also hide initialization-order bugs that only appear during startup or in tests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kind of initialization bugs can happen with abstract members and object construction?"
+   },
+   {
+    "question": "How do you write a custom `equals` and `hashCode` correctly in Scala, and why does it matter?",
+    "answer": "If you override equality, it must stay consistent with hashing so objects behave correctly in hash-based collections like `HashSet` and `HashMap`. In practice, many Scala classes should just use case classes, which generate sensible structural equality and hashing for you. When you do it manually, be careful to compare the same fields in both methods and preserve the equality contract. Getting this wrong causes hard-to-debug lookup failures and duplicate entries.",
+    "real_world": "This often appears when a team adds a domain class to a cache or set and later finds duplicate keys or missing lookups. The bug can look random because it depends on hash bucket placement.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would identity equality be preferable to structural equality?"
+   },
+   {
+    "question": "How do you test Scala code that uses a lot of collections and pure functions?",
+    "answer": "Start by testing the behavior of the function, not the implementation details, and prefer small input/output examples plus edge cases. For pure code, property-style tests are often useful because they check invariants across many inputs instead of a few hand-picked ones. For collection-heavy code, verify ordering, empties, duplicates, and boundary conditions explicitly because those are common sources of regressions. The main trade-off is between exact example tests, which are easy to read, and broader property tests, which catch more cases.",
+    "real_world": "This matters in business logic that transforms records, aggregates metrics, or filters events. A small missed edge case in a collection pipeline can silently drop data or double-count it in production.",
+    "code_lang": "scala",
+    "code": "def total(xs: List[Int]): Int = xs.sum\nassert(total(Nil) == 0)\nassert(total(List(1, 2, 3)) == 6)",
+    "follow_up": "How would you test code that depends on time, randomness, or external services?"
+   },
+   {
+    "question": "How do you decide between using a Scala `List`, `Vector`, or `ArrayBuffer` in real code?",
+    "answer": "Choose based on access and update patterns. `List` is efficient for prepending and recursive processing, `Vector` gives near-constant-time indexed access with good general-purpose performance, and `ArrayBuffer` is for mutable, append-heavy workflows. The trade-off is between immutability and mutation convenience, plus how often you need random access versus building a sequence. In application code, `Vector` is often a safer default for immutable collections.",
+    "real_world": "A batch job that keeps appending records usually performs better with an `ArrayBuffer` while building the data, then converts to an immutable collection before returning it. A service that reads items by index or slices them frequently tends to prefer `Vector` over `List`.",
+    "code_lang": "scala",
+    "code": "val xs = Vector(1, 2, 3)\nval ys = xs :+ 4\nval zs = 0 +: ys\n// xs is unchanged; ys and zs are new vectors",
+    "follow_up": "When would you avoid `Vector` and deliberately choose a mutable collection?"
+   },
+   {
+    "question": "What does `foldLeft` do, and how is it different from `reduce`?",
+    "answer": "`foldLeft` combines elements with an explicit starting value, so it works on empty collections and makes the result type predictable. `reduce` has no seed, so it uses the first element as the initial accumulator and fails on an empty collection. In practice, `foldLeft` is safer and more flexible, especially when the output type differs from the input type. Use `reduce` only when you know the collection is non-empty and the operation naturally combines same-typed values.",
+    "real_world": "Summing totals, building strings, or constructing aggregate objects in production code often uses `foldLeft` because an empty input should still produce a valid result. A `reduce` on an occasionally empty dataset is a common source of runtime failures.",
+    "code_lang": "scala",
+    "code": "val nums = List(1, 2, 3)\nval sum = nums.foldLeft(0)(_ + _)\nval product = nums.reduce(_ * _)\n// product would throw if nums were empty",
+    "follow_up": "How would you use `foldLeft` to build a non-numeric result, like a map or a string?"
+   },
+   {
+    "question": "What are `Option`, `Some`, and `None`, and how do you use them safely in real code?",
+    "answer": "`Option` represents a value that may be present or absent without using `null`. `Some(value)` means present and `None` means missing, and you should usually transform it with `map`, `flatMap`, `getOrElse`, or pattern matching instead of calling `get`. This keeps absence explicit in the type system and makes APIs easier to reason about. The main trade-off is a little more wrapping and unwrapping, but fewer null-related bugs.",
+    "real_world": "Database lookups, request parameters, and cache reads often return missing values. Using `Option` at the boundaries forces callers to handle absence instead of discovering it later as a null pointer bug.",
+    "code_lang": "scala",
+    "code": "def parsePort(s: String): Option[Int] =\n  s.toIntOption\n\nval port = parsePort(sys.env.getOrElse(\"PORT\", \"8080\")).getOrElse(8080)",
+    "follow_up": "When would you choose `Either` instead of `Option`?"
+   },
+   {
+    "question": "How do you decide between `Option` and `Either` in an API design?",
+    "answer": "Use `Option` when there is one meaningful success value and absence is enough to describe failure. Use `Either` when you need to carry error information, distinguish failure reasons, or propagate domain-specific errors through the call chain. `Option` is simpler, but it hides why something failed. `Either` is more explicit and usually better for service and validation code where errors matter.",
+    "real_world": "A lookup service might return `Option[User]`, but a validation pipeline often needs `Either[ValidationError, User]` so logs, metrics, and API responses can explain what went wrong.",
+    "code_lang": "scala",
+    "code": "def lookup(id: String): Option[String] = ???\ndef validate(id: String): Either[String, String] = ???\n\nlookup(\"1\").map(_.toUpperCase)\nvalidate(\"1\").map(_.toUpperCase)",
+    "follow_up": "How do you compose multiple `Either`-returning steps without writing nested matches?"
+   },
+   {
+    "question": "What is a `Future`, and what are the common mistakes people make when using it?",
+    "answer": "A `Future` represents a computation that may complete later with a success or failure. The main mistakes are blocking on it, using the wrong execution context for blocking work, and assuming `Future` preserves strict ordering when you chain side effects. It is useful for composing asynchronous work, but it is not a replacement for proper backpressure or streaming when you have many tasks. You should also be careful that work starts when the `Future` is created, not when it is awaited.",
+    "real_world": "In services, a common bug is calling blocking database or HTTP code inside a default execution context and then seeing thread starvation under load. Another is starting a `Future` too early and triggering side effects before validation passes.",
+    "code_lang": "scala",
+    "code": "import scala.concurrent.Future\n\ndef fetchUser(id: String): Future[String] =\n  Future { \"user-\" + id }\n\nval f = fetchUser(\"42\")",
+    "follow_up": "How do you combine several `Future`s and handle partial failure?"
+   },
+   {
+    "question": "What is the difference between `map`, `foreach`, and `flatMap` on collections or other containers?",
+    "answer": "`map` transforms each element and returns a new container with the results. `foreach` is for side effects and returns `Unit`, so it is not meant for building a new value. `flatMap` is for when the transformation already produces a container and you want the nesting removed. Choosing the right one keeps types honest and avoids extra wrapping or accidental discarded results.",
+    "real_world": "Using `map` for logging or database writes is a common bug because the returned collection is ignored and the side effect is not the purpose of the call. In review, `foreach` makes the intent much clearer.",
+    "code_lang": "scala",
+    "code": "val names = List(\"a\", \"bb\")\nval lengths = names.map(_.length)\nnames.foreach(println)\nval chars = names.flatMap(_.toList)",
+    "follow_up": "What happens if you use `map` for a side effect and never consume the result?"
+   },
+   {
+    "question": "How does Scala infer types in higher-order functions, and when do you add annotations anyway?",
+    "answer": "Scala often infers parameter and return types in small expressions, especially in lambdas and local values. You add annotations when inference becomes ambiguous, when public APIs need stable readability, or when you want the compiler to catch a mistaken broader type early. In recursive methods, annotations are often required for the compiler to typecheck the definition cleanly. The trade-off is less verbosity versus clearer contracts and sometimes better error messages.",
+    "real_world": "In a shared library, explicit return types prevent accidental API changes when an implementation changes internally. In a recursive parser or tree walk, missing annotations can make the code harder to compile and debug.",
+    "code_lang": "scala",
+    "code": "def total(xs: List[Int]): Int =\n  xs.foldLeft(0)((acc, x) => acc + x)\n\nval add = (a: Int, b: Int) => a + b",
+    "follow_up": "When would you annotate a local value even if the compiler can infer it?"
+   },
+   {
+    "question": "What is the purpose of `given` and `using` in Scala, and what problem do they solve better than passing everything explicitly?",
+    "answer": "They let you pass contextual dependencies implicitly through type-driven resolution, such as formatting, ordering, or configuration. This reduces boilerplate when many methods need the same dependency, but the dependency still remains typed and visible at the call site if you look for it. The trade-off is that overusing context can make control flow harder to follow, so it works best for truly ambient, cross-cutting values. It is especially useful for typeclass-style APIs.",
+    "real_world": "Formatting logs, serializing values, and sorting custom domain objects often need the same reusable behavior in many places. A shared `given` keeps call sites clean without hard-coding a global singleton.",
+    "code_lang": "scala",
+    "code": "given Ordering[Int] = Ordering.Int\n\nval xs = List(3, 1, 2)\nval sorted = xs.sorted",
+    "follow_up": "How would you test code that relies on a `given` rather than a direct parameter?"
+   },
+   {
+    "question": "What is a trait mixin, and what can go wrong when multiple traits define the same method?",
+    "answer": "Traits can be mixed into a class to compose behavior without deep inheritance. If multiple traits define the same method, Scala uses linearization to choose which implementation wins, and you may need `super` calls in traits to explicitly layer behavior. This is powerful for reusable cross-cutting concerns like logging or metrics, but it can also make control flow subtle if several traits override the same method. Good design keeps trait stacks shallow and behavior well documented.",
+    "real_world": "Teams often use traits for tracing, metrics, or authorization wrappers around services. Bugs appear when the mixin order changes and one trait silently overrides another’s behavior.",
+    "code_lang": "scala",
+    "code": "trait A { def name = \"A\" }\ntrait B extends A { override def name = \"B\" }\nclass C extends A with B\n\nval c = new C\n// c.name is \"B\"",
+    "follow_up": "When would you prefer composition over trait mixins?"
+   },
+   {
+    "question": "How would you debug a `MatchError` or a `ClassCastException` in Scala code that uses pattern matching?",
+    "answer": "Start by checking whether the match is exhaustive for the runtime shapes you actually receive. `MatchError` usually means a missing case or an assumption about the data shape that is not always true, while `ClassCastException` often points to unsafe casting or erased generic types. Add safer patterns, use sealed ADTs where possible, and write tests for the unexpected inputs that production can actually produce. The goal is to move the failure from runtime to compile time or at least make it explicit.",
+    "real_world": "In event processing, malformed or newly added message variants can cause a service to crash only in production. Making the domain sealed and covering the fallback case prevents that class of outage.",
+    "code_lang": "scala",
+    "code": "def render(x: Any): String = x match {\n  case s: String => s\n  case i: Int    => i.toString\n  case _         => \"unknown\"\n}",
+    "follow_up": "How would you design the domain model so you do not need a wildcard fallback?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how the Scala compiler implements closures, and what that means for allocation and performance on the JVM?",
+    "answer": "A closure becomes an object that captures referenced variables from its surrounding scope. If it captures nothing, the JVM can often reuse a singleton or optimize aggressively; if it captures values, each closure creation may allocate and keep those objects alive longer. In hot code, that can mean extra heap churn, more GC pressure, and accidental retention of large structures through a tiny lambda. I watch for closures created inside tight loops and for methods that capture `this`, because that often widens object lifetimes.",
+    "real_world": "A common production issue is a streaming job creating millions of tiny lambdas per batch and suddenly spending most of its time in GC. Another is a callback capturing a large service object, preventing expected memory release.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What techniques would you use to reduce closure-related allocations without making the code unreadable?"
+   },
+   {
+    "question": "What are value classes in Scala, and where do they help or fail to remove allocation?",
+    "answer": "A value class is a wrapper around a single value intended to add type safety without always paying for a wrapper object at runtime. They can help for domain types like `UserId`, but erasure, boxing, generic use, arrays, pattern matching, or treating them as another type can reintroduce allocation. The key trade-off is readability and type safety versus relying on optimization rules that are context-dependent. I use them carefully and verify with profiling or bytecode inspection rather than assuming they're free.",
+    "real_world": "Teams often introduce tiny domain wrappers expecting zero runtime cost, then discover hot paths still allocate because those values flow through generic APIs or collections. That matters in serialization, parsing, and request fan-out code.",
+    "code_lang": "scala",
+    "code": "class UserId(val value: Long) extends AnyVal\n\ndef load(id: UserId): Long = id.value\nval ids = List(new UserId(1), new UserId(2))\n",
+    "follow_up": "How would opaque types in Scala 3 change that design choice?"
+   },
+   {
+    "question": "How does type erasure affect Scala code in practice, especially with pattern matching and generic APIs?",
+    "answer": "On the JVM, most type arguments are erased at runtime, so `List[Int]` and `List[String]` are both just `List` to the matcher. That means some generic pattern matches only check the outer shape and can compile with warnings but behave unsafely later. It also affects overloading, reflection, and serializers that need full type information. In practice, if runtime type distinctions matter, I pass evidence explicitly or use a mechanism designed to carry type info instead of pretending generics are fully available at runtime.",
+    "real_world": "A classic bug is matching on `case xs: List[String]` and then getting a failure later when elements are used as strings. Data ingestion and JSON libraries hit this a lot if type metadata is missing.",
+    "code_lang": "scala",
+    "code": "def f(x: Any) = x match {\n  case xs: List[String] => xs.head.length\n  case _ => 0\n}\n\nf(List(1, 2, 3)) // compiles with warning; can fail at runtime\n",
+    "follow_up": "What tools or patterns do you use in Scala to preserve enough type information when you truly need it at runtime?"
+   },
+   {
+    "question": "What actually happens when you call `Future { ... }` in Scala, and why do execution context choices matter so much in production?",
+    "answer": "`Future { ... }` schedules the block on an `ExecutionContext`, usually backed by a thread pool, and the result is completed asynchronously. The big failure mode is mixing CPU-bound and blocking work on the same pool, which can starve unrelated tasks and create latency spikes or deadlocks under load. Another is assuming backpressure exists when it doesn't: `Future` starts eagerly, so a loop can flood the pool instantly. In production, pool isolation and clear rules for blocking calls matter more than the syntax.",
+    "real_world": "A service can look fine in staging and then collapse in production because JDBC calls were run on the default CPU pool, consuming threads and delaying all request futures. Tail latencies usually show the problem before average latency does.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure execution contexts for CPU-bound work, blocking I/O, and request timeouts in a real service?"
+   },
+   {
+    "question": "What are the memory and semantics differences between strict and lazy collections or views in Scala, and when do they backfire?",
+    "answer": "Strict collections compute intermediate results immediately and allocate each step, while views or lazy pipelines defer work and can avoid temporary collections. That can improve throughput for long transformation chains, but it also changes when side effects happen, can recompute work if reused incorrectly, and may retain references to the original source longer than expected. The trade-off is lower allocation versus less obvious execution behavior. I use laziness for clearly bounded pipelines and avoid it when deterministic timing or resource release matters.",
+    "real_world": "We've seen code switch to views to reduce allocations, then accidentally hold a large source collection in memory for much longer, causing heap growth. Another common bug is expecting a validation side effect to happen immediately when it only happens on consumption.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you profile whether intermediate collection allocation is actually your bottleneck before changing the design?"
+   },
+   {
+    "question": "How do tail recursion and trampolining relate in Scala, and what are the limits of `@tailrec` for stack safety?",
+    "answer": "`@tailrec` only works when the recursive call is in true tail position, so the compiler can rewrite it as a loop. Many elegant recursive patterns are not tail-recursive, especially when work remains after the call or when recursion alternates across functions. Trampolining or an explicit loop can recover stack safety, but often at some readability or allocation cost. For production code over unbounded inputs, I care less about elegance and more about proving stack safety under worst-case data.",
+    "real_world": "Recursive tree or parser code often passes tests on small inputs and then throws `StackOverflowError` on a real customer payload. That is especially nasty in batch jobs where one pathological record can kill the whole worker.",
+    "code_lang": "scala",
+    "code": "import scala.annotation.tailrec\n\n@tailrec\ndef loop(n: Int, acc: Long = 0): Long =\n  if (n <= 0) acc else loop(n - 1, acc + n)\n",
+    "follow_up": "Can you give an example of a recursive algorithm that looks close to tail-recursive but isn't, and how you'd rewrite it?"
+   },
+   {
+    "question": "What does specialization try to solve in Scala, and why doesn't it completely eliminate boxing costs in numeric code?",
+    "answer": "Specialization generates primitive-specific versions of generic code to avoid boxing values like `Int` and `Double`. It can help in tight numeric paths, but it increases code size, doesn't cover every usage pattern, and boxing can still reappear at abstraction boundaries such as generic collections, trait calls, or mixed-type APIs. So it is a targeted tool, not a universal performance switch. For serious numeric performance, I usually simplify abstractions first and then measure whether specialization actually moved the needle.",
+    "real_world": "Teams building scoring or analytics code often assume generic elegance is free, then find CPU time dominated by boxing and virtual dispatch. The fix is usually a smaller, more concrete hot path rather than sprinkling annotations everywhere.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs in a profiler would tell you boxing is a real issue in Scala code?"
+   },
+   {
+    "question": "How do `synchronized`, `@volatile`, and atomic references differ in Scala on the JVM, and where do people get concurrency correctness wrong?",
+    "answer": "Scala inherits the JVM memory model, so `@volatile` gives visibility guarantees for reads and writes of a field but not compound atomic updates. `synchronized` gives mutual exclusion and establishes happens-before edges, while atomic references support lock-free compare-and-set style updates for specific patterns. The common mistake is thinking visibility implies thread safety, like doing read-modify-write on a volatile variable. I choose the simplest primitive that matches the invariant, because partial correctness in concurrency fails badly under load.",
+    "real_world": "A cache stats counter may look fine in tests but lose increments in production because updates used a volatile `var` instead of an atomic or lock. These bugs often surface only at high concurrency and are painful to reproduce.",
+    "code_lang": "scala",
+    "code": "@volatile var n = 0\n\ndef inc(): Unit = {\n  n = n + 1 // visible, but not atomic\n}\n",
+    "follow_up": "When would you prefer a lock over atomics even if the lock might be slower in microbenchmarks?"
+   },
+   {
+    "question": "How does trait linearization actually work in Scala, and what production bugs come from misunderstanding `super` calls in stacked traits?",
+    "answer": "Scala computes a linear order of traits and classes, and a `super` call in a trait goes to the next implementation in that linearization, not necessarily the parent class you might intuitively expect. That enables stackable behavior, but it also means mixin order changes semantics. If two traits both wrap the same method, reversing their order can alter logging, retries, validation, or resource cleanup. In code review, I treat trait composition as behavior wiring, not just reuse syntax.",
+    "real_world": "A real incident pattern is metrics, auth, or retry traits being mixed in the wrong order so failures aren't counted, auth is bypassed, or retries happen around non-idempotent logic. The code compiles cleanly and the bug is purely semantic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What design alternatives would you use if trait order starts becoming a hidden source of risk?"
+   },
+   {
+    "question": "How would you evaluate whether to use plain `Future`, actors, or a functional effect system for a Scala service that has high concurrency and strict failure handling requirements?",
+    "answer": "I choose based on control over execution, cancellation, resource safety, and how explicit failure semantics need to be. Plain `Future` is lightweight and familiar but eager, hard to cancel, and easy to misuse when workflows get large or need backpressure-like control. Actors are useful for stateful concurrency and message isolation, but they shift complexity into protocols and mailbox behavior. Effect systems add more machinery, but they usually pay off when you need structured concurrency, safer resource handling, testable async logic, and clearer boundaries around side effects.",
+    "real_world": "Teams often start with `Future` and later hit issues like leaked work after timeouts, tangled retry logic, or hard-to-test race conditions. At that point, moving to actors or an effect runtime becomes an architectural decision rather than a syntax preference.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What concrete failure mode would push you away from `Future` first in a production service?"
+   },
+   {
+    "question": "How do Scala 2 implicits and Scala 3 givens differ in implicit resolution, and what edge cases still surprise senior engineers?",
+    "answer": "The core idea is the same: the compiler searches local scope, imports, and implicit scope derived from types, but Scala 3 tightens and clarifies many rules. Scala 3 also separates conversions, givens, and extension methods more explicitly, which reduces some accidental resolutions but doesn't remove ambiguity or orphan-instance problems. The hardest bugs still come from wide imports, multiple valid candidates, and unintuitive implicit scope from companion objects of type constructors and arguments. In practice, keeping instances near the types they describe and avoiding wildcard imports for typeclass-heavy code makes resolution more predictable.",
+    "real_world": "Teams migrating mixed Scala 2/3 code often hit compile failures or behavior changes because a previously found implicit is no longer preferred, or a new import introduces ambiguity deep in generic code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When implicit search fails or picks the wrong instance, how do you debug it systematically?"
+   },
+   {
+    "question": "What are path-dependent types in Scala, and when are they actually the right tool instead of just using type parameters?",
+    "answer": "A path-dependent type depends on a specific value, like `db.Connection` where the type is tied to one `db` instance. It's useful when the type must carry object identity or encapsulated state, not just a generic parameter, such as modeling resources that belong to one owner and must not mix with another. The trade-off is that APIs get harder to read, infer, and integrate with libraries, so type parameters are usually simpler unless the value-level dependency is essential. They shine in capability-style designs and strongly encapsulated modules.",
+    "real_world": "This matters in plugin systems, capability-based security, or database/session APIs where accidentally mixing handles from different owners can corrupt state or break isolation.",
+    "code_lang": "scala",
+    "code": "class Graph {\n  class Node\n  def connect(a: Node, b: Node): Unit = ()\n}\nval g1 = new Graph\nval g2 = new Graph\nval n1 = new g1.Node\nval n2 = new g2.Node\n// g1.connect(n1, n2) // does not compile",
+    "follow_up": "How would you redesign that API if the path-dependent types become too painful for callers?"
+   },
+   {
+    "question": "Can you explain variance in Scala beyond the textbook rules, especially where covariance or contravariance becomes a problem in library design?",
+    "answer": "Variance controls subtyping of parameterized types, but the real design issue is whether your API consumes values, produces values, or both. Covariant types are convenient for immutable producers, contravariant types fit consumers like encoders or orderings, and invariance is often the only safe choice once mutation or bidirectional operations appear. Problems show up when a library over-promises variance and then can't evolve methods without breaking soundness or binary compatibility. A good rule is to make public abstractions as variant as their semantics allow, but keep mutable internals invariant.",
+    "real_world": "A common production pain is exposing a covariant API and later needing a method that accepts that type parameter; suddenly the signature is illegal or requires awkward widening that leaks into user code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why are mutable collections generally invariant even though immutable ones are often covariant?"
+   },
+   {
+    "question": "What is the difference between Scala's bottom and top types like `Nothing`, `Null`, `Any`, and `AnyRef`, and where do they matter in advanced code?",
+    "answer": "`Any` is the universal supertype, `AnyRef` is the JVM reference side, and `Nothing` is the subtype of every type, mainly used to model non-returning computations or impossible values. `Null` is mostly a legacy JVM interop artifact; in modern Scala design you usually avoid exposing it. `Nothing` matters a lot in type inference for APIs like `Left`, `Nil`, exceptions, and failed computations because it lets a value fit any expected element type. Misunderstanding these types often leads to confusing inference or accidental widening to overly generic types.",
+    "real_world": "You see this in generic error-handling code where one branch throws or returns an empty collection, and the inferred type becomes broader or less useful than expected.",
+    "code_lang": "scala",
+    "code": "def fail(msg: String): Nothing = throw new RuntimeException(msg)\nval xs: List[Int] = Nil\nval n: Int = fail(\"boom\")",
+    "follow_up": "How does `Nothing` help make APIs like `Future.failed` or `Left` type-check ergonomically?"
+   },
+   {
+    "question": "What are opaque types in Scala 3, and how do they compare to value classes or plain type aliases for performance and API safety?",
+    "answer": "Opaque types give you a distinct type at compile time while reusing the underlying runtime representation, so they improve type safety without wrapper allocation in normal cases. Unlike a plain type alias, callers can't freely confuse the new type with the underlying one outside the defining scope. Unlike value classes, they avoid many of the JVM and language restrictions that made value classes fragile around arrays, generic code, and pattern matching. The trade-off is that ergonomics depend on carefully designed constructors and extension methods.",
+    "real_world": "They are useful for domain identifiers, validated values, and units where teams want zero-overhead wrappers instead of passing raw `String` or `Long` everywhere and mixing them up.",
+    "code_lang": "scala",
+    "code": "object UserId:\n  opaque type UserId = Long\n  def apply(v: Long): UserId = v\n  extension (id: UserId) def value: Long = id\n\nimport UserId.*\nval id = UserId(42L)",
+    "follow_up": "Where can opaque types still leak abstraction or become awkward with serialization and Java interop?"
+   },
+   {
+    "question": "How do inline methods and macros in Scala 3 work at a high level, and what are the real trade-offs of using them in production?",
+    "answer": "`inline` asks the compiler to substitute code at call sites, enabling constant folding, specialization-like optimizations, and compile-time branching. Scala 3 macros go further by operating on typed syntax trees during compilation, which is powerful for deriving typeclass instances, validating DSLs, or generating boilerplate. The costs are slower compilation, harder debugging, and tighter coupling to compiler internals than normal library code. They are worth it when they remove whole classes of runtime errors or large amounts of repeated code, not just for cleverness.",
+    "real_world": "Teams use derivation macros for codecs and schemas, but production incidents happen when generated code hides expensive behavior or a compiler upgrade breaks macro internals late in a release cycle.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose runtime reflection or handwritten code instead of a Scala 3 macro?"
+   },
+   {
+    "question": "What does binary compatibility mean for Scala libraries, and why is it harder than many engineers expect on the JVM?",
+    "answer": "Binary compatibility means code compiled against an older version of your library still links and runs with the newer one without recompilation. Scala makes this harder because many source-level constructs expand into synthetic methods, trait encodings, default-argument methods, anonymous classes, and typeclass-generated call sites that are easy to break with seemingly small changes. Changing method signatures, trait members, case class parameters, or even some inheritance structures can break downstream users at runtime with linkage errors. Public libraries need stricter compatibility discipline than application code.",
+    "real_world": "A library can pass all its own tests and still break customers with `NoSuchMethodError` or `AbstractMethodError` after a minor upgrade because their services were compiled against the old bytecode shape.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which kinds of source changes look safe in Scala but are especially risky for published libraries?"
+   },
+   {
+    "question": "How do default arguments get implemented in Scala, and what compatibility or interoperability problems do they cause?",
+    "answer": "Scala implements default arguments by generating synthetic methods that compute each default value, and call sites can rely on those generated methods. That means changing parameter lists, reordering parameters, or altering defaults in published APIs can have binary and source compatibility consequences, especially across separate compilation. Interop with Java is also awkward because Java doesn't understand Scala's default-argument syntax directly, so overloaded methods or explicit builders are often better for mixed-language APIs. Defaults are convenient inside an application but should be used more carefully in stable library interfaces.",
+    "real_world": "This often bites teams publishing internal platform libraries: a harmless-looking parameter tweak compiles locally but breaks dozens of services only when they deploy against the new jar.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need a Java-friendly API with optional parameters, what design would you prefer instead of Scala defaults?"
+   },
+   {
+    "question": "What is eta-expansion in Scala, and why can method-versus-function differences still cause surprising bugs or performance issues?",
+    "answer": "A method is not a function object until the compiler converts it, often called eta-expansion, so `f` and `f _` historically differed depending on context and Scala version. The practical issue is that methods can become allocated function values, capture state, or resolve overloads differently than you expect. This matters in hot code because repeated conversion can add allocations, and in generic APIs because overload resolution or SAM conversion can pick an unexpected target. Being explicit with parameter types or storing a function once often avoids surprises.",
+    "real_world": "In stream-processing or parser code, accidental function allocation inside tight loops can show up in profiles, while overloaded Java APIs can bind the wrong callback shape and fail in less obvious ways.",
+    "code_lang": "scala",
+    "code": "def inc(x: Int) = x + 1\nval f: Int => Int = inc\nprintln(f(41))",
+    "follow_up": "How would you look for accidental function allocation in performance-sensitive Scala code?"
+   },
+   {
+    "question": "How do by-name parameters actually work in Scala, and what subtle bugs do they introduce around evaluation, side effects, and concurrency?",
+    "answer": "A by-name parameter is re-evaluated each time it is used, roughly like passing a thunk, unless the callee stores the result in a local `val`. That makes it great for control abstractions such as retries, assertions, and resource management, but dangerous if callers assume it runs once. Repeated side effects, duplicate expensive work, or observing different values under concurrency are common failure modes. If single evaluation is required, force it once inside the method and document that behavior.",
+    "real_world": "A retry helper that logs and checks timeouts can accidentally evaluate the body multiple times before the engineer realizes the body also mutates state or performs billing calls.",
+    "code_lang": "scala",
+    "code": "def twice[A](a: => A) = { a; a }\nvar n = 0\ntwice { n += 1 }\nprintln(n) // 2",
+    "follow_up": "How is a by-name parameter different from passing `() => A`, both semantically and at the bytecode level?"
+   }
+  ]
+ }
+}

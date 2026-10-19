@@ -1,0 +1,469 @@
+{
+ "slug": "pandas-numpy",
+ "name": "Pandas and NumPy",
+ "category": "Data and AI",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a NumPy array and a Python list?",
+    "answer": "A NumPy array stores elements in a contiguous, typed block of memory, so numeric operations are usually much faster than on Python lists. Lists can hold mixed types and are flexible, while arrays are best when you want efficient vectorized math on homogeneous data. A NumPy array also supports broadcasting and many built-in numerical operations.",
+    "real_world": "This matters when you need to process large numeric datasets, images, or simulation results. Using lists for heavy numeric work often becomes slow and memory-inefficient.",
+    "code_lang": "python",
+    "code": "import numpy as np\nx = np.array([1, 2, 3])\nprint(x * 2)\nprint([1, 2, 3] * 2)",
+    "follow_up": "What does vectorization mean in NumPy, and why is it faster?"
+   },
+   {
+    "question": "What is a pandas Series, and how is it different from a DataFrame?",
+    "answer": "A Series is a one-dimensional labeled array, while a DataFrame is a two-dimensional table with rows and columns. You can think of a DataFrame as a collection of aligned Series sharing the same index. Use a Series for a single column or sequence of values, and a DataFrame for tabular data.",
+    "real_world": "You often get a Series when selecting one column from a DataFrame, and a DataFrame when reading CSVs or combining multiple columns. Knowing the difference helps avoid shape and indexing mistakes.",
+    "code_lang": "python",
+    "code": "import pandas as pd\ns = pd.Series([10, 20, 30])\ndf = pd.DataFrame({'a': [10, 20], 'b': [30, 40]})\nprint(type(s))\nprint(type(df['a']))",
+    "follow_up": "How do you get from a Series back to a DataFrame?"
+   },
+   {
+    "question": "What does the pandas index do?",
+    "answer": "The index is the label attached to each row in a Series or DataFrame. It helps with alignment, selection, joins, and time-based or labeled data operations. A common beginner mistake is assuming row positions and index labels are the same thing; they are not always the same.",
+    "real_world": "Indexes matter when joining two tables or combining columns from different sources. If the labels do not line up as expected, pandas can produce missing values instead of matching rows by position.",
+    "code_lang": "python",
+    "code": "import pandas as pd\ndf = pd.DataFrame({'name': ['a', 'b']}, index=[10, 20])\nprint(df.loc[10])\nprint(df.iloc[0])",
+    "follow_up": "When would you use .loc instead of .iloc?"
+   },
+   {
+    "question": "What is the difference between .loc and .iloc in pandas?",
+    "answer": "Use .loc for label-based indexing and .iloc for integer position-based indexing. .loc includes the end label in slices when using labels, while .iloc follows normal Python slicing by position. This distinction is important because the same-looking slice can return different rows depending on which one you use.",
+    "real_world": "This comes up when selecting subsets of data for analysis or model features. Mixing them up can silently pick the wrong rows, which is a subtle bug.",
+    "code_lang": "python",
+    "code": "import pandas as pd\ndf = pd.DataFrame({'x': [10, 20, 30]}, index=['a', 'b', 'c'])\nprint(df.loc['a':'b'])\nprint(df.iloc[0:2])",
+    "follow_up": "What happens if you use a label that is not in the index?"
+   },
+   {
+    "question": "How do boolean masks work in pandas and NumPy?",
+    "answer": "A boolean mask is an array or Series of True/False values used to filter data. In both NumPy and pandas, you create a condition and then use it to select only matching elements or rows. This is a core pattern for filtering without writing loops.",
+    "real_world": "Filtering rows where a metric exceeds a threshold is one of the most common tasks in data work. Boolean masks make that fast and readable.",
+    "code_lang": "python",
+    "code": "import pandas as pd\ndf = pd.DataFrame({'age': [17, 22, 35]})\nmask = df['age'] >= 18\nprint(df[mask])",
+    "follow_up": "What is the difference between using `and`/`or` and `&`/`|` with pandas conditions?"
+   },
+   {
+    "question": "Why do people say NumPy and pandas are vectorized libraries?",
+    "answer": "Vectorization means applying operations to whole arrays or columns at once instead of looping in Python. NumPy and pandas implement these operations in optimized lower-level code, which is usually faster and cleaner. The key trade-off is that you often need to express the problem in array operations rather than step-by-step Python logic.",
+    "real_world": "Teams use vectorization to speed up feature engineering and data cleaning on large datasets. Replacing Python loops with column operations often makes code both faster and easier to maintain.",
+    "code_lang": "python",
+    "code": "import numpy as np\nx = np.array([1, 2, 3])\nprint(x + 5)\nprint(np.sqrt(x))",
+    "follow_up": "When is a Python loop still reasonable instead of vectorization?"
+   },
+   {
+    "question": "What is broadcasting in NumPy?",
+    "answer": "Broadcasting is NumPy’s rule for performing operations on arrays with different shapes by stretching the smaller array conceptually across the larger one. It lets you write concise code for common tasks like adding a scalar, normalizing columns, or combining row and column vectors. It is powerful, but shape mismatches can produce errors or unexpected results if you do not understand the dimensions.",
+    "real_world": "Broadcasting is used in feature scaling, image processing, and distance calculations. Many beginner bugs come from arrays that look compatible but have the wrong shape.",
+    "code_lang": "python",
+    "code": "import numpy as np\nA = np.array([[1, 2], [3, 4]])\nprint(A + 10)\nB = np.array([10, 20])\nprint(A + B)",
+    "follow_up": "How would you check the shape of an array before doing arithmetic?"
+   },
+   {
+    "question": "How do you handle missing values in pandas?",
+    "answer": "Pandas represents missing data with values like NaN or NaT depending on the data type. Common operations are checking with isna or notna, dropping missing rows with dropna, or filling them with fillna. The right choice depends on whether missingness should remove data or be imputed with a meaningful value.",
+    "real_world": "Missing values are common in CSVs, logs, and survey data. If you ignore them, calculations like averages or joins can give misleading results or fail later.",
+    "code_lang": "python",
+    "code": "import pandas as pd\ndf = pd.DataFrame({'x': [1, None, 3]})\nprint(df.isna())\nprint(df.fillna(0))",
+    "follow_up": "What problems can happen if you blindly fill missing values with zero?"
+   },
+   {
+    "question": "How do `merge` and `concat` differ in pandas?",
+    "answer": "`merge` combines DataFrames by matching key columns or indexes, like a database join. `concat` stacks DataFrames along rows or columns without matching on keys unless you arrange the indexes yourself. Use `merge` when records should line up by an identifier, and `concat` when you are appending similar tables or combining pieces of the same shape.",
+    "real_world": "This is common when combining customer data with orders or appending monthly exports. Using the wrong operation can duplicate rows or misalign columns.",
+    "code_lang": "python",
+    "code": "import pandas as pd\na = pd.DataFrame({'id': [1, 2], 'x': [10, 20]})\nb = pd.DataFrame({'id': [1, 2], 'y': [30, 40]})\nprint(a.merge(b, on='id'))",
+    "follow_up": "What happens if the join key has duplicates in one or both DataFrames?"
+   },
+   {
+    "question": "When would you use a NumPy array instead of a pandas DataFrame?",
+    "answer": "Use a NumPy array when you need fast numeric computation on homogeneous data and you do not need labeled rows or columns. NumPy is the lower-level building block for many array operations and is usually simpler for pure math, linear algebra, and scientific code. Use pandas when you need tabular data, column names, joins, grouping, or mixed data types. The trade-off is that pandas adds convenience and structure, while NumPy is lighter and often faster for raw numeric work.",
+    "real_world": "This comes up in model feature preparation, image processing, and simulation code where everything is numeric. A team might convert a DataFrame to a NumPy array before passing it into a machine learning library.",
+    "code_lang": "python",
+    "code": "import numpy as np\narr = np.array([[1, 2], [3, 4]])\nprint(arr.mean())\nprint(arr.T)",
+    "follow_up": "When would you convert a NumPy array back into a DataFrame?"
+   },
+   {
+    "question": "How do you select one or more columns from a pandas DataFrame?",
+    "answer": "You can select a single column with bracket notation or dot notation if the column name is a valid Python identifier, and multiple columns with a list of names. Bracket notation is safer because it works for any column name. Selecting a column returns a Series, while selecting a list of columns returns a DataFrame. This matters because the shape of the result affects later code.",
+    "real_world": "This is common when building a smaller working dataset from a wide table. A bug often appears when someone expects a DataFrame but accidentally gets a Series.",
+    "code_lang": "python",
+    "code": "import pandas as pd\n\ndf = pd.DataFrame({'name': ['A', 'B'], 'age': [10, 20]})\nprint(df['age'])\nprint(df[['name', 'age']])",
+    "follow_up": "What is the difference between `df['col']` and `df[['col']]`?"
+   },
+   {
+    "question": "What does `shape` tell you in NumPy and pandas?",
+    "answer": "`shape` tells you the dimensions of the data structure. In NumPy it returns a tuple of axis lengths, and in pandas it gives the number of rows and columns for a DataFrame. It is one of the first things you check when debugging data pipelines because it confirms whether your data has the expected size. It also helps catch accidental reshaping or filtering mistakes.",
+    "real_world": "A team may use `shape` after a join or filter to confirm they did not lose rows unexpectedly. It is also a quick sanity check before training a model.",
+    "code_lang": "python",
+    "code": "import numpy as np\nx = np.array([[1, 2, 3], [4, 5, 6]])\nprint(x.shape)",
+    "follow_up": "How do you reshape a NumPy array, and what are common mistakes?"
+   },
+   {
+    "question": "What is `dtype`, and why should you care about it?",
+    "answer": "`dtype` is the data type of the values in a NumPy array or a pandas column. It matters because it affects memory use, performance, and what operations are valid. For example, numeric calculations only work properly when data is stored as a numeric type, not as strings. In pandas, unexpected object dtypes are a common source of slow code and bugs.",
+    "real_world": "This often shows up when numbers are read from CSV as strings because of bad formatting or mixed values. A team may need to inspect and convert dtypes before doing calculations or plotting.",
+    "code_lang": "python",
+    "code": "import numpy as np\nx = np.array([1, 2, 3], dtype='int64')\nprint(x.dtype)",
+    "follow_up": "How do you convert a pandas column from strings to numbers?"
+   },
+   {
+    "question": "How do you sort data in pandas or NumPy?",
+    "answer": "In pandas, you usually sort by values with `sort_values` or by index with `sort_index`. In NumPy, you can use `sort` for in-place sorting of an array or `np.sort` to get a sorted copy. You should choose based on whether you need to preserve the original data and whether you are sorting a table or a raw array. Sorting matters for reports, ranking, and preparing data for comparison.",
+    "real_world": "Teams often sort before generating top-N reports or before merging on ordered keys. Sorting can also expose duplicate or malformed keys during debugging.",
+    "code_lang": "python",
+    "code": "import pandas as pd\n\ndf = pd.DataFrame({'name': ['b', 'a'], 'score': [2, 1]})\nprint(df.sort_values('score'))",
+    "follow_up": "What is the difference between sorting by values and sorting by index?"
+   },
+   {
+    "question": "What does `groupby` do in pandas?",
+    "answer": "`groupby` splits data into groups based on one or more columns, applies an aggregation or transformation to each group, and combines the result. It is used for summaries like totals, averages, counts, and per-category metrics. The key idea is split-apply-combine. It is one of pandas' most useful tools for turning raw rows into business metrics.",
+    "real_world": "A common use is calculating sales by region or average response time by service. It is also a frequent source of confusion when the result has grouped indices or fewer rows than the original table.",
+    "code_lang": "python",
+    "code": "import pandas as pd\n\ndf = pd.DataFrame({'team': ['A', 'A', 'B'], 'points': [1, 3, 2]})\nprint(df.groupby('team')['points'].mean())",
+    "follow_up": "What is the difference between aggregation and transformation in `groupby`?"
+   },
+   {
+    "question": "How do you add a new column to a pandas DataFrame?",
+    "answer": "You can assign a value or expression to a new column name, and pandas will create the column. The expression can use existing columns, which makes column creation a common way to derive features or clean data. You should be careful about chained assignment and about whether the operation is creating a copy or modifying the original object. Clear, direct assignment is usually easiest to read.",
+    "real_world": "This is common when creating flags, ratios, or standardized fields for analysis. Mistakes here can lead to silent data issues if a copy is modified instead of the source DataFrame.",
+    "code_lang": "python",
+    "code": "import pandas as pd\n\ndf = pd.DataFrame({'price': [10, 20], 'qty': [2, 3]})\ndf['total'] = df['price'] * df['qty']\nprint(df)",
+    "follow_up": "What can go wrong with chained assignment in pandas?"
+   },
+   {
+    "question": "What is the difference between `copy()` and just assigning one variable to another in Python data work?",
+    "answer": "Simple assignment only creates another reference to the same object, so changes through one name affect the other. `copy()` creates a new object, which is useful when you want to preserve the original data. This matters a lot with pandas DataFrames and NumPy arrays because accidental mutation can create hard-to-find bugs. The main trade-off is memory: copies use more space.",
+    "real_world": "In a notebook, someone may filter or edit data and later discover the original dataset changed too. Teams often make explicit copies before risky cleaning steps to avoid side effects.",
+    "code_lang": "python",
+    "code": "import pandas as pd\n\ndf1 = pd.DataFrame({'x': [1, 2]})\ndf2 = df1.copy()\ndf2['x'] = [9, 9]\nprint(df1)\nprint(df2)",
+    "follow_up": "When is a shallow copy enough, and when do you need a deep copy?"
+   },
+   {
+    "question": "How do you read a CSV file into pandas, and what should you check first?",
+    "answer": "You use `read_csv` to load a CSV into a DataFrame. After loading, you should immediately check the column names, row count, and dtypes to catch parsing problems early. Common issues include wrong delimiters, missing headers, and numbers being read as strings. Reading data correctly is often the first step in any pandas workflow.",
+    "real_world": "This matters when ingesting data from external systems, where format problems are common. A bad parse can silently break later joins, filters, or aggregations.",
+    "code_lang": "python",
+    "code": "import pandas as pd\n\ndf = pd.read_csv('data.csv')\nprint(df.head())\nprint(df.dtypes)",
+    "follow_up": "What are some signs that `read_csv` parsed a file incorrectly?"
+   },
+   {
+    "question": "What does `axis` mean in pandas operations?",
+    "answer": "`axis` tells pandas whether to operate across rows or down columns. For many DataFrame methods, `axis=0` means work along rows and `axis=1` means work across columns, though the exact behavior depends on the method. This is important because beginners often confuse row-wise and column-wise operations. When in doubt, check the method docs and test on a small DataFrame.",
+    "real_world": "This comes up when dropping missing values, applying functions, or calculating summaries across rows. A wrong axis can produce output with the right shape but the wrong meaning.",
+    "code_lang": "python",
+    "code": "import pandas as pd\n\ndf = pd.DataFrame({'a': [1, 2], 'b': [3, 4]})\nprint(df.sum(axis=0))\nprint(df.sum(axis=1))",
+    "follow_up": "How do you tell whether a method is operating row-wise or column-wise?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide whether to use `apply`, vectorized pandas operations, or NumPy functions for a transformation?",
+    "answer": "Prefer vectorized pandas or NumPy operations first because they are usually faster and clearer. Use `apply` only when the logic is not expressible as a built-in vectorized operation, or when you are calling code that truly needs row-by-row processing. The trade-off is performance and readability versus flexibility: `apply` is often much slower and can hide inefficient patterns. In production, I look for a built-in operation or a combination of `where`, arithmetic, string methods, or `np.select` before reaching for `apply`.",
+    "real_world": "This comes up when a notebook prototype works fine on 50k rows but times out on 50 million. Replacing `apply` with vectorized code can cut runtime from minutes to seconds.",
+    "code_lang": "python",
+    "code": "import numpy as np\nimport pandas as pd\n\ndf = pd.DataFrame({'x': [1, 6, 10]})\ndf['bucket'] = np.where(df['x'] >= 5, 'high', 'low')\n",
+    "follow_up": "When is `apply(axis=1)` especially risky, and what would you use instead?"
+   },
+   {
+    "question": "What happens when you assign to a filtered pandas DataFrame, and how do you avoid `SettingWithCopy` bugs?",
+    "answer": "Assigning to a filtered result can modify a view or a copy depending on context, so the behavior is ambiguous and can lead to silent bugs. The safe pattern is to use `.loc` on the original DataFrame for assignment, or make an explicit `.copy()` if you want an independent object. The key issue is not the warning itself but that your update may not land where you think it does. Treat chained indexing as something to avoid in production code.",
+    "real_world": "A common bug is filtering rows for a subset, assigning a cleaned value, and then discovering the original dataset never changed. That can corrupt downstream metrics or exported files.",
+    "code_lang": "python",
+    "code": "# safer\nmask = df['status'] == 'open'\ndf.loc[mask, 'priority'] = 'high'\n\n# avoid this pattern\n# df[df['status'] == 'open']['priority'] = 'high'\n",
+    "follow_up": "How would you intentionally work on a slice without risking side effects?"
+   },
+   {
+    "question": "How do you choose between `merge`, `join`, and `concat` when combining data?",
+    "answer": "Use `merge` when you are combining tables by matching keys, like a database join. Use `join` when you want a more index-oriented convenience method, often on aligned indices. Use `concat` when you are stacking data by rows or columns without key matching. The main trade-off is explicitness versus convenience; in real projects, `merge` is usually the clearest choice for relational data.",
+    "real_world": "This matters when stitching together orders, customers, and product tables from different systems. Choosing `concat` where a key-based join is needed can create duplicated or misaligned records.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you debug a merge that suddenly produces more rows than expected?"
+   },
+   {
+    "question": "What does it mean for a pandas operation to be aligned by index, and why can that surprise people?",
+    "answer": "Many pandas arithmetic operations line up values by index labels rather than by position. That is powerful because it helps avoid accidental misalignment, but it can also create unexpected `NaN` values when indices do not match. If you want positional behavior, you need to be explicit about it, often by working with NumPy arrays or resetting the index first. Understanding alignment is important whenever you combine Series or DataFrames from different sources.",
+    "real_world": "This shows up when joining model predictions back to source rows after filtering or sorting. If the indices no longer match, you can end up attaching predictions to the wrong entities.",
+    "code_lang": "python",
+    "code": "import pandas as pd\ns1 = pd.Series([1, 2], index=['a', 'b'])\ns2 = pd.Series([10, 20], index=['b', 'c'])\nprint(s1 + s2)  # aligns on labels\n",
+    "follow_up": "How would you force positional addition instead of index alignment?"
+   },
+   {
+    "question": "How do you handle duplicate rows or duplicate keys in pandas, and why does it matter?",
+    "answer": "You usually start by identifying whether duplicates are exact duplicate rows or duplicate business keys. Exact duplicates can be removed with `drop_duplicates`, while duplicate keys before a merge should be investigated because they can create many-to-many joins and row explosions. The right fix depends on the data model: sometimes you deduplicate, sometimes you aggregate, and sometimes duplicates are valid and should be preserved. I would always validate assumptions before dropping data silently.",
+    "real_world": "A customer dimension table with duplicate customer IDs can multiply rows in a join and inflate revenue metrics. That kind of bug often survives basic tests because the output still “looks” plausible.",
+    "code_lang": "python",
+    "code": "dupes = df[df.duplicated(['customer_id'], keep=False)]\nclean = df.drop_duplicates()\n",
+    "follow_up": "How would you detect whether a merge is one-to-one, one-to-many, or many-to-many?"
+   },
+   {
+    "question": "When should you use `astype`, and what can go wrong when converting dtypes in pandas?",
+    "answer": "Use `astype` when you need a predictable dtype for computation, storage, or interoperability. It can fail if the data contains incompatible values, and converting blindly can also lose information, such as turning strings with leading zeros into integers. In real work, I usually inspect the column first and clean invalid values before conversion. Dtype conversion matters because it affects memory use, performance, and whether later operations behave as expected.",
+    "real_world": "A ZIP code column imported as integers will drop leading zeros and break joins to reference data. A timestamp column left as strings can also make sorting and filtering behave incorrectly.",
+    "code_lang": "python",
+    "code": "df['zip'] = df['zip'].astype('string')\ndf['amount'] = pd.to_numeric(df['amount'], errors='coerce')\n",
+    "follow_up": "How would you safely convert a messy text column to numeric without crashing the pipeline?"
+   },
+   {
+    "question": "How do you make a pandas pipeline easier to test and debug?",
+    "answer": "Break the work into small pure steps that take a DataFrame and return a DataFrame, instead of mixing I/O and transformation logic. That makes it easier to unit test intermediate outputs and compare expected rows, columns, and dtypes. I also like to assert invariants such as row counts after filters or non-null constraints on key columns. Clear step boundaries are better than one large notebook cell because they make failures local and reproducible.",
+    "real_world": "In ETL jobs, a single hidden assumption can break a late-stage aggregate and be hard to trace. Small testable transforms help you catch issues right where they happen.",
+    "code_lang": "python",
+    "code": "def clean_users(df):\n    df = df.copy()\n    df['email'] = df['email'].str.lower()\n    return df.drop_duplicates('user_id')\n",
+    "follow_up": "What kinds of assertions would you add to a data-cleaning function?"
+   },
+   {
+    "question": "What is the difference between `values`, `to_numpy()`, and working directly with a DataFrame?",
+    "answer": "Working directly with a DataFrame preserves labels, dtype information, and alignment semantics. `to_numpy()` gives you a NumPy array view or copy depending on the data, which is useful for numeric computation but drops labels and can simplify away important metadata. `values` is older and less explicit, so `to_numpy()` is generally preferred when you need an array. The trade-off is speed and compatibility versus safety and readability.",
+    "real_world": "This matters when passing data into a modeling library that expects NumPy arrays. If you strip labels too early, debugging feature order issues becomes much harder.",
+    "code_lang": "python",
+    "code": "arr = df[['a', 'b']].to_numpy()\n# labels are lost here, so keep df if you need column names later\n",
+    "follow_up": "When would you prefer `to_numpy()` over using pandas methods end to end?"
+   },
+   {
+    "question": "How do you think about memory usage when a pandas DataFrame gets large?",
+    "answer": "The first things to check are whether columns have the right dtype and whether you are storing unnecessary object strings or duplicated data. Numeric columns often use far less memory than Python objects, and categorical types can help when there are many repeated strings. You should also avoid unnecessary copies and temporary intermediates in chained operations. The practical trade-off is between convenience and memory pressure, especially in batch jobs.",
+    "real_world": "A job that runs fine on a developer laptop can fail in production because object columns and intermediate copies blow past memory limits. That often leads to swapping, crashes, or very slow processing.",
+    "code_lang": "python",
+    "code": "df['country'] = df['country'].astype('category')\nprint(df.memory_usage(deep=True))\n",
+    "follow_up": "What patterns create extra copies in pandas even when the code looks simple?"
+   },
+   {
+    "question": "How do you compare two DataFrames to find differences, and what pitfalls should you watch for?",
+    "answer": "First make sure the rows and columns are aligned, because comparison only makes sense when both objects represent the same shape and order. Then you can use equality checks or more detailed comparisons depending on whether you want a boolean answer or a report of differing values. The main pitfall is comparing data that only looks similar but has different indices, column order, or dtypes. In data pipelines, I often compare after sorting and normalizing schemas to avoid false mismatches.",
+    "real_world": "This is useful in regression testing when a new pipeline version should produce the same output as the old one. Most failed comparisons are caused by ordering or dtype changes, not actual business logic changes.",
+    "code_lang": "python",
+    "code": "left = df1.sort_index(axis=1).sort_values(df1.columns.tolist()).reset_index(drop=True)\nright = df2.sort_index(axis=1).sort_values(df2.columns.tolist()).reset_index(drop=True)\nprint(left.equals(right))\n",
+    "follow_up": "How would you investigate a comparison failure that is caused only by row order?"
+   },
+   {
+    "question": "When would you use `np.where` instead of `Series.where` in pandas?",
+    "answer": "Use `np.where` when you want a fast, array-oriented conditional expression and you do not need pandas index alignment or label preservation. `Series.where` keeps the Series index and is often easier when you want to stay in pandas and preserve missing-value semantics. The trade-off is that `np.where` usually returns a NumPy array, so you may need to wrap it back into a Series or assign it carefully. If alignment matters, pandas is safer; if raw speed and simple elementwise selection matter, NumPy is often fine.",
+    "real_world": "This comes up when building derived columns from flags or thresholds. A team might accidentally lose the DataFrame index after using `np.where`, which makes later joins or debugging much harder.",
+    "code_lang": "python",
+    "code": "import numpy as np\nimport pandas as pd\ns = pd.Series([1, 5, 2], index=['a','b','c'])\nout = pd.Series(np.where(s > 2, 'high', 'low'), index=s.index)",
+    "follow_up": "What happens if the true and false branches have different types or shapes?"
+   },
+   {
+    "question": "How do you think about `copy()` versus a view in NumPy, and why does it matter?",
+    "answer": "A view shares the same underlying data as the original array, while a copy owns its own memory. That matters because changing a view can change the source array unexpectedly, and copying can be expensive for large arrays. In NumPy, slicing often returns a view, while advanced indexing often returns a copy, but the safest answer is to check assumptions rather than rely on intuition. In performance-sensitive code, use views when you want to avoid duplication, and copies when you need isolation.",
+    "real_world": "This shows up in feature engineering pipelines where one transformation silently alters a cached base array. It can also create hard-to-reproduce bugs when the same array is passed into multiple functions.",
+    "code_lang": "python",
+    "code": "import numpy as np\nx = np.array([1, 2, 3, 4])\ny = x[1:3]\ny[0] = 99\nprint(x)",
+    "follow_up": "How can you tell whether a NumPy operation returned a view or a copy?"
+   },
+   {
+    "question": "How do you debug a pandas operation that suddenly produces more rows than you expected?",
+    "answer": "First check whether you accidentally created a many-to-many merge, because that multiplies rows. Then inspect the key columns for duplicates and confirm whether the join keys are actually unique on the side you expected. It also helps to compare row counts before and after each step in a pipeline so you can isolate where the explosion happens. In real projects, this is often caused by messy source data rather than the code itself.",
+    "real_world": "Teams often discover row explosions only after a report or model input becomes much larger than usual. The root cause is usually duplicate keys in a lookup table or a join done on the wrong columns.",
+    "code_lang": "python",
+    "code": "left = pd.DataFrame({'id':[1,1,2], 'x':[10,11,12]})\nright = pd.DataFrame({'id':[1,2], 'y':[100,200]})\nprint(left.merge(right, on='id').shape)",
+    "follow_up": "How would you guard against that in code before the merge runs?"
+   },
+   {
+    "question": "How do you handle `NaN` in numeric NumPy operations without getting misleading results?",
+    "answer": "You need to know whether the function propagates missing values or ignores them. Plain NumPy reductions like `sum` can produce `NaN` if any value is missing, while the `nan*` variants ignore missing values. The trade-off is that ignoring missing values may hide data quality issues, so you should choose behavior intentionally. In data pipelines, it is often worth counting missing values separately rather than silently dropping them.",
+    "real_world": "A dashboard may show blank or zero-looking metrics because a single missing value contaminated an aggregate. Using the wrong reduction can turn one bad record into a bad KPI.",
+    "code_lang": "python",
+    "code": "import numpy as np\nx = np.array([1.0, np.nan, 3.0])\nprint(np.sum(x))\nprint(np.nansum(x))",
+    "follow_up": "When would you prefer to impute missing values instead of ignoring them?"
+   },
+   {
+    "question": "Why can chained indexing in pandas be a problem even when it appears to work?",
+    "answer": "Chained indexing can create ambiguity about whether you are working on a view or a copy, so your assignment may not affect the original DataFrame. Sometimes it seems to work, sometimes it does nothing, and that inconsistency makes it dangerous. The safer pattern is to use a single `.loc` assignment so pandas knows exactly which rows and columns you mean. This is both more readable and easier to debug.",
+    "real_world": "This is a common source of subtle bugs in cleaning scripts, especially when a team tests on a small sample and later runs on a larger dataset. The code may pass locally but fail to update real data in production.",
+    "code_lang": "python",
+    "code": "df.loc[df['age'] > 18, 'status'] = 'adult'",
+    "follow_up": "How would you rewrite a two-step filter-and-assign pattern safely?"
+   },
+   {
+    "question": "What happens if you use `to_numpy()` on a DataFrame with mixed dtypes?",
+    "answer": "Pandas has to find a common NumPy representation, so mixed dtypes may lead to an object array or another upcast that is less efficient than you expect. That can hurt performance and also strip away pandas-specific metadata like column names and index. If you need numeric computation, it is usually better to select the numeric columns first and confirm the dtype. If you need label-aware behavior, stay in pandas longer.",
+    "real_world": "This often shows up when passing training data to a model library or custom NumPy code. A DataFrame with strings and numbers can unexpectedly become an object array and slow everything down.",
+    "code_lang": "python",
+    "code": "import pandas as pd\ndf = pd.DataFrame({'a':[1,2], 'b':['x','y']})\narr = df.to_numpy()\nprint(arr.dtype)",
+    "follow_up": "How would you safely extract only the numeric data for computation?"
+   },
+   {
+    "question": "How do you choose between `pivot` and `pivot_table` in pandas?",
+    "answer": "Use `pivot` when the row/column combinations are unique and you just want to reshape data. Use `pivot_table` when there may be duplicates and you need an aggregation such as mean or sum. The trade-off is that `pivot_table` is more flexible but can hide data issues if duplicates are not expected. In practice, `pivot` is stricter, which can be useful for catching bad input early.",
+    "real_world": "This matters in reporting pipelines where the same customer/date pair can appear more than once. `pivot` will fail fast, while `pivot_table` may quietly aggregate and mask the duplication problem.",
+    "code_lang": "python",
+    "code": "import pandas as pd\ndf = pd.DataFrame({'id':[1,1], 'k':['x','x'], 'v':[10,20]})\nprint(df.pivot_table(index='id', columns='k', values='v', aggfunc='sum'))",
+    "follow_up": "How do you detect whether duplicates are legitimate or a data quality issue?"
+   },
+   {
+    "question": "How do you test a pandas transformation so it is robust to ordering and missing data?",
+    "answer": "Test the business rule, not the incidental order of rows, unless order is part of the contract. For DataFrames, compare results with explicit sorting or set-based comparisons when order should not matter, and include cases with missing values and empty inputs. It is also useful to test a few representative edge cases, like duplicate keys or all-missing groups, because those are where pandas code often breaks. The goal is to make failures point to logic errors rather than accidental formatting differences.",
+    "real_world": "This is important in ETL jobs where the same transformation runs on many sources with slightly different shapes. A weak test suite may miss a regression that only appears when a column is missing or rows arrive in a different order.",
+    "code_lang": "python",
+    "code": "import pandas as pd\nexpected = pd.DataFrame({'a':[1,2]})\nactual = pd.DataFrame({'a':[2,1]})\npd.testing.assert_frame_equal(expected.sort_values('a').reset_index(drop=True),\n                              actual.sort_values('a').reset_index(drop=True))",
+    "follow_up": "What would you do if the result contains floating-point values that differ by tiny rounding errors?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How would you explain NumPy array strides and memory contiguity, and why do they matter for performance?",
+    "answer": "A NumPy array is defined by a data buffer plus metadata like shape, dtype, and strides, where strides tell NumPy how many bytes to jump to move along each axis. Slicing often creates a view by changing strides instead of copying data, which is fast and memory efficient. Contiguous arrays are laid out sequentially in memory, so many low-level kernels and BLAS-backed operations run much faster on them. The trade-off is that some operations on non-contiguous views silently trigger a copy or run with worse cache locality.",
+    "real_world": "This matters when a pipeline looks vectorized but slows down after transpose-heavy reshaping. Teams often discover a hidden copy when passing sliced arrays into native code or model-serving preprocessors.",
+    "code_lang": "python",
+    "code": "import numpy as np\nx = np.arange(12).reshape(3, 4)\ny = x[:, ::2]\nprint(y.shape)        # (3, 2)\nprint(y.strides)      # skips every other column\nprint(y.flags['C_CONTIGUOUS'])\n",
+    "follow_up": "What kinds of NumPy operations require contiguous input or are likely to copy when given a strided view?"
+   },
+   {
+    "question": "What actually happens under the hood in a pandas groupby, and where do the big performance costs usually come from?",
+    "answer": "A groupby usually does three main things: factorize the group keys into integer codes, split rows logically by those codes, and then run specialized aggregation kernels when possible. The fast path is built-in reductions on numeric types; the slow path is Python-level functions, object dtype handling, or many tiny groups that destroy locality. High cardinality keys increase memory for codes and intermediate structures, and sorting group keys can add extra cost depending on options and downstream needs. In practice, key dtype and whether you stay on compiled aggregations matter more than the one-line syntax suggests.",
+    "real_world": "A common production incident is a job that was fine on millions of rows but times out when a new high-cardinality key or a custom lambda lands in the groupby. Converting repeated strings to categoricals and replacing Python callbacks with named aggregations often fixes it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does using categorical keys change groupby performance and memory behavior?"
+   },
+   {
+    "question": "When would you use pandas categorical dtype, and what are the trade-offs beyond just saving memory?",
+    "answer": "Categorical is useful when a column has repeated values drawn from a limited set, because pandas can store integer codes plus a category dictionary instead of many repeated Python objects. That often reduces memory a lot and can speed up grouping, sorting, and joins on those columns. The trade-offs are that category management becomes explicit: unseen values, category ordering, concatenation across mismatched category sets, and some downstream libraries may behave differently. It is a strong choice for stable dimensions, but less convenient for free-form text or rapidly changing vocabularies.",
+    "real_world": "In analytics tables with country, device, or status columns, converting to categorical can cut memory enough to keep jobs on one machine. Teams also use ordered categoricals to make business-defined sort order consistent across reports.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can appear when merging or concatenating DataFrames whose categorical columns have different category sets?"
+   },
+   {
+    "question": "Can you walk through pandas nullable dtypes versus classic NumPy dtypes with NaN, and why that distinction matters in production?",
+    "answer": "Classic NumPy numeric dtypes cannot represent missing integers or booleans directly, so pandas often falls back to float with NaN or object, which can change semantics and performance. Nullable pandas dtypes like Int64, boolean, and string keep the logical type and track missingness separately. That improves schema fidelity and avoids bugs like IDs turning into floats, but some operations may be slower or behave differently than plain NumPy arrays because they are extension arrays rather than raw contiguous buffers. In production, the key benefit is preserving meaning at I/O boundaries and validation steps.",
+    "real_world": "A common bug is an integer identifier column becoming float after a join or load, then failing equality checks or being serialized with decimals. Nullable dtypes help keep schemas stable across ETL steps.",
+    "code_lang": "python",
+    "code": "import pandas as pd\ns = pd.Series([1, None], dtype='Int64')\nprint(s.dtype)\nprint(s + 1)\n",
+    "follow_up": "What compatibility issues do you watch for when sending nullable pandas columns into NumPy, scikit-learn, or a database writer?"
+   },
+   {
+    "question": "How do you reason about pandas string columns from a performance perspective, especially object dtype versus newer string representations?",
+    "answer": "Object dtype strings are expensive because each cell is effectively a Python object reference, so memory overhead is high and many operations involve Python-level work. Newer string dtypes can give more consistent missing-value behavior and, depending on backend, better memory and vectorized execution characteristics. But string-heavy workloads are still often bottlenecked by parsing, regex, or allocations rather than pure arithmetic-style vectorization. The practical decision is to choose a string representation deliberately and benchmark the exact operations you care about, especially at tens of millions of rows.",
+    "real_world": "Teams often hit out-of-memory issues because a few text columns dominate the whole DataFrame. Switching representation, pre-normalizing values, or moving heavy text processing out of pandas can be the difference between a stable batch job and repeated worker evictions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you measure to decide whether a text-cleaning pipeline should stay in pandas or move to another tool?"
+   },
+   {
+    "question": "What is a ufunc in NumPy, and why do generalized ufuncs and the `out` parameter matter for high-performance code?",
+    "answer": "A ufunc is NumPy's core abstraction for elementwise operations implemented in compiled loops over arrays, with broadcasting and dtype dispatch built in. Generalized ufuncs extend that idea to operate on core dimensions, which is useful for batched linear algebra style patterns without writing explicit Python loops. The `out` parameter matters because it lets you write results into preallocated memory, avoiding temporary arrays and reducing peak memory pressure. At scale, fewer temporaries can matter as much as raw compute speed.",
+    "real_world": "A pipeline can fail not because the math is expensive, but because chained expressions allocate several full-size temporaries and blow memory. Rewriting with `out` or in-place updates often stabilizes batch jobs on fixed-memory workers.",
+    "code_lang": "python",
+    "code": "import numpy as np\nx = np.arange(5.0)\nout = np.empty_like(x)\nnp.multiply(x, 2, out=out)\nnp.add(out, 1, out=out)\nprint(out)\n",
+    "follow_up": "What are the risks of in-place NumPy operations when inputs alias the same underlying memory?"
+   },
+   {
+    "question": "How do you think about rolling and expanding window operations in pandas from an algorithmic and correctness perspective?",
+    "answer": "The first thing is to check whether the window is row-count based or time-based, because irregular timestamps make those behave very differently. Performance depends on whether pandas can use specialized incremental kernels; custom Python functions over windows are usually much slower because they materialize lots of small slices conceptually. Correctness issues often come from boundary behavior like `min_periods`, closed endpoints on time windows, timezone-aware indexes, and whether data is sorted. For large workloads, window size, index monotonicity, and avoiding custom callbacks are the big levers.",
+    "real_world": "A monitoring feature can silently drift if a rolling calculation is run on unsorted or duplicate timestamps. Teams usually add explicit sort and validation steps because the output can look plausible while being wrong.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you validate a time-based rolling metric on data with gaps, duplicates, and daylight saving transitions?"
+   },
+   {
+    "question": "If you need to parallelize NumPy or pandas work, what do you actually need to understand about the GIL, native threads, and oversubscription?",
+    "answer": "The GIL does not automatically make NumPy slow in threads, because many NumPy kernels release it while running native code. But pandas and object-heavy operations often spend more time in Python-managed code, where threads help less. The bigger trap is oversubscription: NumPy may already use threaded BLAS or native parallelism, so adding your own thread or process pool can make performance worse by creating too many runnable threads and fighting over memory bandwidth. Good parallel design starts by identifying whether the workload is compute-bound native code, Python-bound, or I/O-bound.",
+    "real_world": "A service that fans out DataFrame work across a pool can get slower after moving to larger machines because BLAS threads multiply under each worker. Teams often cap native library thread counts and benchmark process-based versus single-process execution.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you diagnose whether a slowdown is caused by the GIL, BLAS threading, or memory bandwidth saturation?"
+   },
+   {
+    "question": "What are the main failure modes when converting between pandas and NumPy, especially around timestamps, timezones, and precision?",
+    "answer": "The big issue is that pandas can represent richer logical types than a plain NumPy ndarray, so conversion may lose metadata or coerce to object. Timezone-aware datetimes are a classic example: moving to NumPy can drop timezone information or force a representation that downstream code mishandles. Precision is another trap with datetimes and large integers when data gets coerced through floats or mixed-type arrays. The safe approach is to check the exact dtype before and after conversion and treat conversions as schema boundaries, not as no-op plumbing.",
+    "real_world": "Production bugs often show up as off-by-hours joins or silently shifted timestamps after exporting arrays into a model or custom extension. These are hard to spot because shapes still match and only semantics changed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely move a timezone-aware timestamp column into a numerical model feature pipeline?"
+   },
+   {
+    "question": "How would you decide between staying in pandas/NumPy and moving a workload to something like Polars, Arrow, Dask, or a database?",
+    "answer": "I’d decide based on memory model, execution pattern, and operational constraints rather than fashion. Pandas and NumPy are excellent when data fits comfortably in memory on one machine and the pipeline benefits from mature APIs and Python ecosystem integration. I’d move when object-heavy columns, repeated copies, single-node limits, or SQL-style scans and joins become the bottleneck, and I’d pick the target based on whether I need columnar interoperability, lazy execution, distribution, or transactional guarantees. The trade-off is usually developer ergonomics and ecosystem compatibility versus scale, predictability, and lower memory overhead.",
+    "real_world": "A common architecture decision is keeping feature engineering in pandas until daily jobs become fragile from memory spikes and long join stages. Teams then split workloads: SQL for heavy joins, Arrow-like formats for interchange, and pandas only for the last mile where its flexibility is worth it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What specific signals in profiling or incident history would tell you it is time to migrate part of a pandas pipeline rather than just optimize it?"
+   },
+   {
+    "question": "Why can a pandas merge explode memory or row count, and how do you prevent that in production?",
+    "answer": "A merge multiplies rows when keys are not unique on one or both sides, so a supposed one-to-one join can become many-to-many and blow up both memory and runtime. I check key cardinality before joining, use the merge validation option when the relationship is known, and project only needed columns before the join. For large joins, I also estimate output rows from key frequencies because the failure mode is usually quadratic in hot keys, not just linear in input size.",
+    "real_world": "A common incident is a daily batch that suddenly OOMs because one upstream system started emitting duplicate business keys. Teams often add pre-merge uniqueness checks and row-count assertions so bad inputs fail fast instead of taking down the worker.",
+    "code_lang": "python",
+    "code": "left.merge(right, on=\"user_id\", validate=\"one_to_one\")\n# or \"one_to_many\", \"many_to_one\"\n\n# fast sanity check before merging\nassert not left[\"user_id\"].duplicated().any()",
+    "follow_up": "How would you detect and handle skewed keys when the join is too large to materialize in memory?"
+   },
+   {
+    "question": "How does NumPy advanced indexing differ from slicing in terms of memory and semantics?",
+    "answer": "Basic slicing usually returns a view, so it reuses the same underlying buffer with different strides. Advanced indexing with integer arrays or boolean arrays creates a copy, because the result may not map to a simple strided view of the original memory. That matters for both performance and correctness: writes to a slice can mutate the source, while writes to an advanced-indexed result usually do not.",
+    "real_world": "This shows up in feature pipelines where a developer thinks they are editing a window in place, but advanced indexing silently copied tens of gigabytes and doubled memory. It also affects latency because fancy indexing turns a cheap metadata operation into a real gather.",
+    "code_lang": "python",
+    "code": "import numpy as np\nx = np.arange(6)\na = x[1:4]      # view\nb = x[[1, 2, 3]]  # copy\na[0] = 99\nprint(x[1], b[0])",
+    "follow_up": "What performance implications do non-contiguous arrays have when you pass them into BLAS-backed operations?"
+   },
+   {
+    "question": "What is the practical difference between `iterrows()`, `itertuples()`, and converting to NumPy for row-wise work?",
+    "answer": "`iterrows()` is usually the worst of both worlds: it is Python-loop slow and it materializes each row as a Series, often losing exact dtypes. `itertuples()` is lighter because it yields named tuples or tuples without building Series objects. If the operation is truly row-oriented and cannot be vectorized, converting selected columns to a NumPy array can be fastest because you avoid pandas object overhead, but you give up labels and may need to handle missing values and mixed dtypes explicitly.",
+    "real_world": "This matters in scoring services and ETL code where one hidden `iterrows()` over millions of rows turns a minute job into an hour. Teams often reserve row iteration for small control paths and move the hot path to arrays or compiled code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you had to keep row-wise custom logic, how would you profile whether Numba or Cython is worth the complexity?"
+   },
+   {
+    "question": "How do `np.memmap` and chunked pandas reads change the architecture for datasets that do not fit in RAM?",
+    "answer": "`np.memmap` lets you access array data backed by a file without loading the whole thing into memory, which is useful for large homogeneous numeric arrays with stable layout. Chunked pandas reads are better for row-oriented ingestion and transformation of tabular files, especially CSV, where you can stream, aggregate, and write out incrementally. The trade-off is that memmap gives you efficient random access but not rich schema handling, while chunking avoids OOMs but forces algorithms to be incremental or require an extra combine step.",
+    "real_world": "A typical production pattern is streaming multi-gigabyte CSVs in chunks to compute aggregates, while model artifacts or embedding matrices live as memory-mapped arrays shared across worker processes.",
+    "code_lang": "python",
+    "code": "import pandas as pd\nagg = {}\nfor chunk in pd.read_csv(\"events.csv\", chunksize=200_000):\n    counts = chunk.groupby(\"user_id\").size()\n    for k, v in counts.items():\n        agg[k] = agg.get(k, 0) + int(v)",
+    "follow_up": "Which algorithms break when you switch to chunked processing, and how would you redesign them?"
+   },
+   {
+    "question": "Why are pandas object columns such a frequent performance and reliability problem?",
+    "answer": "Object dtype means pandas is storing pointers to arbitrary Python objects, so you lose compact memory layout and vectorized native kernels. Operations often devolve into Python-level loops, comparisons can be inconsistent across mixed types, and memory usage becomes much higher and harder to predict. In senior-level code reviews, I treat unexpected object columns as a schema bug unless the data is genuinely heterogeneous.",
+    "real_world": "Many production slowdowns come from a numeric or timestamp field silently parsed as object because of a few bad records. One malformed value can force an entire column off the fast path and break downstream joins, sorting, or serialization.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you instrument a pipeline so accidental object dtypes are caught before they hit production?"
+   },
+   {
+    "question": "How do pandas datetime operations fail in edge cases like daylight saving transitions and mixed timezone awareness?",
+    "answer": "The main failures are around ambiguous or nonexistent local times during DST changes and around mixing timezone-aware with timezone-naive timestamps. Pandas can represent timezone-aware datetimes, but arithmetic, comparisons, merges, and resampling only behave predictably when the whole pipeline uses a consistent policy. In practice, I normalize to UTC early, keep local time only for presentation or explicit business rules, and treat timezone conversion as a schema boundary, not an ad hoc cleanup step.",
+    "real_world": "Teams get duplicate or missing hourly metrics around DST transitions, or a merge silently fails because one side is UTC-aware and the other is naive local time. These bugs are hard to notice until billing, monitoring, or compliance reports drift.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If the business logic depends on local market time, how would you design tests around ambiguous and nonexistent timestamps?"
+   },
+   {
+    "question": "When does `np.einsum` make sense over more obvious NumPy expressions, and what are the trade-offs?",
+    "answer": "`np.einsum` is useful when you want to express tensor contractions directly and potentially avoid large intermediate arrays created by chained broadcasts or transposes. It can make complex linear algebra both faster and more memory-efficient, especially when the naive expression materializes huge temporary results. The trade-off is readability: for simple operations, standard matrix multiplication or reductions are clearer, and for performance-sensitive code you should benchmark because the best path depends on shapes and backend optimizations.",
+    "real_world": "This matters in attention-like workloads, covariance calculations, and feature interactions where a mathematically simple formula can allocate an enormous intermediate if written naively.",
+    "code_lang": "python",
+    "code": "import numpy as np\nx = np.random.rand(1000, 128)\ny = np.random.rand(1000, 128)\n# row-wise dot products without an intermediate 1000x1000 matrix\nz = np.einsum('ij,ij->i', x, y)",
+    "follow_up": "How would you decide whether `einsum`, `matmul`, or a BLAS-friendly reshape is the best implementation?"
+   },
+   {
+    "question": "How do you reason about numerical stability in NumPy and pandas aggregations at scale?",
+    "answer": "Floating-point reductions are order-dependent, so sums, means, and variances can drift as data size grows or execution order changes. The practical fixes are to choose appropriate dtypes, avoid unnecessary casts to lower precision, use numerically stable formulations for variance or log-domain computations when needed, and define acceptable tolerances in tests instead of exact equality. In distributed or chunked pipelines, you should expect slight differences between runs unless the reduction order is controlled.",
+    "real_world": "This becomes a production issue in finance, monitoring, and model training when a refactor changes chunking or parallelism and metrics shift just enough to trigger alerts or fail reproducibility checks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of pandas or NumPy operations are most likely to change results when you parallelize or repartition the data?"
+   },
+   {
+    "question": "What should you understand about pandas MultiIndex before deciding to use it in a large codebase?",
+    "answer": "MultiIndex can represent higher-dimensional keys compactly and enables expressive slicing and reshaping, but it increases cognitive load and can hide expensive index manipulations. Many operations become sensitive to index sortedness, uniqueness, and level names, and teams often end up resetting indexes repeatedly just to interoperate with other code. I use it when the hierarchical index is intrinsic to the domain and repeatedly exploited; otherwise explicit columns are often easier to validate, serialize, and join.",
+    "real_world": "A common maintenance issue is analysis code that works interactively with MultiIndex but becomes brittle in production after a reshape, because downstream functions assume flat columns or unique labels.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the performance and correctness implications of a non-lexsorted MultiIndex?"
+   },
+   {
+    "question": "How do you make pandas and NumPy transformations deterministic and reproducible in the face of hidden nondeterminism?",
+    "answer": "I separate randomness from transformation logic, pass explicit random generators instead of relying on global state, and avoid depending on incidental ordering from joins, group operations, or dictionary-like inputs. I also pin schema, sort order, and dtypes at key boundaries so the same logical data produces the same serialized output and test results. For floating-point-heavy code, reproducibility may still depend on thread count, reduction order, and native libraries, so exact bitwise equality is not always realistic.",
+    "real_world": "This matters when a model training pipeline produces slightly different features or row orders across runs, making debugging and audits painful. Teams usually add stable sorts and explicit seeds, then compare outputs with tolerances and schema checks.",
+    "code_lang": "python",
+    "code": "import numpy as np\nrng = np.random.default_rng(42)\nsample = rng.choice(100, size=5, replace=False)\nprint(sample)",
+    "follow_up": "How would you design a regression test for a pipeline where row order is irrelevant but values and grouping semantics must stay stable?"
+   }
+  ]
+ }
+}

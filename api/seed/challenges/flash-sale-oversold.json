@@ -1,0 +1,330 @@
+{
+  "slug": "flash-sale-oversold",
+  "title": "100 items, 140 orders",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "concurrency",
+    "databases",
+    "flash-sale",
+    "inventory",
+    "redis",
+    "queues"
+  ],
+  "scenario": "A flash sale lists 100 units of a console. In the first 10 seconds, 50,000 people press Buy. After the sale, the orders table contains 140 confirmed orders. The buy path reads the current stock, compares it to zero, writes the order, and decrements stock in a separate statement.",
+  "goal": "Find the concurrency bug, fix it safely, reduce load during the sale, and verify confirmed orders can never exceed available stock.",
+  "concepts": [
+    {
+      "key": "race-condition",
+      "name": "Race condition",
+      "summary": "A race condition happens when two operations overlap and the result depends on timing. Code that is correct one request at a time can fail when many requests run together.",
+      "used_here": "Many buyers run the stock check at the same time, so more than 100 requests can believe stock is still available."
+    },
+    {
+      "key": "duplicate-request",
+      "name": "Duplicate request",
+      "summary": "A duplicate request is the same action submitted more than once, often because of retries or double-clicks. Systems usually handle it with a unique request key or idempotency key.",
+      "used_here": "It is a plausible explanation for extra orders, but it would usually show repeated attempts for the same buyer rather than total sales exceeding stock during a burst."
+    },
+    {
+      "key": "stale-read",
+      "name": "Stale read",
+      "summary": "A stale read returns old data that has not caught up with the latest write. It often happens with caches or read replicas.",
+      "used_here": "A stale stock display can make too many people click Buy, but the server must still prevent confirmed orders above 100."
+    },
+    {
+      "key": "order-state",
+      "name": "Order state",
+      "summary": "Order state describes where an order is in its lifecycle, such as pending, confirmed, canceled, or expired. Counting the wrong state can make reports look wrong.",
+      "used_here": "The incident is about confirmed orders, so pending or canceled rows should not be counted as sold units."
+    },
+    {
+      "key": "database-transaction",
+      "name": "Database transaction",
+      "summary": "A transaction groups database changes so they commit or roll back together. It prevents partial updates when several related rows must change as one unit.",
+      "used_here": "The inventory claim and the row recording that claim must be committed together."
+    },
+    {
+      "key": "atomic-conditional-update",
+      "name": "Atomic conditional update",
+      "summary": "An atomic conditional update checks a condition and changes data in one database operation. Other concurrent requests cannot slip between the check and the change.",
+      "used_here": "The stock row is decremented only if stock is still positive at the moment of the update."
+    },
+    {
+      "key": "affected-row-count",
+      "name": "Affected row count",
+      "summary": "The affected row count tells how many rows a write statement changed. Applications can use it to decide whether a conditional write actually succeeded.",
+      "used_here": "A stock claim succeeds only when the decrement statement changes exactly one row."
+    },
+    {
+      "key": "database-lock",
+      "name": "Database lock",
+      "summary": "A database lock prevents other transactions from changing or reading certain data while a transaction is using it. Locks can protect correctness but can also reduce throughput if held too broadly or too long.",
+      "used_here": "Locking the whole orders table or holding a lock through payment would avoid overlap but would not be a scalable sale design."
+    },
+    {
+      "key": "admission-gate",
+      "name": "Admission gate",
+      "summary": "An admission gate rejects excess traffic before it reaches an expensive backend. It is useful when only a small number of requests can possibly succeed.",
+      "used_here": "For 50,000 Buy clicks and 100 units, most requests should be rejected before they hit the main database."
+    },
+    {
+      "key": "redis-counter",
+      "name": "Redis counter",
+      "summary": "Redis is an in-memory data store often used for very fast counters. Its increment and decrement operations can be used as a lightweight traffic gate.",
+      "used_here": "A Redis counter can hand out a limited number of attempts, while the database remains the final authority on stock."
+    },
+    {
+      "key": "queue",
+      "name": "Queue",
+      "summary": "A queue stores work for workers to process later, often smoothing spikes. A bounded queue can also limit how much work is admitted.",
+      "used_here": "A small queue can let only a controlled number of purchase attempts proceed instead of sending all 50,000 requests to the database."
+    },
+    {
+      "key": "reservation",
+      "name": "Reservation",
+      "summary": "A reservation temporarily holds inventory for a buyer before final confirmation. It is not the same as a completed order.",
+      "used_here": "A successful stock claim becomes a pending reservation while the buyer completes payment."
+    },
+    {
+      "key": "ttl",
+      "name": "TTL",
+      "summary": "TTL means time to live: a value automatically expires after a set time. It is commonly used to clean up temporary holds or cache entries.",
+      "used_here": "A reservation expires after a short window so abandoned checkouts return stock."
+    },
+    {
+      "key": "load-test",
+      "name": "Load test",
+      "summary": "A load test sends realistic traffic to a system to see how it behaves under pressure. It checks both performance and correctness under concurrency.",
+      "used_here": "The fix must be tested with a burst like 50,000 Buy attempts in 10 seconds."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the failure shape",
+      "question": "The sale ended with 140 confirmed orders for 100 units. The buy path reads stock, checks it, writes an order, and decrements stock separately. What is the first hypothesis to investigate?",
+      "concept_keys": [
+        "race-condition",
+        "duplicate-request",
+        "stale-read",
+        "order-state"
+      ],
+      "options": [
+        {
+          "text": "The product page likely showed an old stock value, causing shoppers to click Buy after inventory was gone.",
+          "correct": false,
+          "hint": "A stale display can increase traffic, but it should not be able to create confirmed orders by itself. The server-side write path still needs to enforce the limit.",
+          "id": "a"
+        },
+        {
+          "text": "Concurrent Buy requests likely passed the stock check before other requests' stock decrements were applied.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "The report likely counted pending or canceled rows as confirmed, making the order total look too high.",
+          "correct": false,
+          "hint": "Bad reporting is possible, but the incident says the orders table has 140 confirmed orders. First focus on how confirmed rows were allowed to be created.",
+          "id": "c"
+        },
+        {
+          "text": "The same buyers probably submitted duplicate Buy requests that were each counted as separate confirmed orders.",
+          "correct": false,
+          "hint": "Duplicate requests are worth checking, but they usually cluster around the same buyer or request key. The more important clue is that thousands of different requests overlapped during a 10-second burst.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The suspicious pattern is a check-then-write sequence under a huge burst. If many requests read a positive stock value before any of their decrements are visible, they can all proceed even though only 100 units exist. Duplicate clicks and stale displays are plausible side issues, but they do not explain why the server accepted 140 confirmed orders."
+    },
+    {
+      "title": "Interpret the trace evidence",
+      "question": "You inspect traces around the sellout point. In one 20 ms window, dozens of requests read stock = 7, then each inserted a confirmed order, and the stock decrements finished afterward. What does this prove about the current design?",
+      "concept_keys": [
+        "race-condition",
+        "database-transaction",
+        "stale-read"
+      ],
+      "options": [
+        {
+          "text": "The stock read should be moved after the confirmed order insert so the order row exists before checking inventory.",
+          "correct": false,
+          "hint": "Changing the order of unsafe steps does not make the decision exclusive. The key question is whether a request actually claims stock before it is allowed to continue.",
+          "id": "a"
+        },
+        {
+          "text": "The stock read was only an observation; it did not reserve one of the 7 remaining units for that request.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "The API needs to slow requests down so only 7 requests can enter the order insert code at a time.",
+          "correct": false,
+          "hint": "Slowing traffic may reduce how often the bug appears, but it does not make the stock decision safe. Correctness should not depend on lucky timing.",
+          "id": "c"
+        },
+        {
+          "text": "The database is rejecting concurrent writes too aggressively, so requests are retrying and creating extra orders.",
+          "correct": false,
+          "hint": "The trace shows many requests successfully inserted confirmed orders. Look at what happened between reading stock and changing stock.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Seeing dozens of requests read stock = 7 means the read did not claim inventory. Those requests all made decisions from the same old fact, then wrote confirmed orders later. Throttling might hide the issue sometimes, but it cannot guarantee that only 7 of those requests proceed."
+    },
+    {
+      "title": "Make the stock claim indivisible",
+      "question": "Now you need to change the write path so no more than 100 stock claims can succeed. Which database-side change is the safest core fix?",
+      "concept_keys": [
+        "atomic-conditional-update",
+        "affected-row-count",
+        "database-transaction",
+        "database-lock"
+      ],
+      "options": [
+        {
+          "text": "Use `UPDATE inventory SET stock = stock - 1 WHERE sku = ? AND stock > 0`; only continue when the affected row count is 1, and record the claim in the same transaction.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Run the existing read, order insert, and decrement in a retry loop whenever stock becomes negative.",
+          "correct": false,
+          "hint": "Retrying after oversell detects the problem late. The system should avoid creating the extra successful claim in the first place.",
+          "id": "b"
+        },
+        {
+          "text": "Put an exclusive lock on the entire orders table for the whole Buy request so only one buyer can order at a time.",
+          "correct": false,
+          "hint": "A broad lock can serialize traffic, but it turns a 50,000-request sale into a bottleneck. Also, locking orders is not the same as making the inventory row the source of truth.",
+          "id": "c"
+        },
+        {
+          "text": "Run the sale from a single API server process so in-memory code handles one stock check at a time.",
+          "correct": false,
+          "hint": "A single process is fragile and does not protect you from retries, restarts, or other writers. Production correctness should live in the shared data store.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The conditional update combines the test and the decrement into one database operation. If stock is already 0, the statement changes 0 rows, so the application rejects the request and does not record a successful claim. A table lock or single server can reduce concurrency, but they do not scale well for 50,000 requests and are brittle operational controls."
+    },
+    {
+      "title": "Protect the database from the burst",
+      "question": "After the database fix, staging shows the database still receives tens of thousands of failed stock-claim attempts in 10 seconds. What should you add in front of the database for a flash sale with only 100 units?",
+      "concept_keys": [
+        "admission-gate",
+        "redis-counter",
+        "queue",
+        "atomic-conditional-update",
+        "stale-read"
+      ],
+      "options": [
+        {
+          "text": "Add more API servers so the 50,000 Buy requests spread across more application processes before reaching the database.",
+          "correct": false,
+          "hint": "More servers can make the database receive failed attempts faster. The system needs to avoid sending hopeless requests to the expensive path.",
+          "id": "a"
+        },
+        {
+          "text": "Queue all 50,000 Buy requests and have workers eventually try the database update for every queued request.",
+          "correct": false,
+          "hint": "A queue can smooth concurrency, but processing every hopeless request still creates a large backlog and unnecessary database work. The gate should reject most excess traffic quickly.",
+          "id": "b"
+        },
+        {
+          "text": "Use a fast admission gate, such as a Redis counter or a small bounded queue, to let only a limited number of attempts reach the database while keeping the database conditional update as the final guard.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Serve the stock value from a cache refreshed every second so most requests can decide without reading the database.",
+          "correct": false,
+          "hint": "A faster read path does not make a stock claim. A cached value can be stale exactly when the sale is hottest.",
+          "id": "d"
+        }
+      ],
+      "explanation": "With 100 units and 50,000 clicks, at least 49,900 requests cannot win. A cheap admission gate rejects most of them before they perform a database write, while the database conditional update still protects correctness if the gate is imperfect. Simply adding API servers or caching the stock number increases throughput but does not reduce the number of unsafe or wasted attempts."
+    },
+    {
+      "title": "Handle payment and abandonment",
+      "question": "The product flow requires buyers to complete payment after pressing Buy, and some buyers abandon checkout. How should a successful stock claim be represented while payment is pending?",
+      "concept_keys": [
+        "reservation",
+        "ttl",
+        "database-transaction",
+        "atomic-conditional-update",
+        "order-state"
+      ],
+      "options": [
+        {
+          "text": "Create a pending reservation with an expiration in the same transaction as the stock decrement; payment confirms only an unexpired reservation, and expiry releases stock if it is still pending.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Create a confirmed order immediately after the stock claim, then cancel it later if payment never arrives.",
+          "correct": false,
+          "hint": "That makes business reports and downstream systems see unpaid orders as sold. The order state should reflect that payment is not complete yet.",
+          "id": "b"
+        },
+        {
+          "text": "Decrement stock when checkout starts and keep the hold forever unless customer support manually releases it.",
+          "correct": false,
+          "hint": "Permanent holds avoid oversell but create undersell when buyers abandon. Temporary claims need an automatic release path.",
+          "id": "c"
+        },
+        {
+          "text": "Wait to decrement stock until payment succeeds, because only paid buyers should consume inventory.",
+          "correct": false,
+          "hint": "If many buyers are sent to payment at once, more than 100 can pay successfully before stock is reduced. The system needs a temporary claim before payment.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A reservation separates a temporary inventory hold from a confirmed paid order. Creating the reservation in the same transaction as the decrement prevents losing the record of who holds the unit. Waiting until payment to decrement can oversell, while holding forever can leave stock unavailable after abandoned checkouts."
+    },
+    {
+      "title": "Verify the fix before reopening",
+      "question": "Before the next sale, how should you prove the new design works under the original failure conditions?",
+      "concept_keys": [
+        "load-test",
+        "reservation",
+        "ttl",
+        "atomic-conditional-update",
+        "admission-gate"
+      ],
+      "options": [
+        {
+          "text": "Deploy the fix to production and watch whether confirmed orders pass 100 during the first minute of the next sale.",
+          "correct": false,
+          "hint": "Production monitoring is necessary, but it is not a safe proof. You want evidence before real buyers and real money are involved.",
+          "id": "a"
+        },
+        {
+          "text": "Check that average API latency stays below 200 ms while the admission gate is enabled.",
+          "correct": false,
+          "hint": "Latency matters, but a fast incorrect system can still oversell. The main acceptance criteria must include inventory correctness.",
+          "id": "b"
+        },
+        {
+          "text": "Run unit tests for the stock decrement function and manually click Buy several times in a browser.",
+          "correct": false,
+          "hint": "Unit tests are useful, but this bug only appears when many requests overlap. The test must reproduce the burst and concurrency shape.",
+          "id": "c"
+        },
+        {
+          "text": "Run a load test with 50,000 Buy attempts over 10 seconds against 100 units, include payment delays and abandoned checkouts, and assert confirmed orders never exceed 100 and stock never goes negative.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The original incident was 50,000 attempts in 10 seconds for 100 units, so the verification should reproduce that shape. The assertions must check correctness, not only performance: confirmed orders must be at most 100, stock must not go negative, and expired pending reservations must release stock safely. Browser testing and latency checks cannot expose the race that caused 140 confirmed orders."
+    }
+  ],
+  "takeaway": "Never implement scarce inventory as a separate read, check, and write under concurrency. Make the stock claim a single conditional write, record the claim transactionally, and use reservations with expiry when payment is delayed. For flash-sale traffic, add a cheap admission gate, but keep the database as the final source of correctness.",
+  "review_issues": []
+}

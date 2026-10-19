@@ -1,0 +1,338 @@
+{
+  "slug": "sold-out-but-still-orderable",
+  "title": "Sold out, but 2,000 people still ordered it",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "caching",
+    "search-index",
+    "event-driven-architecture",
+    "consistency",
+    "redis"
+  ],
+  "scenario": "A restaurant marks butter chicken as out of stock on its tablet at 12:00:00. The write succeeds in the primary database. For about the next 90 seconds, the mobile app still shows the item as available, and 2,000 people manage to place orders. The app reads menus from a cache with a 60-second TTL. When that cache misses, it refills from a search-backed menu read model that normally becomes visible on a 30-second refresh interval.",
+  "goal": "Find why stale availability lasted about 90 seconds and design a fix that makes stock changes visible and enforceable in under 5 seconds without overloading the database.",
+  "concepts": [
+    {
+      "key": "primary-database",
+      "name": "Primary database",
+      "summary": "The primary database is the main durable store for application state. Other stores may copy from it but should not be treated as the final authority for writes.",
+      "used_here": "The tablet stock update is first written here, and order creation must agree with this state or an equivalent authoritative availability state."
+    },
+    {
+      "key": "ttl",
+      "name": "TTL",
+      "summary": "A time to live is how long a cached value is considered usable before it expires. Until the TTL ends, readers may keep seeing the old value.",
+      "used_here": "The menu cache keeps a menu entry for 60 seconds after it is filled."
+    },
+    {
+      "key": "cache",
+      "name": "Cache",
+      "summary": "A cache stores data close to readers so requests do not have to hit a slower or more expensive system every time. Cached data can be stale unless it is updated or invalidated at the right time.",
+      "used_here": "The app serves menu pages from this layer, so stale availability in the cache can be shown to many users."
+    },
+    {
+      "key": "search-index",
+      "name": "Search index",
+      "summary": "A search index is a read-optimized copy of data used for fast lookup, filtering, or full-text search. It is often updated asynchronously, so it can lag behind the database.",
+      "used_here": "Cache misses refill menu data from this index-backed read model, which can lag stock changes by up to about 30 seconds."
+    },
+    {
+      "key": "refresh-interval",
+      "name": "Refresh interval",
+      "summary": "A refresh interval is how often an asynchronous read system makes recent writes visible to queries. A write can be accepted but not yet visible to normal reads.",
+      "used_here": "The search-backed menu read model normally exposes changes on a 30-second cycle."
+    },
+    {
+      "key": "cache-invalidation",
+      "name": "Cache invalidation",
+      "summary": "Cache invalidation removes or replaces cached data when the underlying data changes. Targeted invalidation changes only the keys affected by the write.",
+      "used_here": "Only the butter chicken menu key should be deleted or replaced after the stock update, not the whole cache."
+    },
+    {
+      "key": "durable-event",
+      "name": "Durable event",
+      "summary": "A durable event records that something changed so another process can react even if a service crashes. It is safer than best-effort in-memory notifications.",
+      "used_here": "The stock change needs a reliable signal that updates the read path after the database commit."
+    },
+    {
+      "key": "transactional-outbox",
+      "name": "Transactional outbox",
+      "summary": "A transactional outbox stores events in the same transaction as the business write. A relay later publishes those events, avoiding a database write that succeeds while the event is lost.",
+      "used_here": "The stock update and the stock-change event can be committed together before cache and read-model updates are processed."
+    },
+    {
+      "key": "read-model",
+      "name": "Read model",
+      "summary": "A read model is a copy of data shaped for fast reads rather than for authoritative writes. It is useful for performance but may lag the primary state.",
+      "used_here": "The menu data used by cache refills is a read model backed by the search index."
+    },
+    {
+      "key": "atomic-operation",
+      "name": "Atomic operation",
+      "summary": "An atomic operation completes as one indivisible action, so concurrent requests cannot observe or create a half-updated state. It is commonly used for counters, flags, or conditional writes.",
+      "used_here": "Availability can be checked and enforced at the moment an order is created, even when many users submit at once."
+    },
+    {
+      "key": "redis",
+      "name": "Redis",
+      "summary": "Redis is an in-memory data store often used for low-latency caches, counters, locks, and small pieces of shared state. It is fast, but durability and consistency depend on how it is configured and used.",
+      "used_here": "It can hold a fast authoritative availability flag if the order path updates and checks it safely."
+    },
+    {
+      "key": "cache-stampede",
+      "name": "Cache stampede",
+      "summary": "A cache stampede happens when many requests miss the same key at the same time and all try to rebuild it. This can overload the database or read model.",
+      "used_here": "After invalidating a popular menu key, 2,000 readers may all try to refill the same value."
+    },
+    {
+      "key": "per-key-lock",
+      "name": "Per-key lock",
+      "summary": "A per-key lock lets only one worker rebuild a specific cached value while other requests wait or use a controlled fallback. It limits duplicate work without blocking unrelated keys.",
+      "used_here": "It protects the single butter chicken menu key after it is invalidated."
+    },
+    {
+      "key": "canary",
+      "name": "Canary rollout",
+      "summary": "A canary rollout sends a change to a small part of traffic before sending it everywhere. It reduces risk by letting engineers watch real metrics before full rollout.",
+      "used_here": "The new stock-change path can be enabled for a few restaurants first."
+    },
+    {
+      "key": "metrics",
+      "name": "Metrics",
+      "summary": "Metrics are numeric measurements collected over time, such as latency, error rate, and event lag. They show whether a system is behaving as intended.",
+      "used_here": "They confirm stock changes become visible quickly and stale orders stop."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the read path",
+      "question": "You are on call. What should you inspect first to explain how users could still see and order butter chicken after the tablet write succeeded?",
+      "concept_keys": [
+        "primary-database",
+        "cache",
+        "ttl",
+        "search-index",
+        "read-model"
+      ],
+      "options": [
+        {
+          "text": "Trace one stock change from the tablet write through the menu cache, the search-backed read model, and order creation timestamps.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Compare mobile app versions to see whether older clients ignore the out-of-stock field in the menu response.",
+          "correct": false,
+          "hint": "Client bugs can hide fields, but 90 seconds lines up with server-side freshness windows. First account for the systems that serve the menu data.",
+          "id": "b"
+        },
+        {
+          "text": "Look for payment gateway retries that may have duplicated orders after the item was already removed from the cart.",
+          "correct": false,
+          "hint": "Duplicate payments would create extra orders, not explain why the menu still displayed the item as available. Focus on the path that supplies availability to browsing and checkout.",
+          "id": "c"
+        },
+        {
+          "text": "Check whether the restaurant tablet retried the out-of-stock request and accidentally wrote the old value after the new one.",
+          "correct": false,
+          "hint": "A write race is possible, but the incident says the primary database write succeeded. The larger clue is that reads go through multiple layers after that write.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The first useful move is to reconstruct the end-to-end path and timestamps: database write, cache state, read-model visibility, and order creation. The tempting tablet-retry theory does not match the given fact that the primary write succeeded, and it does not explain a 60-second cache TTL plus a 30-second read-model lag."
+    },
+    {
+      "title": "Explain the 90 seconds",
+      "question": "You find that the stock write committed at 12:00:00. A cache miss for this restaurant happened at 12:00:29, just before the search-backed read model made the new stock state visible, and that miss cached the old menu for 60 seconds. Which explanation fits the observed stale window?",
+      "concept_keys": [
+        "ttl",
+        "cache",
+        "search-index",
+        "refresh-interval",
+        "read-model"
+      ],
+      "options": [
+        {
+          "text": "The search index needed three 30-second refresh cycles before a stock update became queryable, so the cache TTL is not part of this incident.",
+          "correct": false,
+          "hint": "A search refresh interval bounds visibility for accepted writes, but the old value can also be preserved by a later cache fill. Both layers matter here.",
+          "id": "a"
+        },
+        {
+          "text": "The app first served the old cache for 60 seconds, then waited another 30 seconds for the search index, so the stale window is exactly 60 + 30.",
+          "correct": false,
+          "hint": "If the cache really stayed stale for the full first 60 seconds, the 30-second read-model lag would normally have already passed before the refill. Think about a miss that happens while the read model is still stale.",
+          "id": "b"
+        },
+        {
+          "text": "The cache refilled from the stale read model near 12:00:29, then kept that stale refill until about 12:01:29, giving roughly 30 + 60 seconds.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The database replica lagged by 90 seconds, so both the cache and the search index correctly copied the old value until replication caught up.",
+          "correct": false,
+          "hint": "The scenario gives a search refresh interval and a cache TTL, not database replica lag. Use the named freshness windows before adding another system.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A near-worst case is a cache miss at about 29 seconds, while the search-backed read model is still stale. That stale result is then cached for another 60 seconds, so users can see it until about 89 seconds after the database write. The common 60 + 30 explanation is backwards for this setup: after a full 60 seconds, a read model with a 30-second bounded lag should already be fresh."
+    },
+    {
+      "title": "Make visibility under 5 seconds",
+      "question": "You need stock changes to be reflected in the served menu in under 5 seconds without shortening all TTLs. Which design is the safest read-path fix?",
+      "concept_keys": [
+        "primary-database",
+        "durable-event",
+        "transactional-outbox",
+        "search-index",
+        "refresh-interval",
+        "cache-invalidation",
+        "read-model"
+      ],
+      "options": [
+        {
+          "text": "Keep the current cache TTL but ask mobile clients to hide items locally for 5 seconds after they see an out-of-stock update.",
+          "correct": false,
+          "hint": "Most users who order during the incident never saw the tablet update. The server-side read path must stop serving stale availability.",
+          "id": "a"
+        },
+        {
+          "text": "Flush the entire menu cache whenever any restaurant marks any item out of stock, so every user gets a fresh copy on the next request.",
+          "correct": false,
+          "hint": "A broad flush creates a large refill spike and still depends on whether the refill source is fresh. The change only affects one restaurant item.",
+          "id": "b"
+        },
+        {
+          "text": "In the same database transaction as the stock change, write an outbox row; a relay publishes it, and the handler writes the new availability straight into the served read model and replaces only that cache key.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Reduce the menu cache TTL from 60 seconds to 3 seconds and keep the search index refresh interval at 30 seconds.",
+          "correct": false,
+          "hint": "A shorter cache TTL cannot guarantee fresh refills if the system it refills from is still stale. It also increases read pressure across all menus, not just changed items.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The fix is targeted and event-driven. Recording the event in the same transaction as the stock change means it cannot be lost if the app crashes after the commit. The handler then updates the served data directly instead of waiting for the 30-second search refresh, and replaces only the one affected cache key, so the change is visible in seconds. Lowering the TTL to 3 seconds is tempting, but a miss would still refill from a read model that can be 30 seconds stale, and it adds load on every menu."
+    },
+    {
+      "title": "Stop stale pages from creating orders",
+      "question": "Even after the read path is fixed, some users may submit an order from a page loaded before the item disappeared. What must the order path do?",
+      "concept_keys": [
+        "primary-database",
+        "atomic-operation",
+        "redis"
+      ],
+      "options": [
+        {
+          "text": "Require clients to refresh the menu immediately before checkout and block the submit button if the refreshed page hides the item.",
+          "correct": false,
+          "hint": "Client refresh helps the interface, but clients can be stale, slow, or bypassed. The server that creates the order must enforce the rule.",
+          "id": "a"
+        },
+        {
+          "text": "Trust the availability value embedded in the menu response because the new event-driven cache path updates it in under 5 seconds.",
+          "correct": false,
+          "hint": "A user can hold an old page or cart for longer than the cache freshness target. Checkout needs its own decision point.",
+          "id": "b"
+        },
+        {
+          "text": "Allow the order, then run a background reconciliation job that cancels orders containing items later found to be out of stock.",
+          "correct": false,
+          "hint": "Cancellation reduces fulfillment damage but still creates bad orders and a poor user experience. The unsafe decision has already happened.",
+          "id": "c"
+        },
+        {
+          "text": "At order creation, check current availability in the primary database or an equivalent atomic availability flag, and reject the item before creating the order if it is out of stock.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Browsing data is not enough authority to create an order. The order service must check current availability at the moment it commits, either in the primary database or in a correctly maintained atomic fast path such as Redis. Trusting the refreshed menu is tempting, but a user who loaded the page 20 minutes ago can still submit a stale cart."
+    },
+    {
+      "title": "Handle 2,000 readers after invalidation",
+      "question": "The event handler replaces the butter chicken cache key, but sometimes a key still misses during deploys or failures. How do you prevent 2,000 simultaneous readers from causing 2,000 backend reads?",
+      "concept_keys": [
+        "cache",
+        "cache-stampede",
+        "per-key-lock",
+        "primary-database"
+      ],
+      "options": [
+        {
+          "text": "Use a per-key fill lock so one request rebuilds the affected menu value while the others wait briefly or serve a controlled stale fallback.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Preload every restaurant menu into cache once per minute so popular keys are unlikely to miss during peak traffic.",
+          "correct": false,
+          "hint": "Preloading everything shifts the load to a scheduled wave and touches many unchanged keys. The incident is about one hot key changing at a specific time.",
+          "id": "b"
+        },
+        {
+          "text": "Add more database replicas so each of the 2,000 readers can perform its own refill without overloading the primary database.",
+          "correct": false,
+          "hint": "Replicas can raise capacity, but duplicated work still wastes resources and can copy stale state depending on the source. First reduce the number of refills for the same key.",
+          "id": "c"
+        },
+        {
+          "text": "Flush the whole cache at low-traffic times so refill spikes happen predictably instead of during restaurant stock changes.",
+          "correct": false,
+          "hint": "Stock changes happen during real service hours, and whole-cache flushing creates avoidable misses for unrelated restaurants. Predictability does not fix the hot-key burst.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A per-key fill lock, often called single-flight behavior, turns many identical misses into one rebuild for that key. Other requests can wait for a short time or use a safe fallback instead of all hitting the database or read model. Adding replicas is tempting, but it treats the symptom by adding capacity while preserving 2,000 duplicate refills."
+    },
+    {
+      "title": "Roll out and prove it worked",
+      "question": "Which rollout and verification plan best shows that the fix meets the under-5-second target and does not overload the database?",
+      "concept_keys": [
+        "canary",
+        "metrics",
+        "durable-event",
+        "cache",
+        "search-index"
+      ],
+      "options": [
+        {
+          "text": "Deploy to all restaurants at once and watch only total order volume, because a drop in orders proves unavailable items are no longer orderable.",
+          "correct": false,
+          "hint": "Total order volume is too broad and can move for unrelated reasons. You need measurements tied to stock changes and read-path freshness.",
+          "id": "a"
+        },
+        {
+          "text": "Canary the new path for a small set of restaurants and measure database-commit-to-served-menu latency, event lag, cache updates, read-model visibility, checkout rejects, and backend read rate.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Verify that the cache TTL is still 60 seconds after deployment, since keeping the TTL unchanged proves the database will not be hammered.",
+          "correct": false,
+          "hint": "A long TTL helps reduce load, but it does not prove invalidation works or that checkout enforcement is active. Measure the actual path after stock changes.",
+          "id": "c"
+        },
+        {
+          "text": "Run a one-time manual test by marking one item out of stock and checking that one phone no longer sees it after 5 seconds.",
+          "correct": false,
+          "hint": "A manual test is useful, but it does not cover event lag, cache refill bursts, or concurrent checkout attempts. The incident involved 2,000 users, not one device.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The canary plus targeted metrics proves both sides of the goal: visibility under 5 seconds and no database hammering. Measuring commit-to-served-menu latency catches event, read-model, and cache sequencing problems, while checkout rejects show stale carts are being blocked. Watching only order volume is tempting but too indirect to diagnose freshness or load."
+    }
+  ],
+  "takeaway": "Stale windows can stack in non-obvious ways: here the near-90-second window comes from a cache miss refilling from a still-stale read model at about 30 seconds, then caching that stale value for 60 more seconds. Fix freshness with targeted, durable, event-driven updates and correct sequencing, not by shortening every TTL. Also enforce availability at order creation and protect hot cache keys from stampedes.",
+  "review_issues": []
+}

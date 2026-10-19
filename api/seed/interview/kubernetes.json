@@ -1,0 +1,493 @@
+{
+ "slug": "kubernetes",
+ "name": "Kubernetes",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Kubernetes, in simple terms, and what problem does it solve?",
+    "answer": "Kubernetes is a system for running and managing containers across a cluster of machines. It schedules work onto nodes, restarts failed containers, and helps keep the desired number of replicas running. The main value is that you declare what you want, and Kubernetes continuously works to match that state.",
+    "real_world": "Teams use it when a single server can’t reliably handle an app or when they need rolling deploys, automatic recovery, and scaling. Without it, ops teams end up manually restarting containers and balancing traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a container and a pod?"
+   },
+   {
+    "question": "What is a Pod, and why does Kubernetes use Pods instead of running containers directly?",
+    "answer": "A Pod is the smallest deployable unit in Kubernetes and usually contains one container, sometimes a few tightly coupled ones. Containers in the same Pod share the same network namespace and can communicate over localhost. Kubernetes uses Pods because some processes need to run together and share storage or networking as one unit.",
+    "real_world": "A common pattern is a web app container with a sidecar for logging or proxying. If you put them in separate Pods, they no longer share localhost and lifecycle becomes harder to coordinate.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you put more than one container in a Pod?"
+   },
+   {
+    "question": "What is the difference between a Deployment and a Pod?",
+    "answer": "A Pod is the runtime unit, while a Deployment manages Pods for you. A Deployment keeps the desired replica count, supports rolling updates, and recreates Pods when they fail. You usually create Deployments instead of naked Pods because Pods are not self-healing across node failures.",
+    "real_world": "If someone creates a Pod directly and the node dies, that workload can disappear until manually recreated. With a Deployment, Kubernetes replaces it automatically.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens during a rolling update?"
+   },
+   {
+    "question": "What is a Service in Kubernetes, and why do you need one?",
+    "answer": "A Service gives a stable way to reach a changing set of Pods. Pod IPs can change when Pods are recreated, so a Service provides a fixed virtual IP or DNS name and load-balances traffic to matching Pods. You need it so clients do not have to track individual Pods.",
+    "real_world": "This matters when a backend is restarted during deployment and its IP changes. Frontend apps keep working because they talk to the Service name, not a specific Pod.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between ClusterIP, NodePort, and LoadBalancer?"
+   },
+   {
+    "question": "How does Kubernetes decide which Pods belong to a Service?",
+    "answer": "A Service uses label selectors to find Pods with matching labels. Labels are simple key-value metadata attached to objects, and selectors let Kubernetes route traffic to the right set of Pods. This makes it easy to update or scale workloads without changing client configuration.",
+    "real_world": "Teams often break traffic by changing Pod labels in a Deployment template but forgetting the Service selector. Then the Service has no endpoints and requests fail.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between labels and annotations?"
+   },
+   {
+    "question": "What is a Namespace, and when would you use one?",
+    "answer": "A Namespace is a logical partition inside a cluster. It helps separate teams, environments, or applications so names do not collide and policies can be applied per group. You use Namespaces for organizational boundaries, not for strong security isolation by themselves.",
+    "real_world": "A company may keep dev, staging, and prod workloads in different namespaces to simplify access control and cleanup. It also helps avoid two teams creating the same Service name in one cluster.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What resources are cluster-scoped instead of namespaced?"
+   },
+   {
+    "question": "What is a ConfigMap, and how is it different from a Secret?",
+    "answer": "A ConfigMap stores non-sensitive configuration data, like environment-specific settings or feature flags. A Secret stores sensitive data such as passwords or tokens, though it still needs proper access control because it is not magically encrypted everywhere by default. Both are ways to decouple configuration from container images.",
+    "real_world": "This is common when the same image runs in multiple environments with different database hosts or API keys. Putting config into the image makes redeploys harder and risks leaking credentials.",
+    "code_lang": "yaml",
+    "code": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: app-config\ndata:\n  LOG_LEVEL: info\n  TIMEOUT: \"5\"",
+    "follow_up": "How do you inject a ConfigMap into a Pod?"
+   },
+   {
+    "question": "What does 'desired state' mean in Kubernetes?",
+    "answer": "Desired state is the configuration you declare, such as how many replicas should run or what image version should be deployed. Kubernetes controllers continuously compare that declaration to the actual state and make changes to reconcile the two. This is the core control-loop idea behind Kubernetes.",
+    "real_world": "If a Pod crashes or a node disappears, Kubernetes notices the actual state no longer matches the desired state and creates replacements. This reduces manual operations during failures.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a controller in Kubernetes?"
+   },
+   {
+    "question": "What is the difference between kubectl apply and kubectl create?",
+    "answer": "kubectl create creates a resource from the manifest if it does not already exist. kubectl apply is used to manage resources declaratively and update existing ones by merging your manifest with the live object. In practice, apply is the common choice for ongoing configuration management.",
+    "real_world": "Teams using GitOps or simple YAML-based workflows usually rely on apply because they repeatedly update the same resources. create is more often used for one-off object creation.",
+    "code_lang": "bash",
+    "code": "kubectl create -f pod.yaml\nkubectl apply -f pod.yaml",
+    "follow_up": "What happens if you change a manifest and run apply again?"
+   },
+   {
+    "question": "How would you check why a Pod is not starting?",
+    "answer": "Start with kubectl get pods and then kubectl describe pod to see scheduling issues, image pull errors, or probe failures. If the container started and exited, kubectl logs helps with application errors. The key is to separate cluster-level problems from app-level problems.",
+    "real_world": "A common beginner issue is a CrashLoopBackOff caused by bad environment variables or a wrong command. Another is an image pull failure due to a typo in the image name or registry access.",
+    "code_lang": "bash",
+    "code": "kubectl get pods\nkubectl describe pod my-pod\nkubectl logs my-pod",
+    "follow_up": "What does CrashLoopBackOff mean?"
+   },
+   {
+    "question": "What is a ReplicaSet, and when would you use it instead of a Deployment?",
+    "answer": "A ReplicaSet keeps a specified number of identical Pods running. In practice, you usually do not manage it directly because a Deployment creates and updates ReplicaSets for you. You would use a ReplicaSet directly only in simple cases or when you want very direct control without rollout features. The key idea is that it provides basic scaling and self-healing for Pods.",
+    "real_world": "If a node dies or a Pod crashes, the ReplicaSet creates replacement Pods so the app stays available. Teams typically rely on Deployments because they also handle updates and rollbacks.",
+    "code_lang": "yaml",
+    "code": "apiVersion: apps/v1\nkind: ReplicaSet\nmetadata:\n  name: web\nspec:\n  replicas: 3\n  selector:\n    matchLabels:\n      app: web\n  template:\n    metadata:\n      labels:\n        app: web\n    spec:\n      containers:\n      - name: nginx\n        image: nginx",
+    "follow_up": "How does a Deployment manage ReplicaSets during a rollout?"
+   },
+   {
+    "question": "What is the difference between a ClusterIP, NodePort, and LoadBalancer Service?",
+    "answer": "ClusterIP exposes a Service only inside the cluster, NodePort opens a port on each node, and LoadBalancer asks the cloud provider for an external load balancer. ClusterIP is the default and is best for internal communication. NodePort is simple but usually not what you want in production. LoadBalancer is common when you need internet access and are running on a supported cloud.",
+    "real_world": "A backend API might use ClusterIP because only other Pods should call it, while a public website might use LoadBalancer so users can reach it from outside the cluster.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use an Ingress instead of a LoadBalancer Service?"
+   },
+   {
+    "question": "What does a Kubernetes label selector do?",
+    "answer": "A label selector matches objects based on their labels. It is how Services, Deployments, and other controllers find the Pods they should manage or route traffic to. Labels are just key-value pairs, but selectors define the relationship. A common mistake is changing Pod labels so they no longer match the selector, which breaks traffic or scaling.",
+    "real_world": "If a Service selector does not match any Pods, the Service exists but has no endpoints, so requests fail even though everything looks created correctly.",
+    "code_lang": "yaml",
+    "code": "selector:\n  matchLabels:\n    app: api\n    tier: backend",
+    "follow_up": "What is the difference between labels and annotations?"
+   },
+   {
+    "question": "What is a readiness probe, and why is it different from a liveness probe?",
+    "answer": "A readiness probe tells Kubernetes whether a Pod is ready to receive traffic. A liveness probe tells Kubernetes whether the container is still healthy or should be restarted. Readiness affects routing; liveness affects restarts. Mixing them up can cause traffic to go to an unready app or cause unnecessary restarts.",
+    "real_world": "During startup, an app may be running but still loading caches or waiting on a dependency. A readiness probe prevents the Service from sending it traffic too early.",
+    "code_lang": "yaml",
+    "code": "readinessProbe:\n  httpGet:\n    path: /ready\n    port: 8080\nlivenessProbe:\n  httpGet:\n    path: /health\n    port: 8080",
+    "follow_up": "What happens if a readiness probe keeps failing?"
+   },
+   {
+    "question": "What is a PersistentVolumeClaim, and why is it useful?",
+    "answer": "A PersistentVolumeClaim, or PVC, is a request for storage from a Pod. It lets you ask for storage without hardcoding the exact disk or backend, so the cluster can bind the claim to a matching PersistentVolume. This matters because container filesystems are temporary, but many apps need data to survive Pod restarts. The main trade-off is that storage setup is more involved than using ephemeral container storage.",
+    "real_world": "Databases, file uploads, and application state often need PVCs so data is not lost when a Pod is rescheduled or recreated.",
+    "code_lang": "yaml",
+    "code": "apiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: data\nspec:\n  accessModes: [\"ReadWriteOnce\"]\n  resources:\n    requests:\n      storage: 5Gi",
+    "follow_up": "What is the difference between a PersistentVolume and a PersistentVolumeClaim?"
+   },
+   {
+    "question": "What is the purpose of a ServiceAccount in Kubernetes?",
+    "answer": "A ServiceAccount gives a Pod an identity for talking to the Kubernetes API. It is not the same as a user account for a person; it is for workloads. By attaching a ServiceAccount and permissions, you can control what that Pod is allowed to do in the cluster. This is important for least privilege and avoiding broad default access.",
+    "real_world": "An app that only needs to read ConfigMaps should not run with full cluster permissions. Using a dedicated ServiceAccount limits the damage if the app is compromised.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do Role and RoleBinding relate to a ServiceAccount?"
+   },
+   {
+    "question": "What is the difference between a node and a control plane in Kubernetes?",
+    "answer": "A node is a machine that runs your application Pods. The control plane is the set of components that makes scheduling and cluster state decisions, such as assigning Pods and maintaining the desired state. You usually interact with the control plane through kubectl, while workload containers run on nodes. If the control plane is unhealthy, the cluster may stop scheduling or reconciling even if nodes are still running.",
+    "real_world": "When a node fails, workloads can be moved to another node if the control plane is healthy. If the control plane is down, existing Pods may keep running, but changes and rescheduling become a problem.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is kubelet responsible for on a node?"
+   },
+   {
+    "question": "What is a DaemonSet used for?",
+    "answer": "A DaemonSet ensures one Pod runs on each node, or on a selected set of nodes. It is useful for node-level agents like log collectors, monitoring agents, or storage daemons. Unlike a Deployment, it is not about running many identical app replicas anywhere in the cluster; it is about coverage on every node. The main trade-off is that scaling follows the number of nodes, not a chosen replica count.",
+    "real_world": "If your team needs to ship node logs to a central system, a DaemonSet is the normal pattern because every node needs the agent installed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a DaemonSet different from a Deployment for background workers?"
+   },
+   {
+    "question": "What does it mean for a Pod to be in CrashLoopBackOff?",
+    "answer": "CrashLoopBackOff means the container keeps starting and then crashing, so Kubernetes backs off before trying again. It is not the root cause; it is the symptom of repeated failure. Common causes include a bad command, missing environment variables, app startup errors, or failed dependency checks. The fix is to inspect logs and the container configuration, not just restart the Pod.",
+    "real_world": "This often shows up right after a bad config change or new image rollout, when the app crashes immediately on startup and keeps retrying.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kubectl commands would you use first to debug CrashLoopBackOff?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How would you explain the difference between requests and limits on a container, and why do they matter in practice?",
+    "answer": "Requests are what Kubernetes uses for scheduling: the container is guaranteed at least that much of a resource for placement decisions. Limits are the maximum the container should use; if it goes over CPU it gets throttled, and if it goes over memory it is typically killed. The trade-off is stability versus density: higher requests reduce packing efficiency, while too-low limits can cause throttling or OOM kills. In production, bad sizing often shows up as noisy neighbors or sudden restarts under load.",
+    "real_world": "Teams often discover this after a latency spike or OOMKilled incidents in a shared cluster. Right-sizing requests and limits is one of the fastest ways to stabilize an overloaded service.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose initial requests and limits for a service you are deploying for the first time?"
+   },
+   {
+    "question": "When would you use a Deployment versus a StatefulSet, and what changes about the Pods?",
+    "answer": "Use a Deployment for stateless workloads where Pods are interchangeable and can be replaced freely. Use a StatefulSet when each replica needs a stable identity, stable storage, or ordered startup and shutdown. With a StatefulSet, Pod names and attached volumes are tied to the replica identity, which matters for databases and clustered systems. The trade-off is more operational complexity in exchange for predictable state handling.",
+    "real_world": "This comes up when moving something like Postgres, Kafka, or Elasticsearch into Kubernetes. Using a Deployment there can work briefly, but fail badly during restarts or rescheduling because the instances are not truly interchangeable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can appear if you scale a StatefulSet up and down quickly?"
+   },
+   {
+    "question": "How do rolling updates work in a Deployment, and what can go wrong during one?",
+    "answer": "A rolling update gradually replaces old Pods with new ones according to the strategy settings, so capacity is preserved during the rollout. What can go wrong is that the new version may never become ready, or the rollout may proceed too aggressively and reduce available capacity below what the service needs. If readiness probes are wrong, Kubernetes may send traffic to broken Pods or keep healthy Pods out of service. Good rollouts depend on correct readiness checks, resource headroom, and conservative update settings.",
+    "real_world": "A common production issue is a deployment that looks successful but quietly routes traffic to an app that is still failing initialization. Teams often notice this only through elevated 5xx rates during rollout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely roll back a bad Deployment update?"
+   },
+   {
+    "question": "What is an Ingress, and how is it different from exposing a Service directly?",
+    "answer": "An Ingress defines HTTP or HTTPS routing rules from outside the cluster to internal Services, usually through an Ingress controller. Exposing a Service directly with LoadBalancer or NodePort gives you a simpler path but less flexible routing. Ingress is better when you need host-based or path-based routing, TLS termination, or many services behind one external entry point. The trade-off is that you need to operate an Ingress controller and its configuration correctly.",
+    "real_world": "This is common when one team wants api.example.com and another wants app.example.com, or when multiple services share the same public IP. It also matters for TLS and path routing, where a plain Service is too limited.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you check if an Ingress rule exists but traffic still returns 404?"
+   },
+   {
+    "question": "How do liveness, readiness, and startup probes work together, and when would you use all three?",
+    "answer": "Readiness controls whether a Pod receives traffic, liveness tells Kubernetes whether to restart it, and startup probe gives slow-starting containers extra time before liveness kicks in. If a service has heavy initialization, startup probes prevent early restarts while the app is still booting. Readiness is about traffic safety; liveness is about recovery; startup is about boot timing. Using all three can make behavior much more predictable, especially for apps with caches, migrations, or warmup phases.",
+    "real_world": "Without a startup probe, a JVM or large application can get restarted repeatedly before it finishes booting. Without a proper readiness probe, a Pod can pass health checks while it is still unable to serve real requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you use to design a readiness probe for a web API?"
+   },
+   {
+    "question": "How do resource quotas and limit ranges help in a shared namespace?",
+    "answer": "ResourceQuota caps how much total CPU, memory, storage, or object count a namespace can consume, which prevents one team or workload from exhausting the cluster. LimitRange sets default requests and limits or enforces minimums and maximums per Pod or container. Together they improve fairness and make workloads safer by avoiding unbounded resource usage. The trade-off is less flexibility for developers, so the defaults need to match real usage patterns.",
+    "real_world": "In multi-team clusters, quotas prevent one namespace from taking every node during an incident or load test. LimitRange also helps catch forgotten resource settings before they reach production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if a Pod requests more resources than the quota allows?"
+   },
+   {
+    "question": "What is a DaemonSet update strategy, and when can updates be disruptive?",
+    "answer": "A DaemonSet ensures one Pod runs on each matching node, so updates usually need to replace those node-local Pods one by one. That is useful for agents like log collectors, monitoring, or network components. Updates can be disruptive if the Pod is handling node-local state or if the replacement briefly removes coverage from a node. The key trade-off is broad coverage versus careful coordination during upgrades.",
+    "real_world": "This matters for things like log shippers and security agents, where missing even a short window on a node can mean lost telemetry. Teams often notice gaps during node drains or DaemonSet rollouts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you keep a DaemonSet from running on certain nodes?"
+   },
+   {
+    "question": "How would you debug a Service that exists but traffic is not reaching the Pods?",
+    "answer": "I would first verify the Service selector matches the Pod labels and that the Pods are Ready, because unready Pods are usually removed from endpoints. Then I would check the generated endpoints and confirm the target port matches what the container is actually listening on. If the Service type is internal, I would test from inside the cluster to separate network issues from application issues. Most failures here are selector mismatches, wrong ports, or readiness problems rather than the Service object itself.",
+    "real_world": "This is a common post-deploy outage: the Service is present, DNS works, but requests fail because no endpoints are attached. It often happens after a label change or port rename in the manifest.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you look at if the endpoints exist but requests still time out?"
+   },
+   {
+    "question": "What is the difference between a rolling update and a recreate-style rollout, and when would you choose each?",
+    "answer": "A rolling update keeps some old Pods serving while new ones come up, which minimizes downtime. A recreate-style rollout stops all old Pods before starting new ones, so it is simpler but causes a full outage during the transition. Rolling updates are the default for most production services, while recreate can make sense when the application cannot run two versions side by side. The trade-off is availability versus avoiding version overlap.",
+    "real_world": "Recreate is sometimes used for apps with incompatible in-memory state or singleton resources that cannot tolerate two versions at once. Most teams avoid it for customer-facing APIs because even short downtime becomes visible.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What application behaviors make a rolling update unsafe?"
+   },
+   {
+    "question": "How do you test Kubernetes manifests before applying them in a real environment?",
+    "answer": "I would validate the YAML structure, check that the manifests render correctly from any templating tool, and use server-side validation or a dry-run path to catch schema errors early. Then I would deploy to a staging cluster or namespace that is close to production and verify probes, config, and service discovery. Static checks catch syntax and schema mistakes, but only a real cluster exposes scheduling, RBAC, storage, and network issues. The main trade-off is speed versus confidence, so good teams combine both.",
+    "real_world": "Broken manifests often pass code review but fail only after release because of an invalid field, missing secret, or bad selector. Staging validation catches most of those before production traffic is at risk.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of problems can a dry-run not catch?"
+   },
+   {
+    "question": "How do you decide between putting configuration in a ConfigMap versus baking it into the container image?",
+    "answer": "Put environment-specific or operational settings in a ConfigMap so you can change them without rebuilding the image. Bake only application defaults or code-adjacent assets into the image when they should version with the release. The trade-off is flexibility versus repeatability: ConfigMaps make promotion and rollback easier, while image-baked config can be simpler and more immutable. In practice, teams often keep the image generic and inject environment config at deploy time.",
+    "real_world": "This matters when the same image runs in dev, staging, and prod but points at different endpoints or feature flags. If config is baked into the image, a small settings change turns into a new build and slower incident response.",
+    "code_lang": "yaml",
+    "code": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: app-config\ndata:\n  LOG_LEVEL: info\n  API_BASE_URL: https://api.example.com\n---\nenv:\n- name: LOG_LEVEL\n  valueFrom:\n    configMapKeyRef:\n      name: app-config\n      key: LOG_LEVEL",
+    "follow_up": "How do you roll out a ConfigMap change safely to avoid inconsistent app behavior?"
+   },
+   {
+    "question": "What happens if a container’s memory limit is set too low, and how is that different from CPU throttling?",
+    "answer": "If a container exceeds its memory limit, the kernel can kill it, so you may see restarts rather than gradual slowdown. CPU limits are different: the container is usually throttled, so it keeps running but more slowly. That means memory problems are often abrupt and user-visible, while CPU problems can look like latency or timeouts under load. In production, low memory limits are a common cause of unstable pods during traffic spikes or JVM warmup.",
+    "real_world": "A service might work fine in staging but crash in production after a traffic burst because the request cache or language runtime uses more memory than expected. CPU throttling often shows up as slow APIs even though the pod looks healthy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or events would you check to confirm the pod was OOM-killed versus just under CPU pressure?"
+   },
+   {
+    "question": "How would you debug a Deployment that keeps creating new Pods, but they never become Ready?",
+    "answer": "First check the Pod status, events, and probe configuration to see whether the app is failing to start, failing readiness checks, or being scheduled onto nodes without enough resources. Then inspect container logs and compare the pod spec to what the application actually needs, especially ports, env vars, and volume mounts. If the app starts but never becomes Ready, the problem is often the readiness probe or a dependency the app waits on. The key is to separate startup failure from readiness failure before changing the Deployment.",
+    "real_world": "This is common after a config change where the container runs, but the health endpoint now depends on a database that is unavailable. It also happens when a probe points at the wrong port after a container image change.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you change first if the readiness probe is too strict but the app is actually serving traffic?"
+   },
+   {
+    "question": "When would you use a StatefulSet instead of a Deployment, and what operational differences should you expect?",
+    "answer": "Use a StatefulSet when each replica needs a stable identity, stable network name, or stable storage, such as databases or clustered brokers. Unlike Deployment pods, StatefulSet pods are ordinally named and are typically created, updated, and deleted in a more controlled order. That gives you predictability, but usually less flexibility and slower rollouts. In exchange, you can safely attach per-pod persistent volumes and preserve identity across reschedules.",
+    "real_world": "This matters for databases, queues, and systems that store node membership or shard ownership in the pod identity. Using a Deployment for those workloads often causes data loss or cluster instability during rescheduling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do headless Services fit into StatefulSets?"
+   },
+   {
+    "question": "What is a rolling update strategy trying to optimize, and when can it still cause downtime?",
+    "answer": "A rolling update tries to replace old pods gradually so some capacity stays available while the new version comes up. It can still cause downtime if the new pods are not actually ready before old ones are removed, if the app needs more capacity than the update budget allows, or if there are too few replicas. Misconfigured readiness probes and aggressive maxUnavailable settings are common causes. The practical goal is not just zero downtime, but controlling how much risk and capacity loss you accept during the rollout.",
+    "real_world": "Teams often discover rollout downtime only in production because the new version starts but fails requests after readiness passes. A small service with one or two replicas is especially sensitive to rolling-update settings.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tune a rollout for a service with only two replicas?"
+   },
+   {
+    "question": "How do node selectors, affinities, and taints/tolerations differ in scheduling Pods?",
+    "answer": "Node selectors are the simplest way to require a pod land on nodes with matching labels. Affinity and anti-affinity give you more expressive placement rules, such as preferring or requiring certain topology or separating replicas across zones. Taints and tolerations work from the node side: they keep pods off a node unless the pod explicitly tolerates the taint. In practice, selectors are easy, affinities are flexible, and taints are useful for reserving special nodes like GPU or infra pools.",
+    "real_world": "This is useful when you need workloads isolated onto nodes with SSDs, GPUs, or compliance boundaries. It also helps spread replicas across zones to reduce the impact of a single node or zone failure.",
+    "code_lang": "yaml",
+    "code": "spec:\n  nodeSelector:\n    disktype: ssd\n  tolerations:\n  - key: dedicated\n    operator: Equal\n    value: batch\n    effect: NoSchedule",
+    "follow_up": "When would you prefer pod anti-affinity over topology spread constraints?"
+   },
+   {
+    "question": "How would you troubleshoot a Service that resolves correctly but returns connection timeouts from another Pod?",
+    "answer": "I would verify the Service endpoints first to confirm it has backing pods, then check whether the target pods are actually listening on the port the Service forwards to. Next I would compare the Service selector, container port, and readiness status, because unready pods are removed from endpoints. If DNS works but connections time out, the issue is often a port mismatch, a network policy, or the app binding only to localhost. The important distinction is between name resolution and actual network reachability.",
+    "real_world": "This commonly happens after a refactor where the container listens on a new port but the Service manifest is not updated. It also appears when a network policy blocks pod-to-pod traffic even though the Service exists.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What commands or objects would you inspect to confirm whether the endpoints list is empty or wrong?"
+   },
+   {
+    "question": "What problem do init containers solve, and why not just put the setup in the main container startup script?",
+    "answer": "Init containers handle one-time setup steps that must complete before the main app starts, such as waiting for a dependency, copying files, or preparing volumes. They are useful because they are isolated, retried independently, and keep the main container image focused on the application itself. A startup script can work, but it mixes setup with runtime logic and makes failure modes harder to observe. Init containers make startup sequencing explicit and easier to debug.",
+    "real_world": "Teams use init containers to block until a schema migration job or external secret is ready. This prevents an app from crashing in a loop because it started before its prerequisites existed.",
+    "code_lang": "yaml",
+    "code": "initContainers:\n- name: wait-for-db\n  image: busybox\n  command: ['sh', '-c', 'until nc -z db 5432; do sleep 2; done']\ncontainers:\n- name: app\n  image: myapp:1.0",
+    "follow_up": "What are the downsides of using an init container for dependency waiting?"
+   },
+   {
+    "question": "How do you think about choosing between a Horizontal Pod Autoscaler and scaling the Deployment manually?",
+    "answer": "Manual scaling is useful when demand is predictable or when you want operator control during an incident, but it does not react to traffic changes automatically. The Horizontal Pod Autoscaler is better when load varies and you have reliable metrics that correlate with demand. The trade-off is that autoscaling adds more moving parts and can react too slowly or too aggressively if the metrics are poor. In practice, teams often combine both: set sensible defaults, then let autoscaling handle routine traffic fluctuations.",
+    "real_world": "This matters for services with strong daily traffic patterns or sudden promotional spikes. If scaling is manual, the system can be overloaded before someone notices; if autoscaling is misconfigured, it can oscillate or scale on the wrong signal.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you trust for autoscaling an HTTP service, and why?"
+   },
+   {
+    "question": "What is the point of a PodDisruptionBudget, and what can it protect you from?",
+    "answer": "A PodDisruptionBudget limits how many replicas of a workload can be voluntarily disrupted at once, such as during node drains or cluster maintenance. It helps keep enough healthy pods running so the service stays available while the cluster changes underneath it. It does not stop involuntary disruptions like node crashes, and it does not guarantee the workload can be scheduled if the cluster is already full. The main trade-off is availability protection versus slower maintenance operations.",
+    "real_world": "This is important during node upgrades, autoscaler scale-downs, or planned maintenance windows. Without it, a drain can evict too many replicas and cause an outage even though the application itself is healthy.",
+    "code_lang": "yaml",
+    "code": "apiVersion: policy/v1\nkind: PodDisruptionBudget\nmetadata:\n  name: api-pdb\nspec:\n  minAvailable: 2\n  selector:\n    matchLabels:\n      app: api",
+    "follow_up": "How is a voluntary disruption different from a pod being killed because it exceeded memory?"
+   },
+   {
+    "question": "How would you decide whether to put a sidecar container in a Pod, and what are the operational costs?",
+    "answer": "A sidecar makes sense when you need closely coupled behavior like log shipping, proxying, metrics export, or certificate refresh alongside the app. The cost is that you now manage two lifecycles in one Pod, so resource usage, crashes, and readiness become more complex. Sidecars can improve consistency and packaging, but they can also hide failures or add latency if they sit on the request path. In real projects, I would use a sidecar only when the coupling is strong enough to justify the extra operational burden.",
+    "real_world": "Teams often add sidecars for service mesh proxies or log collectors and later find that startup and memory overhead doubled unexpectedly. If the sidecar fails, the whole pod may become unavailable even if the app container is fine.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a DaemonSet or an external service instead of a sidecar?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you walk me through what actually happens from creating a Pod object to a container process starting on a node?",
+    "answer": "The API server stores the Pod in etcd, then the scheduler watches for unscheduled Pods and writes a node binding back through the API. Kubelet on that node watches assigned Pods, pulls images, asks the container runtime to create the sandbox and containers, mounts volumes, and reports status back. In parallel, controllers and kube-proxy or the CNI react to the same API objects to program endpoints and networking. The important point is Kubernetes is mostly a set of independent control loops coordinated through the API, so delays or failures in one loop show up as partial progress rather than a single transaction.",
+    "real_world": "This matters during incidents because a Pod stuck in Pending, ContainerCreating, or Running but not receiving traffic usually points to different components in that chain: scheduler, kubelet/runtime, storage, CNI, or endpoints programming.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If Pods are created quickly but take a long time to become runnable, which stages would you measure first and why?"
+   },
+   {
+    "question": "How does the scheduler actually pick a node for a Pod, and what are the biggest reasons scheduling becomes slow at scale?",
+    "answer": "The scheduler filters nodes that cannot run the Pod, then scores feasible nodes and chooses one, with plugins contributing both phases. Performance usually degrades from too many candidate nodes, expensive inter-pod affinity rules, topology spread constraints, and frequent reprocessing under churn. Resource fragmentation also hurts because many nodes look feasible until late in evaluation. The trade-off is richer placement policy versus scheduler throughput and latency.",
+    "real_world": "In large clusters, a single workload with broad anti-affinity or spread constraints can push scheduling latency up for unrelated teams, and Pending backlogs appear even when aggregate capacity looks fine.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you change first if the scheduler is healthy but many Pods stay Pending because of fragmentation?"
+   },
+   {
+    "question": "What are the practical differences between iptables and IPVS service proxying, and why would you care in production?",
+    "answer": "Both implement Service virtual IPs and load-balancing on nodes, but they differ in how rules are represented and updated. iptables can become expensive with very large rule sets because updates and packet traversal depend on many chains, while IPVS uses kernel load-balancing data structures that generally scale better for large numbers of Services and endpoints. The choice affects connection behavior, failover speed, observability, and operational familiarity. It also does not remove the need to understand conntrack limits and CNI behavior.",
+    "real_world": "Teams often feel this when clusters grow to thousands of Services or rapidly changing endpoints: node CPU rises during rule churn, and new connections fail or stall even though Pods are healthy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does conntrack interact with Kubernetes Services, and what failure symptoms does saturation cause?"
+   },
+   {
+    "question": "What failure modes do you watch for in etcd, and why is it such a common root cause during control-plane incidents?",
+    "answer": "etcd is the source of truth for cluster state, so high write latency, leader instability, quorum loss, or storage saturation can slow or break almost every control-plane path. API requests may time out, controllers fall behind, leases stop renewing promptly, and the scheduler cannot persist decisions. The main operational risks are disk latency, network partitions between members, oversized objects or watch pressure, and poorly planned backup or restore procedures. Because Kubernetes relies on continuous small writes and watches, etcd health matters more than raw CPU.",
+    "real_world": "A control plane can look 'up' while all rollouts stall because etcd fsync latency spikes; Pods keep running, but no one can reliably create, update, or observe objects.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you restore from an etcd snapshot safely, and what cluster-state surprises would you expect afterward?"
+   },
+   {
+    "question": "How do Kubernetes watches work under the hood, and what problems show up when you have too many watchers or too much object churn?",
+    "answer": "Clients usually list current state, then open a watch stream starting from a resource version so they can process incremental changes. The API server has to serve those watches efficiently while keeping watch caches current, and heavy churn can cause watch lag, relists, memory pressure, and increased etcd load. If clients fall behind resource history, they may need to relist, which amplifies load further. This is why controller design, object size, and update frequency matter in big clusters.",
+    "real_world": "A noisy controller that rewrites status fields too often can trigger a feedback loop: more watch events, more relists, hotter API servers, and delayed reconciliation across unrelated workloads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns would you use when writing a controller to avoid overwhelming the API server?"
+   },
+   {
+    "question": "What is the difference between cgroup CPU limits, CPU shares, and quotas in Kubernetes, and how does that show up in application latency?",
+    "answer": "Requests influence scheduling and usually map to relative CPU weight, while limits can map to a hard quota over a period that causes throttling when exceeded. Shares decide who gets CPU when the node is contended; quotas can cap a container even when there may be idle CPU moments within the period boundary. For bursty, latency-sensitive services, strict CPU limits often increase tail latency more than expected because short spikes get throttled. The trade-off is stronger isolation versus better burst performance.",
+    "real_world": "A service can look underutilized on average yet still miss p99 latency goals because it is repeatedly throttled during short request bursts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you deliberately avoid setting CPU limits, and what safeguards would you put in place instead?"
+   },
+   {
+    "question": "How do network policies actually get enforced, and what gaps or misconceptions do teams commonly have about them?",
+    "answer": "NetworkPolicy is just an API; enforcement is implemented by the network plugin, usually by programming kernel packet filters or equivalent dataplane rules on nodes. Policies are generally additive and apply only where the plugin supports them, so behavior depends on CNI capabilities, policy types, and traffic direction. Common misconceptions are assuming policies cover host-network traffic, DNS, or egress the same way in every environment, or assuming a policy object does anything before the plugin installs rules. You need to verify dataplane support, default-deny posture, and exceptions explicitly.",
+    "real_world": "Teams think they locked down east-west traffic, but a missing default-deny or unsupported egress path leaves workloads reachable until a real security review or incident proves otherwise.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a namespace isolation baseline with network policies without breaking service discovery and observability?"
+   },
+   {
+    "question": "What happens during node failure detection and pod eviction, and why can the timing surprise people?",
+    "answer": "The node lifecycle logic relies on heartbeats or leases to detect an unhealthy node, then marks it NotReady or Unreachable and starts eviction behavior for Pods that are not supposed to stay bound there. Detection and eviction are intentionally delayed to avoid flapping on transient network issues, so failover is not instant even if the node is truly gone. Pods on the failed node may still look Running for a while because the control plane cannot confirm local process state. The trade-off is stability versus faster recovery.",
+    "real_world": "During a zone network partition, traffic may continue targeting Pods that are effectively dead until endpoints and replacements converge, which surprises teams expecting immediate self-healing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do tolerationSeconds, graceful termination, and volume attach limits affect failover time for stateful workloads?"
+   },
+   {
+    "question": "How would you approach API server performance tuning in a busy multi-tenant cluster?",
+    "answer": "I would start by measuring request rates, verb mix, latency by resource, inflight requests, watch counts, and object sizes before changing anything. The usual levers are reducing noisy clients, fixing controllers that patch too often, using server-side apply or status updates carefully, right-sizing API server replicas, and tuning request fairness and client-side rate limiting. Large lists, broad watches, and huge custom resources are common hidden costs. The goal is to reduce unnecessary API work first, because scaling the control plane alone rarely fixes pathological clients.",
+    "real_world": "A cluster can have plenty of CPU on API servers but still feel broken because one operator floods the API with retries or full-object updates, starving other tenants of fair access.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would tell you the problem is watch pressure versus admission webhook latency?"
+   },
+   {
+    "question": "Can you explain finalizers and owner references, and describe a deletion edge case that can leave resources stuck?",
+    "answer": "Owner references drive garbage collection relationships, while finalizers let a controller block deletion until it performs cleanup and then removes the finalizer. A resource gets a deletion timestamp first, and it only disappears after finalizers are cleared. Stuck deletions usually happen when the responsible controller is down, lost permissions, or has a bug, so the object remains in a terminating state indefinitely. The key trade-off is reliable external cleanup versus the risk of wedging control flow if cleanup cannot complete.",
+    "real_world": "This shows up with cloud load balancers, DNS records, or custom resources backed by external systems: deleting the Kubernetes object does not finish, and retries pile up because the cleanup controller is failing.",
+    "code_lang": "yaml",
+    "code": "metadata:\n  finalizers:\n    - example.com/cleanup\n  ownerReferences:\n    - apiVersion: apps/v1\n      kind: Deployment\n      name: api\n      uid: 1234-uid",
+    "follow_up": "When is it acceptable to remove a finalizer manually, and what checks would you do first?"
+   },
+   {
+    "question": "How does CoreDNS interact with Kubernetes internals, and what usually causes DNS to become a cluster-wide bottleneck?",
+    "answer": "CoreDNS watches Services, EndpointSlices, and sometimes Pods, then serves records from an in-memory view of that data. At scale, DNS pain usually comes from query volume rather than lookup complexity: short client-side TTL behavior, search path expansion, ndots settings, and chatty libraries can multiply queries dramatically. If CoreDNS is underprovisioned or upstream lookups are slow, request latency spreads quickly because almost every workload depends on DNS. EndpointSlice reduced some watch and object size pressure compared with large Endpoints objects, but DNS can still become a hotspot in busy clusters.",
+    "real_world": "A small config issue like high ndots with external hostnames can turn one app call into several DNS queries, causing CoreDNS CPU spikes and broad request latency during peak traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kubelet DNS settings or Pod resolver settings would you check first during a DNS storm?"
+   },
+   {
+    "question": "What is an EndpointSlice, why did Kubernetes add it, and what trade-offs does it introduce compared with the old Endpoints object?",
+    "answer": "EndpointSlice shards backend addresses across multiple objects instead of storing every endpoint in one large Endpoints resource. That scales better for large Services because updates are smaller, watchers process less data per change, and control-plane memory and network pressure drop. The trade-off is more objects and more reconciliation logic, so consumers need to handle multiple slices and eventual consistency across them. In practice it is much more stable for Services with many backends or high churn.",
+    "real_world": "A Service with thousands of Pods used to generate huge Endpoints updates on every rollout; with EndpointSlices, those updates are split and less likely to overload controllers, kube-proxy, or API watchers.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of clients or controllers broke historically when clusters moved from Endpoints-heavy assumptions to EndpointSlice-aware behavior?"
+   },
+   {
+    "question": "How does the Horizontal Pod Autoscaler actually make decisions, and what failure modes matter in production beyond just 'CPU too high'?",
+    "answer": "HPA periodically reads metrics, compares current utilization or custom metric values to the target, and adjusts replicas proportionally, with stabilization and tolerance to avoid flapping. In production, the hard parts are metric freshness, startup behavior, and lag: scaling decisions are only as good as the metrics pipeline and the workload's response time. If requests are too low, metrics are misleading; if Pods warm slowly, HPA reacts after users already feel pain. It also cannot fix bottlenecks like database saturation or unschedulable Pods.",
+    "real_world": "Teams often see HPA scale out correctly on paper while latency still climbs because new Pods take minutes to become useful or because the cluster autoscaler cannot add nodes quickly enough.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tune HPA behavior for a bursty service with expensive warm-up and uneven per-request CPU cost?"
+   },
+   {
+    "question": "What actually happens when the cluster autoscaler decides to remove a node, and why is scale-down often riskier than scale-up?",
+    "answer": "The autoscaler looks for underutilized nodes whose Pods can be moved elsewhere, simulates rescheduling, then cordons and drains a candidate before letting the infrastructure remove it. Scale-down is riskier because it interacts with PodDisruptionBudgets, local storage, daemon overhead, anti-affinity, and workloads that were technically schedulable once but no longer fit cleanly. A bad scale-down can cause eviction delays, rescheduling failures, or churn where nodes are removed and quickly re-added. The safe path is conservative, which is why scale-down is often slower.",
+    "real_world": "A cluster can sit with apparently idle nodes for hours because one small Pod with strict affinity or a blocking PDB makes the node non-removable, confusing teams who only look at CPU graphs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you inspect to explain why a specific node has been marked unremovable for a long time?"
+   },
+   {
+    "question": "How do mutating and validating admission webhooks affect API reliability, and what design choices keep them from becoming a control-plane outage?",
+    "answer": "Admission webhooks sit inline on write paths, so every matching create, update, or delete can block on them. That makes latency, failurePolicy, timeout choice, and scoping critical: a slow or unavailable webhook can stall deployments, node heartbeats indirectly, or even system component updates if it matches too broadly. Good designs narrowly target objects, keep timeouts short, avoid external dependencies where possible, and fail open only when the risk is acceptable. You also need to plan certificate rotation and version compatibility carefully.",
+    "real_world": "A broadly scoped mutating webhook with a dependency on an external policy service can turn a minor network issue into a cluster-wide incident where new Pods cannot be created.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose failurePolicy Ignore versus Fail for an admission webhook?"
+   },
+   {
+    "question": "What are the main causes of API version skew problems in Kubernetes, and how do they show up during upgrades?",
+    "answer": "Version skew shows up when apiservers, kubelets, controllers, CRDs, or clients rely on behaviors or API versions that are not aligned. The practical problems are usually removed APIs, changed defaults, webhook incompatibility, and controllers compiled against assumptions that no longer hold. During upgrades, writes may start failing, objects may stop reconciling, or old clients may silently drop fields they do not understand. The safe approach is staged upgrades, checking deprecated APIs ahead of time, and validating webhook and CRD compatibility before touching production.",
+    "real_world": "A cluster upgrade often looks healthy until a rollout hits an old admission webhook or a deprecated API in CI manifests, at which point deployments fail even though existing workloads keep running.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you find upgrade blockers related to deprecated APIs before starting the control-plane upgrade?"
+   },
+   {
+    "question": "Can you explain topology spread constraints and how they differ from anti-affinity when you're trying to improve availability?",
+    "answer": "Topology spread constraints tell the scheduler to keep replicas balanced across zones, nodes, or other topology domains, using a maximum skew rather than pairwise placement rules. Anti-affinity is stricter and can become expensive because it evaluates existing Pods and can make scheduling much harder as clusters grow. Spread constraints are often the better default when you want resilience without overconstraining placement, especially for large replica counts. The trade-off is that soft spread may still allow temporary imbalance when capacity is tight.",
+    "real_world": "Teams that model 'one replica per zone if possible' with anti-affinity often hit scheduling failures during partial outages, while spread constraints let the scheduler degrade more gracefully.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if topology spread constraints conflict with limited zonal capacity during a surge rollout?"
+   },
+   {
+    "question": "How do CRDs and custom controllers really fit into the Kubernetes control loop model, and what are the common scaling pitfalls?",
+    "answer": "A CRD extends the API with a new resource type, and a controller watches those objects plus related state, then reconciles actual state toward the desired state described in spec. The scaling pitfalls are usually not the CRD itself but controller behavior: hot reconcile loops, full-list processing, poor backoff, large status updates, and too many watches or cache entries. Since every custom controller adds load to the API server and memory to its own caches, multi-tenant platforms can suffer death by a thousand operators. Good controllers are level-triggered, idempotent, and frugal with writes.",
+    "real_world": "An operator that updates status every few seconds across tens of thousands of objects can create enough API churn to impact unrelated workloads and make the whole cluster feel slow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What controller-runtime or reconciliation patterns help avoid API hot loops?"
+   },
+   {
+    "question": "What is the difference between image pull latency and container startup latency in Kubernetes, and how do you reduce each without creating new problems?",
+    "answer": "Image pull latency is the time to fetch layers onto the node; container startup latency is everything after that, including sandbox setup, volume mounts, CNI work, and the process becoming Ready. Reducing pull time often means smaller images, layer reuse, pre-pulling, or registry locality, while reducing startup time means faster app init, fewer mounts, lighter sidecars, and careful probe design. The trade-off is that aggressive pre-pulling or large image caches consume disk and can hurt node density. You need to measure both separately because the fixes are different.",
+    "real_world": "During a regional failover, a service may have enough replicas configured but still miss recovery targets because thousands of Pods are waiting on registry bandwidth rather than scheduling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you measure whether slow rollouts are dominated by image distribution, CNI setup, or application initialization?"
+   },
+   {
+    "question": "If a Pod is OOMKilled repeatedly even though the node has plenty of free memory, how would you explain that and what would you check next?",
+    "answer": "An OOMKill usually means the container exceeded its own memory limit, not that the whole node ran out of memory. Kubernetes enforces limits with cgroups, so a process can be killed inside a mostly idle node if its container limit is too low or memory usage spikes sharply. I would confirm the exit reason, compare working set to the limit, check for cache versus heap growth, and review whether sidecars share the Pod budget in a way people forgot about. Then I would tune limits based on measured peaks and understand whether the leak is real or the sizing is wrong.",
+    "real_world": "This often happens after adding a proxy sidecar or enabling a feature flag that increases heap usage; the node looks healthy, but one container keeps restarting because its local budget is the real boundary.",
+    "code_lang": "bash",
+    "code": "kubectl describe pod mypod\nkubectl top pod mypod --containers\nkubectl logs mypod --previous\nkubectl get pod mypod -o jsonpath='{.status.containerStatuses[*].lastState.terminated.reason}'",
+    "follow_up": "How would your approach differ if the kernel, not the container cgroup, was under global memory pressure on the node?"
+   }
+  ]
+ }
+}

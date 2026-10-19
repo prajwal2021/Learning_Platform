@@ -1,0 +1,305 @@
+{
+  "slug": "product-images-expire-after-fifteen-minutes",
+  "title": "Product images disappear fifteen minutes after upload",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "object-storage",
+    "presigned-urls",
+    "cdn",
+    "data-modeling",
+    "incident-debugging"
+  ],
+  "scenario": "Sellers can upload product images and see them in the admin UI right after saving a listing. About 15 minutes later, public product pages show broken images for about 40% of new listings, while older listings and the remaining new listings keep working. The upload service was changed this morning, and no object storage outage is reported.",
+  "goal": "Find the cause of the 15-minute image failures and choose a safe production fix.",
+  "concepts": [
+    {
+      "key": "database-record",
+      "name": "Database record",
+      "summary": "A saved row or document that stores application state. For a product, it may store fields such as title, price, and image reference.",
+      "used_here": "The product record contains the image reference that the public page uses to build its image tag."
+    },
+    {
+      "key": "presigned-url",
+      "name": "Presigned URL",
+      "summary": "A temporary URL that grants access to an object without requiring the caller to have storage credentials. It includes signature fields that prove who created it and what access it allows.",
+      "used_here": "Some product image fields contain long storage URLs with signature query parameters."
+    },
+    {
+      "key": "url-expiration",
+      "name": "URL expiration",
+      "summary": "A time limit after which a temporary URL is no longer accepted by the storage service. After expiration, the object may still exist, but that URL no longer grants access to it.",
+      "used_here": "The failing image URLs include a 900-second lifetime, which matches the 15-minute symptom."
+    },
+    {
+      "key": "object-storage",
+      "name": "Object storage",
+      "summary": "A storage system for files addressed as objects inside buckets or containers. Amazon S3 is a common example.",
+      "used_here": "Uploaded product images are stored as objects in a bucket."
+    },
+    {
+      "key": "object-key",
+      "name": "Object key",
+      "summary": "The stable name or path of an object inside object storage. It identifies the object independently from any temporary URL used to access it.",
+      "used_here": "The product should keep the image object's key as the durable reference."
+    },
+    {
+      "key": "cdn-url",
+      "name": "CDN URL",
+      "summary": "A URL served through a content delivery network that caches and delivers public content close to users. It is usually stable for public assets.",
+      "used_here": "Public product images can be served through a CDN URL derived from the stored object key."
+    },
+    {
+      "key": "access-control",
+      "name": "Access control",
+      "summary": "Rules that decide who can read or write a resource. Public product images and private seller files may need different rules.",
+      "used_here": "The fix must not make all objects public just to avoid expired URLs."
+    },
+    {
+      "key": "batch-migration",
+      "name": "Batch migration",
+      "summary": "A controlled update of existing data in small groups. It reduces risk by allowing validation, rollback, and progress tracking.",
+      "used_here": "Existing bad image references need to be converted without breaking working listings."
+    },
+    {
+      "key": "http-status",
+      "name": "HTTP status",
+      "summary": "A numeric response code returned by a web server. For images, 200 usually means the image was fetched successfully, while 403 or 404 means it was not usable.",
+      "used_here": "The team can verify whether public image URLs still return 200 after 15 minutes."
+    },
+    {
+      "key": "monitoring",
+      "name": "Monitoring",
+      "summary": "Collected signals such as metrics, logs, and alerts that show whether a system is healthy. It helps confirm that a fix works in production.",
+      "used_here": "Image load failures and storage access errors should drop after the fix is deployed."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Choose the first place to look",
+      "question": "You are on call and need to narrow the problem quickly. Which first check best separates a rendering problem from a stored-data problem?",
+      "concept_keys": [
+        "database-record",
+        "cdn-url",
+        "http-status"
+      ],
+      "options": [
+        {
+          "text": "Restart the image processing workers and check whether newly uploaded thumbnails are generated more consistently.",
+          "correct": false,
+          "hint": "Worker health matters if image files are missing or thumbnails are delayed. Here the images work briefly before failing.",
+          "id": "a"
+        },
+        {
+          "text": "Increase public page timeouts and check whether slow object storage responses are causing the broken image icons.",
+          "correct": false,
+          "hint": "A timeout issue would usually vary with load or network latency. The exact 15-minute timing points to data or access lifetime.",
+          "id": "b"
+        },
+        {
+          "text": "Purge the CDN cache for several affected products and see whether the public pages start showing images again.",
+          "correct": false,
+          "hint": "A cache purge can change what users see, but it does not explain why only some new listings fail at the same age.",
+          "id": "c"
+        },
+        {
+          "text": "Compare the saved image field and rendered image URL for affected and unaffected listings created at the same time.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The fastest split is to compare what the application saved and what the browser is asked to load for working and failing listings. If affected records contain a different kind of image reference, the problem is likely in the upload flow or data model, not in page rendering. A CDN purge is tempting, but it would not explain failures that begin exactly 15 minutes after upload for about 40% of new listings."
+    },
+    {
+      "title": "Interpret the failing URL",
+      "question": "You inspect an affected product record. Its image field is `https://shop-prod-images.s3.us-east-1.amazonaws.com/products/987/main.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAEXAMPLE%2F20261016%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20261016T100000Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Signature=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef`. What detail best explains the exact 15-minute failure?",
+      "concept_keys": [
+        "presigned-url",
+        "url-expiration",
+        "object-storage"
+      ],
+      "options": [
+        {
+          "text": "The URL has `X-Amz-Date=20261016T100000Z` and `X-Amz-Expires=900`, so access ends 900 seconds later.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "The URL contains a signature, and the signature value is too long for some browsers to load as an image source.",
+          "correct": false,
+          "hint": "Browsers can load long image URLs. Focus on fields that define when the storage service will accept the URL.",
+          "id": "b"
+        },
+        {
+          "text": "The object path includes `products/987/main.jpg`, so the listing ID is being used where a file hash should be used.",
+          "correct": false,
+          "hint": "A predictable path can have other risks, but it does not explain a precise failure after 900 seconds.",
+          "id": "c"
+        },
+        {
+          "text": "The URL is in the `us-east-1` region, and cross-region reads commonly fail after cached credentials rotate.",
+          "correct": false,
+          "hint": "The region is part of the storage endpoint and signature scope. It does not by itself create a 15-minute lifetime.",
+          "id": "d"
+        }
+      ],
+      "explanation": "`X-Amz-Expires=900` means the URL is valid for 900 seconds from `X-Amz-Date=20261016T100000Z`, which is exactly 15 minutes. After that time, the storage service can reject the request even though the object still exists. The region and object path are worth validating, but neither explains the exact 15-minute cutoff."
+    },
+    {
+      "title": "Name the root cause",
+      "question": "You compare records. Working listings store values like `products/123/main.jpg` or `/cdn/products/123/main.jpg`. Failing listings store long storage URLs with `X-Amz-*` query parameters. What is the root cause?",
+      "concept_keys": [
+        "database-record",
+        "presigned-url",
+        "object-key",
+        "cdn-url"
+      ],
+      "options": [
+        {
+          "text": "The application persisted a temporary signed access URL as the product image reference.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "The object storage bucket is deleting new objects after 15 minutes for some sellers.",
+          "correct": false,
+          "hint": "If the object were deleted, every way of reading that object would fail. The evidence so far is about the saved reference, not object existence.",
+          "id": "b"
+        },
+        {
+          "text": "The admin UI is using browser-local previews that never match the public product page.",
+          "correct": false,
+          "hint": "Local previews may explain why the admin seems fine at first. They do not explain why the public page URL has a 900-second access limit.",
+          "id": "c"
+        },
+        {
+          "text": "The CDN is caching broken image responses for new listings created by the updated upload service.",
+          "correct": false,
+          "hint": "Caching can amplify a bad response, but the records themselves differ before the CDN is involved.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The product record is using a temporary access mechanism as if it were a durable image identity. That makes the public page work only until the saved URL expires. The most tempting alternative is a CDN issue, but affected records already contain expiring `X-Amz-*` URLs while working records contain stable references."
+    },
+    {
+      "title": "Fix new uploads correctly",
+      "question": "What should the upload flow store and serve for new product images?",
+      "concept_keys": [
+        "object-key",
+        "cdn-url",
+        "presigned-url",
+        "access-control"
+      ],
+      "options": [
+        {
+          "text": "Store the stable object key, then derive a public CDN URL or a short-lived read URL based on the image access policy.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Keep storing the generated storage URL, but increase its expiration from 15 minutes to 30 days.",
+          "correct": false,
+          "hint": "A longer temporary URL only delays the same failure. It also keeps access policy mixed into the stored product identity.",
+          "id": "b"
+        },
+        {
+          "text": "Make the image bucket public and keep the existing saved URLs so signatures no longer matter.",
+          "correct": false,
+          "hint": "Public bucket access can hide this symptom, but it changes the security model for every object in the bucket.",
+          "id": "c"
+        },
+        {
+          "text": "Store both the upload URL and the CDN URL, then prefer whichever one returns 200 first.",
+          "correct": false,
+          "hint": "Keeping two competing identities makes future failures harder to reason about. The durable record should identify the object, not a temporary grant.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The durable product data should store the object key, such as `products/987/main.jpg`, because that identifies the image independent of any access method. For public product images, the app can derive a stable CDN URL; for private images, it can generate a separate short-lived read URL when needed. Extending the expiration is tempting, but it only moves the failure from 15 minutes to a later time and still treats a temporary grant as permanent data."
+    },
+    {
+      "title": "Repair existing bad records",
+      "question": "About 40% of new listings from today already contain expired signed storage URLs. What is the safest migration plan?",
+      "concept_keys": [
+        "batch-migration",
+        "database-record",
+        "object-key",
+        "object-storage"
+      ],
+      "options": [
+        {
+          "text": "Re-download every image through the saved URL and upload it again under a new stable path.",
+          "correct": false,
+          "hint": "Many saved URLs are already expired, so using them as the source of truth will fail for the records that need repair most.",
+          "id": "a"
+        },
+        {
+          "text": "Parse only known bucket URLs, decode the object key, verify the object exists, and update records in small batches with rollback data.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Strip everything after `?` in the saved URL and store the remaining storage URL as the final image value.",
+          "correct": false,
+          "hint": "Removing the query string may remove the expiration, but it still stores an access URL rather than the durable object identity.",
+          "id": "c"
+        },
+        {
+          "text": "Ask affected sellers to upload their images again because the old records can no longer be trusted.",
+          "correct": false,
+          "hint": "The signed URL may be expired, but the path inside it can still identify an existing object if validated carefully.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The expired URL still contains the bucket host and object path, so a controlled migration can recover the stable key without relying on the expired signature. Validation matters: only trusted bucket hosts should be parsed, and each object should be checked before updating the product record. Re-downloading through the saved URL is tempting, but expired URLs will fail even when the underlying object is still present."
+    },
+    {
+      "title": "Confirm the fix worked",
+      "question": "After deploying the code change and running the migration, which verification gives the strongest evidence that the incident is resolved?",
+      "concept_keys": [
+        "cdn-url",
+        "presigned-url",
+        "http-status",
+        "monitoring"
+      ],
+      "options": [
+        {
+          "text": "Watch the object storage upload success rate for one hour and confirm it stays near the normal baseline.",
+          "correct": false,
+          "hint": "Upload success shows objects are being written. The incident is about the reference used later by public pages.",
+          "id": "a"
+        },
+        {
+          "text": "Create a new listing, confirm the admin preview appears, and mark the deploy healthy if upload latency is unchanged.",
+          "correct": false,
+          "hint": "The symptom appears after time passes and on public pages. Immediate admin success is not enough.",
+          "id": "b"
+        },
+        {
+          "text": "Curl several old saved signed URLs and confirm they now return 403 after their expiration time passes.",
+          "correct": false,
+          "hint": "Expired signed URLs should fail. That does not prove the application stopped saving or serving them.",
+          "id": "c"
+        },
+        {
+          "text": "Check that no product records contain `X-Amz-` fields, then wait over 15 minutes and verify new public image URLs return 200 without signed query parameters.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The right confirmation checks both data shape and user-visible behavior after the 15-minute boundary. Product records should no longer contain signed URL fields, and public image URLs should still return HTTP 200 after the old expiration window. Upload metrics alone are not sufficient because uploads were already succeeding during the incident."
+    }
+  ],
+  "takeaway": "Store durable object identity separately from temporary access grants. Presigned URLs are useful for upload or controlled download, but they should not be persisted as permanent product image URLs. For public images, derive a CDN URL from the stored key; for private images, generate short-lived read URLs when needed.",
+  "review_issues": [
+    "Step 2: The pre-step `url-expiration` concept text says the failing image URLs include a 900-second lifetime, which directly gives away the correct interpretation of `X-Amz-Expires=900` if concepts are shown before the question.",
+    "Step 4: The distractor “increase its expiration from 15 minutes to 30 days” is technically inaccurate for S3 SigV4 presigned URLs, which cannot be valid for 30 days; the usual maximum is 7 days with long-lived credentials and potentially less with temporary credentials.",
+    "Step 4: The pre-step `object-key`/`cdn-url` concept text says the product should keep the image object key and derive a CDN URL, which gives away this step’s correct fix if concepts are shown before the question."
+  ]
+}

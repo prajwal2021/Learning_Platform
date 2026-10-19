@@ -1,0 +1,389 @@
+{
+  "slug": "cdn-bill-quadruples-overnight",
+  "title": "The CDN bill quadruples overnight with the same traffic",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "cdn",
+    "caching",
+    "frontend",
+    "incident-response",
+    "cost-debugging"
+  ],
+  "scenario": "Daily CDN-related cost jumps from $4,800 to $19,000 after a frontend SDK release, while page views increase by only 3%. The CDN cache hit ratio drops from 92% to 18%, and origin servers report a sharp rise in requests for images and scripts. Users are not reporting errors, but the finance alert says the current run rate will exceed the monthly budget within a week.",
+  "goal": "Find the cause of the cache hit collapse, fix it without breaking valid asset variants, and prove the bill will return toward the expected run rate.",
+  "concepts": [
+    {
+      "key": "cdn",
+      "name": "CDN",
+      "summary": "A content delivery network serves files from servers close to users. It reduces latency and takes load off the origin service when cached content can be reused.",
+      "used_here": "The CDN serves images and scripts and should normally reuse cached copies for most requests."
+    },
+    {
+      "key": "cache-hit-ratio",
+      "name": "Cache hit ratio",
+      "summary": "Cache hit ratio is the share of requests served from cache instead of fetched from the origin. A lower hit ratio usually means more origin traffic and more cache-fill work.",
+      "used_here": "The hit ratio fell from 92% to 18%, which explains why origin requests rose even though page views barely changed."
+    },
+    {
+      "key": "origin-egress",
+      "name": "Origin egress",
+      "summary": "Origin egress is data transferred out of the origin system to another service, such as a CDN. It is different from edge-to-user CDN delivery.",
+      "used_here": "The incident likely increases origin-to-CDN bytes and origin load, not necessarily user-facing bytes."
+    },
+    {
+      "key": "cache-fill",
+      "name": "Cache fill",
+      "summary": "Cache fill is the CDN fetching an object from origin because it was not already cached at the edge. Providers may charge for these fetches, requests, or the resulting origin egress.",
+      "used_here": "The cost increase comes from many more misses and refetches of assets that should have been cached."
+    },
+    {
+      "key": "cache-key",
+      "name": "Cache key",
+      "summary": "A cache key is the exact value a cache uses to decide whether two requests can reuse the same stored response. It often includes the hostname, path, query string, and sometimes headers.",
+      "used_here": "If the cache key changes on every request, the CDN treats the same file as many different files."
+    },
+    {
+      "key": "query-parameter",
+      "name": "Query parameter",
+      "summary": "A query parameter is the part of a URL after the question mark, such as ?w=640. Some parameters change content, while others only carry tracking or diagnostics data.",
+      "used_here": "The investigation checks whether query parameters are making asset URLs look unique to the CDN."
+    },
+    {
+      "key": "high-cardinality",
+      "name": "High cardinality",
+      "summary": "High cardinality means a field has many distinct values. Caches perform poorly when non-content fields have a new value on nearly every request.",
+      "used_here": "A per-request tracing value can create millions of distinct cache keys for the same asset."
+    },
+    {
+      "key": "ttl",
+      "name": "TTL",
+      "summary": "TTL, or time to live, is how long a cached response can be reused before it must be refreshed. A long TTL helps only when later requests use the same cache key.",
+      "used_here": "Raising TTL cannot fix requests that all have different cache keys."
+    },
+    {
+      "key": "purge",
+      "name": "Cache purge",
+      "summary": "A purge removes objects from a cache so they will be refetched. It is useful for replacing stale content, but it can also cause a burst of misses.",
+      "used_here": "Purging is tempting during a cache incident, but it does not fix why new requests are missing."
+    },
+    {
+      "key": "autoscaling",
+      "name": "Autoscaling",
+      "summary": "Autoscaling adds server capacity when load rises. It protects availability but does not remove wasteful traffic.",
+      "used_here": "More origin capacity may reduce risk, but it is not the primary fix for unnecessary cache misses."
+    },
+    {
+      "key": "beacon",
+      "name": "Telemetry beacon",
+      "summary": "A telemetry beacon sends observability data separately from the main resource request. Browsers commonly use it to report performance or tracing information after loading a page.",
+      "used_here": "Tracing data can be sent without changing cacheable image and script URLs."
+    },
+    {
+      "key": "header",
+      "name": "HTTP header",
+      "summary": "An HTTP header carries metadata alongside a request or response. Caches may or may not include headers in their cache keys, depending on configuration.",
+      "used_here": "For requests the application controls, tracing can use a header that is not part of the CDN cache key."
+    },
+    {
+      "key": "content-hash",
+      "name": "Content-hashed URL",
+      "summary": "A content-hashed URL includes a fingerprint of the file contents, such as app.8f3a.js. When the file changes, the URL changes; when it does not, the URL stays stable.",
+      "used_here": "Static scripts can be cached aggressively while still updating safely on deploy."
+    },
+    {
+      "key": "variant",
+      "name": "Content variant",
+      "summary": "A content variant is a different response for what looks like the same resource, such as a resized image or localized file. Valid variants must remain separate in the cache.",
+      "used_here": "Image width, format, or locale may need to stay in the cache key if they change the bytes returned."
+    },
+    {
+      "key": "cache-key-normalization",
+      "name": "Cache-key normalization",
+      "summary": "Cache-key normalization changes which request fields are used to identify cached objects. It can drop, sort, or allow only selected parameters so equivalent requests share a cached response.",
+      "used_here": "The CDN can ignore tracing-only parameters while preserving parameters that affect content."
+    },
+    {
+      "key": "canary",
+      "name": "Canary rollout",
+      "summary": "A canary rollout applies a change to a small slice of traffic before global release. It reduces risk by letting engineers compare behavior before and after the change.",
+      "used_here": "The cache-key change should be tested on limited traffic before it affects all users."
+    },
+    {
+      "key": "observability",
+      "name": "Observability",
+      "summary": "Observability is the use of logs, metrics, and traces to understand a system’s behavior. It helps connect a symptom to the responsible component and verify a fix.",
+      "used_here": "Metrics and logs show whether misses, origin fetches, and costs return to normal."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the right cost model",
+      "question": "The bill jumped from $4,800/day to $19,000/day, page views rose only 3%, and cache hit ratio fell from 92% to 18%. What should you check first to avoid chasing the wrong cost driver?",
+      "concept_keys": [
+        "cdn",
+        "cache-hit-ratio",
+        "origin-egress",
+        "cache-fill",
+        "observability"
+      ],
+      "options": [
+        {
+          "text": "Focus on JavaScript error rates first because an SDK release most often raises cost by breaking client-side execution.",
+          "correct": false,
+          "hint": "Client errors are worth watching, but the strongest signal here is cache behavior: hit ratio fell from 92% to 18%.",
+          "id": "a"
+        },
+        {
+          "text": "Break the CDN bill and metrics into edge-to-user delivery, cache-fill or origin-fetch traffic, request counts, and origin load around the SDK release.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Increase the origin fleet size immediately because the higher bill proves the origin is the long-term bottleneck.",
+          "correct": false,
+          "hint": "Extra capacity may be needed for safety, but it does not explain why a CDN that used to serve cached assets is suddenly refetching them.",
+          "id": "c"
+        },
+        {
+          "text": "Assume edge-to-user CDN egress quadrupled and start by comparing total user bandwidth by country and browser version.",
+          "correct": false,
+          "hint": "If users viewed nearly the same pages with the same assets, user-facing bytes would usually not quadruple. The hit-ratio collapse points to another part of the delivery path.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The first step is to separate user-facing CDN delivery from cache misses, cache-fill traffic, request charges, and origin load. With page views up only 3%, edge-to-user bytes should usually stay roughly flat unless asset sizes changed. The tempting mistake is to treat the whole bill as user egress; the 92% to 18% hit-ratio drop points to many needless origin fetches instead."
+    },
+    {
+      "title": "Find what changed in cacheability",
+      "question": "The billing split shows cache-fill requests and origin egress rose sharply right after the SDK release, while edge-to-user bytes per page stayed nearly unchanged. Which log comparison is most likely to identify why the CDN is missing?",
+      "concept_keys": [
+        "cache-key",
+        "query-parameter",
+        "high-cardinality",
+        "cache-fill",
+        "observability"
+      ],
+      "options": [
+        {
+          "text": "Compare the number of 404 and 500 responses for asset requests across browser versions.",
+          "correct": false,
+          "hint": "Errors can cause retries and cost, but users are not reporting failures and the key metric that changed is cache reuse.",
+          "id": "a"
+        },
+        {
+          "text": "Compare average compressed response size for each image and script path before and after the release.",
+          "correct": false,
+          "hint": "A size increase would affect bytes delivered to users too. Here user-facing bytes per page are roughly unchanged, while misses rose sharply.",
+          "id": "b"
+        },
+        {
+          "text": "Compare before-and-after asset request logs by URL path, query parameters, cache status, and distinct cache-key count per path.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Compare TLS handshake latency and TCP connection reuse between the CDN and the origin.",
+          "correct": false,
+          "hint": "Connection behavior can affect latency, but it does not usually turn cacheable objects into misses across many asset paths.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A cache miss problem is usually explained by what the CDN considers a distinct object, so you need URL and cache-key level data. Grouping by path and counting distinct query combinations can reveal whether the same asset is being requested under many different keys. Looking only at response size is tempting, but unchanged edge-to-user bytes per page makes size inflation a poor fit."
+    },
+    {
+      "title": "Identify the root cause",
+      "question": "The log comparison shows that `/static/app.js` and common image paths now have thousands of distinct URLs per minute. The new URLs differ mainly by `_trace=1707428123123`, `_trace=1707428123124`, and similar millisecond values; those requests are mostly CDN MISS. Parameters like `w=640` and `fmt=webp` have far fewer values and return different bytes. What is the root cause?",
+      "concept_keys": [
+        "cache-key",
+        "query-parameter",
+        "high-cardinality",
+        "variant"
+      ],
+      "options": [
+        {
+          "text": "A high-cardinality tracing query parameter is part of the CDN cache key, so equivalent assets no longer share cached responses.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "The origin started returning different image and script bytes for every user, making shared CDN caching impossible.",
+          "correct": false,
+          "hint": "The logs show many different URLs, not proof that the content bytes differ for each tracing value.",
+          "id": "b"
+        },
+        {
+          "text": "The SDK increased the number of page views enough to overwhelm the edge cache with legitimate new objects.",
+          "correct": false,
+          "hint": "Page views rose only 3%. That is far too small to explain a hit-ratio fall from 92% to 18% by itself.",
+          "id": "c"
+        },
+        {
+          "text": "The CDN TTL is too short, so assets expire before the next user requests the same script or image.",
+          "correct": false,
+          "hint": "Short TTLs cause misses over time, but these misses happen because the URL value changes almost every request.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The millisecond tracing value has very high cardinality and is included in the cache key, so the CDN treats the same asset as a new object over and over. That fragments the cache and drives cache-fill traffic. A short TTL is a tempting explanation, but increasing TTL would not help when each request uses a different key."
+    },
+    {
+      "title": "Stop the bleeding safely",
+      "question": "You need an immediate production mitigation while the frontend team prepares a code change. Which CDN change best reduces cache-fill traffic without collapsing legitimate asset variants?",
+      "concept_keys": [
+        "cache-key-normalization",
+        "query-parameter",
+        "variant",
+        "ttl",
+        "purge",
+        "autoscaling"
+      ],
+      "options": [
+        {
+          "text": "Purge all image and script objects from the CDN so the cache can rebuild using fresh responses.",
+          "correct": false,
+          "hint": "A purge makes the cache colder at first. It does not change the key pattern that caused the misses.",
+          "id": "a"
+        },
+        {
+          "text": "Double the origin autoscaling limit so the origin can handle the extra fetches until the bill stabilizes.",
+          "correct": false,
+          "hint": "More capacity can protect availability, but it keeps paying for avoidable cache-fill traffic.",
+          "id": "b"
+        },
+        {
+          "text": "Raise the CDN TTL for all images and scripts from 1 hour to 30 days so each unique URL stays cached longer.",
+          "correct": false,
+          "hint": "A longer TTL helps only if future requests use the same key. Millisecond values mean most keys may never be reused.",
+          "id": "c"
+        },
+        {
+          "text": "For static asset routes, remove only the tracing query parameter from the CDN cache key and leave the path plus existing content-affecting fields unchanged.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Dropping only the tracing parameter from the cache key lets requests for the same asset reuse a cached response again. Keeping the path and known content-affecting fields unchanged avoids mixing responses that are actually different. Raising TTL is attractive during cache incidents, but it does not fix a new unique key on nearly every request."
+    },
+    {
+      "title": "Fix the frontend behavior",
+      "question": "After the CDN mitigation is in place, what frontend change prevents the same failure mode from returning in another CDN or route?",
+      "concept_keys": [
+        "beacon",
+        "header",
+        "content-hash",
+        "cache-key",
+        "query-parameter"
+      ],
+      "options": [
+        {
+          "text": "Move the tracing value into the URL path instead of the query string so query handling rules cannot affect it.",
+          "correct": false,
+          "hint": "The CDN cache key normally includes the path. Moving a high-cardinality value there usually makes the fragmentation harder to filter safely.",
+          "id": "a"
+        },
+        {
+          "text": "Round the tracing value to the nearest minute before appending it to images and scripts so nearby requests can share a URL.",
+          "correct": false,
+          "hint": "This reduces the number of values but still ties observability data to the cache key. It also creates avoidable misses every time the rounded value changes.",
+          "id": "b"
+        },
+        {
+          "text": "Stop putting per-request tracing values in cacheable asset URLs; report asset timing with a separate beacon, or a header for controlled fetches that is excluded from the cache key, and use content-hashed filenames for cache busting.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Append the SDK version to every image and script URL so tracing can identify which release loaded each asset.",
+          "correct": false,
+          "hint": "A stable version can be useful for release attribution, but it is not a per-request trace and it can still create unnecessary variants if used carelessly.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Tracing data should not change the URL of cacheable images and scripts on every request. A separate telemetry beacon, or a cache-key-excluded header where the app controls the request, preserves observability without fragmenting the cache. Content-hashed filenames provide safe cache busting because the URL changes only when the file content changes."
+    },
+    {
+      "title": "Preserve real variants during rollout",
+      "question": "You now need to make the CDN rule durable across asset types. Logs show image bytes differ when `w`, `fmt`, or `locale` changes, but not when `_trace` changes. Which rollout plan is safest?",
+      "concept_keys": [
+        "cache-key-normalization",
+        "variant",
+        "canary",
+        "observability"
+      ],
+      "options": [
+        {
+          "text": "Exclude only parameters whose value looks like a 13-digit timestamp and keep every other parameter in the cache key.",
+          "correct": false,
+          "hint": "A pattern match can handle today’s value shape, but tracing fields can change format. Safer rules are based on whether a field changes content.",
+          "id": "a"
+        },
+        {
+          "text": "Ignore the entire query string for every CDN route so all parameter-driven cache fragmentation disappears at once.",
+          "correct": false,
+          "hint": "Some query parameters may select genuinely different content. Removing them globally can serve the wrong size, format, or locale.",
+          "id": "b"
+        },
+        {
+          "text": "Create a per-route cache-key allowlist that keeps content-changing fields such as `w`, `fmt`, and `locale`, excludes tracing-only fields, and canary it on a small traffic slice while comparing response hashes and cache metrics.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Keep the full query string in the cache key and rely on the frontend release to remove the tracing value everywhere.",
+          "correct": false,
+          "hint": "The frontend fix is important, but a durable edge policy should protect against future non-content parameters and older clients.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A per-route allowlist protects valid variants while removing fields that do not affect bytes. The canary and response-hash comparison reduce the risk of serving a 640px image to a 320px request or mixing locales. Ignoring the entire query string is tempting, but it can break real variants that depend on `w`, `fmt`, or `locale`."
+    },
+    {
+      "title": "Verify recovery",
+      "question": "The CDN rule is canaried and the frontend fix is rolling out. Which verification set best proves the incident is resolved and not hiding a new correctness issue?",
+      "concept_keys": [
+        "cache-hit-ratio",
+        "cache-fill",
+        "origin-egress",
+        "cdn",
+        "observability",
+        "variant"
+      ],
+      "options": [
+        {
+          "text": "Origin autoscaling stops adding instances, which shows the CDN is no longer causing excess load.",
+          "correct": false,
+          "hint": "Origin load is only one signal. You also need to confirm misses, cache-fill traffic, user-facing bytes, and response correctness.",
+          "id": "a"
+        },
+        {
+          "text": "Page views remain within 3% of the previous day and JavaScript error rate does not increase after the frontend rollback.",
+          "correct": false,
+          "hint": "Stable traffic and error rates are useful guardrails, but they do not prove cache reuse recovered or that variant responses are correct.",
+          "id": "b"
+        },
+        {
+          "text": "Cache hit ratio moves back toward the pre-incident 92%, cache-fill requests and origin egress fall, edge-to-user bytes per page stay about the same, and sampled variant responses still match the requested size, format, and locale.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The daily bill immediately returns to exactly $4,800 and origin CPU drops below last week’s average within one hour.",
+          "correct": false,
+          "hint": "Billing data can lag, and the original $4,800 was the daily CDN-related bill, not a guaranteed origin metric. Look for leading technical indicators first.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The right verification combines cost-leading indicators and correctness checks. If hit ratio trends back toward 92% and cache-fill plus origin egress drop while edge-to-user bytes per page stay stable, the wasteful refetching is gone. Checking sampled variants matters because an overly broad cache-key rule could silently serve the wrong asset."
+    }
+  ],
+  "takeaway": "When traffic is flat but CDN cost jumps and hit ratio collapses, separate edge delivery from cache-fill and origin egress before acting. High-cardinality, non-content URL fields can destroy cache reuse; keep cache keys limited to fields that change the response, and send tracing data through beacons or cache-key-excluded metadata instead.",
+  "review_issues": []
+}

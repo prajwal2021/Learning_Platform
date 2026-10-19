@@ -1,0 +1,357 @@
+{
+  "slug": "charged-twice",
+  "title": "The customer was charged twice",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "payments",
+    "retries",
+    "idempotency",
+    "mobile",
+    "distributed-systems"
+  ],
+  "scenario": "A customer taps Pay on a slow mobile connection. The app waits 10 seconds, times out, and retries automatically. The payment service calls an external payment processor first and then writes the result to its own database. The customer reports two card charges for the same checkout.",
+  "goal": "Find the cause of the double charge and design a production-safe fix for retries and partial failures.",
+  "concepts": [
+    {
+      "key": "client-timeout",
+      "name": "Client timeout",
+      "summary": "A client timeout means the client stopped waiting for a response. It does not prove the server stopped doing the work.",
+      "used_here": "The mobile app gave up after 10 seconds, while the payment service may still have been processing the first request."
+    },
+    {
+      "key": "retry",
+      "name": "Retry",
+      "summary": "A retry sends a request again after a timeout or transient error. Retried requests must be safe because the first request may have succeeded.",
+      "used_here": "The app sent another Pay request after it did not receive a response in time."
+    },
+    {
+      "key": "payment-processor",
+      "name": "Payment processor",
+      "summary": "A payment processor is an external system that authorizes or captures card payments. Calls to it can create real customer-visible side effects.",
+      "used_here": "The payment service asks the processor to charge the card before saving its own database record."
+    },
+    {
+      "key": "server-logs",
+      "name": "Server logs",
+      "summary": "Server logs record what a backend received and did at specific times. Correlating logs across systems helps reconstruct incidents.",
+      "used_here": "Gateway, payment-service, processor, and database records show whether one or two charge attempts happened."
+    },
+    {
+      "key": "idempotency-key",
+      "name": "Idempotency key",
+      "summary": "An idempotency key is a stable identifier for one intended operation. Systems can use it to recognize that two requests are asking for the same work.",
+      "used_here": "The payment flow needs a way to distinguish a retry of the same payment from a new payment."
+    },
+    {
+      "key": "unique-constraint",
+      "name": "Unique constraint",
+      "summary": "A unique constraint is a database rule that prevents duplicate values in selected columns. It is enforced even when multiple requests arrive at the same time.",
+      "used_here": "The payment service needs storage protection so two handlers cannot create separate attempts for the same operation."
+    },
+    {
+      "key": "database-transaction",
+      "name": "Database transaction",
+      "summary": "A database transaction groups database changes so they commit together or roll back together. It does not automatically include external API calls.",
+      "used_here": "The service can atomically create or update its own payment-attempt row, but the processor call is outside the database."
+    },
+    {
+      "key": "in-progress-state",
+      "name": "In-progress state",
+      "summary": "An in-progress state records that work has started but has not reached a final result. Other requests can use it to avoid starting duplicate work.",
+      "used_here": "A retry may arrive while the first payment attempt is still running."
+    },
+    {
+      "key": "reconciliation",
+      "name": "Reconciliation",
+      "summary": "Reconciliation compares two systems after the fact and fixes mismatches. It is common when an external side effect may have happened but the local record is incomplete.",
+      "used_here": "The service needs a safe way to resolve payment attempts left unfinished by a crash or timeout."
+    },
+    {
+      "key": "schema-migration",
+      "name": "Schema migration",
+      "summary": "A schema migration changes database structure, such as adding columns, tables, or indexes. Safe migrations are usually backward compatible during rollout.",
+      "used_here": "The payment database must be changed without breaking old app versions during deployment."
+    },
+    {
+      "key": "cache-ttl",
+      "name": "Cache TTL",
+      "summary": "A cache TTL is how long a cached item is kept before it expires. Expiration-based storage is usually weaker than durable database state for money movement.",
+      "used_here": "A short-lived cache might hide some retries but cannot be the only record of payment safety."
+    },
+    {
+      "key": "observability",
+      "name": "Observability",
+      "summary": "Observability is the ability to understand system behavior through logs, metrics, traces, and tests. It is used to confirm that a fix works in production.",
+      "used_here": "The team needs evidence that retries no longer create multiple processor charges."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the evidence",
+      "question": "The customer reports two card charges for one checkout. Where should you look first to reconstruct what happened?",
+      "concept_keys": [
+        "client-timeout",
+        "retry",
+        "payment-processor",
+        "server-logs"
+      ],
+      "options": [
+        {
+          "text": "Inspect only the payment database because it is the service’s source of truth for completed payments.",
+          "correct": false,
+          "hint": "The processor can have customer-visible side effects even when the local database is incomplete. You need records from both sides of the boundary.",
+          "id": "a"
+        },
+        {
+          "text": "Correlate the app timeout, gateway requests, payment-service logs, processor charges, and database rows for this checkout.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Refund the newest charge immediately and investigate later if the customer reports another problem.",
+          "correct": false,
+          "hint": "A refund may be necessary, but it does not explain whether the system can repeat the mistake. First find the path that created two charges.",
+          "id": "c"
+        },
+        {
+          "text": "Ask the mobile team to disable the Pay button while the backend checks recent deploys.",
+          "correct": false,
+          "hint": "A disabled button can reduce double taps, but it does not explain automatic retries or network timeouts. The backend must still be safe when a request is repeated.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The right first move is to correlate every system that could have seen or created the charge. The processor is especially important because the service calls it before writing its own database row, so the database alone may not tell the full story. Refunding first may help the customer, but it does not identify the failure mode or prevent another double charge."
+    },
+    {
+      "title": "Interpret the timeline",
+      "question": "The logs show: the app sent request A at t=0.0 and timed out at t=10.0; it sent retry request B at t=10.1. The gateway received A at t=0.4 and B at t=10.5. The payment service made two processor charge calls, and the processor shows two successful charges. What does this tell you?",
+      "concept_keys": [
+        "client-timeout",
+        "retry",
+        "server-logs",
+        "payment-processor"
+      ],
+      "options": [
+        {
+          "text": "The first request likely kept running after the app timeout, and the retry created a second server-side charge attempt 10.1 seconds after the first reached the gateway.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "The customer likely double-tapped Pay because the gateway received two requests only a fraction of a second apart.",
+          "correct": false,
+          "hint": "Check the gateway timestamps, not only the mobile timeout. The gateway received the requests at t=0.4 and t=10.5.",
+          "id": "b"
+        },
+        {
+          "text": "The processor likely duplicated one payment-service call because the app retry did not reach the backend.",
+          "correct": false,
+          "hint": "The gateway and payment-service logs show two backend requests and two processor calls. That points to repeated work upstream of the processor result.",
+          "id": "c"
+        },
+        {
+          "text": "The database likely inserted the same result twice and then caused two processor charges afterward.",
+          "correct": false,
+          "hint": "The recorded service order matters. In this incident, the service calls the processor before writing its own database result.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A client timeout does not cancel work already accepted by the server. The two gateway arrivals are t=10.5 minus t=0.4, which is 10.1 seconds apart, matching an automatic retry after the app gave up. The tempting double-tap theory does not fit those timestamps."
+    },
+    {
+      "title": "Make retries safe at the protocol level",
+      "question": "Now that you know the retry caused a second charge attempt, what change should the client and payment service make so a retry represents the same intended payment instead of a new one?",
+      "concept_keys": [
+        "retry",
+        "idempotency-key",
+        "payment-processor"
+      ],
+      "options": [
+        {
+          "text": "Have the service generate a new payment-attempt identifier for every HTTP request it receives.",
+          "correct": false,
+          "hint": "A new identifier per request makes a retry look like fresh work. The service needs a way to connect repeated requests to the same intent.",
+          "id": "a"
+        },
+        {
+          "text": "Have the app stop automatic retries and show an error whenever the first Pay request times out.",
+          "correct": false,
+          "hint": "Networks, proxies, and users can still repeat requests. Removing one retry path does not make the backend correct.",
+          "id": "b"
+        },
+        {
+          "text": "Increase the mobile timeout from 10 seconds to 60 seconds so slow processor calls usually finish before the app retries.",
+          "correct": false,
+          "hint": "Longer timeouts reduce how often the bug appears, but they do not remove it. A timeout at 60 seconds still leaves the client unsure whether the server did the work.",
+          "id": "c"
+        },
+        {
+          "text": "Have the app create one stable payment-attempt identifier when the user starts paying, send it on the first request and retries, and have the service and processor treat repeats as the same operation.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The retry needs a stable identity for the intended payment, not a fresh identity for each HTTP attempt. Reusing the same identifier lets the service recognize repeated requests and lets the processor avoid treating them as separate operations. Increasing the timeout is tempting, but it only changes the timing window; it cannot prove whether the first request succeeded."
+    },
+    {
+      "title": "Handle simultaneous duplicate requests",
+      "question": "The app now sends the same payment-attempt identifier on retries. Two requests with that same identifier can still reach two payment-service instances at nearly the same time. Which server-side flow is safe?",
+      "concept_keys": [
+        "idempotency-key",
+        "unique-constraint",
+        "database-transaction",
+        "in-progress-state",
+        "payment-processor"
+      ],
+      "options": [
+        {
+          "text": "Allow both requests to charge and automatically refund the second one when duplicate rows are detected.",
+          "correct": false,
+          "hint": "A refund still creates a second customer-visible charge and may fail or settle later. The safer design prevents the second charge attempt.",
+          "id": "a"
+        },
+        {
+          "text": "Create an in-progress row for the identifier inside a database transaction with duplicate prevention; only the request that creates it calls the processor, while repeats wait for or return the stored result.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Look for an existing row by identifier; if none is found, call the processor, then insert the successful result afterward.",
+          "correct": false,
+          "hint": "Two instances can both observe that no row exists before either inserts. The risky part is the gap before the durable record exists.",
+          "id": "c"
+        },
+        {
+          "text": "Use an in-memory lock keyed by user ID around the payment handler on each service instance.",
+          "correct": false,
+          "hint": "In-memory locks usually do not cover other instances and disappear on restart. Payments need protection that survives process boundaries.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The service must record the attempt before making the external side effect, and the database must enforce that only one row can exist for the identifier. Then concurrent repeats cannot both become independent processor calls. The tempting check-then-insert approach races because both handlers can see no row and both charge before either writes a result."
+    },
+    {
+      "title": "Cover the crash gap",
+      "question": "With the safer flow, the service creates an in-progress row, calls the processor, and then saves the final result. What should happen if the service crashes after the processor charged the card but before the final result is saved locally?",
+      "concept_keys": [
+        "payment-processor",
+        "in-progress-state",
+        "reconciliation",
+        "idempotency-key",
+        "database-transaction"
+      ],
+      "options": [
+        {
+          "text": "Run a reconciliation job that finds old in-progress attempts, queries the processor using the same operation identifier, and records the processor’s actual result locally.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Automatically refund every processor charge that does not have a matching successful local row within 2 minutes.",
+          "correct": false,
+          "hint": "The local row may be missing because the service crashed after a valid charge. A blind refund can reverse legitimate payments and still leaves the local state unclear.",
+          "id": "b"
+        },
+        {
+          "text": "Mark any in-progress attempt older than 2 minutes as failed and let the customer start a new payment with a new identifier.",
+          "correct": false,
+          "hint": "A local failure state does not mean the processor did nothing. Starting over can create another real charge.",
+          "id": "c"
+        },
+        {
+          "text": "Call the processor again with a new operation identifier because the local database has no final success row.",
+          "correct": false,
+          "hint": "A missing local result is not proof that the external side effect did not happen. A new identifier can make the processor treat it as new work.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A database transaction cannot include the external processor call, so there is always a crash gap between the processor side effect and the local final write. Reconciliation closes that gap by asking the processor what happened for the same operation and then repairing local state. Marking the attempt failed locally is tempting, but it can hide a real successful charge."
+    },
+    {
+      "title": "Roll out the storage change safely",
+      "question": "You need to deploy this fix while older app versions may not send the new payment-attempt identifier yet. Which migration and rollout plan is safest?",
+      "concept_keys": [
+        "schema-migration",
+        "unique-constraint",
+        "idempotency-key",
+        "cache-ttl"
+      ],
+      "options": [
+        {
+          "text": "Use a 24-hour cache entry per customer and amount so no database migration is needed.",
+          "correct": false,
+          "hint": "A cache can expire, be evicted, or be lost during failures. Money movement needs a durable record, not only a time-limited memory of recent requests.",
+          "id": "a"
+        },
+        {
+          "text": "Immediately add a non-null identifier column and reject every Pay request that does not include it.",
+          "correct": false,
+          "hint": "That may be correct as a final state, but it can break old clients during rollout. Safe migrations usually allow both old and new behavior temporarily.",
+          "id": "b"
+        },
+        {
+          "text": "Add a unique rule on customer, card fingerprint, amount, and minute of the hour to catch likely duplicates.",
+          "correct": false,
+          "hint": "Similar-looking payments can be legitimate, and true retries can cross minute boundaries. The system needs identity for the intended operation, not a guess from attributes.",
+          "id": "c"
+        },
+        {
+          "text": "Add durable storage for the identifier and result with duplicate prevention for non-empty identifiers, deploy backend support first, measure usage, then require the identifier after supported app versions are broadly adopted.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "A backward-compatible rollout lets the backend accept new identifiers without breaking old mobile versions. Durable storage with duplicate prevention is needed for correctness; a cache or heuristic on amount and time can miss real retries or block legitimate payments. After adoption is high, the service can enforce the identifier for new payment flows."
+    },
+    {
+      "title": "Confirm the fix",
+      "question": "After deploying backend support and a new app version, how should you confirm that the fix actually prevents double charges?",
+      "concept_keys": [
+        "observability",
+        "retry",
+        "idempotency-key",
+        "payment-processor",
+        "reconciliation"
+      ],
+      "options": [
+        {
+          "text": "Verify that the Pay button is disabled after the first tap and that customer support receives fewer refund tickets.",
+          "correct": false,
+          "hint": "UI behavior and support volume are indirect signals. They can improve while backend retries are still unsafe.",
+          "id": "a"
+        },
+        {
+          "text": "Check that the mobile app shows fewer timeout errors after the release and that most Pay requests return HTTP 200.",
+          "correct": false,
+          "hint": "Lower timeout rates are useful, but they do not prove duplicate charge prevention. You need to observe behavior when a retry actually happens.",
+          "id": "b"
+        },
+        {
+          "text": "Run a test where the first response is delayed past the app timeout, retry with the same identifier, and verify one processor charge, one final local result, matching retry responses, and no stuck reconciliation backlog.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Compare total processor revenue before and after release and confirm it did not drop by more than 1 percent.",
+          "correct": false,
+          "hint": "Aggregate revenue can hide rare but serious duplicate charges. Confirmation should follow a repeated request with the same operation identity end to end.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The best confirmation exercises the exact failure mode: response timeout, retry, and processor side effect. The expected result is one processor charge and repeated responses that refer to the same payment result, plus reconciliation metrics showing no unresolved stuck attempts. HTTP success rates or revenue totals are too indirect to prove the retry path is safe."
+    }
+  ],
+  "takeaway": "A timeout tells the client it stopped waiting; it does not tell the client whether the server or an external processor completed the work. Payment retries must be made safe with a stable operation identity, durable duplicate prevention, and reconciliation for the gap between external side effects and local writes.",
+  "review_issues": [
+    "Step 1: In the challenge step “Handle simultaneous duplicate requests,” the wrong option “Look for an existing row by identifier; if none is found, call the processor, then insert...” is treated as clearly unsafe because both handlers can charge. But the previous step’s correct answer says the service and processor should treat repeats with the same payment-attempt identifier as the same operation. If the processor call uses that identifier as an idempotency key, concurrent duplicate processor calls should not both create charges, so this option is not clearly worse unless it explicitly omits the processor idempotency key.",
+    "Step 3: The explanation for “Handle simultaneous duplicate requests” says the check-then-insert approach lets both handlers “both charge before either writes a result.” That conflicts with the earlier protocol-level fix requiring the processor to treat repeated requests with the same operation identifier as the same operation."
+  ]
+}

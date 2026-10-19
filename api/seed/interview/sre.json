@@ -1,0 +1,493 @@
+{
+ "slug": "sre",
+ "name": "Site reliability engineering",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is site reliability engineering, in plain terms?",
+    "answer": "Site reliability engineering is applying software engineering practices to operations work so services stay reliable, scalable, and efficient. The goal is to reduce repetitive manual work, improve observability, and make reliability a product requirement instead of an afterthought. SRE teams usually define measurable reliability targets and use automation to meet them.",
+    "real_world": "A team with frequent late-night pages may adopt SRE practices to automate deployments, alerts, and recovery steps. This usually reduces human error and makes outages shorter.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between SRE and traditional operations?"
+   },
+   {
+    "question": "What is the difference between an SLA, SLO, and SLI?",
+    "answer": "An SLI is the metric you measure, like availability or latency. An SLO is the target you want for that metric, such as 99.9% success over 30 days. An SLA is the external promise to a customer, often with consequences if you miss it, so it is usually stricter from a business perspective.",
+    "real_world": "A payment API might track request success rate as an SLI, set an internal SLO for reliability, and have an SLA with enterprise customers. If the team confuses them, it can either overpromise to customers or underinvest in reliability.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you choose a good SLI for a service?"
+   },
+   {
+    "question": "What is an error budget, and why is it useful?",
+    "answer": "An error budget is the allowed unreliability for a service, derived from the gap between 100% and the SLO. It gives teams a clear trade-off: if reliability is healthy, they can ship faster; if they consume too much budget, they need to slow down and fix issues. This turns reliability into a measurable engineering constraint instead of a vague goal.",
+    "real_world": "If a service has a 99.9% SLO, the team can use the small remaining budget to decide whether a risky release is acceptable. Without this, product and operations teams often argue without a shared metric.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What do you do when an error budget is exhausted?"
+   },
+   {
+    "question": "What is the difference between monitoring and alerting?",
+    "answer": "Monitoring is collecting and visualizing data about a system, while alerting is notifying someone when that data crosses a threshold or indicates a problem. Good monitoring helps you understand system health; good alerting helps you act quickly on user-impacting issues. Not every graph needs an alert, because too many alerts create noise and burnout.",
+    "real_world": "A dashboard may show CPU, memory, request rate, and latency all day, but only latency errors above a threshold should page the on-call engineer. Teams often learn this after waking people up for harmless spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes an alert actionable?"
+   },
+   {
+    "question": "What is the difference between a symptom-based alert and a cause-based alert?",
+    "answer": "A symptom-based alert tells you users are affected, such as high error rate or slow responses. A cause-based alert tells you something internal may be wrong, such as disk usage or CPU saturation. Symptom alerts are usually better for paging because they map to impact, while cause alerts are often useful for diagnosis or early warning.",
+    "real_world": "If a database disk is nearly full, a cause alert can warn the team before outages happen. But if only internal metrics page you, you may miss the fact that users are already seeing failures elsewhere.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of each for a web service?"
+   },
+   {
+    "question": "What is a runbook?",
+    "answer": "A runbook is a documented set of steps for responding to a known issue or performing a routine operational task. It should be written so someone on call can follow it under stress, with clear checks, commands, and rollback steps. Runbooks reduce guesswork and make response more consistent.",
+    "real_world": "During an outage, the on-call engineer may use a runbook to restart a worker, check logs, and confirm recovery. Without one, people waste time debating the next step and may make the incident worse.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should a good runbook always include?"
+   },
+   {
+    "question": "What is the point of a postmortem?",
+    "answer": "A postmortem is a structured review after an incident to understand what happened, why it happened, and how to prevent recurrence. The goal is learning and system improvement, not blame. Good postmortems produce concrete follow-up actions, such as monitoring changes, automation, or design fixes.",
+    "real_world": "After a production outage, a team might discover that an alert fired too late and a manual deploy process caused the failure. A postmortem turns that into improvements instead of letting the same outage happen again.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a postmortem effective?"
+   },
+   {
+    "question": "What is a common mistake when setting alert thresholds?",
+    "answer": "A common mistake is choosing thresholds based only on absolute values instead of user impact and normal system behavior. That leads to noisy alerts during expected spikes or missed alerts during real incidents. Good thresholds are usually tied to SLOs, baselines, or rates of change rather than arbitrary numbers.",
+    "real_world": "If an application gets more traffic at lunchtime, a fixed CPU threshold may page constantly even though users are fine. Teams often need to tune alerts after observing real traffic patterns.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use a static threshold anyway?"
+   },
+   {
+    "question": "What is redundancy in reliability engineering?",
+    "answer": "Redundancy means having extra components so the system can keep working when one part fails. Examples include multiple servers, multiple availability zones, or replicated databases. The trade-off is higher cost and more complexity, but it reduces single points of failure.",
+    "real_world": "A single web server can fail and take the site down, while two behind a load balancer can keep serving traffic if one crashes. Teams often discover the value of redundancy only after the first major outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between redundancy and failover?"
+   },
+   {
+    "question": "What is a graceful degradation strategy?",
+    "answer": "Graceful degradation means the system keeps providing partial service when a dependency fails or load is high. Instead of total failure, nonessential features may be disabled so the core user flow still works. This is important because it protects the most valuable part of the product during incidents.",
+    "real_world": "An e-commerce site might disable recommendations or reviews if an internal service is down, but still allow checkout. That keeps revenue flowing while the team repairs the weaker part of the system.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you name one feature that is safe to degrade first and one that usually is not?"
+   },
+   {
+    "question": "What does high availability mean, and how is it different from just having backups?",
+    "answer": "High availability means designing a service to stay up despite failures, usually through redundancy and automatic failover. Backups protect data so you can recover after loss or corruption, but they do not keep the service running during an outage. A system can have backups and still have poor availability if it has a single point of failure. The trade-off is usually more cost and complexity for less downtime.",
+    "real_world": "A database backup helps after accidental deletion, but if the primary database host dies and there is no replica or failover, the application is still down. Teams often confuse disaster recovery with availability.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are common single points of failure in a simple web application?"
+   },
+   {
+    "question": "What is a single point of failure?",
+    "answer": "A single point of failure is one component whose failure takes down the whole system or a critical part of it. In reliability work, you look for these and either remove them or make them redundant. Common examples are one load balancer, one database server, or one DNS provider. The key idea is that if there is no backup path, one failure becomes an outage.",
+    "real_world": "A service might be deployed on multiple app servers but still depend on one Redis instance for sessions. If that Redis instance fails, users may be logged out or the whole app may stop working.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you identify single points of failure in an architecture review?"
+   },
+   {
+    "question": "What is failover?",
+    "answer": "Failover is switching traffic or work from a failed component to a healthy one. It can be manual or automatic, but in SRE the goal is usually to make it fast and reliable enough that users barely notice. Failover matters because redundancy is only useful if the system can actually move over when something breaks. The trade-off is added complexity and the risk of failover itself being buggy.",
+    "real_world": "In production, a primary database may fail and traffic is moved to a replica. If the promotion process is slow or the app cannot reconnect cleanly, the outage is still visible to users.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What can go wrong during failover?"
+   },
+   {
+    "question": "What is load balancing, and why do we use it?",
+    "answer": "Load balancing spreads incoming traffic across multiple servers so no single server becomes overloaded. It improves availability and often improves performance because requests can be routed to healthy instances. Load balancers can also help with rolling deploys and health checks. The trade-off is one more layer to operate and debug.",
+    "real_world": "A web app might work fine with one server in development, but in production a load balancer is needed so a spike in traffic does not crash that server. It also lets teams remove unhealthy instances automatically.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between round-robin and health-checked load balancing?"
+   },
+   {
+    "question": "What is a health check?",
+    "answer": "A health check is a test used to decide whether a service instance is ready or still healthy enough to receive traffic. Basic checks may just confirm the process is running, while deeper checks verify dependencies like the database are reachable. Health checks matter because load balancers and orchestration systems rely on them to stop routing users to broken instances. A common mistake is making the check too heavy so the check itself causes load or false failures.",
+    "real_world": "If an app can start but cannot connect to its database, a simple process check would miss the problem. A better health check can prevent a broken instance from serving requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use a liveness check versus a readiness check?"
+   },
+   {
+    "question": "What is observability, and how is it different from just collecting logs?",
+    "answer": "Observability is the ability to understand a system’s internal state from its outputs, usually through logs, metrics, and traces. Logs are one signal, but by themselves they are often too noisy or too slow to answer systemic questions. Observability matters because it helps you debug unknown failures, not just known ones. The trade-off is more instrumentation and storage cost.",
+    "real_world": "When latency spikes in production, metrics can show it started after a deploy, traces can show which service is slow, and logs can explain the error. With only logs, the root cause may be much harder to find.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of questions are better answered by metrics than by logs?"
+   },
+   {
+    "question": "What is a rollout, and what is the benefit of deploying changes gradually?",
+    "answer": "A rollout is the process of releasing a new version to users or servers. Gradual rollouts reduce risk because you can expose the change to a small portion of traffic first and stop if problems appear. This is useful for catching bugs before they affect everyone. The downside is slower release management and more operational complexity.",
+    "real_world": "A team may deploy to 5% of traffic first to watch error rates and latency before sending the change to all users. That limits blast radius if the release is bad.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a canary release and a blue-green deployment?"
+   },
+   {
+    "question": "What is a canary deployment?",
+    "answer": "A canary deployment sends a new version to a small subset of traffic before expanding it. It is used to detect regressions with minimal impact if the new version misbehaves. This is especially useful when you care about real production traffic, not just tests. The trade-off is that you need good monitoring and a way to quickly roll back or halt the rollout.",
+    "real_world": "A team may release a new API version to one region or a small percentage of users first. If error rates rise, they stop the rollout instead of exposing all customers to the bug.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you watch during a canary?"
+   },
+   {
+    "question": "What is rollback, and when should you use it?",
+    "answer": "Rollback means returning to a previous known-good version after a bad release or configuration change. It is one of the fastest ways to restore service when the new change is the problem. Rollback is useful when the issue is clearly tied to the recent change and reverting is safer than fixing forward. The trade-off is that some changes are not safely reversible, especially data migrations.",
+    "real_world": "If a deployment causes a 500 error spike, rolling back may restore service in minutes. But if the release included a destructive database change, rollback may not be enough on its own.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can database migrations make rollback harder?"
+   },
+   {
+    "question": "What is capacity planning?",
+    "answer": "Capacity planning is estimating how much traffic, storage, and compute a system needs so it does not run out during normal or peak usage. It matters because many incidents are really capacity problems that were not anticipated. Teams use past trends, load tests, and business forecasts to plan capacity. The trade-off is that overprovisioning wastes money, while underprovisioning causes latency or outages.",
+    "real_world": "A retail site may need extra capacity before a holiday sale. If the team guesses too low, autoscaling may not react fast enough and users will see errors.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you estimate capacity for a service with seasonal traffic?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide whether to scale up, scale out, or both for a service?",
+    "answer": "Scale up when a bottleneck is mostly per-instance resource limits and the software benefits from a larger machine, like memory-heavy caches or databases. Scale out when the workload is parallelizable and you want better fault tolerance and elastic growth. In practice, teams often do both: scale up to a point, then scale out when a single node becomes too expensive or risky. The trade-off is cost, operational complexity, and how well the app handles many instances.",
+    "real_world": "A payments service may need larger instances for database replicas, but many stateless API servers can be added horizontally during traffic spikes. Choosing the wrong model can lead to hot spots, noisy neighbors, or expensive overprovisioning.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you use to know that vertical scaling has hit its limit?"
+   },
+   {
+    "question": "What would you look at first if latency jumped after a deployment but error rates stayed flat?",
+    "answer": "I’d compare the new release against the old one using traces, p95/p99 latency, dependency timings, and saturation metrics like CPU, memory, connection pools, and queue depth. Flat error rates often mean the request still succeeds but slower code paths, retries, or downstream contention were introduced. I’d also check whether the change altered traffic shape, cache hit rate, or database query patterns. The key is to isolate whether the regression is in the app, a dependency, or the infrastructure around it.",
+    "real_world": "This is common when a seemingly harmless feature adds one extra database call or causes cache misses. Users complain about slowness before anything outright fails.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you narrow that down when you only have logs and metrics, not distributed tracing?"
+   },
+   {
+    "question": "When would you prefer a queue-based asynchronous design over synchronous request handling?",
+    "answer": "Use a queue when the work can happen later, can be retried safely, or would make the user wait too long. It absorbs bursts, decouples producers from consumers, and protects downstream systems from sudden load. The trade-off is added latency, eventual consistency, and the need to handle duplicates and dead-lettering. For user-facing flows, synchronous is better when you need an immediate answer and the dependency is reliable and fast.",
+    "real_world": "Image processing, email delivery, and audit log writing are common queue-based workloads. Without a queue, a traffic spike can take down the whole request path.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failures do you have to design for in a queue consumer?"
+   },
+   {
+    "question": "How do you tell whether a system is CPU-bound, memory-bound, or I/O-bound?",
+    "answer": "Look at the saturation signals alongside latency: high CPU utilization and run queue pressure suggest CPU-bound, frequent garbage collection or OOM risk suggests memory-bound, and high disk or network wait plus increasing queue depth suggests I/O-bound. The important part is not just one metric but whether requests are waiting for a constrained resource. You confirm it by correlating these metrics with p95 latency and throughput under load. That tells you what resource to fix instead of guessing.",
+    "real_world": "Teams often scale the wrong thing because they only watch average CPU. A service can be at 40% CPU and still be I/O-bound due to a slow database or exhausted connection pool.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you change first for each of those bottlenecks?"
+   },
+   {
+    "question": "How do you approach autoscaling without causing a feedback loop or thrashing?",
+    "answer": "You want scaling signals that reflect real load, plus cooldowns or stabilization windows so the system does not react to short spikes. If scaling is based on a lagging metric, it can overshoot and then oscillate as capacity catches up. It also helps to scale on queue length, request rate, or latency at the service boundary rather than only on CPU. The trade-off is between fast reaction and stability.",
+    "real_world": "A bursty API can repeatedly add and remove pods every few minutes, which increases cost and hurts cache locality. Good autoscaling keeps capacity steady through small spikes instead of chasing every fluctuation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which metrics are better triggers for autoscaling than CPU?"
+   },
+   {
+    "question": "What is the difference between active-active and active-passive failover?",
+    "answer": "Active-active means multiple sites or nodes are serving traffic at the same time, so capacity is shared and a failure usually causes a partial reduction rather than a full switchover. Active-passive keeps one side idle or mostly idle until the primary fails, which is simpler but can waste capacity and can take longer to promote. Active-active is harder because you need data consistency, routing, and conflict handling. The choice depends on how much downtime and complexity you can tolerate.",
+    "real_world": "Global services often use active-active at the edge but keep a single primary for writes. A smaller team may choose active-passive because it is easier to operate and test.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you test failover if you have a primary database that must stay consistent?"
+   },
+   {
+    "question": "What is backpressure, and why does it matter in a distributed system?",
+    "answer": "Backpressure is a way for a slower component to signal that it cannot accept more work right now. It prevents unbounded queues, memory growth, and cascading failures when downstream services are overloaded. You can implement it with bounded queues, request shedding, rate limits, or retry-after signals. The trade-off is that callers must handle rejection or delay instead of assuming everything is always accepted.",
+    "real_world": "Without backpressure, one overloaded downstream can cause retries and queue buildup across the whole stack. That often turns a localized slowdown into a full outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is backpressure different from simple rate limiting?"
+   },
+   {
+    "question": "How do you choose between retries and circuit breakers when a dependency is failing?",
+    "answer": "Retries help when failures are transient and the dependency is expected to recover quickly, but they increase load and can make an outage worse if used blindly. Circuit breakers stop sending traffic after repeated failures, which protects both your service and the dependency during sustained issues. In practice, you often combine them with timeouts and jittered backoff. The trade-off is faster recovery from small blips versus avoiding self-inflicted overload during real incidents.",
+    "real_world": "A flaky third-party API might be fine with a couple of retries, but a hard outage needs a breaker or your workers will pile up and timeout. This is a common cause of retry storms.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would tell you that retries are making the problem worse?"
+   },
+   {
+    "question": "How would you design log aggregation so it helps during an incident instead of overwhelming you?",
+    "answer": "Centralize logs, but keep them structured, consistent, and tied to request or trace IDs so you can search by event instead of raw text. The key is to log enough context to debug failures without dumping high-volume debug logs everywhere, which adds cost and noise. Sampling, log levels, and retention policies matter because incident data is useful only if you can find the relevant slice quickly. Good log design is as much about filtering and correlation as it is about collection.",
+    "real_world": "During an outage, unstructured logs from many services can hide the root cause because every team sees a different piece of the story. Structured logs make it much easier to trace one failing request through the system.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What fields would you require in every application log line?"
+   },
+   {
+    "question": "How do you test reliability changes before they reach production?",
+    "answer": "Use a mix of load tests, failure injection, and staging or pre-prod environments that resemble production closely enough to expose real bottlenecks. Load tests show whether the system meets latency and capacity targets, while failure injection checks behavior under dependency loss, timeouts, and restarts. The limitation is that test environments are rarely perfect, so you still need observability and cautious rollout. The goal is to catch obvious failure modes early, not prove the system is flawless.",
+    "real_world": "A team may pass unit tests but still discover that a cache outage causes a thundering herd under load. Controlled tests help reveal those production-only failure modes before customers do.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is one reliability issue that load tests often miss?"
+   },
+   {
+    "question": "How do you decide what should be paged as an alert versus just tracked on a dashboard or ticket?",
+    "answer": "Page only for conditions that need immediate human action and are both user-impacting and time-sensitive. If a problem can wait for business hours, it usually belongs in a ticket or dashboard instead of waking someone up. The trade-off is between responsiveness and alert fatigue: too many pages train people to ignore them. I’d base the decision on impact, urgency, and whether automation can safely handle it first.",
+    "real_world": "Teams often turn every threshold breach into a page, then on-call engineers start muting alerts. That leads to missed real incidents because people stop trusting the paging system.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you define the difference between an actionable alert and noisy telemetry?"
+   },
+   {
+    "question": "What is a good way to set an SLI for latency so it reflects user experience instead of just average response time?",
+    "answer": "Use a percentile or a threshold-based measure rather than an average, because averages hide tail latency. A common approach is to track the percentage of requests under a target latency for the operations that matter to users. The key is to choose a window and threshold that match the experience you want to protect, then measure the same way consistently. This makes the SLI sensitive to slow requests that users actually notice.",
+    "real_world": "An API can have a fine average latency but still feel slow because a small fraction of requests are very delayed. That often shows up first as complaints even when the dashboard looks healthy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if different endpoints have very different latency profiles?"
+   },
+   {
+    "question": "If an incident is caused by a dependency returning errors, how do you decide whether to fail open, fail closed, or degrade the feature?",
+    "answer": "It depends on the feature’s risk and the value of availability versus correctness. Fail open when partial service is better than blocking the user and the risk of letting something through is acceptable; fail closed when correctness, safety, or compliance matters more. Degrading the feature is often best when you can preserve the core flow while disabling the dependent part. The trade-off is between user experience, data integrity, and operational risk.",
+    "real_world": "Checkout systems often need stricter behavior than a recommendation widget. A team might disable personalized recommendations during a vendor outage but still allow purchases.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make that decision explicit in the application rather than relying on ad hoc exception handling?"
+   },
+   {
+    "question": "What happens if you add retries everywhere in a distributed system, and how do you make retries safer?",
+    "answer": "Retries can turn a transient failure into a traffic storm if many clients retry at once, especially when the dependency is already overloaded. They also risk duplicate side effects if the operation is not idempotent. Safer retries use backoff, jitter, a bounded retry count, and only target operations that can be repeated safely. You also want timeouts that leave enough budget for retries without making requests hang too long.",
+    "real_world": "During a database slowdown, aggressive retries can multiply load and make recovery much slower. Teams often discover this only after an incident where a small failure cascades into a broader outage.",
+    "code_lang": "python",
+    "code": "import time, random\nfor attempt in range(3):\n    try:\n        call()\n        break\n    except TransientError:\n        time.sleep((2 ** attempt) + random.random())",
+    "follow_up": "When would you prefer a queue or circuit breaker over retries?"
+   },
+   {
+    "question": "How do you distinguish a real incident from a deploy-related blip using metrics and logs?",
+    "answer": "Look for correlation across signals and scope the blast radius. If only one service or one version changed and the issue started right after deployment, that points to the release. If multiple unrelated services degrade at once, suspect shared infrastructure or a dependency. Logs help confirm the failure mode, but metrics tell you whether it is isolated, broad, or self-healing.",
+    "real_world": "A bad deploy can look like a platform outage at first if you only stare at a single service dashboard. Correlating with version labels and request paths usually narrows it down quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you check first to decide whether to roll back or wait?"
+   },
+   {
+    "question": "What is the trade-off between active health checks and passive detection based on user traffic?",
+    "answer": "Active checks detect problems even when traffic is low, because the system probes endpoints directly. Passive detection only sees failures when real requests arrive, which is closer to user impact but can miss silent failures during quiet periods. Active checks can also give false confidence if the probe is too shallow. In practice, you usually want both: active checks for basic reachability and passive signals for real request success.",
+    "real_world": "A service may pass a simple health endpoint while real database calls are failing. That is why teams often combine liveness probes with deeper dependency checks elsewhere.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should a health check test, and what should it intentionally not test?"
+   },
+   {
+    "question": "How do you choose between a fixed alert threshold and an anomaly-based alerting approach?",
+    "answer": "Fixed thresholds are simpler, easier to explain, and better for known hard limits like saturation or error rate. Anomaly detection is useful when normal patterns vary by time of day, day of week, or tenant and a static threshold would be too noisy or too blind. The trade-off is precision versus maintainability: anomaly systems can catch subtle regressions but are harder to tune and trust. For critical paging, many teams prefer simple rules and use anomaly detection for investigation or lower-priority signals.",
+    "real_world": "A traffic spike at noon may be normal for one service but a severe issue for another. Static thresholds alone often either miss issues or create constant false positives.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you validate that an anomaly detector is actually improving incident response?"
+   },
+   {
+    "question": "What should you measure during a load test if you want to know whether the system will hold up in production?",
+    "answer": "Measure more than throughput: track latency percentiles, error rate, saturation signals, queue depth, CPU, memory, and dependency behavior. The goal is to find the knee in the curve, where latency and errors start rising sharply before the system fully collapses. You also want to match realistic traffic shapes and payloads, because uniform synthetic load can miss bottlenecks. A good test tells you the safe operating range and the failure mode.",
+    "real_world": "A service may look fine at average load but fail when request bursts create queue buildup. Load tests often reveal that the real limit is a downstream database or cache, not the app server itself.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a load test that reveals whether the bottleneck is in your service or a dependency?"
+   },
+   {
+    "question": "How do you reduce the impact of a noisy neighbor in a shared platform or cluster?",
+    "answer": "Start by isolating the resource that is being contended: CPU, memory, disk I/O, network, or connection pools. Then apply controls like per-tenant quotas, priority classes, rate limits, and separate workloads for critical and best-effort traffic. The trade-off is efficiency versus isolation, because tighter isolation often lowers utilization. In shared systems, fairness and predictability usually matter more than squeezing out every last bit of capacity.",
+    "real_world": "One tenant running an expensive batch job can slow unrelated production traffic if the platform shares too many resources. Quotas and workload separation are common ways to stop that from happening.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you split a shared service into separate clusters instead of just adding limits?"
+   },
+   {
+    "question": "What is the safest way to make an operational change when you are not fully sure what the blast radius will be?",
+    "answer": "Use a small, reversible change with clear monitoring and a rollback path. That might mean doing it on one instance, one shard, one region, or a tiny slice of traffic first. The important part is to define success and failure signals before the change, not after. This limits risk while still letting you learn quickly from real behavior.",
+    "real_world": "Teams often apply a config change to one node first to see if it affects startup time or error rate. That catches bad assumptions before a fleet-wide outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether a change is safe enough for a canary versus needing a maintenance window?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How would you make a multi-region service reliable without turning every request into a cross-region latency penalty?",
+    "answer": "The usual pattern is to keep the data plane local and use cross-region replication for durability and failover, not for every read and write. You route users to a healthy nearby region, replicate state asynchronously or selectively synchronously depending on consistency needs, and predefine what degrades during a regional loss. The trade-off is lower steady-state latency versus some risk of stale reads or write unavailability during failover. The hard part is deciding which data can tolerate replication lag and which paths need stronger guarantees.",
+    "real_world": "Teams often discover that a globally replicated database fixes one failure mode while adding 50–100 ms to every request and creating new consistency incidents. Regional isolation with carefully chosen replication boundaries usually gives better reliability for user-facing services.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What state would you keep region-local versus globally consistent, and why?"
+   },
+   {
+    "question": "What actually causes a thundering herd during recovery, and how do you prevent it?",
+    "answer": "A thundering herd happens when many clients or workers react to the same event at once: cache expiry, lock release, process restart, or dependency recovery. The system gets a synchronized spike exactly when it is least able to handle it, so recovery turns into another outage. You prevent it with jittered retries, request coalescing, staggered restarts, token-bucket or concurrency limits, and serving slightly stale data instead of forcing immediate regeneration. The key trade-off is slower freshness or throughput in exchange for a much smoother recovery curve.",
+    "real_world": "A common incident is all app instances missing the same cache key after a deploy and stampeding the database. Another is consumers reconnecting to a broker simultaneously and exhausting connection or auth capacity.",
+    "code_lang": "python",
+    "code": "import random, time\n\ndef backoff(attempt, base=0.2, cap=5.0):\n    sleep = min(cap, base * (2 ** attempt))\n    return random.uniform(0, sleep)\n\nfor attempt in range(5):\n    time.sleep(backoff(attempt))\n    # retry request here\n",
+    "follow_up": "How is a cache stampede different from a retry storm, and would you mitigate them the same way?"
+   },
+   {
+    "question": "How do you reason about tail latency in a microservice call graph?",
+    "answer": "End-user latency is dominated by the slowest path, so p99 gets worse as you add fan-out and parallel calls even if each dependency looks acceptable alone. I model the critical path, concurrency, and the number of downstream calls per request, then check queueing, connection pools, and timeout budgets at each hop. Reducing tail latency often means less fan-out, tighter per-hop deadlines, hedging only for idempotent reads, and isolating slow classes of work. The trade-off is extra complexity and sometimes more total work to improve the worst-case path.",
+    "real_world": "A service making 20 downstream calls can show a good median but a terrible p99 because one slow shard or pool queue dominates the request. Teams often miss this when they monitor only per-service averages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use hedged requests, and what new risks do they introduce?"
+   },
+   {
+    "question": "How would you set timeouts across a chain of services so they fail fast without causing unnecessary errors?",
+    "answer": "Timeouts should come from an end-to-end deadline, not be chosen independently at each hop. Each service should reserve some local processing time, pass the remaining budget downstream, and avoid waiting longer than the caller can still use. If every hop uses a full static timeout, latency multiplies and work continues after the request is already useless. The trade-off is that aggressive deadlines protect capacity but can cut off slow-but-successful requests.",
+    "real_world": "In incidents, it's common to find a frontend with a 2-second timeout calling a service that calls three dependencies each waiting 2 seconds. The user fails quickly, but the backend keeps burning threads and connections for much longer.",
+    "code_lang": "go",
+    "code": "deadline, ok := ctx.Deadline()\nif ok {\n    remaining := time.Until(deadline)\n    child, cancel := context.WithTimeout(ctx, remaining-50*time.Millisecond)\n    defer cancel()\n    _ = callDependency(child)\n}\n",
+    "follow_up": "How do you choose timeout budgets differently for user-facing traffic versus batch jobs?"
+   },
+   {
+    "question": "What does overload collapse look like internally, and what mechanisms stop a service from taking itself down?",
+    "answer": "Overload collapse starts when arrival rate exceeds effective service rate, so queues grow, latency rises, clients time out, retries add more load, and useful throughput can actually fall. Internally you see thread or event-loop starvation, connection pool exhaustion, growing run queues, and memory pressure from buffered work. The best defenses are admission control, bounded queues, concurrency limits, load shedding by priority, and fast failure before expensive work starts. The trade-off is rejecting some requests early to preserve latency and success for the rest.",
+    "real_world": "A service can look healthy by CPU at first while its queue depth and timeout rate explode; by the time CPU saturates, user impact is already severe. Teams that only scale on CPU often miss the onset of collapse.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which signal would you use for overload protection first: CPU, queue depth, latency, or in-flight requests?"
+   },
+   {
+    "question": "How do you make a cache improve reliability instead of becoming a hidden dependency?",
+    "answer": "Treat the cache as an optimization with explicit miss-path capacity and failure behavior, not as a required source of truth. That means sizing the origin to survive reduced hit rate for important paths, using TTLs carefully, protecting against hot keys, and deciding when stale reads are acceptable during cache problems. You also need per-key or per-request coalescing so one miss does not fan out into many origin requests. The trade-off is cost and complexity for a system that can survive cache eviction storms or cache-cluster outages.",
+    "real_world": "Many outages happen when a cache cluster restarts and the database cannot absorb the sudden miss traffic. Another common issue is one celebrity key or tenant causing disproportionate backend load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect that your cache is causing more harm than benefit before users notice?"
+   },
+   {
+    "question": "When should an SRE push for idempotency, and what does it buy you operationally?",
+    "answer": "Idempotency matters anywhere requests may be retried, duplicated, reordered, or resumed after partial failure: APIs, job workers, event consumers, and deployment controllers. It lets you use retries and at-least-once delivery safely because repeating the same operation does not create extra side effects. Operationally that reduces incident blast radius and simplifies recovery workflows like replaying events or rerunning failed jobs. The trade-off is extra state, deduplication logic, or API design constraints.",
+    "real_world": "Without idempotency, a retry can double-charge a payment, create duplicate resources, or send the same email thousands of times after a broker failover. With it, teams can replay dead-letter queues and recover faster.",
+    "code_lang": "sql",
+    "code": "INSERT INTO payments (idempotency_key, amount, status)\nVALUES ('req_123', 5000, 'captured')\nON CONFLICT (idempotency_key) DO NOTHING;",
+    "follow_up": "What are the limits of idempotency if the side effect happens in an external system you do not control?"
+   },
+   {
+    "question": "How do you handle clock issues in distributed systems from an SRE perspective?",
+    "answer": "Clocks matter for TLS validity, leases, TTLs, ordering assumptions, and metric interpretation, but wall-clock time is not a safe source of causality. I rely on monotonic clocks for durations, keep NTP or equivalent healthy, bound assumptions that depend on synchronized time, and design leases and token expiry with skew in mind. During incidents, clock skew can make logs appear out of order and trigger false leader elections or premature expirations. The trade-off is accepting some uncertainty in timestamps to avoid brittle coordination.",
+    "real_world": "A few seconds of skew can invalidate certificates, break auth tokens, or cause one node to think a lease expired when it did not. It can also mislead responders into chasing the wrong sequence of events in logs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would tell you clock skew is causing an incident rather than a dependency outage?"
+   },
+   {
+    "question": "How would you design safe leader election or lease-based coordination for critical jobs?",
+    "answer": "Use leases with renewal and fencing, not a permanent notion of leadership. The leader should prove liveness by renewing before expiry, and any operation against shared state should carry a fencing token so an old leader cannot keep writing after a pause or partition. This handles split-brain better than just checking a boolean lock. The trade-off is more coordination complexity and the need for downstream systems to enforce fencing or version checks.",
+    "real_world": "A classic failure mode is a paused process that resumes after a long GC stop or network partition and still thinks it is leader. Without fencing, it can run duplicate cron jobs or corrupt shared state alongside the new leader.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is a lease alone insufficient if the previous leader can resume after a long pause?"
+   },
+   {
+    "question": "What do you look for when debugging a production incident caused by connection management rather than application logic?",
+    "answer": "I check for connection pool exhaustion, handshake or TLS latency, ephemeral port pressure, SYN backlog issues, idle timeout mismatches, and whether keepalive settings fit the traffic pattern. A lot of outages are really about too many short-lived connections or clients holding connections too long, which causes queueing long before CPU is high. I also compare request concurrency to max open connections and look for retries multiplying new connection attempts. The trade-off is that larger pools can reduce waits but increase memory use and amplify downstream overload.",
+    "real_world": "After a deploy, a small change like disabling reuse or lowering an idle timeout can cause a storm of new TLS handshakes and make latency spike across the fleet. This often presents as random timeouts even though the application code is functionally correct.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether the bottleneck is in the client pool, the network path, or the server accept side?"
+   },
+   {
+    "question": "How do you use little's law and queueing behavior to reason about a service that looks fine on average but falls apart at peak?",
+    "answer": "Little's Law gives you L = λW, so if arrival rate rises and service time stays flat, queue length and waiting time still grow quickly as utilization approaches 100%. In real systems, once a bottleneck is near saturation, tail latency grows nonlinearly because requests spend more time waiting than being processed. The practical use is to keep headroom, cap concurrency, and watch queue depth and service time together instead of relying on average CPU. A system can show acceptable mean latency while p99 is exploding because a small fraction of requests are trapped behind the queue.",
+    "real_world": "A service can pass steady-state load tests at 60% utilization and still melt during a traffic spike because burstiness pushes a hot shard or thread pool near saturation. Teams often discover this when autoscaling reacts too slowly and p99 rises minutes before error rate does.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you collect to tell whether the waiting is in the application, kernel, or a downstream dependency?"
+   },
+   {
+    "question": "If you had to set a hard concurrency limit for a service, how would you choose it and what failure mode are you trying to avoid?",
+    "answer": "I would start from measured resource ceilings: memory per in-flight request, downstream connection limits, thread or goroutine scheduling cost, and the latency target at peak. The goal is not maximum throughput at any cost; it is preventing the service from entering a state where queues grow without bound and recovery gets slower than the traffic spike. A good limit is one that keeps utilization below the knee of the latency curve and sheds excess load quickly with a controlled failure. Then I would tune it under load and revisit it as request mix changes.",
+    "real_world": "Without a hard cap, one slow dependency can cause in-flight requests to pile up until the service runs out of memory or file descriptors. Teams often add a semaphore or bounded worker pool specifically to turn catastrophic failure into fast, visible rejection.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you enforce the limit: per process, per endpoint, per tenant, or globally?"
+   },
+   {
+    "question": "What is coordinated omission in latency measurement, and why can it hide a serious production problem?",
+    "answer": "Coordinated omission happens when the load generator stops issuing work while the system is stalled, so the worst delays are never measured. That makes latency percentiles look much better than users actually experience during pauses, lock contention, or garbage collection. To avoid it, the test must keep an external schedule of intended arrivals and record the delay relative to that schedule, not just time spent after a request is sent. Otherwise you can certify a system as healthy while it is producing multi-second gaps under load.",
+    "real_world": "This shows up when a service has periodic pauses: benchmark dashboards report acceptable p99, but real users see visible hangs because requests that should have arrived during the pause were never counted. It is a common reason pre-production load tests miss latency incidents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a load test to avoid coordinated omission when the traffic pattern is bursty?"
+   },
+   {
+    "question": "How do brownouts differ from outages, and when would you intentionally design one?",
+    "answer": "A brownout is an intentional reduction in functionality or quality under stress so the core path stays available. Instead of serving every feature poorly, you disable expensive or noncritical work like recommendations, enrichments, or synchronous writes to secondary systems. The trade-off is partial user impact versus preserving the main transaction and preventing total collapse. This works best when features are clearly prioritized and isolated behind flags or admission controls.",
+    "real_world": "During a sudden traffic surge, turning off personalized ranking or image transformations can keep checkout or login responsive. Teams that do not predefine these modes often discover during an incident that dependencies are too entangled to shed optional work safely.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would trigger a brownout automatically, and how would you stop it from flapping?"
+   },
+   {
+    "question": "How would you reason about durability and recovery trade-offs between synchronous replication, asynchronous replication, and quorum writes?",
+    "answer": "Synchronous replication reduces data loss risk because an acknowledgment waits for multiple copies, but it adds latency and can reduce availability if replicas are slow or partitioned. Asynchronous replication usually gives better latency and availability for writes, but you accept a window where acknowledged data can be lost on failover. Quorum schemes try to balance that by requiring a majority, but the real behavior depends on failure domains, read consistency, and whether stale reads are acceptable. The right choice comes from the business cost of losing recent writes versus rejecting or delaying them.",
+    "real_world": "A payments ledger and a clickstream pipeline should make different choices here. Many incidents happen because a team unknowingly uses async failover for data that product assumed was durable the moment the API returned 200.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you explain RPO and RTO implications of those choices to a product team?"
+   },
+   {
+    "question": "What happens during DNS-related incidents that makes them tricky to debug, even when the application code is unchanged?",
+    "answer": "DNS failures are tricky because resolution is cached at many layers with different lifetimes: clients, OS resolvers, sidecars, recursive resolvers, and libraries. You can get partial failure where some instances keep using a dead IP, others cannot resolve at all, and retries amplify load on the resolver rather than the application. Negative caching and stale connections can make recovery look inconsistent long after the authoritative record is fixed. From an SRE view, you need visibility into resolution latency, cache behavior, and connection reuse, not just app-level errors.",
+    "real_world": "A service migration can look complete in the control plane while a subset of clients still send traffic to old backends because of cached answers or long-lived keepalive connections. These incidents often present as random timeouts by host or AZ instead of a clean outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What mitigations would you use if you needed to change service endpoints safely during peak traffic?"
+   },
+   {
+    "question": "How would you handle noisy alerts caused by partial regional failures where global availability still looks fine?",
+    "answer": "I would alert on both global user impact and regional saturation or error budgets, because aggregate metrics can hide a serious local outage. The key is to structure alerts by failure domain and route them differently: a single-region issue may not page the same way as global unavailability, but it still needs fast action before failover overloads healthy regions. You also want denominator control, since low-traffic regions can generate misleading percentages. Good alerting here mirrors how traffic actually shifts during incidents, not just the org chart.",
+    "real_world": "If one region drops 20% of capacity, global success rate may remain above target while another region quietly absorbs the load and runs hot. Teams that only watch global metrics often page late, after the secondary effect becomes the real outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you set burn-rate style alerts for a regional SLO when traffic is uneven across regions?"
+   },
+   {
+    "question": "What are the main failure modes of Kubernetes readiness and liveness probes, and how do they cause incidents instead of preventing them?",
+    "answer": "The big mistake is using liveness to detect transient slowness or downstream failures, which turns a degraded service into a restart loop. Readiness should represent whether the instance can serve traffic now; liveness should answer whether the process is irrecoverably stuck. Probes can also be too expensive, depend on the same overloaded path as user traffic, or flip too quickly and cause endpoint churn. The result is self-inflicted load spikes, dropped caches, and longer recovery times.",
+    "real_world": "A common incident pattern is a dependency slowdown causing probe timeouts, then Kubernetes kills healthy-but-slow pods and the remaining pods get even more traffic. Many teams fix this by making probes cheap, isolating them from dependencies, and using startup probes for slow initialization.",
+    "code_lang": "yaml",
+    "code": "livenessProbe:\n  httpGet: { path: /live, port: 8080 }\nreadinessProbe:\n  httpGet: { path: /ready, port: 8080 }\nstartupProbe:\n  httpGet: { path: /ready, port: 8080 }",
+    "follow_up": "What should a readiness endpoint check, and what should it explicitly avoid checking?"
+   },
+   {
+    "question": "Suppose a service has enough total CPU, but p99 latency spikes during bursts anyway. What kernel or runtime-level issues would you investigate?",
+    "answer": "I would look for run-queue buildup, CPU throttling from quotas, stop-the-world GC pauses, lock contention, context-switch overhead, and NIC or disk interrupt behavior. Total CPU can look fine while a subset of cores, cgroups, or threads are overloaded, especially with poor locality or uneven work distribution. I would also check syscall latency, retransmits, and scheduler delay because the bottleneck may be waiting to run rather than doing work. Tail latency often comes from contention and scheduling artifacts, not raw compute shortage.",
+    "real_world": "This is common in containers with tight CPU quotas: average usage seems safe, but cgroup throttling creates bursty pauses that users feel as random slowness. It also happens when one hot mutex serializes a path that looked parallel on paper.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish CPU throttling from garbage collection or lock contention using production-safe tooling?"
+   },
+   {
+    "question": "How do you do incident-safe schema changes for a large database-backed service that cannot afford long locks or inconsistent readers?",
+    "answer": "I prefer expand-and-contract: add backward-compatible schema first, deploy code that can read and write both forms, backfill in controlled batches, then remove the old path later. The reason is that schema migrations are really distributed changes across app versions, replicas, and long-running jobs, so the danger is not just lock time but mixed-version behavior. For large tables, I would avoid rewrite-heavy operations during peak and validate replication lag, query plans, and rollback strategy before cutting over. The safest migration is the one you can pause without breaking either version of the application.",
+    "real_world": "A seemingly simple column change can block writes, blow up replica lag, or make older app instances crash on deserialization. Teams with strong migration discipline treat database changes like staged rollouts, not one-shot DDL events.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What checks would you put in place before and during the backfill to catch hidden blast radius early?"
+   }
+  ]
+ }
+}

@@ -1,0 +1,461 @@
+{
+ "slug": "kotlin",
+ "name": "Kotlin",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between `val` and `var` in Kotlin?",
+    "answer": "`val` means the reference cannot be reassigned, while `var` can be reassigned. `val` does not always mean the object is immutable; it only makes the variable itself read-only. In Kotlin, `val` is the default choice when you do not need to change the reference, because it reduces accidental bugs.",
+    "real_world": "This matters in code reviews and debugging when a developer thinks `val` makes a list or object immutable, but the contents still change. It also affects how safely you can reason about state in UI or backend code.",
+    "code_lang": "kotlin",
+    "code": "val name = \"Ada\"\nvar age = 20\n// name = \"Bob\" // error\nage = 21",
+    "follow_up": "If `val` does not make an object immutable, how do you make a collection truly unmodifiable in Kotlin?"
+   },
+   {
+    "question": "What is a nullable type in Kotlin, and why does Kotlin use the `?` syntax?",
+    "answer": "A nullable type is one that can hold `null`, written with `?`, like `String?`. Kotlin uses this to make nullability explicit in the type system and reduce `NullPointerException`s. You must handle nullable values with safe calls, Elvis operators, or explicit checks before using them as non-null values.",
+    "real_world": "This comes up constantly when reading data from APIs, databases, or Android intents, where missing values are common. Kotlin forces you to handle those cases instead of crashing later.",
+    "code_lang": "kotlin",
+    "code": "fun printLength(s: String?) {\n    val len = s?.length ?: 0\n    println(len)\n}",
+    "follow_up": "What is the difference between `s?.length`, `s!!.length`, and `s.length`?"
+   },
+   {
+    "question": "What does the Elvis operator `?:` do in Kotlin?",
+    "answer": "The Elvis operator provides a fallback when the left side is `null`. It is commonly used with nullable values to supply a default or return early. It makes null-handling compact and readable compared with nested `if` checks.",
+    "real_world": "A team might use it to default missing user input, API fields, or config values so the app keeps working with sensible behavior. It also helps avoid verbose null checks in business logic.",
+    "code_lang": "kotlin",
+    "code": "fun username(input: String?): String {\n    return input ?: \"guest\"\n}",
+    "follow_up": "When would you use `?: return` or `?: throw` instead of a default value?"
+   },
+   {
+    "question": "What is a `data class` in Kotlin, and when would you use one?",
+    "answer": "A `data class` is a class meant to hold data, and Kotlin automatically generates useful methods like `equals`, `hashCode`, `toString`, `copy`, and destructuring support. You use it for simple models such as API responses, UI state, or value objects. It is not a replacement for every class, because it is less suitable for objects with complex behavior.",
+    "real_world": "This is common in backend DTOs and Android models, where you want equality to be based on content rather than object identity. It also reduces boilerplate in tests and logging.",
+    "code_lang": "kotlin",
+    "code": "data class User(val id: Int, val name: String)\n\nval u1 = User(1, \"A\")\nval u2 = u1.copy(name = \"B\")",
+    "follow_up": "What does `copy()` do in a data class, and what parts of the object does it not deeply clone?"
+   },
+   {
+    "question": "What is a `when` expression in Kotlin, and how is it different from `switch` in other languages?",
+    "answer": "`when` is a branch expression that can return a value, not just execute statements. It is more powerful than many `switch` statements because it can match values, ranges, types, and arbitrary conditions. Kotlin also requires handling all cases when used as an expression in some situations, which improves safety.",
+    "real_world": "This is useful when mapping status codes, parsing commands, or selecting UI behavior from a sealed set of states. It keeps decision logic more readable than long `if-else` chains.",
+    "code_lang": "kotlin",
+    "code": "fun label(x: Int) = when (x) {\n    1 -> \"one\"\n    2, 3 -> \"small\"\n    in 4..10 -> \"range\"\n    else -> \"other\"\n}",
+    "follow_up": "When does `when` need an `else` branch, and when can the compiler know it is exhaustive?"
+   },
+   {
+    "question": "What is a Kotlin class constructor, and what is the difference between a primary and secondary constructor?",
+    "answer": "The primary constructor is part of the class header and is the usual way to define required properties. Secondary constructors are additional constructors inside the class body, and they are used when you need alternative ways to create the object. In many cases, the primary constructor with default parameters is simpler and preferred.",
+    "real_world": "This comes up when building models or services that need different initialization paths, such as from JSON, from tests, or from dependency injection. Using constructors well keeps object creation clear.",
+    "code_lang": "kotlin",
+    "code": "class Person(val name: String, val age: Int = 0)\n\nclass Point {\n    constructor(x: Int, y: Int) {\n        println(x + y)\n    }\n}",
+    "follow_up": "Why would you choose default parameters over adding multiple secondary constructors?"
+   },
+   {
+    "question": "What are Kotlin extension functions, and why are they useful?",
+    "answer": "Extension functions let you add a function to an existing type without changing that type or subclassing it. They are useful for making helper code read naturally, such as string, collection, or formatting utilities. They do not actually modify the class; they are resolved statically based on the declared type.",
+    "real_world": "Teams often use extensions to keep helper logic close to the types it works with, especially in Android and utility-heavy codebases. They improve readability, but can also hide where behavior is really coming from if overused.",
+    "code_lang": "kotlin",
+    "code": "fun String.lastChar(): Char = this[this.length - 1]\n\nprintln(\"Kotlin\".lastChar())",
+    "follow_up": "Can an extension function access private members of the class it extends?"
+   },
+   {
+    "question": "What is a `lateinit var` in Kotlin, and when should you avoid it?",
+    "answer": "`lateinit var` tells Kotlin that a non-null property will be initialized later before it is used. It only works with mutable `var` properties of non-primitive reference types. You should avoid it when a property can be set through the constructor or when nullability is a better and safer model.",
+    "real_world": "This is common in frameworks that require a no-arg constructor or delayed setup, such as some Android or testing patterns. Misusing it can create runtime crashes if the property is accessed too early.",
+    "code_lang": "kotlin",
+    "code": "lateinit var service: String\n\nfun init() {\n    service = \"ready\"\n}",
+    "follow_up": "How does `lateinit` differ from using a nullable type with `String?`?"
+   },
+   {
+    "question": "What is the purpose of a companion object in Kotlin?",
+    "answer": "A companion object holds members that belong to the class rather than to an instance. It is often used for factory methods, constants, or shared utility functions tied to the class. It is similar to static members in other languages, but it is implemented as an object.",
+    "real_world": "This is useful when you want `Foo.create()` or a constant associated with `Foo` without creating an instance first. It keeps class-level behavior grouped with the class itself.",
+    "code_lang": "kotlin",
+    "code": "class User private constructor(val name: String) {\n    companion object {\n        fun create(name: String) = User(name)\n    }\n}",
+    "follow_up": "When would you use a top-level function instead of a companion object?"
+   },
+   {
+    "question": "What is a Kotlin package, and why do you use one?",
+    "answer": "A package is a namespace for organizing code and avoiding name collisions. It also affects how you import and reference classes, functions, and properties from other files. Kotlin packages do not have to match the folder structure exactly, but teams usually keep them aligned for clarity. Use packages to group related code and keep larger projects maintainable.",
+    "real_world": "In a real project, packages help separate feature code from shared utilities and make imports manageable. Without them, names like `Logger` or `Config` collide quickly as the codebase grows.",
+    "code_lang": "kotlin",
+    "code": "package com.example.auth\n\nclass UserService\n\n// elsewhere\nimport com.example.auth.UserService",
+    "follow_up": "What is the difference between a package and an import?"
+   },
+   {
+    "question": "How do you define and use a function with default parameter values in Kotlin?",
+    "answer": "You can give a parameter a default value in the function signature, and callers may omit that argument. This reduces overloads and makes APIs easier to read. If needed, callers can still pass explicit values, including named arguments. Default parameters are a common Kotlin style because they keep functions concise.",
+    "real_world": "This is useful for optional configuration, like timeouts, flags, or formatting options. It keeps APIs smaller than writing several overloaded methods.",
+    "code_lang": "kotlin",
+    "code": "fun greet(name: String = \"world\", punctuation: String = \"!\") {\n    println(\"Hello, $name$punctuation\")\n}\n\ngreet()\ngreet(\"Kotlin\")",
+    "follow_up": "When would you prefer named arguments over positional arguments?"
+   },
+   {
+    "question": "What are named arguments in Kotlin, and when do they help?",
+    "answer": "Named arguments let you specify a parameter by name instead of relying only on its position. They make calls clearer when a function has several parameters of the same type or when some values are easy to confuse. They also work well with default parameters because you can skip arguments in the middle by naming the ones you want. The trade-off is slightly more verbosity in the call site.",
+    "real_world": "This often prevents bugs in code like date/time formatting, UI configuration, or test setup where several booleans or strings would otherwise be hard to read. It also makes refactors safer when function signatures change.",
+    "code_lang": "kotlin",
+    "code": "fun connect(host: String, port: Int, secure: Boolean) {}\n\nconnect(host = \"api.example.com\", port = 443, secure = true)",
+    "follow_up": "What happens if you mix named and positional arguments in a call?"
+   },
+   {
+    "question": "What is a `class` in Kotlin, and how do you create an instance of one?",
+    "answer": "A class is a blueprint for objects that groups state and behavior. In Kotlin, you define properties and functions inside the class, then create an instance by calling the class like a function. Classes can have constructors, inheritance, interfaces, and visibility modifiers. They are the basic building block for modeling domain objects and services.",
+    "real_world": "You use classes for things like `User`, `Order`, or `HttpClient` where data and behavior belong together. A junior mistake is trying to put everything into top-level functions when a class would make the design clearer.",
+    "code_lang": "kotlin",
+    "code": "class User(val name: String) {\n    fun greet() = \"Hi, $name\"\n}\n\nval user = User(\"Ava\")\nprintln(user.greet())",
+    "follow_up": "How is a class different from an `object` declaration in Kotlin?"
+   },
+   {
+    "question": "What is an `object` declaration in Kotlin?",
+    "answer": "An `object` declaration defines a single instance instead of a class you instantiate multiple times. It is commonly used for stateless utilities, singletons, and shared factories. Unlike a `companion object`, it stands on its own and can implement interfaces or hold state. Use it when you truly need one shared instance across the app.",
+    "real_world": "This is useful for things like app-wide registries or a simple in-memory cache. It can also be a source of hidden global state if overused, so teams usually keep it narrow.",
+    "code_lang": "kotlin",
+    "code": "object AppConfig {\n    val env = \"prod\"\n}\n\nprintln(AppConfig.env)",
+    "follow_up": "When would you choose an `object` over a regular class?"
+   },
+   {
+    "question": "What does `==` mean in Kotlin compared with `===`?",
+    "answer": "`==` checks structural equality by calling `.equals()` under the hood, while `===` checks reference equality, meaning both variables point to the exact same object. Most of the time you want `==` because you care whether values are equal, not whether they are the same instance. Use `===` only when identity matters. This distinction is important for custom classes and nullable values.",
+    "real_world": "This matters in tests and bug hunts when two objects look the same but are different instances. A common mistake is using `===` and getting surprising false results.",
+    "code_lang": "kotlin",
+    "code": "val a = String(\"hi\".toCharArray())\nval b = String(\"hi\".toCharArray())\nprintln(a == b)\nprintln(a === b)",
+    "follow_up": "How does this relate to overriding `equals` and `hashCode`?"
+   },
+   {
+    "question": "What is a `for` loop in Kotlin, and what can you loop over?",
+    "answer": "A `for` loop iterates over anything that can be iterated, such as lists, arrays, ranges, or other iterable collections. Kotlin’s loop syntax is concise and works well for simple traversal. If you need more complex iteration, you can still use indices or collection functions like `map` and `filter`. In idiomatic Kotlin, loops are common, but collection operations are often preferred for transformations.",
+    "real_world": "This comes up constantly when processing records, rendering lists, or validating input. Using the wrong loop form can lead to off-by-one bugs or awkward index handling.",
+    "code_lang": "kotlin",
+    "code": "for (n in 1..3) {\n    println(n)\n}\n\nval names = listOf(\"a\", \"b\")\nfor (name in names) println(name)",
+    "follow_up": "What is the difference between `..` and `until` in a range?"
+   },
+   {
+    "question": "How do you write a basic `if` expression in Kotlin, and why is it called an expression?",
+    "answer": "In Kotlin, `if` can produce a value, so you can assign its result to a variable. That is why it is called an expression rather than only a statement. This makes simple branching more concise and often removes the need for separate temporary variables. When both branches return a value, the types should be compatible.",
+    "real_world": "This is useful when you want to compute a setting, label, or fallback value in one place. A common beginner mistake is expecting `if` to work like a statement-only construct from other languages.",
+    "code_lang": "kotlin",
+    "code": "val max = if (a > b) a else b\nprintln(max)",
+    "follow_up": "What happens if one branch of the `if` expression is missing?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do `open`, `final`, and `abstract` affect inheritance in Kotlin, and what problems do they prevent?",
+    "answer": "In Kotlin, classes and methods are `final` by default, so you have to mark a class or member `open` to allow overriding. `abstract` members have no implementation and must be implemented by subclasses, while abstract classes can also hold shared state and concrete methods. This default-final design prevents accidental inheritance and makes APIs safer to evolve. In practice, you should open only the specific extension points you expect other code to override.",
+    "real_world": "This matters when building libraries or framework code: a team may accidentally make a class inheritable and later change internals, breaking downstream subclasses. The default-final model reduces that risk.",
+    "code_lang": "kotlin",
+    "code": "open class Base {\n    open fun run() {}\n    fun fixed() {}\n}\nabstract class Repo {\n    abstract fun load(): String\n}",
+    "follow_up": "When would you choose an abstract class over an interface in Kotlin?"
+   },
+   {
+    "question": "What is a Kotlin interface, and how does it compare to a Java interface in day-to-day use?",
+    "answer": "A Kotlin interface can declare abstract members and also provide default implementations. A class can implement multiple interfaces, which is often how you compose behavior without deep inheritance. Compared with Java, Kotlin makes default methods and property-like contracts feel more natural, but interfaces still cannot hold instance state. Use them for capability-style APIs and to define stable contracts between modules.",
+    "real_world": "Teams use interfaces to mock dependencies in tests and to swap implementations for different backends, such as a real payment gateway versus a sandbox one. This keeps code decoupled and easier to test.",
+    "code_lang": "kotlin",
+    "code": "interface Logger {\n    fun log(msg: String)\n    fun warn(msg: String) = log(\"WARN: $msg\")\n}\nclass ConsoleLogger : Logger {\n    override fun log(msg: String) = println(msg)\n}",
+    "follow_up": "How would you decide between an interface and an abstract class for a shared API?"
+   },
+   {
+    "question": "How do Kotlin `sealed` classes or interfaces help when modeling state, and what does that buy you in practice?",
+    "answer": "A sealed hierarchy restricts which types can implement it, usually within the same source set or file depending on the declaration style. That lets the compiler know the full set of cases, so `when` can be exhaustive without a fallback branch. It is useful for modeling finite states like loading, success, and failure. The trade-off is less openness for external extension, but much better correctness for closed domains.",
+    "real_world": "This is common in UI state models and parser results, where missing a case can become a production bug. Exhaustive handling catches those omissions at compile time instead of during runtime.",
+    "code_lang": "kotlin",
+    "code": "sealed class ResultState\nclass Loading : ResultState()\ndata class Success(val data: String) : ResultState()\ndata class Error(val message: String) : ResultState()\n\nfun render(state: ResultState) = when (state) {\n    is Loading -> \"loading\"\n    is Success -> state.data\n    is Error -> state.message\n}",
+    "follow_up": "How would you model optional failures with a sealed type versus using exceptions?"
+   },
+   {
+    "question": "What are Kotlin null-safety operators like `?.` and `!!`, and when is `!!` a bad idea?",
+    "answer": "`?.` performs a safe call and returns null if the receiver is null, which keeps null handling explicit and local. `!!` asserts the value is non-null and throws a null pointer exception if you're wrong. `!!` is usually a code smell because it pushes a preventable failure into runtime; it can be acceptable at narrow boundaries where you have an external guarantee that the compiler cannot see. Prefer checking, smart casting, or restructuring the code so the type system does the work.",
+    "real_world": "Null-related crashes often appear when parsing API responses or reading values from platform APIs that are outside your control. Replacing `!!` with explicit handling usually turns production crashes into recoverable errors.",
+    "code_lang": "kotlin",
+    "code": "val length = user?.name?.length ?: 0\n// Avoid this unless you are certain:\nval id = orderId!!",
+    "follow_up": "What is a smart cast, and when does Kotlin refuse to smart cast a value?"
+   },
+   {
+    "question": "What is a smart cast in Kotlin, and why does it sometimes fail even after an `is` check?",
+    "answer": "A smart cast lets Kotlin treat a variable as a more specific type after a type check, so you can call members without an explicit cast. It works when the compiler can prove the value will not change unexpectedly. Smart casts often fail for mutable properties, open properties, or variables captured by lambdas because their value could change between the check and the use. In those cases you need to copy to a local `val` or cast explicitly.",
+    "real_world": "This shows up in UI code and concurrent code, where a property can change after validation. Understanding why the compiler refuses the cast helps avoid subtle race-condition bugs.",
+    "code_lang": "kotlin",
+    "code": "fun printLength(x: Any?) {\n    if (x is String) {\n        println(x.length)\n    }\n}",
+    "follow_up": "How would you rewrite code when smart casting fails on a mutable property?"
+   },
+   {
+    "question": "How do lambda expressions and higher-order functions change the way you write Kotlin code?",
+    "answer": "A lambda is an anonymous function value, and a higher-order function accepts or returns functions. Kotlin uses these heavily for collection operations, callbacks, and configuration APIs, which can reduce boilerplate and make intent clearer. The trade-off is that nested lambdas can hurt readability if overused, especially when control flow becomes hard to follow. In practice, they are most valuable when they remove repetitive loops or callback interfaces.",
+    "real_world": "This is common in business logic that transforms lists or in async code that uses callbacks. Teams often refactor imperative loops into higher-order functions for clarity and testability.",
+    "code_lang": "kotlin",
+    "code": "val names = listOf(\"a\", \"bb\", \"ccc\")\nval longNames = names.filter { it.length > 1 }\nval lengths = names.map { it.length }",
+    "follow_up": "When would you avoid a lambda-based API even if it looks concise?"
+   },
+   {
+    "question": "What does `inline` do for higher-order functions in Kotlin, and what trade-offs come with it?",
+    "answer": "`inline` tells the compiler to substitute the function body at call sites, which can reduce object allocation for lambdas and sometimes improve performance. It is especially useful for small utility functions that take lambdas and are called often. The trade-off is larger bytecode and potentially slower compilation, plus less predictable debugging because code is expanded at the call site. Use it when profiling or API design shows a real benefit, not just by default.",
+    "real_world": "This matters in performance-sensitive code such as collection-heavy transformations or small utility APIs that are called in hot paths. It can also affect binary size in mobile apps.",
+    "code_lang": "kotlin",
+    "code": "inline fun measure(block: () -> Unit) {\n    val start = System.nanoTime()\n    block()\n    println(System.nanoTime() - start)\n}",
+    "follow_up": "What kinds of lambdas cannot be inlined the same way?"
+   },
+   {
+    "question": "How do Kotlin collections differ between read-only and mutable types, and what should you be careful about?",
+    "answer": "Kotlin distinguishes between read-only views like `List` and mutable implementations like `MutableList`. Read-only does not always mean deeply immutable; it just means the current reference does not expose mutating operations. That matters because a function that accepts `List` cannot add elements, but the underlying object may still be modified elsewhere. In APIs, prefer the narrower mutable type only when mutation is truly required.",
+    "real_world": "This often causes bugs when one layer assumes a list will not change after passing it around, but another layer still holds the mutable implementation. Those shared mutations can lead to flaky tests and hard-to-reproduce production issues.",
+    "code_lang": "kotlin",
+    "code": "fun total(items: List<Int>) = items.sum()\n\nval mutable = mutableListOf(1, 2)\nval readOnly: List<Int> = mutable\nmutable.add(3) // readOnly now observes the change",
+    "follow_up": "How would you make a defensive copy when exposing collection data from a class?"
+   },
+   {
+    "question": "What is the difference between `map` and `flatMap` in Kotlin collections, and when would you use each?",
+    "answer": "`map` transforms each element independently and keeps the same outer shape, while `flatMap` transforms each element and then flattens nested collections into one result. Use `map` when each input produces exactly one output, and `flatMap` when each input can produce zero or many outputs. The key trade-off is clarity: `flatMap` is powerful, but it can hide structure if used where a simple `map` is enough. Choosing the right one avoids extra nesting and cleanup code.",
+    "real_world": "This comes up in parsing nested API responses, tag expansion, and permission calculations. Using `flatMap` in the right spot can replace a loop that manually appends into a destination list.",
+    "code_lang": "kotlin",
+    "code": "val words = listOf(\"a b\", \"c d\")\nval chars = words.flatMap { it.split(\" \") }\n// result: [\"a\", \"b\", \"c\", \"d\"]",
+    "follow_up": "How would you preserve grouping if you need the nested structure later?"
+   },
+   {
+    "question": "How do you handle exceptions idiomatically in Kotlin, and what are the trade-offs versus returning a result type?",
+    "answer": "Kotlin uses exceptions for exceptional failure, but you can also model expected failures with a sealed result type or `Result`-style API. Exceptions are convenient when failure is truly unusual and you want to unwind quickly, while result types make success and failure part of the normal control flow. The trade-off is between ergonomics and explicitness: exceptions can be simpler but easier to miss, while result types are more verbose but easier to test and compose. In real systems, parse and validation failures often fit result types better than exceptions.",
+    "real_world": "This matters in service code where you want validation errors to become user-facing messages, not crashes. Teams often standardize on one style so error handling stays consistent across modules.",
+    "code_lang": "kotlin",
+    "code": "fun parseIntSafe(text: String): Int? =\n    text.toIntOrNull()\n\nval value = parseIntSafe(\"12\") ?: 0",
+    "follow_up": "How would you propagate an error with more context than just a nullable value?"
+   },
+   {
+    "question": "How do `let`, `apply`, `also`, `run`, and `with` differ, and how do you choose between them in real code?",
+    "answer": "They are scope functions, but they differ in what `this`/`it` refers to and what they return. Use `let` when you want to transform a value and keep chaining, `apply` when you configure an object and return it, `also` for side effects while keeping the original value, and `run`/`with` when you want to work on an object as a block and return the block result. The main trade-off is readability: overusing them can make code harder to scan if the return value or receiver is unclear.",
+    "real_world": "This comes up when building request objects, parsing nullable values, or logging intermediate state in a chain. Teams often standardize on one or two of these to keep code reviews simpler.",
+    "code_lang": "kotlin",
+    "code": "val user = User().apply {\n    name = \"Ava\"\n    age = 30\n}\nval id = user.let { repo.save(it) }",
+    "follow_up": "How do you avoid confusing `this` and `it` in nested scope functions?"
+   },
+   {
+    "question": "What is the difference between `List` and `MutableList` in Kotlin, and what does that mean for API design?",
+    "answer": "`List` is read-only from the caller’s perspective, while `MutableList` exposes modification operations like add and remove. In API design, returning `List` communicates intent and limits accidental mutation, even though the underlying object might still be mutable. If you need to guarantee true immutability, Kotlin’s type system alone does not provide that; you must avoid exposing mutable state or copy defensively.",
+    "real_world": "This matters when a service returns cached data and another layer mutates it by mistake, causing subtle cross-request bugs. It also affects library APIs where you want to protect internal state from callers.",
+    "code_lang": "kotlin",
+    "code": "fun loadNames(): List<String> {\n    val names = mutableListOf(\"a\", \"b\")\n    return names\n}\n",
+    "follow_up": "When would you return a copy instead of a view or the original collection?"
+   },
+   {
+    "question": "What happens when a function parameter has both a default value and a named argument at the call site?",
+    "answer": "Named arguments let you skip positional ordering and specify only the arguments you care about, while defaults fill in the rest. This is useful when a function has several optional parameters, because it makes call sites clearer and less brittle to parameter reordering. The trade-off is that named arguments are part of the source-level API, so changing parameter names can break callers.",
+    "real_world": "This is common in client SDKs and test helpers where functions have many optional settings. It reduces mistakes like passing timeout and retries in the wrong order.",
+    "code_lang": "kotlin",
+    "code": "fun connect(host: String, port: Int = 5432, ssl: Boolean = true) {}\nconnect(host = \"db.local\", ssl = false)\nconnect(\"db.local\")",
+    "follow_up": "What restrictions apply to named arguments when calling Java methods from Kotlin?"
+   },
+   {
+    "question": "How do you use extension functions safely in a codebase, and what are the limits of what they can do?",
+    "answer": "Extensions are resolved statically, so they do not actually modify the class or participate in dynamic dispatch the way member functions do. They are good for utility behavior that you want attached to a type without inheritance, but they cannot access private state and can be shadowed by member functions with the same signature. In shared code, use them sparingly because they can hide behavior behind a syntax that looks like a real method on the type.",
+    "real_world": "This is useful for formatting, mapping DTOs, or adding small adapters around third-party types you cannot change. It can also confuse teams when an extension and a member method appear to do the same thing but behave differently.",
+    "code_lang": "kotlin",
+    "code": "fun String.slug(): String = lowercase().replace(' ', '-')\nval s = \"Hello World\".slug()",
+    "follow_up": "What happens if a class later adds a member function with the same signature as your extension?"
+   },
+   {
+    "question": "When would you prefer a top-level function over putting the same code in a companion object or utility class?",
+    "answer": "Top-level functions are often best for stateless behavior because they are simple, easy to test, and avoid unnecessary object wrappers. They also map well to Kotlin’s package structure and reduce boilerplate compared with Java-style utility classes. Use a companion object when the function needs to feel attached to the type, for example a factory or parser, but otherwise top-level is usually cleaner.",
+    "real_world": "This shows up in parsing, formatting, and pure business logic libraries where you want small, focused APIs. It can reduce ceremony and make tests easier to write.",
+    "code_lang": "kotlin",
+    "code": "package parsing\n\nfun parsePort(text: String): Int = text.toInt()\n",
+    "follow_up": "When does putting logic in a companion object actually improve discoverability?"
+   },
+   {
+    "question": "How do you decide between using a sealed class hierarchy and a simple enum or set of booleans?",
+    "answer": "Use a sealed hierarchy when each state can carry different data or behavior, and you want the compiler to help you handle all cases. Enums are better for a fixed set of simple labels, while booleans usually become unclear once there are more than one or two flags. The trade-off is more types and verbosity, but much better modeling and safer `when` expressions.",
+    "real_world": "This matters for UI state, payment flows, and API results where different states need different payloads. A sealed model can prevent invalid combinations that are easy to create with flags.",
+    "code_lang": "kotlin",
+    "code": "sealed class ResultState {\n    data class Success(val data: String): ResultState()\n    data class Error(val message: String): ResultState()\n    object Loading: ResultState()\n}",
+    "follow_up": "How does exhaustiveness checking in `when` help when this model changes?"
+   },
+   {
+    "question": "What causes a smart cast to stop working, even after you check a type with `is`?",
+    "answer": "Smart casts only work when Kotlin can prove the value will not change between the check and the use. They often fail for mutable properties, custom getters, concurrent access, or variables captured by lambdas, because the compiler cannot guarantee stability. In those cases you usually need a local immutable copy or an explicit cast after narrowing the scope.",
+    "real_world": "This appears in Android and server code when checking a nullable property and then using it later in a callback. The code looks safe, but the compiler refuses the smart cast because another thread or getter could change the value.",
+    "code_lang": "kotlin",
+    "code": "val x: Any? = \"hi\"\nif (x is String) {\n    println(x.length)\n}",
+    "follow_up": "How would you rewrite code when the smart cast fails on a mutable property?"
+   },
+   {
+    "question": "How do you handle interoperability with Java collections, and what bugs do you watch for at the boundary?",
+    "answer": "Kotlin sees Java collections as platform types, so nullability and mutability are less strict than in pure Kotlin code. You should validate inputs from Java, avoid assuming collection elements are non-null, and be careful when exposing Kotlin collections back to Java because callers may mutate them. The main risk is null-related runtime failures or unintended shared mutable state across the boundary.",
+    "real_world": "This matters in mixed Kotlin/Java services and Android apps that still use older Java libraries. Many production bugs come from assuming a Java `List<String>` contains only non-null strings when it can actually contain nulls.",
+    "code_lang": "kotlin",
+    "code": "fun namesFromJava(list: List<String?>?): List<String> =\n    list.orEmpty().filterNotNull()",
+    "follow_up": "How do platform types affect overload resolution and null-safety in Kotlin?"
+   },
+   {
+    "question": "What is the difference between `==`, `===`, and `equals()` in terms of debugging unexpected comparisons?",
+    "answer": "`==` calls `equals()` with null-safe handling, while `===` checks referential identity. In most business code you want `==`, but `===` is useful when you care about object identity, caching, or whether two references point to the same instance. A common bug is assuming `==` on objects with default `equals()` means semantic equality, when it only does so if the class implements it appropriately.",
+    "real_world": "This comes up in tests and cache debugging when two objects look the same in logs but are not the same instance. It also matters for singleton-like objects and object pooling.",
+    "code_lang": "kotlin",
+    "code": "val a = \"hi\"\nval b = \"hi\"\nprintln(a == b)\nprintln(a === b)",
+    "follow_up": "When would you intentionally compare references instead of values?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How do Kotlin coroutines actually suspend without blocking a thread, and what costs should you care about in production?",
+    "answer": "A suspend function is compiled into a state machine that stores local state and resumes later through a continuation, so suspension frees the underlying thread instead of parking it. That makes high-concurrency I/O practical, but suspension is not free: each suspend point adds allocation and dispatch overhead, and accidental context switches can dominate small units of work. The main performance rule is to keep CPU-bound work off limited thread pools and avoid over-fragmenting logic into tiny suspend calls. Structured concurrency matters because leaked child coroutines become real resource leaks, not just style issues.",
+    "real_world": "Teams hit latency regressions after \"coroutinizing\" hot code paths that mostly did CPU work; the extra dispatch and continuation churn outweighed any benefit. In incident reviews, orphaned coroutines often explain requests that timed out but kept consuming DB connections.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when you use `Dispatchers.IO`, `Default`, or an unconfined/custom dispatcher for the same suspend function?"
+   },
+   {
+    "question": "What are the failure and cancellation semantics of structured concurrency in Kotlin, and how does `coroutineScope` differ from `supervisorScope`?",
+    "answer": "`coroutineScope` treats child failures as fatal to the scope: one child exception cancels siblings and is rethrown to the parent. `supervisorScope` isolates child failures so one child can fail without automatically cancelling the others, which is useful when tasks are independent. Cancellation is cooperative, so code must hit suspension points or check cancellation explicitly; swallowing `CancellationException` breaks shutdown and timeout behavior. The trade-off is between fail-fast correctness and partial-progress resilience.",
+    "real_world": "A fan-out service may want `coroutineScope` for a request where any missing dependency invalidates the whole response, but a batch worker may use supervision so one bad item does not cancel hundreds of healthy ones.",
+    "code_lang": "kotlin",
+    "code": "suspend fun loadAll() = supervisorScope {\n    val a = async { loadA() }\n    val b = async { loadB() }\n    val c = async { loadC() }\n    listOf(runCatching { a.await() },\n           runCatching { b.await() },\n           runCatching { c.await() })\n}",
+    "follow_up": "What mistakes do you see around `launch` versus `async` when exceptions happen?"
+   },
+   {
+    "question": "How do `Flow`, `Channel`, and `SharedFlow` differ under load, especially around backpressure and dropped data?",
+    "answer": "`Flow` is a cold asynchronous stream: each collector runs the upstream again, and backpressure is naturally represented by suspending the producer. `Channel` is a hot queue for point-to-point communication with configurable buffering, so producers can suspend, buffer, or fail depending on capacity and overflow strategy. `SharedFlow` is a hot broadcast stream for many collectors; it can replay recent values, but with limited buffering you must decide whether slow consumers should suspend producers or miss events. The key design choice is whether you want replay, one-to-one versus one-to-many delivery, and strict versus lossy backpressure.",
+    "real_world": "Production bugs often come from using `SharedFlow` for one-off work items and discovering multiple consumers process the same event, or from using a small channel buffer and stalling upstream threads during traffic spikes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose `StateFlow` instead of `SharedFlow`, and what semantics do you get?"
+   },
+   {
+    "question": "What does `tailrec` really do in Kotlin, and when does it not help?",
+    "answer": "`tailrec` asks the compiler to turn self-recursion in tail position into a loop, removing stack growth and usually matching iterative performance. It only works when the recursive call is the final action in the function; if work happens after the call, or the recursion is mutual across functions, it cannot be optimized. It helps readability for some algorithms, but loops are still clearer for many hot paths and avoid depending on compiler eligibility. On the JVM, this matters because general tail-call optimization is not available.",
+    "real_world": "Recursive tree or parser code can blow the stack with large inputs; adding `tailrec` only fixes the narrow cases the compiler can rewrite, so teams still need iterative versions for some production workloads.",
+    "code_lang": "kotlin",
+    "code": "tailrec fun gcd(a: Int, b: Int): Int =\n    if (b == 0) a else gcd(b, a % b)\n\nfun sum(xs: List<Int>, i: Int = 0): Int =\n    if (i == xs.size) 0 else xs[i] + sum(xs, i + 1)",
+    "follow_up": "How would you verify from bytecode or benchmarking that the optimization actually happened?"
+   },
+   {
+    "question": "How do reified type parameters work in Kotlin, and what are the runtime and design trade-offs versus passing `Class` or `KClass` explicitly?",
+    "answer": "On the JVM, generic type arguments are normally erased, so ordinary functions cannot inspect `T` at runtime. An inline function with a reified type parameter substitutes the call-site type into the generated code, which enables checks like `is T` and access to class metadata without explicitly passing a token. The trade-off is code growth from inlining and the fact that reification only works in inline functions, so it is not suitable for every API boundary. Passing `Class` or `KClass` is more explicit and works across non-inline abstractions, but is noisier for callers.",
+    "real_world": "Framework glue code often starts with reified helpers because they are ergonomic, then moves to explicit type tokens at module boundaries to reduce binary size and keep Java interop straightforward.",
+    "code_lang": "kotlin",
+    "code": "inline fun <reified T> Any.castOrNull(): T? =\n    if (this is T) this else null\n\nval x: Any = \"hi\"\nval s: String? = x.castOrNull<String>()",
+    "follow_up": "Why does `is List<String>` still not give you full element-type safety at runtime?"
+   },
+   {
+    "question": "What is the real cost of Kotlin reflection compared with direct calls or Java reflection, and how do you decide when it is acceptable?",
+    "answer": "Kotlin reflection is convenient because it understands Kotlin-specific concepts like properties, nullability metadata, and default parameters, but it is usually much heavier than direct calls and often heavier than plain Java reflection. Costs show up in startup, classpath scanning, metadata parsing, and repeated reflective invocation, so hot-path use is rarely acceptable without caching. If you need occasional wiring, admin tooling, or tests, it is fine; for serialization, DI, or mappers on critical paths, code generation or precomputed metadata is often a better trade-off. The decision is usually latency and memory budget, not syntax preference.",
+    "real_world": "Services with aggressive cold-start goals often remove runtime reflection from serializers and dependency injection because reflection-heavy initialization dominates startup and inflates container memory.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What Kotlin features commonly force libraries to use reflection or code generation to work correctly?"
+   },
+   {
+    "question": "How do delegated properties work under the hood, and what pitfalls do you watch for with `lazy` and observable delegates?",
+    "answer": "A delegated property compiles to calls on a delegate object, typically `getValue` and `setValue`, with the property metadata passed in. That abstraction is powerful, but every access can add indirection, allocations, synchronization, or callback work depending on the delegate implementation. `lazy` is great for expensive one-time initialization, but the chosen thread-safety mode changes contention and visibility behavior; using the synchronized default on a hot path can be surprisingly costly. Observable delegates are useful for state tracking, but they can create reentrancy or event storms if updates trigger more writes.",
+    "real_world": "A common production issue is a supposedly cheap property backed by a synchronized lazy delegate being read on every request, turning into lock contention under load.",
+    "code_lang": "kotlin",
+    "code": "class User {\n    val config by lazy { loadConfig() }\n    var name: String by Delegates.observable(\"?\") { _, old, new ->\n        audit(old, new)\n    }\n}",
+    "follow_up": "How would you choose between the different `LazyThreadSafetyMode` options?"
+   },
+   {
+    "question": "What happens at the Java boundary with checked exceptions, platform types, and default methods, and what bugs do senior engineers watch for there?",
+    "answer": "Kotlin does not enforce checked exceptions, so Java APIs that rely on them can still fail at runtime unless you document and test those paths carefully. Platform types are the bigger day-to-day hazard: when Kotlin consumes Java types with unknown nullability, the compiler cannot fully protect you, so a value may look safe and still throw a null-related failure later. Default interface methods and generated overloads also depend on compiler settings and target compatibility, so binary interop can surprise you across modules. The safe approach is to annotate nullability in Java, keep ABI-sensitive settings consistent, and be deliberate about public APIs used from both languages.",
+    "real_world": "Many NPE incidents in mixed Kotlin/Java services come from unannotated Java return types that Kotlin code treated as effectively non-null until production data proved otherwise.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do `@JvmOverloads`, `@JvmStatic`, and `@Throws` affect the Java-facing API shape?"
+   },
+   {
+    "question": "How does variance actually work in Kotlin, and why do `out`, `in`, and star projections matter for API design on the JVM?",
+    "answer": "Kotlin uses declaration-site variance, so `out T` means a producer of `T` and `in T` means a consumer of `T`; this lets the type system express safe substitution without wildcard noise at every use site. When you cannot know the exact type argument, star projections give a safe restricted view similar to an existential type. This matters because mutable generic APIs are where unsoundness appears: reading is usually easier to make covariant than writing. On the JVM, it also affects interop and generated signatures, so choosing variance well makes APIs safer and easier to call from both Kotlin and Java.",
+    "real_world": "Library teams often discover too late that invariant public types force callers into needless casts or copies, while overly permissive variance on mutable abstractions makes the API impossible to implement safely.",
+    "code_lang": "kotlin",
+    "code": "fun copy(src: List<out Number>, dst: MutableList<in Number>) {\n    for (x in src) dst.add(x)\n}",
+    "follow_up": "Why is `MutableList<out T>` much less useful than `List<out T>` in practice?"
+   },
+   {
+    "question": "What Kotlin-specific binary compatibility traps do you think about when publishing a library used by other teams or services?",
+    "answer": "Many source-compatible changes are not binary-compatible once callers are already compiled: changing default parameter values, adding parameters, moving top-level declarations, or altering inline functions can break consumers in subtle ways. Data class shape changes, sealed hierarchy changes, and value-class evolution can also affect generated methods, serialization, and exhaustive callers. Inline public APIs are especially sensitive because their implementation is copied into downstream binaries, so behavior and compatibility become tied to recompilation. For published libraries, keep the ABI small, treat compiler-generated members as part of the contract when exposed, and test compatibility explicitly.",
+    "real_world": "A common internal outage is upgrading a shared Kotlin library without recompiling all consumers, then seeing `NoSuchMethodError` or behavior mismatches because generated signatures or inlined code changed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can changing a default argument value fail to affect already-compiled callers?"
+   },
+   {
+    "question": "How do suspend functions get compiled on the JVM, and what does that mean for stack traces, allocations, and debugging hot paths?",
+    "answer": "A suspend function is compiled into a state machine that takes an extra Continuation parameter and resumes from saved state labels instead of keeping a normal call stack across suspension points. That usually means extra objects or captured state around suspension, plus stack traces that reflect coroutine machinery unless debug metadata is enabled. The main performance cost is not the suspend keyword itself but frequent suspension, context switching, and retaining large captured objects longer than expected. On hot paths, I look for accidental per-element suspension and lambda capture rather than assuming coroutines are free.",
+    "real_world": "A service that processes millions of small messages can regress badly if a suspend call is inserted inside a tight loop and starts allocating state for every element. Debugging production latency also gets harder when logical call flow is split across resumed continuations.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns do you use to reduce coroutine overhead in a high-throughput pipeline?"
+   },
+   {
+    "question": "What are the practical differences between Sequence, Iterable, and Flow, and when does Sequence become the wrong optimization?",
+    "answer": "Iterable is eager, Sequence is lazy and usually synchronous on the caller thread, and Flow is asynchronous and suspension-aware. Sequence can save intermediate allocations for long transformation chains, but it adds iterator and lambda overhead and is often slower on small collections or when you immediately materialize the result anyway. It is also a poor fit when operations block, suspend, or need concurrency. I choose Sequence only when laziness actually reduces work or memory, not as a default style.",
+    "real_world": "Teams sometimes convert every collection chain to Sequence expecting free speedups, then see CPU rise because tiny lists now pay extra abstraction overhead in a hot endpoint. It also causes confusion when someone tries to call suspend code from a Sequence pipeline.",
+    "code_lang": "kotlin",
+    "code": "val result = items\n    .asSequence()\n    .filter { it.isValid() }\n    .map { transform(it) }\n    .take(100)\n    .toList()",
+    "follow_up": "How would you benchmark whether a Sequence pipeline is actually better than the eager version?"
+   },
+   {
+    "question": "How do inline value classes work under the hood, and where do boxing and unexpected allocations still happen?",
+    "answer": "A value class wraps a single value and can be represented as that underlying value in many call sites, which helps type safety without always paying object allocation cost. But boxing still appears at generic boundaries, nullable usage, interface dispatch, reflection, and some interop cases because the runtime may need an actual wrapper object. So they are great for domain types like UserId, but you should not promise zero-cost everywhere. I treat them as an API clarity tool first and a performance optimization only after measurement.",
+    "real_world": "A team may introduce value classes for IDs across a serialization-heavy service and then wonder why allocations did not disappear; many frameworks hit generic or reflective paths that force boxing.",
+    "code_lang": "kotlin",
+    "code": "@JvmInline\nvalue class UserId(val value: Long)\n\nfun load(id: UserId) = id.value\nfun <T> echo(x: T) = x  // generic use may box",
+    "follow_up": "What compatibility or interop concerns do you check before exposing value classes in a public library API?"
+   },
+   {
+    "question": "How do default arguments and `@JvmOverloads` affect generated bytecode and Java interoperability, and what can break when APIs evolve?",
+    "answer": "Kotlin implements default arguments by generating synthetic methods that use a bitmask and marker parameter to decide which defaults to apply. Java callers cannot use that mechanism directly, so `@JvmOverloads` generates real overloads, which improves Java ergonomics but increases method count and API surface. The compatibility risk is that changing parameter order, defaults, or overload shape can break source or binary consumers in surprising ways, especially across modules. For public APIs I keep constructor and function signatures conservative and explicit when Java consumers exist.",
+    "real_world": "Library teams hit production upgrade failures when a Kotlin API that looked source-compatible in Kotlin changed enough to break Java callers or reflective frameworks expecting a specific overload set.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you avoid `@JvmOverloads` even if you know Java code will call the API?"
+   },
+   {
+    "question": "How does Kotlin generate methods for properties, and what JVM-level details matter for frameworks, annotations, and performance?",
+    "answer": "A Kotlin property is syntax over methods and sometimes a backing field, so on the JVM you usually get getters and setters rather than direct field access. That matters because annotations can target the property, field, getter, or setter differently, and Java frameworks often inspect only one of those locations. Performance-wise, trivial accessors are often inlined by the JIT, so the bigger risk is not call overhead but surprising side effects in custom getters or delegated properties. I am careful to annotate the exact target a framework reads and to avoid expensive work in accessors.",
+    "real_world": "Serialization and DI bugs often come from putting an annotation on the Kotlin property when the framework actually scans fields or getters. Another common issue is a getter that computes on every access and becomes a hidden hotspot.",
+    "code_lang": "kotlin",
+    "code": "class User(\n    @field:JvmField\n    val id: Long\n) {\n    val displayName: String\n        get() = \"user-$id\"\n}",
+    "follow_up": "Can you explain when Kotlin creates a backing field and when it does not?"
+   },
+   {
+    "question": "What do you look for when optimizing Kotlin collection code on the JVM, especially around hidden allocations and multiple passes?",
+    "answer": "I look for chains that create intermediate lists, repeated traversals like `filter().first()` or `map().sum()`, boxing of primitives, and lambdas capturing more state than needed. Kotlin collection APIs are expressive but can allocate heavily if used naively in hot paths, so sometimes a simple loop is faster and clearer. I also watch for converting between collection types repeatedly and for accidental copying in APIs that promise immutability. The right trade-off depends on data size and call frequency, not ideology.",
+    "real_world": "A request path handling tens of thousands of items can spend most of its CPU in temporary list creation and garbage collection rather than business logic. Replacing a chain with one pass can remove latency spikes under load.",
+    "code_lang": "kotlin",
+    "code": "var sum = 0\nfor (x in items) {\n    if (x.active) sum += x.cost\n}",
+    "follow_up": "Where do primitive arrays or specialized collections matter in Kotlin performance work?"
+   },
+   {
+    "question": "How do `crossinline` and `noinline` actually change the behavior of an inline function, and why would you need them?",
+    "answer": "An inline lambda normally allows non-local returns because its body is inserted into the caller, but `crossinline` forbids that when the lambda may be invoked from another execution context like a returned Runnable or nested object. `noinline` keeps a lambda as a real object so you can store it, pass it around, or call it where inlining is not possible. These modifiers exist because inline changes control flow and object lifetime semantics, not just speed. I use them to make the contract explicit and prevent surprising returns or illegal generated code.",
+    "real_world": "A utility that schedules callbacks can accidentally allow `return` to escape the caller if the API is designed carelessly. That becomes a correctness bug, not just a style issue.",
+    "code_lang": "kotlin",
+    "code": "inline fun runNow(block: () -> Unit) { block() }\ninline fun later(crossinline block: () -> Unit): Runnable {\n    return Runnable { block() }\n}\ninline fun wrap(noinline block: () -> Unit): () -> Unit = block",
+    "follow_up": "What would happen if `crossinline` were removed from the `later` example?"
+   },
+   {
+    "question": "How do you think about object initialization order in Kotlin, especially with open members, property initializers, and delegated properties?",
+    "answer": "Initialization runs base-class constructor logic before derived-class initialization is complete, so calling open members during construction is dangerous because overrides may observe partially initialized state. Property initializers and `init` blocks execute in declaration order, which means one property can depend on another that is not ready yet. Delegates can also run code during initialization and hide work or side effects. My rule is to avoid open calls in constructors and keep initialization boring, explicit, and side-effect free.",
+    "real_world": "This causes real production bugs when a base class logs through an open property or method and the subclass has not initialized the fields that implementation needs yet. The failure often appears only in certain construction paths.",
+    "code_lang": "kotlin",
+    "code": "open class Base {\n    init { println(name()) }\n    open fun name() = \"base\"\n}\nclass Child(val x: String) : Base() {\n    override fun name() = x // x not ready during Base init\n}",
+    "follow_up": "How would you redesign that class hierarchy to avoid constructor-time dispatch?"
+   },
+   {
+    "question": "What are the trade-offs between using enums, sealed hierarchies, and singleton objects for state machines or protocol modeling in Kotlin?",
+    "answer": "Enums are compact and easy when variants are fixed and carry little or no per-case data. Sealed hierarchies model richer state and let each variant have its own payload and behavior, but they create more types and can be more expensive to evolve across module boundaries. Singleton objects are useful for stateless cases inside a sealed model to avoid repeated allocation. I choose based on whether the domain needs attached data, exhaustive handling, and long-term API stability.",
+    "real_world": "In protocol or workflow code, forcing everything into an enum often leads to parallel maps or nullable fields that drift out of sync. A sealed model is usually safer, but it matters whether consumers compile against your module or consume it as a published library.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What binary compatibility concern appears when you add a new sealed subclass in a library?"
+   },
+   {
+    "question": "How do annotations on Kotlin declarations map to the JVM, and what mistakes cause frameworks like Jackson, JPA, or DI containers to misbehave?",
+    "answer": "Kotlin has separate annotation targets for property, field, getter, setter, parameter, and more, while many Java frameworks inspect only one of those JVM elements. If you put an annotation on the property by default, it may not land where the framework expects, so you often need use-site targets like `@field:` or `@get:`. Constructor parameters are another common edge case because some frameworks bind there while others require a no-arg constructor or mutable fields. The safe approach is to know exactly what the framework reflects over and annotate that target explicitly.",
+    "real_world": "This is a common source of production serialization bugs: a field looks annotated in Kotlin source, but the runtime framework ignores it and silently uses the wrong name or nullability behavior.",
+    "code_lang": "kotlin",
+    "code": "data class Person(\n    @field:JsonProperty(\"user_id\")\n    val id: String,\n    @get:Deprecated(\"use fullName\")\n    val name: String\n)",
+    "follow_up": "How would you debug whether a framework is reading the field, the getter, or the constructor parameter?"
+   }
+  ]
+ }
+}

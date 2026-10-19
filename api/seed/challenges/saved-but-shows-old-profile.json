@@ -1,0 +1,333 @@
+{
+  "slug": "saved-but-shows-old-profile",
+  "title": "I saved my profile, and it shows the old one",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "databases",
+    "replication",
+    "consistency",
+    "read-routing",
+    "debugging"
+  ],
+  "scenario": "A user changes their display name from “Sam” to “Samantha” and is redirected to their profile page, but the page still shows “Sam”. If they refresh a few seconds later, the page shows “Samantha”. Profile writes go to the primary database, and profile reads are load balanced across three database replicas.",
+  "goal": "Make the user who just saved their profile immediately see their own update without sending all profile reads to the primary.",
+  "concepts": [
+    {
+      "key": "primary-database",
+      "name": "Primary database",
+      "summary": "The database node that accepts writes. Other nodes usually copy its changes later.",
+      "used_here": "The profile update is committed on the primary before the user is redirected."
+    },
+    {
+      "key": "database-replica",
+      "name": "Database replica",
+      "summary": "A read-only copy of the primary database. Replicas reduce read load but can be slightly behind the primary.",
+      "used_here": "The profile page reads from one of three replicas."
+    },
+    {
+      "key": "load-balancing",
+      "name": "Load balancing",
+      "summary": "Distributing requests across multiple servers or nodes. It improves capacity but can send related requests to different places.",
+      "used_here": "Profile reads are spread across three replicas, so the redirect read may hit any replica."
+    },
+    {
+      "key": "http-redirect",
+      "name": "HTTP redirect",
+      "summary": "A response that tells the browser to make a new request to another URL. A common pattern is to redirect after a successful form submit.",
+      "used_here": "After saving the profile, the user’s browser is sent to the profile page."
+    },
+    {
+      "key": "browser-cache",
+      "name": "Browser cache",
+      "summary": "A browser can reuse a previously downloaded response instead of asking the server again. Cache headers control when this is allowed.",
+      "used_here": "It is a possible cause to rule out, but the incident points to the database read path."
+    },
+    {
+      "key": "database-commit",
+      "name": "Database commit",
+      "summary": "A commit is the point where a database write becomes durable and visible on the database node that accepted it. A failed or rolled-back write should not be treated as saved.",
+      "used_here": "The save response should only be trusted after the primary has committed the new display name."
+    },
+    {
+      "key": "replication-lag",
+      "name": "Replication lag",
+      "summary": "The delay between a write committing on the primary and that write appearing on a replica. During this delay, a replica can return old data.",
+      "used_here": "The redirected profile read can hit a replica before it has applied the display-name update."
+    },
+    {
+      "key": "read-your-writes",
+      "name": "Read-your-writes consistency",
+      "summary": "After a user writes data, that same user should see the result in their later reads. It does not require every other user to see the update immediately.",
+      "used_here": "The user who saved the profile must see the new display name on the redirected profile page."
+    },
+    {
+      "key": "eventual-consistency",
+      "name": "Eventual consistency",
+      "summary": "Replicas may be stale for a short time, but they converge if no new writes happen. It trades immediate freshness for scale and availability.",
+      "used_here": "Other users briefly seeing the old display name is acceptable in this incident."
+    },
+    {
+      "key": "read-routing",
+      "name": "Read routing",
+      "summary": "Choosing which database node handles a read request. Routing can depend on the user, endpoint, recent writes, or replica freshness.",
+      "used_here": "After a profile save, reads for that user can be sent to the primary for a short period."
+    },
+    {
+      "key": "session-flag",
+      "name": "Session flag",
+      "summary": "A small piece of per-user state stored in a server session or signed cookie. It can tell later requests to use special behavior for a limited time.",
+      "used_here": "A short-lived flag records that this user recently wrote their profile and should read from the primary."
+    },
+    {
+      "key": "synchronous-replication",
+      "name": "Synchronous replication",
+      "summary": "A write is not considered complete until replicas acknowledge it. It improves freshness but increases write latency and can reduce availability.",
+      "used_here": "Forcing every profile write to wait for all three replicas is heavier than needed for this case."
+    },
+    {
+      "key": "metrics",
+      "name": "Metrics",
+      "summary": "Numeric measurements from production systems, such as latency, error rate, or replica delay. They help confirm both the bug and the fix.",
+      "used_here": "Replica lag and primary read rate show whether the solution is working safely."
+    },
+    {
+      "key": "automated-test",
+      "name": "Automated test",
+      "summary": "A repeatable test run by software instead of a person. It prevents regressions when code changes later.",
+      "used_here": "A test should verify that saving a profile and following the redirect shows the new display name."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the request path",
+      "question": "A user reports that saving their display name succeeds, but the redirected profile page shows the old name. What should you inspect first?",
+      "concept_keys": [
+        "http-redirect",
+        "primary-database",
+        "database-replica",
+        "load-balancing",
+        "browser-cache"
+      ],
+      "options": [
+        {
+          "text": "Run a direct query on the primary database to see whether the display name was changed.",
+          "correct": false,
+          "hint": "That tells you whether the write happened, but not why the next page rendered old data.",
+          "id": "a"
+        },
+        {
+          "text": "Review the frontend state update to see whether the old display name remained in memory.",
+          "correct": false,
+          "hint": "The redirected page is a new request, so the server read path matters at least as much as client memory.",
+          "id": "b"
+        },
+        {
+          "text": "Check whether the browser reused an older profile page from its local cache after the redirect.",
+          "correct": false,
+          "hint": "Caching can cause stale pages, but first compare the two server-side requests that happen back to back.",
+          "id": "c"
+        },
+        {
+          "text": "Trace the POST save request and the redirected GET, including which database node each request used.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The important first split is whether the redirected GET read the same data source as the POST wrote. If the POST wrote the primary and the GET read a different replica, the page can be stale even though the save succeeded. Checking only the primary is tempting, but it misses where the profile page actually got its data."
+    },
+    {
+      "title": "Interpret the trace",
+      "question": "The trace shows: the POST committed “Samantha” on the primary at 12:00:01.105. The redirected GET at 12:00:01.180 read from replica-2 and returned “Sam”. A refresh at 12:00:04.400 read from replica-2 and returned “Samantha”. What is the most likely cause?",
+      "concept_keys": [
+        "database-commit",
+        "primary-database",
+        "database-replica",
+        "replication-lag",
+        "load-balancing"
+      ],
+      "options": [
+        {
+          "text": "The redirected GET hit a replica that had not yet applied the primary’s committed change.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "The write was rolled back after the redirect, then retried successfully a few seconds later.",
+          "correct": false,
+          "hint": "The primary commit timestamp says the write became durable before the redirected read.",
+          "id": "b"
+        },
+        {
+          "text": "The browser cached the old profile page and stopped using the server for the first GET.",
+          "correct": false,
+          "hint": "A server trace for the redirected GET exists, so the browser did make a request.",
+          "id": "c"
+        },
+        {
+          "text": "The load balancer sent the refresh to a different application server with newer memory.",
+          "correct": false,
+          "hint": "The trace names the database node and shows the same replica returning different values over time.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The numbers fit replication lag: only 75 ms passed between the primary commit and the replica read, and the same replica had the new value about 3.3 seconds later. The most tempting alternative is an application-server memory issue, but the trace shows the database replica returned the old value and then caught up."
+    },
+    {
+      "title": "Choose the right consistency target",
+      "question": "Product says the user who just saved their own display name must see it on the redirected profile page. It is acceptable if other users see the old name for up to 5 seconds. What consistency guarantee do you need?",
+      "concept_keys": [
+        "read-your-writes",
+        "eventual-consistency",
+        "replication-lag"
+      ],
+      "options": [
+        {
+          "text": "Require all users to see every profile update immediately on every read.",
+          "correct": false,
+          "hint": "That is stronger than the stated requirement and usually costs more capacity or availability.",
+          "id": "a"
+        },
+        {
+          "text": "Guarantee that the writer sees their own committed update, while other users may read replicas that catch up shortly.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Guarantee that repeated reads by the same user never go backward compared with their previous reads.",
+          "correct": false,
+          "hint": "Avoiding backward movement is useful, but the first read after the save still has to include the write.",
+          "id": "c"
+        },
+        {
+          "text": "Guarantee only that each replica eventually shows the new display name after replication finishes.",
+          "correct": false,
+          "hint": "That describes convergence later, but it does not protect the immediate redirected read.",
+          "id": "d"
+        }
+      ],
+      "explanation": "This is a read-your-writes requirement for the user who made the change. Other users can remain on eventually consistent replica reads because a brief delay is acceptable for them. Requiring immediate visibility for everyone would solve the symptom, but it is stronger than needed."
+    },
+    {
+      "title": "Pick the production fix",
+      "question": "You want to preserve replica capacity for normal profile traffic. Which fix best meets the requirement for the user who just saved their profile?",
+      "concept_keys": [
+        "read-routing",
+        "session-flag",
+        "primary-database",
+        "database-replica",
+        "replication-lag",
+        "synchronous-replication"
+      ],
+      "options": [
+        {
+          "text": "Send all profile reads from all users to the primary until replica lag is always below 1 second.",
+          "correct": false,
+          "hint": "This removes the benefit of having replicas and protects many reads that do not need this guarantee.",
+          "id": "a"
+        },
+        {
+          "text": "Add a 3-second delay before redirecting to the profile page so replicas usually have time to catch up.",
+          "correct": false,
+          "hint": "A fixed sleep is unreliable when lag varies, and it makes every save slower even when not needed.",
+          "id": "b"
+        },
+        {
+          "text": "After a successful save, route that user’s profile reads to the primary for a short window such as 10 seconds.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Make every profile write wait until all three replicas acknowledge the change before returning success.",
+          "correct": false,
+          "hint": "This gives a stronger guarantee than needed and changes the write path’s latency and availability.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A short per-user primary-read window gives the writer read-your-writes while keeping most traffic on replicas. A 10-second window covers the observed few-second lag with margin, and it is scoped to the user who just wrote. Sending all reads to the primary is tempting because it is simple, but it gives up read scaling for users who do not need immediate freshness."
+    },
+    {
+      "title": "Make the routing safe",
+      "question": "You implement the short primary-read window with per-user state. Which implementation detail is most important for correctness and blast-radius control?",
+      "concept_keys": [
+        "database-commit",
+        "session-flag",
+        "read-routing",
+        "primary-database"
+      ],
+      "options": [
+        {
+          "text": "Set a user-scoped flag only after the primary commit succeeds, with an expiry such as read_primary_until = now + 10 seconds.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Set a global flag before starting the write, then clear it after the profile page has been viewed once.",
+          "correct": false,
+          "hint": "Think about what happens if the write fails, and about whether unrelated users should change read paths.",
+          "id": "b"
+        },
+        {
+          "text": "Let the browser add a query parameter like ?fresh=true to any profile URL after saving.",
+          "correct": false,
+          "hint": "Client-controlled routing is easy to misuse and may apply to requests that should not get special treatment.",
+          "id": "c"
+        },
+        {
+          "text": "Keep the primary-read flag for 24 hours so the user never sees a stale profile again that day.",
+          "correct": false,
+          "hint": "A long window creates unnecessary primary load long after replicas should have caught up.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The flag must be set only after the write commits, because the application should not treat a failed save as a successful fresh write. It should also be scoped to that user and expire quickly, so only the reads that need protection go to the primary. A global or long-lived flag would make the primary absorb far more traffic than the requirement justifies."
+    },
+    {
+      "title": "Confirm the fix worked",
+      "question": "After deploying the routing change, what is the best validation plan?",
+      "concept_keys": [
+        "automated-test",
+        "metrics",
+        "read-routing",
+        "primary-database",
+        "database-replica",
+        "replication-lag",
+        "read-your-writes"
+      ],
+      "options": [
+        {
+          "text": "Add an automated save-then-follow-redirect test, and monitor that recent writers read from primary while primary read load stays bounded.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Monitor only primary CPU because the fix is safe if the primary stays below 70 percent utilization.",
+          "correct": false,
+          "hint": "Capacity is necessary, but it does not prove the user saw their own write.",
+          "id": "b"
+        },
+        {
+          "text": "Watch only replica lag and assume the issue is fixed whenever lag is below the 10-second window.",
+          "correct": false,
+          "hint": "Lag is relevant, but you also need to prove the redirected read uses the intended path.",
+          "id": "c"
+        },
+        {
+          "text": "Ask support to retry the original account manually and close the incident if one refresh shows the new name.",
+          "correct": false,
+          "hint": "A single manual check can miss intermittent routing and load-related failures.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The validation should check both correctness and safety: the immediate redirected read shows the committed name, and the primary does not receive too much extra read traffic. Replica-lag metrics help explain risk, but they do not prove the per-user routing happened. An automated test prevents the same regression from returning later."
+    }
+  ],
+  "takeaway": "When a write goes to a primary and the next read goes to a replica, a user can see stale data because of replication lag. Fix the requirement you actually have: read-your-writes for the writer, not immediate global consistency for everyone. A short primary-read window is one safe pattern; another is reading from a replica only after it has caught up to the write’s position.",
+  "review_issues": []
+}

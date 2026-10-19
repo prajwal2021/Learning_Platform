@@ -1,0 +1,461 @@
+{
+ "slug": "laravel",
+ "name": "Laravel",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Laravel, and what problem does it solve for a PHP developer?",
+    "answer": "Laravel is a PHP web framework that gives you a structured way to build applications with routing, controllers, database access, validation, authentication, and more. It solves a lot of repetitive setup by providing conventions and built-in tools so you can focus on application logic instead of wiring everything from scratch. It matters because it helps teams build apps faster and keep code organized.",
+    "real_world": "A team starting a new CRUD app often chooses Laravel because they can get routes, forms, database models, and auth working quickly without assembling a custom stack.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are some of Laravel’s core building blocks, like routes, controllers, and models?"
+   },
+   {
+    "question": "What is a route in Laravel, and when would you define one?",
+    "answer": "A route maps an incoming HTTP request to the code that should handle it, such as returning a view or calling a controller method. You define routes when you want to expose a URL for a page, API endpoint, form submission, or any other request handler. Routes are the entry point of most Laravel applications.",
+    "real_world": "If `/users` should show a user list and `POST /users` should create one, those behaviors are usually defined as separate routes.",
+    "code_lang": "php",
+    "code": "Route::get('/users', [UserController::class, 'index']);\nRoute::post('/users', [UserController::class, 'store']);",
+    "follow_up": "What is the difference between a GET route and a POST route?"
+   },
+   {
+    "question": "What is the purpose of a controller in Laravel?",
+    "answer": "A controller groups request-handling logic in one place instead of putting it directly in routes. It receives the request, coordinates any model or service logic, and returns a response like a view, JSON, or redirect. This matters because controllers keep routes small and your application easier to maintain.",
+    "real_world": "In a small app, a route closure might be fine, but once the logic grows, moving it into a controller makes testing and reuse much easier.",
+    "code_lang": "php",
+    "code": "class UserController extends Controller\n{\n    public function index()\n    {\n        return view('users.index');\n    }\n}",
+    "follow_up": "When would you use a route closure instead of a controller?"
+   },
+   {
+    "question": "What is an Eloquent model, and what do you use it for?",
+    "answer": "An Eloquent model represents a database table and gives you an object-oriented way to query and save records. You use it when you want to read, insert, update, or delete data without writing raw SQL for every operation. It matters because it ties your PHP objects to your database records in a clean, consistent way.",
+    "real_world": "A junior developer may use `User::where('email', $email)->first()` instead of hand-writing SQL, which reduces boilerplate and keeps queries readable.",
+    "code_lang": "php",
+    "code": "$user = User::where('email', 'a@example.com')->first();\n$user->name = 'Ava';\n$user->save();",
+    "follow_up": "What is the difference between an Eloquent model and a database migration?"
+   },
+   {
+    "question": "What is the difference between a GET and a POST request in Laravel?",
+    "answer": "GET is used to retrieve data and should not change server state, while POST is typically used to submit data that creates or changes something. In Laravel, this affects how you define the route and how forms are submitted. Choosing the right method matters for clarity, caching behavior, and HTTP semantics.",
+    "real_world": "A login form usually submits with POST because it sends credentials and changes the session state, while a page listing products uses GET.",
+    "code_lang": "php",
+    "code": "Route::get('/products', [ProductController::class, 'index']);\nRoute::post('/products', [ProductController::class, 'store']);",
+    "follow_up": "Why do HTML forms often need method spoofing for PUT or DELETE?"
+   },
+   {
+    "question": "What is middleware in Laravel?",
+    "answer": "Middleware is code that runs before or after a request reaches your controller. It is used for cross-cutting concerns like authentication, logging, throttling, or checking headers. It matters because it lets you protect or modify groups of routes without repeating the same logic everywhere.",
+    "real_world": "A protected admin area often uses authentication middleware so unauthenticated users are redirected before they reach controller code.",
+    "code_lang": "php",
+    "code": "Route::middleware('auth')->group(function () {\n    Route::get('/dashboard', [DashboardController::class, 'index']);\n});",
+    "follow_up": "What is the difference between middleware and a controller?"
+   },
+   {
+    "question": "What is a Blade template in Laravel?",
+    "answer": "Blade is Laravel’s templating engine for building views with PHP-friendly syntax. You use it to render HTML pages with variables, conditionals, loops, and reusable components while keeping presentation logic separate from controllers. It matters because it makes server-rendered pages easier to read and maintain.",
+    "real_world": "A product page might use Blade to loop through items and show different markup depending on whether the user is logged in.",
+    "code_lang": "blade",
+    "code": "@foreach ($users as $user)\n    <p>{{ $user->name }}</p>\n@endforeach",
+    "follow_up": "How do Blade templates differ from plain PHP view files?"
+   },
+   {
+    "question": "What is CSRF protection in Laravel, and why does it matter?",
+    "answer": "CSRF protection helps prevent malicious sites from submitting forms on behalf of a logged-in user. Laravel includes CSRF tokens for state-changing requests, and forms need to send that token so the framework can verify the request is legitimate. It matters because it protects actions like password changes, transfers, or profile updates.",
+    "real_world": "If a user is logged into an app and visits a hostile site, CSRF protection helps stop that site from silently submitting a form to the app.",
+    "code_lang": "blade",
+    "code": "<form method=\"POST\" action=\"/profile\">\n    @csrf\n    <button type=\"submit\">Save</button>\n</form>",
+    "follow_up": "What happens if you forget to include the CSRF token in a form?"
+   },
+   {
+    "question": "What is validation in Laravel, and how do you usually use it?",
+    "answer": "Validation checks incoming request data before you use it. In Laravel, you typically define rules for required fields, formats, lengths, and allowed values, and the framework returns errors if the input does not pass. It matters because it prevents bad data from reaching your database or business logic.",
+    "real_world": "A signup form should validate email format and password length before creating a user, otherwise invalid records and confusing errors can slip through.",
+    "code_lang": "php",
+    "code": "$validated = $request->validate([\n    'email' => 'required|email',\n    'name' => 'required|string',\n]);",
+    "follow_up": "What happens in Laravel when validation fails?"
+   },
+   {
+    "question": "What is the Artisan command-line tool used for in Laravel?",
+    "answer": "Artisan is Laravel’s CLI for generating code, running framework tasks, and managing the app during development. You use it for things like creating controllers, models, migrations, and running database or cache commands. It matters because it saves time and keeps common project tasks consistent. Many teams also use Artisan in deployment scripts or scheduled jobs.",
+    "real_world": "A developer can create a controller and migration in seconds instead of hand-writing boilerplate, which reduces mistakes and keeps naming conventions consistent across the team.",
+    "code_lang": "bash",
+    "code": "php artisan make:controller PostController\nphp artisan make:model Post -m\nphp artisan migrate",
+    "follow_up": "When would you choose an Artisan command over writing the file manually?"
+   },
+   {
+    "question": "What are Eloquent relationships, and why are they useful?",
+    "answer": "Eloquent relationships describe how models are connected, such as one-to-many or many-to-many. You use them to fetch related data through model methods instead of writing raw join logic every time. This matters because it makes code easier to read and keeps database access organized. Common examples are `hasMany`, `belongsTo`, and `belongsToMany`.",
+    "real_world": "If a post has many comments, a relationship lets a developer load comments with `Post::with('comments')` instead of manually assembling queries.",
+    "code_lang": "php",
+    "code": "class Post extends Model\n{\n    public function comments()\n    {\n        return $this->hasMany(Comment::class);\n    }\n}",
+    "follow_up": "What problem does eager loading solve with relationships?"
+   },
+   {
+    "question": "What is eager loading in Laravel, and what problem does it solve?",
+    "answer": "Eager loading tells Eloquent to load related models up front instead of querying them one by one later. It solves the N+1 query problem, where looping over models causes many extra database queries. This matters because the app can get much slower as data grows. You usually use `with()` when you know you need related data for a list or view.",
+    "real_world": "A page that lists 50 posts and their authors can become slow if each author is loaded separately; eager loading avoids that extra database traffic.",
+    "code_lang": "php",
+    "code": "$posts = Post::with('user')->get();\nforeach ($posts as $post) {\n    echo $post->user->name;\n}",
+    "follow_up": "How would you notice the N+1 problem during development?"
+   },
+   {
+    "question": "What is the difference between `find()` and `first()` in Eloquent?",
+    "answer": "`find()` looks up a model by its primary key, while `first()` returns the first row that matches the query conditions. You use `find()` when you already have the ID, and `first()` when you are filtering by other columns. This matters because it reflects the intent of the query and keeps code readable. Both can return `null` if nothing is found.",
+    "real_world": "If a route receives a user ID, `find()` is the natural choice. If you want the first published post by date, `first()` fits the query better.",
+    "code_lang": "php",
+    "code": "$user = User::find(5);\n$post = Post::where('published', true)->first();",
+    "follow_up": "What happens if `find()` does not find a record?"
+   },
+   {
+    "question": "What is a request lifecycle in Laravel, at a high level?",
+    "answer": "The request lifecycle is the path a request takes from entering the app to returning a response. Laravel boots the framework, runs middleware, matches the route, executes controller or route logic, and sends back a response. This matters because it helps you understand where to put logic and where bugs can happen. It also explains why middleware and service providers are important.",
+    "real_world": "When debugging a failed login, knowing the lifecycle helps you figure out whether the problem is in middleware, the route, or controller code.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where in the lifecycle would you add logging or authentication checks?"
+   },
+   {
+    "question": "What is dependency injection in Laravel, and why do developers use it?",
+    "answer": "Dependency injection means receiving needed objects through a constructor or method instead of creating them inside the class. Laravel’s container can build and provide many of these dependencies automatically. This matters because it makes code easier to test, replace, and maintain. It also helps avoid tightly coupled classes.",
+    "real_world": "A controller that depends on a mailer or service class can be tested with a fake implementation instead of sending real emails during tests.",
+    "code_lang": "php",
+    "code": "class PostController extends Controller\n{\n    public function __construct(private PostService $service) {}\n}",
+    "follow_up": "What is the service container responsible for in this process?"
+   },
+   {
+    "question": "What is route model binding in Laravel?",
+    "answer": "Route model binding lets Laravel automatically resolve a model from a route parameter. Instead of manually looking up a record by ID in the controller, Laravel injects the model for you when the route is matched. This matters because it reduces repetitive code and makes controllers simpler. It can be explicit or implicit, depending on how the route parameter is defined.",
+    "real_world": "A show page for a post can be written more cleanly because the controller receives the `Post` directly instead of calling `Post::find()` each time.",
+    "code_lang": "php",
+    "code": "Route::get('/posts/{post}', function (Post $post) {\n    return $post->title;\n});",
+    "follow_up": "What happens if the requested model does not exist?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide between using Eloquent and the query builder in a real Laravel project?",
+    "answer": "Use Eloquent when you want readable domain logic, relationships, events, and model-level behavior. Use the query builder when you need a flatter, more explicit SQL-oriented query, or when the Eloquent abstraction gets in the way of performance or complex joins. The trade-off is productivity and consistency versus finer control and sometimes less overhead. In many projects, both are used: Eloquent for normal app code and the query builder for reporting or bulk data work.",
+    "real_world": "This matters when a page starts doing multiple joins and aggregations and the Eloquent version becomes slow or hard to reason about. Teams often switch just the hot path to the query builder while keeping the rest of the code on models.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you drop all the way down to raw SQL instead?"
+   },
+   {
+    "question": "What causes the N+1 query problem in Laravel, and how do you usually find and fix it?",
+    "answer": "N+1 happens when you load a list of parent records and then run one query per parent to fetch related data. In Laravel, this often comes from accessing relationships in a loop without eager loading. You usually spot it in query logs, the debug toolbar, or slow endpoints with surprisingly high query counts. The fix is to eager load the relationship, and sometimes to select only the columns you actually need.",
+    "real_world": "A common production issue is an index page that looks fine in local testing but gets much slower with real data because each row triggers extra queries. Fixing it can reduce dozens or hundreds of queries down to a handful.",
+    "code_lang": "php",
+    "code": "$users = User::with('posts')->get();\n\nforeach ($users as $user) {\n    echo $user->posts->count();\n}",
+    "follow_up": "How would you detect an N+1 problem in a code review?"
+   },
+   {
+    "question": "When would you choose queued jobs in Laravel instead of doing the work inside the request?",
+    "answer": "Use a queue when the work is slow, retryable, or not required before the response is returned. That keeps the request fast and avoids timeouts for things like sending email, generating files, or syncing with external services. The trade-off is eventual consistency: the user may get a response before the background work finishes. You also need to think about retries, idempotency, and failure handling.",
+    "real_world": "This is common after checkout, where you want to confirm the order quickly but send receipts, update analytics, and notify other systems asynchronously. Without a queue, one slow dependency can make the whole user request feel broken.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a queued job safe to retry?"
+   },
+   {
+    "question": "How do you handle database transactions in Laravel, and when are they important?",
+    "answer": "Transactions are important when several writes need to succeed or fail as a unit. In Laravel, you wrap the related database work in a transaction so that an exception rolls everything back instead of leaving partial data behind. This matters for consistency, especially when one write depends on another, like creating an order and its line items. The main trade-off is that you should keep transactions short to avoid locking rows longer than necessary.",
+    "real_world": "A classic bug is creating an invoice record, then failing while inserting line items, which leaves orphaned records. Transactions prevent those partial states and make failures easier to recover from.",
+    "code_lang": "php",
+    "code": "DB::transaction(function () use ($data) {\n    $order = Order::create($data['order']);\n    foreach ($data['items'] as $item) {\n        $order->items()->create($item);\n    }\n});",
+    "follow_up": "What kinds of work should you avoid inside a transaction?"
+   },
+   {
+    "question": "How do accessors and mutators help in Laravel, and what is a downside of using them too much?",
+    "answer": "Accessors and mutators let you centralize how an attribute is read or written, so formatting and normalization live on the model instead of being repeated across controllers and views. That is useful for things like derived display values or cleaning input before saving. The downside is hiding too much behavior in the model can make debugging harder, because simple property access may have side effects. They are best used for small, well-defined transformations.",
+    "real_world": "Teams often use them to standardize phone numbers, slugs, or display names across the app. Problems show up when a model accessor does expensive work and gets called many times in a list page.",
+    "code_lang": "php",
+    "code": "public function getFullNameAttribute(): string\n{\n    return $this->first_name.' '.$this->last_name;\n}\n\npublic function setEmailAttribute(string $value): void\n{\n    $this->attributes['email'] = strtolower($value);\n}",
+    "follow_up": "When would you prefer a service class over putting logic in an accessor?"
+   },
+   {
+    "question": "How do you structure form validation when different actions need different rules?",
+    "answer": "Use separate validation rules for each action instead of one large rule set with lots of conditionals. In Laravel that often means dedicated form request classes or clear conditional rules inside the request layer. This keeps controller code small and makes it obvious which inputs are required for which action. The main trade-off is more classes or more structure, but it scales better than mixing business logic into controllers.",
+    "real_world": "This matters when a create form and an update form have different required fields or uniqueness rules. Without separation, teams often end up with hard-to-read controller code and subtle validation bugs.",
+    "code_lang": "php",
+    "code": "public function rules(): array\n{\n    return [\n        'name' => ['required', 'string'],\n        'email' => ['required', 'email'],\n    ];\n}",
+    "follow_up": "How would you return different validation messages for API clients versus browser users?"
+   },
+   {
+    "question": "What is mass assignment in Eloquent, and how do you avoid the security risk around it?",
+    "answer": "Mass assignment is when you assign an array of input directly to a model, like create or fill. The risk is that a user could send fields you did not intend to expose, and Laravel would store them if the model allows it. You avoid that by explicitly defining which attributes are fillable, or by guarding sensitive fields and only mapping trusted data. The goal is to make accidental over-posting impossible.",
+    "real_world": "This comes up when a signup form accidentally accepts fields like role or is_admin from the request payload. A mistake here can become a privilege escalation bug.",
+    "code_lang": "php",
+    "code": "class User extends Model\n{\n    protected $fillable = ['name', 'email'];\n}\n\nUser::create($request->only('name', 'email'));",
+    "follow_up": "What is the trade-off between `$fillable` and manual assignment?"
+   },
+   {
+    "question": "How do you use API resources in Laravel, and why not return models directly from controllers?",
+    "answer": "API resources let you control exactly what your JSON response looks like instead of exposing the raw model structure. That helps keep internal fields hidden, makes responses stable, and lets you shape related data consistently. Returning models directly is quick, but it couples clients to your database structure and can leak columns you did not mean to expose. Resources also make it easier to version or refactor responses later.",
+    "real_world": "This matters when a mobile app depends on a response format and you want to change the database without breaking clients. It also helps avoid accidentally returning timestamps, flags, or relationship data that should stay private.",
+    "code_lang": "php",
+    "code": "return new UserResource($user);\n\n// in resource\npublic function toArray($request)\n{\n    return [\n        'id' => $this->id,\n        'name' => $this->name,\n    ];\n}",
+    "follow_up": "How would you return a collection and include pagination metadata?"
+   },
+   {
+    "question": "How do you debug a route or controller that works in local but fails in production?",
+    "answer": "Start by checking the exact request, logs, and environment differences instead of guessing at the code first. Common causes are cached config or routes, missing environment variables, different queue or storage setup, or a database permission issue. In Laravel, clearing stale caches and comparing app config between environments often reveals the problem quickly. The key is to verify what production actually loaded, not what the source code says.",
+    "real_world": "A frequent issue is a route or config change that was deployed but not picked up because cached data is still serving old values. Another common one is a file path or storage permission difference between local and the server.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which Laravel caches would you check first, and why?"
+   },
+   {
+    "question": "What are model events or observers useful for, and when should you avoid them?",
+    "answer": "Observers are useful when you need to react to model changes in one place, such as syncing a search index, creating related records, or logging audit data. They help keep controllers thin and make side effects reusable across the app. You should avoid stuffing important business rules into observers if the flow becomes hard to follow or if the side effect should be explicit in the use case. Hidden behavior can surprise other developers and make tests harder to reason about.",
+    "real_world": "This is common in apps that need audit trails or external syncing whenever a record changes. It can also become a source of bugs if an observer fires during imports or maintenance scripts and does more than expected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test code that depends on a model observer?"
+   },
+   {
+    "question": "How do you choose between a service class, a controller, and a model when you’re organizing business logic in Laravel?",
+    "answer": "Keep controllers thin: they should accept the request, call a service or domain action, and return a response. Put persistence-related logic close to the model or a repository-like layer if you use one, but keep complex business rules out of Eloquent methods when they start to blur responsibilities. A service class is useful when one workflow touches multiple models, transactions, queues, or integrations. The trade-off is structure versus ceremony: too many abstractions make small apps harder to follow.",
+    "real_world": "This matters when a checkout flow starts handling coupon rules, inventory updates, and payment callbacks. If the logic stays in the controller, it becomes hard to test and easy to break when one piece changes.",
+    "code_lang": "php",
+    "code": "public function store(OrderRequest $request, PlaceOrder $placeOrder)\n{\n    $order = $placeOrder->handle($request->validated());\n    return response()->json($order, 201);\n}",
+    "follow_up": "How would you test that service class without hitting the database too much?"
+   },
+   {
+    "question": "What’s the difference between `has()`, `whereHas()`, and `with()` when filtering related data in Eloquent?",
+    "answer": "`has()` filters parent records by whether a relationship exists, while `whereHas()` filters parents by conditions on the related records. `with()` only eager loads related data; it does not filter the parent results unless you combine it with `whereHas()`. The key trade-off is clarity versus query complexity: `whereHas()` can express the intent well, but it may generate heavier SQL. Use `with()` to avoid N+1 when you need the relation in memory.",
+    "real_world": "A common bug is showing users with published posts and then looping over posts in the view, causing extra queries. Another is loading all users with `with('posts')` and assuming unpublished posts were filtered out when they were not.",
+    "code_lang": "php",
+    "code": "User::whereHas('posts', function ($q) {\n    $q->where('published', true);\n})->with('posts')->get();",
+    "follow_up": "How would you load only the published posts on each user, not all posts?"
+   },
+   {
+    "question": "How do you decide whether to use a form request class versus validating directly in a controller?",
+    "answer": "Use a form request when validation, authorization, or request preparation is more than trivial. It keeps controllers smaller and makes the rules reusable and easier to test, especially when create and update actions differ. Inline validation is fine for very small endpoints, but it can become noisy as soon as the rules include conditional logic or custom messages. The main trade-off is simplicity for one-off cases versus better organization for real workflows.",
+    "real_world": "This comes up when a profile update endpoint needs different rules for email, password, and avatar uploads. Putting all of that in the controller usually makes the action hard to read and harder to reuse elsewhere.",
+    "code_lang": "php",
+    "code": "public function store(StoreUserRequest $request)\n{\n    $data = $request->validated();\n    User::create($data);\n}",
+    "follow_up": "How would you handle validation that depends on the authenticated user or another database row?"
+   },
+   {
+    "question": "What happens if you start a database transaction and then dispatch a job or send an email before the transaction commits?",
+    "answer": "The job or email can run before the data is actually committed, so the worker or mail process may not see the new rows yet. That leads to flaky behavior where a queued job cannot find the record it was told to process, or a notification goes out for data that later rolls back. The safe pattern is to dispatch after commit when the work depends on the transaction’s outcome. Transactions protect consistency, but they also change timing, which matters a lot with async work.",
+    "real_world": "A typical production issue is an order confirmation job that runs immediately, looks up the new order, and fails because the insert is still uncommitted. Teams often only see it under load, when queues are fast enough to beat the database commit.",
+    "code_lang": "php",
+    "code": "DB::transaction(function () use ($data) {\n    $order = Order::create($data);\n    SendOrderConfirmation::dispatch($order);\n});",
+    "follow_up": "What would you change so the job only runs after a successful commit?"
+   },
+   {
+    "question": "When would you prefer a database index or a query change over adding caching in Laravel?",
+    "answer": "If the query is slow because it scans too much data or uses an inefficient filter/sort, fix the SQL shape first with indexes and better conditions. Caching helps when the same expensive result is requested repeatedly and the data can tolerate some staleness. Caching without understanding the query often hides the real problem and can create invalidation complexity. The best order is usually: measure, improve the query, then cache if the workload still justifies it.",
+    "real_world": "A dashboard endpoint might feel slow because it counts rows across a large table on every request. Adding cache can help, but if the query lacks an index, the system will still fall over when the cache expires or misses.",
+    "code_lang": "sql",
+    "code": "SELECT status, COUNT(*)\nFROM orders\nWHERE created_at >= '2026-01-01'\nGROUP BY status;",
+    "follow_up": "How do you decide whether a cache key should be per user, per tenant, or global?"
+   },
+   {
+    "question": "How do you usually handle authorization in Laravel, and how is that different from validation?",
+    "answer": "Validation checks whether the input is structurally acceptable; authorization checks whether the current user is allowed to do the action. In Laravel, policies are a good fit for model-related permissions, while gates work well for smaller or cross-cutting checks. Keeping them separate prevents a common bug where someone assumes valid input means permitted access. The trade-off is that authorization adds another decision point, but it keeps security rules explicit.",
+    "real_world": "A user can submit a perfectly valid request to edit an invoice, but they should only be allowed to edit invoices in their own account. If that check is mixed into validation, it becomes easy to forget on another endpoint.",
+    "code_lang": "php",
+    "code": "public function update(User $user, Invoice $invoice)\n{\n    return $user->id === $invoice->user_id;\n}",
+    "follow_up": "Where would you call that policy in a controller or form request?"
+   },
+   {
+    "question": "What problem do database factories and seeders solve, and how do you keep them from becoming misleading test data?",
+    "answer": "Factories create realistic model instances quickly, and seeders populate known baseline data for local development or demo environments. They are most useful when tests need structured records without verbose setup, but they should stay close to the real shape of the data your app expects. The risk is overusing fake defaults that hide edge cases or create tests that pass for the wrong reasons. Good factories make it easy to override important fields and create only what each test needs.",
+    "real_world": "Teams often use seeders to spin up a local environment with accounts, roles, and a few example records. If the seeded data is too simplistic, developers miss bugs that only appear with missing relations or unusual statuses.",
+    "code_lang": "php",
+    "code": "User::factory()\n    ->hasPosts(3)\n    ->create(['role' => 'admin']);",
+    "follow_up": "How would you create a factory state for a suspended user with no posts?"
+   },
+   {
+    "question": "What’s the difference between `dispatchSync()` and pushing a job onto the queue, and when would you choose each?",
+    "answer": "`dispatchSync()` runs the job immediately in the current process, while queued dispatch sends it to a worker for later execution. Use synchronous execution when the task is small, must finish before the response continues, or is only used in tests or admin tooling. Use a queue for slow, retryable, or bursty work like emails, exports, or webhooks. The trade-off is latency versus resilience: sync is simpler, queues scale better and protect request time.",
+    "real_world": "Generating a CSV export or resizing many images during the HTTP request will make the UI feel broken. Moving it to a queued job keeps the app responsive and lets you retry failures safely.",
+    "code_lang": "php",
+    "code": "ProcessReport::dispatchSync($reportId);\nProcessReport::dispatch($reportId);",
+    "follow_up": "What would you do if the queued job must be idempotent?"
+   },
+   {
+    "question": "How do you approach testing a controller endpoint in Laravel without turning it into an integration test for the whole app?",
+    "answer": "Test the HTTP behavior you care about: status code, response shape, validation errors, and the side effects you expect. Mock external services and keep the database setup minimal, often with factories and an in-memory or test database. If the controller is thin, most of the logic should already be covered in unit tests for services or actions. The goal is to verify wiring and contracts without duplicating every rule at the HTTP layer.",
+    "real_world": "This matters when an endpoint talks to payments or a third-party API. You want to prove the request is routed, the response is correct, and the external call is mocked, not actually charge a card in test runs.",
+    "code_lang": "php",
+    "code": "$response = $this->postJson('/orders', ['sku' => 'ABC']);\n$response->assertCreated()\n    ->assertJsonPath('data.sku', 'ABC');",
+    "follow_up": "When would you choose to mock the database layer versus using the real test database?"
+   },
+   {
+    "question": "What are some common reasons a Laravel app becomes slow in production even when the code looks fine locally?",
+    "answer": "Different data volume is usually the main reason: small local tables hide missing indexes, N+1 queries, and expensive loops. Production also exposes queue backlog, slow external services, session or cache misconfiguration, and repeated work inside middleware or view composers. You need to look at query count, query time, logs, and worker health instead of assuming the framework is the problem. The trade-off is that local debugging is faster, but only production-like data reveals real bottlenecks.",
+    "real_world": "A page can load instantly on a developer machine and then time out in production because one loop touches thousands of rows. Another common issue is a queue worker falling behind, so requests that depend on async work appear “slow” when they are actually waiting.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tools or signals would you check first to narrow down the bottleneck?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "What actually happens under the hood when Laravel resolves something from the service container, and where do you pay for that at scale?",
+    "answer": "The container uses reflection to inspect constructor dependencies, recursively resolves them, and applies bindings, contextual bindings, singletons, and extenders before returning an instance. The cost is usually small per resolution, but it adds up in hot paths like middleware stacks, jobs, and repeatedly constructing the same graph per request. Singletons reduce repeated work, but they can leak state in long-lived workers if the object is not effectively stateless. The trade-off is flexibility versus startup and per-request overhead.",
+    "real_world": "In Octane or queue workers, a singleton that caches request-specific data can bleed one user's state into another request. Teams also see measurable latency from resolving heavy services many times inside loops instead of once at the edge.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does the risk profile change when the app runs under PHP-FPM versus Octane?"
+   },
+   {
+    "question": "How does `chunk()` differ from `chunkById()` and `cursor()` in Laravel, and when can `chunk()` silently skip or duplicate work?",
+    "answer": "`chunk()` paginates by offset, so if rows are inserted, deleted, or updated while you iterate, later pages can shift and you can miss or reprocess rows. `chunkById()` uses a monotonic key boundary, which is much safer for backfills and batch updates on mutable tables. `cursor()` streams one model at a time with low memory use, but it keeps the query open longer and still needs careful ordering. The key trade-off is consistency under change versus simplicity and query shape.",
+    "real_world": "A common incident is a backfill that updates a status column while using `chunk()`, causing records to move out of the result set mid-run. The job finishes 'successfully' but leaves a hole that only shows up days later.",
+    "code_lang": "php",
+    "code": "User::where('active', 1)\n    ->chunkById(1000, function ($users) {\n        foreach ($users as $user) {\n            $user->update(['synced' => 1]);\n        }\n    });",
+    "follow_up": "What assumptions does `chunkById()` make about the ordering column?"
+   },
+   {
+    "question": "In Laravel, how would you make a queued job safe to retry without causing duplicate side effects?",
+    "answer": "Treat the job as at-least-once delivery and make the side effect idempotent. Usually that means using a natural idempotency key, unique database constraint, or a state transition check so the second execution becomes a no-op. You should also separate transient failures from permanent ones, because blind retries can amplify damage if the downstream action already happened. The trade-off is extra bookkeeping in exchange for safe recovery from worker crashes, timeouts, and network errors.",
+    "real_world": "Payment capture, webhook delivery, and invoice generation are classic cases: the worker may die after the external API succeeds but before your app records success. Without an idempotency strategy, a retry charges the customer twice or emits duplicate documents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you store the idempotency key if the downstream provider does not support one?"
+   },
+   {
+    "question": "What are the main failure modes when using Laravel Horizon or queue workers under load, and how do you reason about them?",
+    "answer": "The big ones are backlog growth, uneven queue starvation, memory leaks in long-lived workers, job timeouts that exceed visibility or retry windows, and downstream saturation from too much concurrency. Horizon gives visibility, but you still need to tune worker counts, timeout and retry settings, and queue separation based on job type and external limits. A fast queue does not help if jobs contend on the database or a third-party API. The trade-off is throughput versus fairness, stability, and the blast radius of failures.",
+    "real_world": "Teams often put emails, webhooks, and image processing on the same queue; one noisy job class floods workers and delays user-visible work. Another common incident is workers being restarted too rarely, so memory growth slowly reduces capacity until the queue falls behind.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you separate queues and choose concurrency for CPU-bound versus IO-bound jobs?"
+   },
+   {
+    "question": "How do Laravel's cache locks work for mutual exclusion, and what are the edge cases that still let two workers do the same work?",
+    "answer": "A cache lock stores a short-lived key in a backend that supports atomic lock acquisition, and only the holder should proceed until it releases or the TTL expires. The tricky part is that locks are advisory and time-based: if the process pauses, runs longer than the TTL, or the backend behaves differently under failure, another worker can acquire the lock and duplicate the work. So lock duration, renewal strategy, and idempotent side effects still matter. They reduce concurrency bugs but do not replace correctness at the data layer.",
+    "real_world": "This comes up in scheduled commands, report generation, and syncing a tenant from an external system. A network stall or GC pause can let the lock expire, and a second worker starts the same expensive process while the first is still running.",
+    "code_lang": "php",
+    "code": "$lock = Cache::lock('sync:tenant:'.$tenantId, 60);\n\n$lock->block(5, function () use ($tenantId) {\n    app(SyncTenant::class)->handle($tenantId);\n});",
+    "follow_up": "When would you prefer a database constraint or row-level lock over a cache lock?"
+   },
+   {
+    "question": "What does `SELECT ... FOR UPDATE` map to in Laravel, and what deadlock or throughput issues should you expect in production?",
+    "answer": "In Laravel you typically use `lockForUpdate()` inside a transaction to acquire row-level write locks until commit. It prevents concurrent writers from modifying the same rows, but lock ordering and large transaction scope can create deadlocks or long waits under contention. It also reduces throughput because blocked requests tie up workers and database connections. The trade-off is strong correctness for contested state transitions versus lower concurrency and more operational tuning.",
+    "real_world": "Inventory decrements and wallet transfers often work fine in testing, then deadlock under burst traffic when two code paths lock rows in different orders. The fix is usually shorter transactions, consistent lock ordering, and retry logic around deadlocks.",
+    "code_lang": "php",
+    "code": "DB::transaction(function () use ($id) {\n    $order = Order::whereKey($id)->lockForUpdate()->firstOrFail();\n\n    if ($order->status === 'pending') {\n        $order->status = 'paid';\n        $order->save();\n    }\n});",
+    "follow_up": "How would you compare optimistic concurrency to `lockForUpdate()` for the same problem?"
+   },
+   {
+    "question": "How do you decide whether to use Laravel Octane, and what classes of bugs appear because the application is no longer booted fresh on every request?",
+    "answer": "Octane helps when your app spends meaningful time bootstrapping Laravel or repeatedly building the same in-memory state, and when your workload benefits from long-lived workers. The main risks are state leakage across requests, stale configuration or container instances, and libraries that assume PHP request isolation. Anything request-specific must not live in static properties, mutated singletons, or globally cached service instances. The trade-off is lower latency and higher throughput versus a stricter discipline around shared state and worker lifecycle.",
+    "real_world": "A subtle production bug is a singleton service storing the current tenant or authenticated user, which works under PHP-FPM but leaks data under Octane. Another is stale feature flags or config values because a worker keeps old state until it is reloaded.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts of a typical Laravel app would you audit first before enabling Octane?"
+   },
+   {
+    "question": "What are the trade-offs of using Redis for cache, queues, sessions, and rate limiting all in the same Laravel deployment?",
+    "answer": "Redis is fast and operationally convenient, but combining unrelated workloads creates resource contention and larger blast radius. Large queue bursts can evict hot cache keys, session traffic can add latency to lock-heavy operations, and persistence settings that are fine for cache may be wrong for queues. Separation can be logical, by database or keyspace, or physical, with different instances depending on scale and failure tolerance. The trade-off is simplicity and cost versus isolation and predictable behavior under load.",
+    "real_world": "A spike in queued jobs can drive memory pressure and key eviction, which suddenly logs out users if sessions share the same Redis capacity. Teams often split at least sessions from cache, and sometimes queues too, once they hit sustained traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you had to keep one Redis cluster, what safeguards would you add first?"
+   },
+   {
+    "question": "How do route, config, event, and view caching change Laravel's runtime behavior, and what can break when you enable them in production?",
+    "answer": "These caches trade startup work for precomputed artifacts, so bootstrap and request handling get faster because Laravel does less scanning and parsing. The risk is that dynamic behavior relying on runtime discovery or environment changes can stop working until caches are rebuilt. Closures in routes can also constrain how route caching works, and stale cache artifacts are a common deploy issue when build and runtime environments differ. The trade-off is better performance and more deterministic deploys versus stricter deployment discipline.",
+    "real_world": "A classic incident is deploying new environment values or package configuration without rebuilding config cache, so production keeps using old settings. Another is route changes not taking effect because the cached routes file was not refreshed during deploy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which of these caches would you consider mandatory, optional, or risky in a containerized deployment?"
+   },
+   {
+    "question": "If an Eloquent query is slow, how do you break down whether the problem is model hydration, relationship loading, SQL shape, or indexes?",
+    "answer": "First isolate the raw SQL and execution plan, because a bad join, sort, or missing index usually dwarfs framework overhead. Then compare returning arrays or scalar results from the query builder versus hydrating full models, especially for large result sets where casting, accessors, and relations add CPU and memory cost. Also inspect whether eager loading is reducing queries but overfetching too much data. The trade-off is developer convenience from rich models versus lower latency and memory from narrower, more explicit queries.",
+    "real_world": "A page can go from acceptable locally to timing out in production because it hydrates thousands of models with several casts and nested relations. The SQL may be fixed, but the remaining bottleneck is PHP memory and serialization work rather than the database.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or tooling would you use to prove hydration is the bottleneck instead of the database?"
+   },
+   {
+    "question": "How do you use `upsert()` correctly in Laravel, and what problems does it solve or create under concurrency?",
+    "answer": "`upsert()` pushes conflict handling to the database, so it’s much safer than a read-then-insert/update sequence under concurrent writers. It works well for idempotent imports, counters, and sync jobs, but correctness depends on a real unique constraint on the conflict columns. The trade-off is that it bypasses a lot of Eloquent behavior like model events and per-row business logic, and large batches can still create lock contention. I treat it as a database primitive, not as a drop-in replacement for model saves.",
+    "real_world": "A common production incident is duplicate rows from two workers both doing `firstOrCreate()` at the same time because the uniqueness was only enforced in application code. Switching to a unique index plus `upsert()` usually fixes the race, but teams then notice observers stopped firing.",
+    "code_lang": "php",
+    "code": "DB::table('inventory')->upsert(\n    [\n        ['sku' => 'A1', 'qty' => 10],\n        ['sku' => 'B2', 'qty' => 5],\n    ],\n    ['sku'],\n    ['qty']\n);",
+    "follow_up": "What’s the difference between `upsert()` and `updateOrInsert()` when many workers hit the same key?"
+   },
+   {
+    "question": "What are the trade-offs between `firstOrCreate()`, `updateOrCreate()`, and enforcing uniqueness at the database level?",
+    "answer": "`firstOrCreate()` and `updateOrCreate()` are convenience APIs, but by themselves they are not enough for correctness under concurrency because they usually involve a read followed by a write. The real protection comes from a database unique constraint, with application code prepared to handle a duplicate-key failure or use a single-statement write pattern. Without that, two requests can both decide the row is missing and create duplicates. The trade-off is convenience versus correctness: helper methods are fine for low-risk flows, but critical paths need database-enforced invariants.",
+    "real_world": "This matters in signup, coupon redemption, webhook ingestion, and billing syncs where duplicate records become customer-visible. Teams often only discover the gap after traffic spikes or after adding more queue workers.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you already have duplicates in production, how would you clean them up before adding the unique index?"
+   },
+   {
+    "question": "How would you reason about `ShouldBeUnique` jobs in Laravel, and what guarantees does it not give you?",
+    "answer": "`ShouldBeUnique` is useful to suppress duplicate queued jobs for the same logical key, but it is not a substitute for idempotent job handlers. The uniqueness is about queue admission or processing behavior depending on the pattern you use, not a hard exactly-once guarantee across crashes, retries, visibility timeouts, or external side effects. You still need a dedupe key in the database or in the downstream API contract. I use it to reduce waste, not to prove correctness.",
+    "real_world": "A team might mark invoice-sync jobs as unique and assume customers can never be charged twice, then discover a worker crashed after the charge but before acking the job. On retry, the queue layer did its job, but the business operation still needed idempotency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the handler so a retry after partial success is safe?"
+   },
+   {
+    "question": "What can go wrong with long-running queue workers in Laravel besides just memory leaks?",
+    "answer": "The bigger issue is stale process state: config changes, rotated secrets, changed feature flags, old singletons, and broken external connections can all persist because the worker process keeps running. In addition, fragmented memory, unbounded logs, and expensive static caches can slowly degrade throughput long before the process crashes. You need bounded job runtime, worker recycling, health checks, and explicit reconnect behavior. Laravel makes queues easy, but the operational model is much closer to running daemons than handling PHP-FPM requests.",
+    "real_world": "A frequent production issue is deploying a config change or credential rotation and seeing web traffic recover immediately while workers keep failing until they are restarted. Another is one bad job type slowly bloating workers so latency rises over hours instead of spiking all at once.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you watch to tell stale workers apart from simply having too much queue volume?"
+   },
+   {
+    "question": "When does `cursorPaginate()` outperform offset pagination in Laravel, and what are the correctness trade-offs?",
+    "answer": "`cursorPaginate()` is usually better for large, append-heavy tables because it avoids scanning and discarding rows for high offsets. It scales better as page number grows, but it requires a stable, deterministic ordering and changes the UX because you navigate by cursor, not arbitrary page numbers. It’s also better behaved when new rows are inserted during browsing, though updates to the sort key can still make rows appear to move. Offset pagination is simpler, but it gets slower and less stable at scale.",
+    "real_world": "On an activity feed or orders table with millions of rows, `LIMIT/OFFSET` can become progressively slower and produce weird gaps under concurrent inserts. Cursor pagination often cuts database work significantly, especially for APIs consumed by infinite-scroll clients.",
+    "code_lang": "php",
+    "code": "$orders = Order::orderBy('id')\n    ->cursorPaginate(50);\n\nreturn OrderResource::collection($orders);",
+    "follow_up": "What ordering would you choose if IDs are not the business sort order?"
+   },
+   {
+    "question": "How do global scopes help or hurt in a large Laravel codebase?",
+    "answer": "Global scopes are powerful for enforcing defaults like tenancy or soft-delete behavior, but they hide query behavior and can make performance debugging much harder. They also interact badly with aggregates, joins, admin/reporting queries, and raw SQL if engineers forget the scope exists or accidentally bypass it. My rule is to use them only for invariants the application almost never wants to violate, and to keep them simple and visible. Otherwise an explicit local scope or repository-level query is easier to reason about.",
+    "real_world": "Multi-tenant apps often add a tenant scope and feel safe until a background task, export, or analytics query bypasses it and leaks data. The opposite also happens: a hidden scope adds expensive conditions to every query and no one notices until production load testing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What’s your strategy for preventing tenant-scope bypasses in jobs and console commands?"
+   },
+   {
+    "question": "What are the performance and consistency implications of using read/write database splitting in Laravel?",
+    "answer": "Read/write splitting can increase capacity, but it introduces replica lag, so a request may write to the primary and then immediately read stale data from a replica. That can break flows like showing a just-created record, checking a just-updated balance, or authorizing based on recently changed state. You need to identify read-after-write paths and force them to the primary when correctness matters. The trade-off is straightforward: better read scalability in exchange for more complicated consistency semantics.",
+    "real_world": "Teams often enable replicas to reduce primary load, then users report that a created order or changed password “didn’t stick” for a few seconds. The database is healthy; the application just assumed immediate consistency where it no longer exists.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which Laravel request paths would you pin to the write connection, and which can safely tolerate stale reads?"
+   },
+   {
+    "question": "How do you think about soft deletes as an architectural choice, not just an Eloquent feature?",
+    "answer": "Soft deletes are useful for recovery, auditing, and preserving foreign-key relationships, but they increase query complexity and can hide large amounts of dead data in hot tables. They also don’t replace a real audit log because they tell you that something was deleted, not why or by whom unless you model that separately. Over time they can hurt index selectivity and make uniqueness rules trickier unless the schema accounts for deleted rows. I use them when restore semantics are a real product requirement, not by default.",
+    "real_world": "A table with years of soft-deleted rows can become a performance problem even if the app always filters them out. Another common incident is re-creating a supposedly unique entity and hitting conflicts because a soft-deleted row still owns the unique value.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you enforce uniqueness when soft-deleted rows should or should not count?"
+   },
+   {
+    "question": "If you had to bulk update millions of rows in Laravel, how would you avoid taking the app down?",
+    "answer": "I’d avoid row-by-row Eloquent saves and instead use set-based SQL or carefully batched updates with predictable ordering and backpressure. The goal is to control lock duration, transaction size, replication impact, and queue or web traffic contention, not just total runtime. I’d also make the migration resumable, observable, and safe to stop, because the first attempt often reveals unexpected hotspots. In many cases the fastest code is not the safest production plan.",
+    "real_world": "Large backfills often look fine in staging but in production they can saturate I/O, create long lock waits, and cause replicas to lag badly enough that read traffic breaks. Teams that batch by primary key range and pause between batches usually have a much smoother rollout.",
+    "code_lang": "php",
+    "code": "DB::table('users')\n  ->whereBetween('id', [$start, $end])\n  ->update(['status' => 'active']);",
+    "follow_up": "How would you choose batch size and detect that the backfill is hurting live traffic?"
+   },
+   {
+    "question": "What’s your mental model for Eloquent model serialization on queued jobs, and what subtle bugs does it cause?",
+    "answer": "When you queue a job with an Eloquent model, Laravel usually serializes an identifier and re-hydrates the model later rather than freezing the full object graph. That keeps payloads smaller, but it means the job runs against later database state, not necessarily the state that existed when it was dispatched. Relations may be missing, deleted records may no longer exist, and dirty in-memory attributes that were never saved are gone. If the exact original state matters, pass explicit primitives or a purpose-built DTO instead of the model.",
+    "real_world": "This bites teams when a job is dispatched with a model after local mutations but before save, or when the job assumes a relation that was eager loaded during the request will still be there later. In production it shows up as 'it worked inline but the queued version behaved differently.'",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you deliberately pass IDs only instead of a model, even though Laravel supports model serialization?"
+   }
+  ]
+ }
+}

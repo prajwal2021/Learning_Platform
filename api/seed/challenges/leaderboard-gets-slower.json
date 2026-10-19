@@ -1,0 +1,366 @@
+{
+  "slug": "leaderboard-gets-slower",
+  "title": "The leaderboard page gets slower every week",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "databases",
+    "caching",
+    "redis",
+    "leaderboards",
+    "performance"
+  ],
+  "scenario": "A game shows a leaderboard page with the top 100 players and the current player's own rank. The code runs one query like SELECT ... ORDER BY score DESC LIMIT 100 and another like SELECT COUNT(*) WHERE score > ? to compute the player's rank. With 50 million players, the page takes about 6 seconds, and it gets slower every week as more players join.",
+  "goal": "Find a design that keeps the leaderboard fast as the player table grows while keeping the database as the source of truth.",
+  "concepts": [
+    {
+      "key": "query-plan",
+      "name": "Query plan",
+      "summary": "A query plan shows how the database will execute a SQL query. It usually includes scans, sorts, indexes, estimated rows, and actual timing when measured.",
+      "used_here": "Used to see which part of the leaderboard request is consuming time and how many rows it touches."
+    },
+    {
+      "key": "order-by-limit",
+      "name": "ORDER BY with LIMIT",
+      "summary": "ORDER BY sorts rows by a chosen column, and LIMIT returns only a fixed number of rows. Depending on indexes, the database may still need to inspect or sort many rows before returning the limited result.",
+      "used_here": "Used by the query that returns the top 100 players."
+    },
+    {
+      "key": "count-query",
+      "name": "COUNT query",
+      "summary": "COUNT returns how many rows match a condition. Depending on the condition and indexes, it may still need to examine many matching entries.",
+      "used_here": "Used by the rank query that counts players with a higher score."
+    },
+    {
+      "key": "database-index",
+      "name": "Database index",
+      "summary": "An index is an ordered lookup structure maintained by the database. It can make some filters and orderings much cheaper than scanning the whole table.",
+      "used_here": "Used as one possible database optimization for score-based queries."
+    },
+    {
+      "key": "read-replica",
+      "name": "Read replica",
+      "summary": "A read replica is a copy of a database that serves read traffic. Replicas are commonly used to reduce load on the primary database.",
+      "used_here": "Considered as one possible way to move leaderboard reads away from the primary."
+    },
+    {
+      "key": "redis-sorted-set",
+      "name": "Redis sorted set",
+      "summary": "A Redis sorted set stores unique members with numeric scores and keeps them ordered. It supports operations that read by rank, read by score range, and update a member's score.",
+      "used_here": "Considered as one possible structure for storing player scores outside the primary database."
+    },
+    {
+      "key": "materialized-view",
+      "name": "Materialized view",
+      "summary": "A materialized view stores the result of a query so it can be read later. It must be refreshed when the underlying data changes or on a schedule.",
+      "used_here": "Considered as one possible precomputed representation of leaderboard data."
+    },
+    {
+      "key": "cache",
+      "name": "Cache",
+      "summary": "A cache stores data that was already computed so later requests can reuse it. Cached data may be slightly stale depending on how it is invalidated or expired.",
+      "used_here": "Used to reduce repeated work for leaderboard reads."
+    },
+    {
+      "key": "ttl",
+      "name": "TTL",
+      "summary": "TTL means time to live. It is the amount of time a cached value remains valid before it expires.",
+      "used_here": "Used to control how long reused leaderboard data can be served."
+    },
+    {
+      "key": "transactional-outbox",
+      "name": "Transactional outbox",
+      "summary": "A transactional outbox stores a message in the same database transaction as the state change that caused it. A separate worker later reads the stored message and delivers it.",
+      "used_here": "Considered for safely propagating score changes after database writes."
+    },
+    {
+      "key": "idempotency",
+      "name": "Idempotency",
+      "summary": "An idempotent operation can be retried without applying the same logical change twice. This is important when workers or networks can fail after partially completing work.",
+      "used_here": "Used when score update messages may be delivered more than once."
+    },
+    {
+      "key": "version-guard",
+      "name": "Version guard",
+      "summary": "A version guard attaches a sequence number or version to a change. Consumers can ignore an older change if a newer one has already been applied.",
+      "used_here": "Used to protect leaderboard updates from arriving out of order."
+    },
+    {
+      "key": "rebuild",
+      "name": "Rebuild",
+      "summary": "A rebuild recreates a derived data store from an authoritative source. It is used when the derived copy is missing, corrupt, or needs a new format.",
+      "used_here": "Used when the leaderboard serving data must be restored from the database."
+    },
+    {
+      "key": "atomic-swap",
+      "name": "Atomic swap",
+      "summary": "An atomic swap switches readers from one complete value or structure to another in one indivisible step. Readers should not observe a half-built replacement.",
+      "used_here": "Used to move leaderboard reads to a rebuilt structure only after it is ready."
+    },
+    {
+      "key": "tie-breaking",
+      "name": "Tie-breaking",
+      "summary": "Tie-breaking defines what happens when two records have the same primary sort value. It may produce shared ranks or a deterministic order among equal values.",
+      "used_here": "Used when multiple players have the same score."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with evidence",
+      "question": "You are on call and see the leaderboard page taking about 6 seconds for some users. What is the best first step to understand the slowdown?",
+      "concept_keys": [
+        "query-plan",
+        "order-by-limit",
+        "count-query"
+      ],
+      "options": [
+        {
+          "text": "Cache the whole leaderboard page immediately and investigate the database after traffic is lower.",
+          "correct": false,
+          "hint": "A cache may hide symptoms, but it can also hide correctness and freshness problems. You still need measurements showing which data is expensive to compute.",
+          "id": "a"
+        },
+        {
+          "text": "Add two more application servers and check whether the page latency drops under load.",
+          "correct": false,
+          "hint": "More application capacity helps only if the application tier is the bottleneck. First identify which operation is taking the 6 seconds.",
+          "id": "b"
+        },
+        {
+          "text": "Run EXPLAIN ANALYZE for both SQL queries and compare row counts, sort work, and timing.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Increase the database connection pool size so more leaderboard requests run in parallel.",
+          "correct": false,
+          "hint": "More concurrency can make a slow database query worse by adding contention. You need to know what each request is doing inside the database.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The first step is to measure the two queries separately with an execution plan and actual timings. The page does two different kinds of work: returning the top 100 and counting players above one score. Adding servers or connections is tempting, but it does not explain why latency grows as the player table grows to 50 million rows."
+    },
+    {
+      "title": "Apply the obvious database improvement",
+      "question": "The plan shows the top-100 query scans and sorts a large part of the 50 million-row table, and the rank query also scans many rows. What database change should you try first?",
+      "concept_keys": [
+        "database-index",
+        "order-by-limit",
+        "count-query"
+      ],
+      "options": [
+        {
+          "text": "Rewrite the rank query as SELECT MAX(rank) from a subquery that orders all players by score.",
+          "correct": false,
+          "hint": "A query rewrite can look cleaner but still require ordering or counting a very large set. Look for an access path that matches the score operation.",
+          "id": "a"
+        },
+        {
+          "text": "Create an index on player_id because every request is for one current player.",
+          "correct": false,
+          "hint": "The expensive operations are ordered and filtered by score. An index on the player identifier helps look up the player row, not order the whole leaderboard.",
+          "id": "b"
+        },
+        {
+          "text": "Partition the players table by signup month so each partition has fewer rows to scan.",
+          "correct": false,
+          "hint": "The leaderboard ranks all players together. Partitioning by a field unrelated to the score does not avoid comparing against players in every partition.",
+          "id": "c"
+        },
+        {
+          "text": "Create a descending index on score and benchmark both queries again with production-like data.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "An index ordered by score gives the database a useful access path for score-based reads, especially the top-100 query. After adding it, you still need to measure both queries because the rank calculation can require counting a large number of matching index entries. Rewriting the query into a subquery is tempting, but it usually preserves the same large amount of work."
+    },
+    {
+      "title": "Choose a serving structure",
+      "question": "After adding the score index, the top-100 query drops to 35 ms, but a median player's rank query still takes 2.8 seconds because it counts about 25 million higher-scored entries. What design best targets both reads at 50 million players?",
+      "concept_keys": [
+        "read-replica",
+        "redis-sorted-set",
+        "materialized-view"
+      ],
+      "options": [
+        {
+          "text": "Move both SQL queries to read replicas and add enough replicas to handle leaderboard traffic.",
+          "correct": false,
+          "hint": "Replicas can spread read load, but each request can still perform a large amount of work. Focus on the per-request algorithm, not only where it runs.",
+          "id": "a"
+        },
+        {
+          "text": "Add a background job that precomputes ranks nightly and use yesterday's rank during the day.",
+          "correct": false,
+          "hint": "Nightly precomputation can be far from current in an active game. The page needs a value that follows score changes during the day.",
+          "id": "b"
+        },
+        {
+          "text": "Maintain player scores in a Redis sorted set and read top players and rank from that structure.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Refresh a materialized top-100 table every minute and keep using SQL COUNT for each rank.",
+          "correct": false,
+          "hint": "This helps one part of the page but leaves the slow per-user calculation in place. The remaining query is the one still touching millions of entries.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A Redis sorted set keeps players ordered by score and supports efficient updates, top-N reads, and rank lookups. That changes the serving path from counting millions of rows per request to using a data structure built for ordered scores. Read replicas are the most tempting wrong answer, but they only distribute the same expensive count over more database machines."
+    },
+    {
+      "title": "Reduce repeated public work",
+      "question": "With the Redis sorted set serving the page, p95 latency is now about 70 ms. Traffic is high, and product says the public top-100 list may be up to 5 seconds stale, but the current player's own rank should reflect recent score changes. What should you cache?",
+      "concept_keys": [
+        "cache",
+        "ttl",
+        "redis-sorted-set"
+      ],
+      "options": [
+        {
+          "text": "Cache each player's full leaderboard response for 60 seconds to maximize hit rate.",
+          "correct": false,
+          "hint": "The allowed staleness differs between the public list and the user-specific rank. A longer TTL may violate the freshness requirement for the rank.",
+          "id": "a"
+        },
+        {
+          "text": "Cache the top-100 list for 5 seconds and continue reading the current player's rank from the sorted set.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Cache the SQL top-100 query for 5 seconds and keep Redis only for rank lookups.",
+          "correct": false,
+          "hint": "The current serving path already avoids the database for leaderboard reads. Reintroducing SQL for the hot public list adds unnecessary load.",
+          "id": "c"
+        },
+        {
+          "text": "Cache the entire rendered page for 5 seconds using the URL path as the cache key.",
+          "correct": false,
+          "hint": "The page contains user-specific data. A shared page cache can mix one player's rank into another player's response unless keyed and varied very carefully.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The top-100 list is the same for many users, so a 5-second TTL can remove repeated reads while staying within the stated freshness limit. The user's own rank is personalized and expected to follow recent score changes, so it should still be read from the serving structure. Caching the whole rendered page is tempting, but it risks serving one user's rank to another unless every user-specific variation is handled correctly."
+    },
+    {
+      "title": "Make score propagation safe",
+      "question": "The database remains the source of truth for scores. When a match finishes, the service writes the new score to the database and must update the Redis sorted set. Which update pattern is safest in production?",
+      "concept_keys": [
+        "transactional-outbox",
+        "idempotency",
+        "version-guard",
+        "redis-sorted-set"
+      ],
+      "options": [
+        {
+          "text": "Write the score and an update record in the same database transaction; have a worker apply it to Redis with idempotency and version checks.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Periodically poll all changed players from the database every 30 seconds and overwrite their Redis scores.",
+          "correct": false,
+          "hint": "Polling can miss freshness goals and creates delay even when the write path is healthy. It also needs careful handling for ordering and missed windows.",
+          "id": "b"
+        },
+        {
+          "text": "Update Redis first for fast reads, then write the database row in the background within a few seconds.",
+          "correct": false,
+          "hint": "The database is the source of truth. If the later database write fails, the leaderboard can show a score that was never committed.",
+          "id": "c"
+        },
+        {
+          "text": "Write the database row, then publish a Redis update after commit from the application process.",
+          "correct": false,
+          "hint": "Think about what happens if the process crashes after the database commit but before the publish. A production design needs a durable handoff between those two steps.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Storing the score change and the update record in the same database transaction prevents the Redis update from being lost after a committed score write. A worker can retry safely, and version checks prevent an older update from overwriting a newer score. Publishing after commit from the app process is tempting, but a crash in that gap leaves the database and leaderboard inconsistent."
+    },
+    {
+      "title": "Recover from lost serving data",
+      "question": "A Redis cluster issue deletes the leaderboard sorted set, but the player scores in the database are intact. What is the safest recovery approach?",
+      "concept_keys": [
+        "rebuild",
+        "atomic-swap",
+        "redis-sorted-set"
+      ],
+      "options": [
+        {
+          "text": "Rebuild a new sorted set from the database, verify the count and samples, then atomically switch reads to it.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Restore the most recent Redis snapshot and skip rebuilding because Redis was only seconds behind.",
+          "correct": false,
+          "hint": "A snapshot may be stale or incomplete relative to the database. You need a way to prove the serving copy matches the source of truth.",
+          "id": "b"
+        },
+        {
+          "text": "Start inserting players into the existing live key and allow reads to continue during the rebuild.",
+          "correct": false,
+          "hint": "During the rebuild, the structure contains only a fraction of players. Serving ranks from a partial leaderboard can produce very wrong results.",
+          "id": "c"
+        },
+        {
+          "text": "Disable score updates until Redis is back, then replay only the updates that happened after the outage.",
+          "correct": false,
+          "hint": "Replaying recent updates does not recreate players that were already in the deleted structure. Recovery needs the full set of scores, not only the tail of changes.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Because Redis is derived data, the authoritative recovery source is the database. Building into a separate key or cluster and switching only after verification prevents users from seeing ranks based on a partial 50 million-player set. Replaying only recent updates is tempting, but it cannot restore the players that existed before the outage."
+    },
+    {
+      "title": "Handle equal scores deliberately",
+      "question": "After launch, support reports that two players with the same score can see adjacent ranks, such as 1203 and 1204. Product says equal scores should share the same displayed rank, with any stable order allowed inside the tied group. What should you change?",
+      "concept_keys": [
+        "tie-breaking",
+        "redis-sorted-set",
+        "count-query"
+      ],
+      "options": [
+        {
+          "text": "Round scores to fewer digits so ties are less likely to appear in the leaderboard.",
+          "correct": false,
+          "hint": "Changing score precision changes the game semantics and may create more ties, not fewer. The issue is how ties are ranked, not how scores are stored.",
+          "id": "a"
+        },
+        {
+          "text": "Define rank as 1 plus the number of players with a strictly higher score, and use the same rule in Redis and SQL checks.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Keep the current rank behavior because the ordering is deterministic and every player has a unique position.",
+          "correct": false,
+          "hint": "Deterministic ordering solves repeatability, but it may not match the product definition of rank. Equal scores need an explicit rule.",
+          "id": "c"
+        },
+        {
+          "text": "Add a random tie-breaker so equal-score players rotate through the tied ranks over time.",
+          "correct": false,
+          "hint": "Randomization makes support cases harder and can make a player's rank change without any score change. Ranking should be predictable.",
+          "id": "d"
+        }
+      ],
+      "explanation": "If equal scores share a rank, the rank is based on how many players have a strictly greater score, then adding one. That rule makes both players with score 4200 display the same rank, while the top-100 list can still use a stable display order within the tied group. Keeping deterministic unique positions is tempting, but it conflicts with the product requirement for shared ranks."
+    }
+  ],
+  "takeaway": "Indexes can remove obvious waste, but they do not always change the core cost of a per-request ranking calculation over tens of millions of rows. For a hot leaderboard, keep the database as the source of truth and serve ordered reads from a structure designed for score ranking, with safe propagation, rebuilds, caching, and explicit tie rules.",
+  "review_issues": [
+    "Step 6: The marked recovery approach omits handling score changes that occur while the 50M-player sorted set is being rebuilt. A safe production rebuild needs a consistent database snapshot plus replay/dual-application of outbox changes before the atomic switch; otherwise the new Redis set can be stale even after count/sample verification."
+  ]
+}

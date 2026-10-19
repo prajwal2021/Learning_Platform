@@ -1,0 +1,297 @@
+{
+  "slug": "refunds-stuck-as-pending",
+  "title": "Refunds stay pending even after support retries them",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "payments",
+    "idempotency",
+    "state-machines",
+    "reconciliation",
+    "debugging"
+  ],
+  "scenario": "A payments service records customer refunds and submits them to an external payment processor. Support uses an admin retry button when a refund is still pending, but over the last week 11% of retried refunds stayed pending for more than 24 hours. Support reports that the processor call usually returns 202 Accepted, yet customers still do not receive the refund and no clear error appears in the admin tool.",
+  "goal": "Find why support retries do not create progress, then design a safe refund retry flow that avoids duplicate refunds.",
+  "concepts": [
+    {
+      "key": "payment-processor",
+      "name": "Payment processor",
+      "summary": "A third-party service that moves money for payments and refunds. Your system sends it requests and later receives status updates.",
+      "used_here": "The refunds service submits refund operations to the processor and depends on the processor to create and complete them."
+    },
+    {
+      "key": "distributed-tracing",
+      "name": "Distributed tracing",
+      "summary": "Tracing links logs and service calls that belong to the same user action or job. It helps you see what happened across services in order.",
+      "used_here": "Traces connect the admin retry click, the refund service request, and the processor response for stuck and successful refunds."
+    },
+    {
+      "key": "idempotency-key",
+      "name": "Idempotency key",
+      "summary": "An idempotency key lets a client safely retry the same operation without performing it twice. The server remembers the first result for that key and returns it for later matching requests.",
+      "used_here": "The processor uses these keys to decide whether a refund submission is a retry of an existing operation or a new refund operation."
+    },
+    {
+      "key": "semantic-request",
+      "name": "Semantic request",
+      "summary": "A semantic request is the business action you intend, not just an HTTP call. Retrying the same semantic request should be safe, while a different money movement needs its own identity.",
+      "used_here": "A refund for a specific payment, amount, and currency is the money movement; a note or reason change may be metadata unless the previous request is resolved, canceled, or superseded."
+    },
+    {
+      "key": "refund-state-machine",
+      "name": "Refund state machine",
+      "summary": "A state machine stores the allowed statuses for an object and the valid transitions between them. It prevents unclear states and makes retries auditable.",
+      "used_here": "Each refund request should move through states such as requested, submitting, submitted, succeeded, failed, canceled, or superseded."
+    },
+    {
+      "key": "webhook",
+      "name": "Webhook",
+      "summary": "A webhook is an HTTP callback sent by another service when something changes. It lets your system learn about asynchronous completion without constantly asking.",
+      "used_here": "The processor can notify the refunds service when a refund succeeds, fails, or changes status."
+    },
+    {
+      "key": "polling",
+      "name": "Polling",
+      "summary": "Polling means periodically asking another system for the current status. It is slower than a callback but useful when callbacks are delayed or lost.",
+      "used_here": "The refunds service can periodically check the processor for refunds that remain pending too long."
+    },
+    {
+      "key": "outbox-pattern",
+      "name": "Outbox pattern",
+      "summary": "The outbox pattern records a message or job in the same database transaction as the state change that requires it. A worker later sends the message, so the work is not lost if the process crashes.",
+      "used_here": "Creating a refund record and scheduling its processor submission should be committed atomically."
+    },
+    {
+      "key": "reconciliation",
+      "name": "Reconciliation",
+      "summary": "Reconciliation compares your internal records with an external source of truth and fixes mismatches. It is common when external operations complete asynchronously.",
+      "used_here": "The refunds service must compare pending refunds with processor records and update internal states safely."
+    },
+    {
+      "key": "observability-metrics",
+      "name": "Observability metrics",
+      "summary": "Metrics are numeric signals used to monitor system behavior over time. Good metrics show both success and failure modes.",
+      "used_here": "Metrics should show pending age, retry outcomes, duplicate prevention, and whether refunds eventually reach terminal states."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Choose the first place to look",
+      "question": "You are on call and need to understand why 11% of support-retried refunds remain pending for more than 24 hours. Which investigation gives the fastest useful signal?",
+      "concept_keys": [
+        "payment-processor",
+        "distributed-tracing"
+      ],
+      "options": [
+        {
+          "text": "Compare traces for stuck and successful refunds from admin click through processor response and internal refund updates.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Start by increasing the worker concurrency because pending refunds usually mean the queue is not draining fast enough.",
+          "correct": false,
+          "hint": "Queue health matters, but the symptom says the processor call often returns 202. First learn whether those accepted calls map to real progress.",
+          "id": "b"
+        },
+        {
+          "text": "Search for database deadlocks on the refunds table because stuck pending rows often come from failed writes.",
+          "correct": false,
+          "hint": "Database errors are worth checking, but there is already a successful-looking external response in the path. You need an end-to-end view before optimizing one layer.",
+          "id": "c"
+        },
+        {
+          "text": "Inspect only the support admin frontend logs because support retries are initiated from that tool.",
+          "correct": false,
+          "hint": "The frontend can show that the button was clicked, but it cannot prove what the backend sent or what the processor did with it.",
+          "id": "d"
+        }
+      ],
+      "explanation": "End-to-end traces let you compare the full path for stuck versus successful retries: admin action, service request, processor response, and local state changes. This is faster than guessing at queues or locks because 202 Accepted means some external call is happening. The tempting queue explanation does not explain why accepted processor calls still leave 11% pending after 24 hours."
+    },
+    {
+      "title": "Interpret the trace evidence",
+      "question": "The traces show this pattern: for stuck refunds, the original attempt and every support retry receive 202 Accepted in 30-60 ms, the processor response includes the same processor request reference each time, and the processor dashboard shows no new refund operation after the first attempt. What is the most likely cause?",
+      "concept_keys": [
+        "payment-processor",
+        "idempotency-key"
+      ],
+      "options": [
+        {
+          "text": "The processor is rate limiting refund creation but returning 202 so the client will not retry too aggressively.",
+          "correct": false,
+          "hint": "Rate limiting usually has a distinct status, header, or delayed behavior pattern. The repeated reference value is an important clue.",
+          "id": "a"
+        },
+        {
+          "text": "The retry is being treated as the same prior submission, so the processor returns the earlier accepted result instead of creating a new operation.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "The admin tool is timing out before the backend receives the retry, so support sees a stale pending status.",
+          "correct": false,
+          "hint": "The backend traces include a processor response for the retry. That means the retry reached the backend and an external call was made.",
+          "id": "c"
+        },
+        {
+          "text": "The webhook consumer is down, so the processor creates refunds but the local service never observes completion.",
+          "correct": false,
+          "hint": "A webhook outage can leave local rows stale, but it would not by itself explain why the processor dashboard has no new operation.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The same processor request reference and no new dashboard operation indicate the processor is replaying the result of a previous submission. A missing webhook would explain a stale local status only if the processor had actually created or completed a refund. Here the evidence says the retry does not create a new refund operation at all."
+    },
+    {
+      "title": "Stop the immediate damage",
+      "question": "You inspect the outbound requests and find that the admin retry path sends the payment capture key as the request identity for every refund attempt on that payment. What is the safest immediate mitigation while you prepare a permanent fix?",
+      "concept_keys": [
+        "idempotency-key",
+        "semantic-request",
+        "payment-processor"
+      ],
+      "options": [
+        {
+          "text": "Bulk re-run all pending refunds with a timestamp appended to each request identity to clear the 24-hour backlog quickly.",
+          "correct": false,
+          "hint": "A timestamp makes every click unique, including repeated clicks for the same intended refund. That can turn an operational backlog into duplicate money movement.",
+          "id": "a"
+        },
+        {
+          "text": "Pause this retry path, list current processor refunds before manual action, and allow only reviewed refunds to be resubmitted with a new refund-specific identity.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Remove request identity from refund retries so every support click forces the processor to create a fresh refund attempt.",
+          "correct": false,
+          "hint": "A retry after a timeout can be sent more than once. Without a stable retry identity, the same intended refund can move money twice.",
+          "id": "c"
+        },
+        {
+          "text": "Keep the retry button active but change only the HTTP timeout so the admin tool waits longer for processor completion.",
+          "correct": false,
+          "hint": "The processor is returning 202 quickly, so a longer client timeout does not create a new operation or resolve the old one.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Pausing the unsafe path prevents more misleading 202 responses and avoids duplicate refunds while operators inspect actual processor state. For unresolved intended refunds, resubmission needs a refund-specific identity, not the payment capture identity. Removing identity or appending timestamps is tempting because it may create new operations, but it makes retries unsafe after timeouts or repeated support clicks."
+    },
+    {
+      "title": "Design the permanent refund model",
+      "question": "You now need to replace the admin retry behavior. Which data model best supports safe retries and auditable refunds?",
+      "concept_keys": [
+        "refund-state-machine",
+        "semantic-request",
+        "idempotency-key"
+      ],
+      "options": [
+        {
+          "text": "Create a new refund record for every admin edit, including a changed support reason, and submit each record independently.",
+          "correct": false,
+          "hint": "Not every edit means new money should move. Metadata changes need to be separated from creating another refund unless the previous request is resolved, canceled, or explicitly superseded.",
+          "id": "a"
+        },
+        {
+          "text": "Store only a retry_count on the payment row and reuse the payment capture identity until the processor returns a terminal status.",
+          "correct": false,
+          "hint": "A payment can have multiple refund intents over time. Collapsing them into the payment row makes it hard to know which money movement a retry belongs to.",
+          "id": "b"
+        },
+        {
+          "text": "Create a refund record per intended money movement, with amount, currency, payment id, state, stable refund identity, and stored processor refund id when known.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Rely on the processor dashboard as the refund record and keep only the latest pending status in your database.",
+          "correct": false,
+          "hint": "External dashboards are useful for investigation, but your service still needs durable local state to make retries, permissions, and audits safe.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A refund should be modeled as its own state-machine record because it is a separate money movement from the original payment capture. The stable identity belongs to that refund request, and the processor refund id must be persisted once the processor creates an operation. A changed amount is a different money movement, but a changed reason may only be metadata unless the existing pending request is first resolved, canceled, or explicitly superseded."
+    },
+    {
+      "title": "Make submission and reconciliation reliable",
+      "question": "With refund records in place, how should the service submit refunds and keep their status correct when the processor is asynchronous?",
+      "concept_keys": [
+        "outbox-pattern",
+        "webhook",
+        "polling",
+        "reconciliation",
+        "refund-state-machine"
+      ],
+      "options": [
+        {
+          "text": "Create the refund row and enqueue the processor submission in the same database transaction; workers submit with the stable refund identity, save the processor id, and webhooks plus polling reconcile pending states.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Use only processor webhooks and remove polling so the system never sends extra status requests.",
+          "correct": false,
+          "hint": "Webhooks are usually the primary signal, but network delivery and handler failures happen. Long-pending records need a second path to detect missed updates.",
+          "id": "b"
+        },
+        {
+          "text": "Insert the refund row, commit it, and then publish a queue message from application memory after the request finishes.",
+          "correct": false,
+          "hint": "A crash between the commit and the publish leaves a refund record that no worker ever submits. The database state and the submission work need to be tied together.",
+          "id": "c"
+        },
+        {
+          "text": "Call the processor first from the web request, then insert the refund row only after the processor returns 202 Accepted.",
+          "correct": false,
+          "hint": "If the service crashes after the external call but before the insert, money movement may exist without an internal record.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Recording the refund and the submission job in one transaction prevents a committed refund from being silently lost before submission. The worker can safely retry with the same refund identity, then store the processor refund id and move the state forward. Webhooks give fast updates, while polling catches missed callbacks for records that would otherwise stay pending for more than 24 hours."
+    },
+    {
+      "title": "Confirm the fix worked",
+      "question": "After deploying the new refund flow, which verification plan best proves the incident is fixed without introducing duplicate refunds?",
+      "concept_keys": [
+        "observability-metrics",
+        "reconciliation",
+        "refund-state-machine"
+      ],
+      "options": [
+        {
+          "text": "Track that processor calls still return mostly 202 Accepted, since accepted responses show the processor received the requests.",
+          "correct": false,
+          "hint": "202 only means the request was accepted for asynchronous handling. The incident happened even though support usually saw 202.",
+          "id": "a"
+        },
+        {
+          "text": "Measure pending-refund age, terminal-state rate, duplicate-prevention audits, and processor reconciliation for retried refunds over several days.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Verify that every support retry creates a new processor operation, because new operations prove the old cache behavior is gone.",
+          "correct": false,
+          "hint": "Some retries should map to the same operation when they are the same intended refund. Forcing every retry to create a new operation risks duplicate refunds.",
+          "id": "c"
+        },
+        {
+          "text": "Ask support whether fewer customers complain, because customer reports are the final proof of refund success.",
+          "correct": false,
+          "hint": "Customer reports are valuable but delayed and incomplete. You need system evidence before complaints accumulate.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The fix must reduce the 11% of retried refunds stuck beyond 24 hours while preserving duplicate protection. The right checks include age of pending refunds, movement to succeeded or failed states, reconciliation against processor records, and audits that total refunded amounts do not exceed what was intended. Counting 202 Accepted responses is insufficient because that was already happening during the incident."
+    }
+  ],
+  "takeaway": "Idempotency must be scoped to the semantic operation, not reused from a related operation like the original payment capture. Model refunds as durable state-machine records with stable refund-level identities, stored processor ids, and reconciliation through webhooks plus polling. Do not remove idempotency to make retries “work”; that trades stuck refunds for possible duplicate money movement.",
+  "review_issues": []
+}

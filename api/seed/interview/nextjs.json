@@ -1,0 +1,493 @@
+{
+ "slug": "nextjs",
+ "name": "Next.js",
+ "category": "Frontend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Next.js, and why would you use it instead of plain React?",
+    "answer": "Next.js is a React framework that adds routing, server-side rendering, static generation, API routes, and build-time optimizations. You use it when you want React plus the app structure and performance features needed for production websites. Plain React gives you the UI library, but Next.js gives you conventions and tooling for page rendering and deployment.",
+    "real_world": "Teams often choose Next.js for marketing sites, dashboards, and e-commerce pages where SEO and fast initial load matter. It also reduces the amount of custom setup needed for routing and bundling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems do server-side rendering and static generation solve?"
+   },
+   {
+    "question": "What is file-based routing in Next.js?",
+    "answer": "File-based routing means the URL structure is created from files and folders in the app. In the pages router, a file like `pages/about.tsx` maps to `/about`. In the app router, folders and special files like `page.tsx` define routes. This matters because you usually do not need to manually configure a router for basic pages.",
+    "real_world": "A beginner often creates a component and expects it to become a page automatically, but it will not until it is placed in the right route file. This is a common source of “why is my page 404ing?” bugs.",
+    "code_lang": "javascript",
+    "code": "// pages/about.tsx\nexport default function About() {\n  return <h1>About</h1>;\n}",
+    "follow_up": "How do dynamic routes work in Next.js?"
+   },
+   {
+    "question": "What is the difference between server-side rendering and static generation in Next.js?",
+    "answer": "Server-side rendering means the page HTML is created on the server for each request, so the content can reflect fresh data at request time. Static generation means the HTML is created at build time and served as a prebuilt file, which is usually faster and cheaper to serve. The trade-off is freshness versus speed and simplicity.",
+    "real_world": "A product page with price and inventory often needs server-side rendering or revalidation because the data changes frequently. A blog post or help page is often a better fit for static generation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose one over the other for a page with data?"
+   },
+   {
+    "question": "What is the purpose of `getStaticProps` or data fetching in a page component?",
+    "answer": "Data fetching lets a page load information before it is rendered so the HTML can include real content instead of only an empty shell. In older Next.js pages, `getStaticProps` is used for static generation and `getServerSideProps` for per-request rendering. In the app router, server components and route-specific fetching usually replace those patterns.",
+    "real_world": "This matters when SEO or first paint is important, because search engines and users see the content immediately. A common mistake is fetching everything only in the browser and causing a blank loading state.",
+    "code_lang": "javascript",
+    "code": "export async function getStaticProps() {\n  const posts = await fetch('https://api.example.com/posts').then(r => r.json())\n  return { props: { posts } }\n}",
+    "follow_up": "What is the difference between fetching on the server and fetching in the browser?"
+   },
+   {
+    "question": "What is the difference between the `pages` router and the `app` router?",
+    "answer": "The `pages` router is the older Next.js routing model based on files under `pages/`. The `app` router is the newer model that uses nested layouts, server components by default, and route segments under `app/`. For basic apps they both solve routing, but the app router gives more control over layouts and server rendering patterns.",
+    "real_world": "A team migrating an older app may keep the pages router for existing screens and build new sections in the app router. Knowing which router a codebase uses changes where you put pages, layouts, and data fetching.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a server component, and how is it different from a client component?"
+   },
+   {
+    "question": "What are client components in Next.js, and when do you need one?",
+    "answer": "Client components are React components that run in the browser and can use state, effects, and browser-only APIs like `window`. In the app router, a component becomes a client component when you add the `",
+    "real_world": "Forms, modals, dropdowns, and interactive buttons usually need client components because they depend on state and events. A common mistake is trying to use `useState` in a server component and getting an error.",
+    "code_lang": "javascript",
+    "code": "\"use client\"\nimport { useState } from 'react'\nexport default function Counter() {\n  const [n, setN] = useState(0)\n  return <button onClick={() => setN(n + 1)}>{n}</button>\n}",
+    "follow_up": "Why would you prefer a server component when you do not need client-side interactivity?"
+   },
+   {
+    "question": "What is the `Link` component in Next.js used for?",
+    "answer": "`Link` is used for client-side navigation between routes. It prefetches pages when appropriate and avoids a full page reload, which makes navigation feel faster and preserves app state better than a normal anchor reload. For external links, you usually still use a regular `<a>` tag.",
+    "real_world": "A common beginner mistake is using `window.location` or plain anchors for internal navigation, which causes slower transitions and loses client-side benefits. `Link` is the standard way to move between Next.js pages.",
+    "code_lang": "javascript",
+    "code": "import Link from 'next/link'\n\nexport default function Nav() {\n  return <Link href=\"/dashboard\">Dashboard</Link>\n}",
+    "follow_up": "When would you choose a normal `<a>` tag instead of `Link`?"
+   },
+   {
+    "question": "What are API routes in Next.js?",
+    "answer": "API routes are server endpoints defined inside the Next.js app, so you can build simple backend handlers without a separate server. They are useful for form submissions, webhooks, and small API needs. They are not a replacement for a full backend when your app needs complex business logic, long-lived processes, or heavy server-side architecture.",
+    "real_world": "Small teams often use API routes for contact forms or third-party webhook receivers because they are easy to deploy with the frontend. They also help keep simple server logic in one project.",
+    "code_lang": "javascript",
+    "code": "export default function handler(req, res) {\n  if (req.method !== 'POST') return res.status(405).end()\n  res.status(200).json({ ok: true })\n}",
+    "follow_up": "What are the limits of putting backend logic inside a Next.js app?"
+   },
+   {
+    "question": "What does `next/image` do, and why use it?",
+    "answer": "`next/image` is an optimized image component that helps with resizing, lazy loading, and serving appropriately sized images. It improves performance and reduces layout shifts compared with using raw `<img>` tags. The trade-off is that it has more rules and setup, especially for remote images.",
+    "real_world": "Image-heavy pages like product listings or blogs often have poor performance because unoptimized images are too large. Using `next/image` helps control bandwidth and loading behavior.",
+    "code_lang": "javascript",
+    "code": "import Image from 'next/image'\n\nexport default function Avatar() {\n  return <Image src=\"/me.png\" alt=\"Me\" width={200} height={200} />\n}",
+    "follow_up": "What is layout shift, and how do images contribute to it?"
+   },
+   {
+    "question": "What is one common mistake beginners make with environment variables in Next.js?",
+    "answer": "A common mistake is assuming all environment variables are available in the browser. In Next.js, only variables meant for the client are exposed there, while secret values must stay server-side. This matters because putting secrets into client code can leak them to users.",
+    "real_world": "Teams sometimes accidentally expose API keys in frontend bundles and discover it only after a security review. Another common issue is forgetting to restart the dev server after changing environment files.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely use a secret API key in a Next.js app?"
+   },
+   {
+    "question": "What does `next dev`, `next build`, and `next start` each do?",
+    "answer": "`next dev` starts the development server with fast refresh and on-demand compilation. `next build` creates the production build and checks for build-time errors. `next start` runs the built app in production mode, so it only works after `next build`.",
+    "real_world": "A team may think an app is “broken in production” when it only worked under `next dev`; the build step catches errors like unsupported dynamic behavior before deployment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of issues can show up during `next build` that you might not notice in development?"
+   },
+   {
+    "question": "How do you add a dynamic route in Next.js, and what does the bracket syntax mean?",
+    "answer": "You create a file or folder with brackets, like `[id]`, to match a variable part of the URL. Next.js puts that segment into the route params so you can read it in the page or handler. This is how you build pages like `/products/123` without creating one file per product.",
+    "real_world": "This is used for profile pages, product detail pages, and blog posts where the URL includes an identifier or slug.",
+    "code_lang": "jsx",
+    "code": "// pages/products/[id].js\nimport { useRouter } from 'next/router';\nexport default function Product() {\n  const router = useRouter();\n  return <p>Product {router.query.id}</p>;\n}",
+    "follow_up": "How would you handle a route like `/docs/a/b/c`?"
+   },
+   {
+    "question": "What is a catch-all route in Next.js, and when would you use it?",
+    "answer": "A catch-all route uses `[...]` in the filename, like `[...slug]`, to match multiple path segments. It is useful when the number of nested segments is not fixed, such as documentation pages or category paths. You use it when one page needs to handle many URL shapes instead of one exact segment.",
+    "real_world": "A docs site often uses catch-all routes so `/docs/getting-started/install` and `/docs/api/auth` can share the same page logic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between `[...slug]` and `[[...slug]]`?"
+   },
+   {
+    "question": "How do you create a custom 404 page in Next.js?",
+    "answer": "You add a `404` page, and Next.js will use it when no route matches. This lets you control the messaging, links, and branding instead of showing a generic not found page. It is a simple way to improve navigation for users who land on a bad URL.",
+    "real_world": "Broken links from old emails or search results often send users to missing pages; a useful 404 page can guide them back to the right content.",
+    "code_lang": "jsx",
+    "code": "// pages/404.js\nexport default function NotFound() {\n  return <h1>Page not found</h1>;\n}",
+    "follow_up": "How do you return a not-found state from a dynamic page?"
+   },
+   {
+    "question": "What is the difference between `next/head` and the document metadata you can define in the app router?",
+    "answer": "Both are used to control the document head, like the page title and description, but they belong to different routing systems. In the pages router, you typically use `next/head`; in the app router, metadata is usually defined through route metadata exports. The important idea is that head content should be set per page, not only globally.",
+    "real_world": "Teams use page-specific titles and descriptions for SEO and social sharing, so product pages and blog posts do not all look the same in search results.",
+    "code_lang": "jsx",
+    "code": "import Head from 'next/head';\nexport default function Page() {\n  return (\n    <>\n      <Head><title>About</title></Head>\n      <p>About us</p>\n    </>\n  );\n}",
+    "follow_up": "Why is it better to set the title per page instead of once in a shared layout?"
+   },
+   {
+    "question": "What does the `public` folder do in Next.js?",
+    "answer": "Files in `public` are served directly from the site root without going through React or bundling. You use it for static assets like images, favicons, and robots files that need stable URLs. This is different from importing an asset into a component, which makes it part of the build output.",
+    "real_world": "A logo in `public/logo.svg` can be referenced as `/logo.svg` anywhere in the app, which is convenient for shared assets and marketing pages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you import an image instead of putting it in `public`?"
+   },
+   {
+    "question": "How do you navigate programmatically in Next.js, and when would you do that instead of using `Link`?",
+    "answer": "You use the router from Next.js to push a new URL in response to code, such as after a form submit or login. `Link` is best for normal clickable navigation, but programmatic navigation is useful when the route depends on an action or condition. The trade-off is that programmatic navigation is less declarative, so it should not replace simple links.",
+    "real_world": "After a user signs in, the app may redirect them to the dashboard only if authentication succeeds.",
+    "code_lang": "jsx",
+    "code": "import { useRouter } from 'next/router';\nexport default function Login() {\n  const router = useRouter();\n  const onSubmit = () => router.push('/dashboard');\n  return <button onClick={onSubmit}>Sign in</button>;\n}",
+    "follow_up": "How would you replace the current page instead of adding a new history entry?"
+   },
+   {
+    "question": "What is a rewrite in Next.js?",
+    "answer": "A rewrite maps one URL to another destination without changing the URL the user sees in the browser. It is useful for proxying, migrations, and keeping old links working while moving content. Unlike redirects, rewrites are invisible to the user and keep the original address bar value.",
+    "real_world": "A team might rewrite `/blog/:slug` to a new CMS-backed path while preserving old marketing URLs.",
+    "code_lang": "javascript",
+    "code": "// next.config.js\nmodule.exports = {\n  async rewrites() {\n    return [{ source: '/old-path', destination: '/new-path' }];\n  },\n};",
+    "follow_up": "When would you choose a redirect instead of a rewrite?"
+   },
+   {
+    "question": "Why does Next.js care about the `key` prop in lists, and what happens if you use a bad key?",
+    "answer": "Keys help React identify which list items changed, were added, or were removed. If you use unstable keys like array indexes for items that can reorder, React may reuse the wrong component state. That can cause bugs like an input keeping the wrong value after list updates.",
+    "real_world": "This matters in todo lists, table rows, and sortable cards where users can reorder or delete items and expect state to stay attached to the right row.",
+    "code_lang": "jsx",
+    "code": "items.map((item) => (\n  <li key={item.id}>{item.name}</li>\n))",
+    "follow_up": "When is using the array index as a key acceptable?"
+   },
+   {
+    "question": "How do you deploy a Next.js app, and what is the basic thing you need to remember about build output?",
+    "answer": "You deploy the app by building it first and then serving the built output in the environment that runs it. The main thing to remember is that production should use the optimized build, not the development server. If the deployment platform handles Next.js for you, it still needs the app to build successfully during deployment.",
+    "real_world": "A common release problem is a CI pipeline that passes locally but fails in the deploy step because the production build exposes a missing import or invalid page.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What usually goes into environment variables or platform settings during deployment?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "When would you choose a Server Component over a Client Component in the app router, and what trade-off are you making?",
+    "answer": "Use a Server Component when the UI can be rendered from server data and does not need browser-only APIs or client state. That keeps JavaScript out of the client bundle and can improve initial load and data fetching. Use a Client Component when you need interactivity like hooks, event handlers, local state, or access to the DOM. The trade-off is simpler interactivity versus smaller bundles and less client-side work.",
+    "real_world": "This matters on pages like product detail or marketing pages where most content is static but a few controls are interactive. Teams often move as much as possible back to Server Components to cut bundle size after noticing slow mobile loads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you pass data from a Server Component to a Client Component without breaking the boundary?"
+   },
+   {
+    "question": "How do you handle loading and error states in the app router, and why is that better than sprinkling manual conditionals everywhere?",
+    "answer": "In the app router, you can use route-level loading and error files so Next.js shows fallback UI automatically while data is resolving or when a segment fails. That keeps loading and error behavior close to the route that owns it, instead of duplicating checks inside many components. It also makes streaming and partial rendering work naturally. Manual conditionals still matter for component-level states, but route-level boundaries are cleaner for shared page states.",
+    "real_world": "This is useful when a dashboard has several sections that load independently. If one request fails, you can show a segment-specific error without taking down the whole page.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a route-level error boundary and handling an error inside the data-fetching code?"
+   },
+   {
+    "question": "What happens if a Server Component reads cookies or headers during rendering, and what does that mean for caching and performance?",
+    "answer": "Reading request-specific values like cookies or headers makes the render depend on the incoming request, so the result cannot be treated like a fully static page. That usually reduces the chance that Next.js can reuse cached output across requests. It is necessary for personalization and auth checks, but you should keep that logic as narrow as possible so the rest of the page can still be cached or streamed efficiently. The main trade-off is personalization versus cacheability.",
+    "real_world": "A common case is rendering a signed-in navigation state or tenant-specific content. If you read request data too broadly, an otherwise cacheable page can become slower for everyone.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure a page so only one small part depends on the request while the rest stays cache-friendly?"
+   },
+   {
+    "question": "How do route handlers differ from API routes in the pages router, and when would you use them?",
+    "answer": "Route handlers live in the app router and are placed alongside the route they serve, which makes them fit naturally into the same folder structure as the UI. They are a good choice for simple backend endpoints, webhooks, and proxying to other services. Compared with pages-router API routes, they integrate better with the app router model and can share the same route segment conventions. For larger backend systems, though, they are still just server code inside your Next.js app, not a replacement for a dedicated API.",
+    "real_world": "Teams often use route handlers for webhook receivers from payment providers or auth callbacks. Putting the endpoint next to the page or segment makes ownership and deployment easier.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would make you choose a separate backend service instead of keeping the endpoint in Next.js?"
+   },
+   {
+    "question": "What problem does middleware solve in Next.js, and what should you be careful about when using it?",
+    "answer": "Middleware is for running lightweight logic before a request reaches a page or route, such as redirects, locale handling, or simple auth gates. It is useful because it can intercept requests early and apply rules consistently. The main caution is that it runs on every matching request, so heavy logic or unnecessary checks can hurt latency. It should be quick and focused, not a place for large data fetching or business workflows.",
+    "real_world": "A common use is sending unauthenticated users away from protected routes before the page renders. Another is redirecting users based on locale or feature rollout rules.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug a case where middleware seems to run on requests you did not expect?"
+   },
+   {
+    "question": "How do you decide between fetching data on the server and fetching it in a Client Component after hydration?",
+    "answer": "Fetch on the server when the page needs the data for its initial render, SEO, or faster first paint. Fetch on the client when the data depends on user interaction, changes frequently, or should update without a full navigation. Server fetching reduces client bundle work and avoids loading spinners for the initial view, but client fetching can simplify live updates and highly interactive screens. The right choice depends on whether the data is part of the page shell or part of ongoing interaction.",
+    "real_world": "This comes up in feeds and dashboards where some data should be ready immediately, but filters or live refreshes happen after the page loads. Teams often split the page so the shell is server-rendered and the dynamic parts fetch on the client.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you avoid fetching the same data twice when combining server and client fetching?"
+   },
+   {
+    "question": "What causes hydration mismatch errors in Next.js, and how do you track one down?",
+    "answer": "A hydration mismatch happens when the HTML rendered on the server does not match what the client renders on first load. Common causes are using random values, dates, browser-only APIs, or rendering different content before effects run. To debug it, compare what the server can know versus what only the browser knows, then isolate the component that changes between renders. The fix is usually to move the unstable part into an effect, make the output deterministic, or mark the component as client-side only if needed.",
+    "real_world": "This often shows up in production when a page looks fine locally but fails after deploy because time zones or browser state change the markup. It can also happen when a library reads `window` during render.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a safe pattern for rendering time or locale-sensitive content without causing a mismatch?"
+   },
+   {
+    "question": "How do `next/font` and CSS modules help with performance and maintainability compared with a global stylesheet setup?",
+    "answer": "`next/font` lets you load fonts in a way that avoids common layout shift and extra network work from ad hoc font loading. CSS modules scope styles to a component, which reduces accidental collisions and makes refactoring safer. A global stylesheet is still useful for resets or design tokens, but large apps usually benefit from local styles for component ownership. The trade-off is more files and structure versus fewer naming conflicts and better encapsulation.",
+    "real_world": "This matters in design-system-heavy apps where many teams touch the same codebase. Scoped styles reduce regressions when one component’s class names accidentally affect another part of the site.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you still prefer a global CSS file in a Next.js app?"
+   },
+   {
+    "question": "What do `generateStaticParams` and dynamic route params let you do in the app router, and what happens if a path is not generated ahead of time?",
+    "answer": "`generateStaticParams` lets you predeclare which dynamic routes should be built ahead of time for static output. It is useful when the set of paths is known or can be fetched at build time, like blog posts or product slugs. If a path is not generated, Next.js can either handle it at request time or return a not-found result depending on your route behavior and data flow. The trade-off is faster prebuilt pages versus flexibility for large or changing route sets.",
+    "real_world": "A commerce site might prebuild top products but leave long-tail products to be rendered on demand. That keeps build times manageable while still giving fast pages for the most visited routes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle a catalog with hundreds of thousands of product pages without making builds too slow?"
+   },
+   {
+    "question": "How do you test a Next.js component or page that depends on routing or navigation, and what are you trying to verify?",
+    "answer": "You usually test the user-visible behavior, not the Next.js internals: that a click triggers navigation, a route-based component renders the right state, or a link points where you expect. For components that use router hooks, mock the routing layer or wrap them in a test helper so the component can render in isolation. For page-level tests, verify the rendered output and interactions around params, search state, and conditional UI. The main goal is to catch regressions in integration points without overspecifying implementation details.",
+    "real_world": "This is useful when refactoring a page from the pages router to the app router or when a navigation bug only shows up after a click. Good tests catch broken route params and incorrect redirects before release.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What do you avoid mocking in a test if you want to keep it close to real user behavior?"
+   },
+   {
+    "question": "How do you decide whether to use Server Actions, a route handler, or a traditional form submit in a Next.js app?",
+    "answer": "Use a Server Action when the interaction is tightly coupled to a form or UI event and you want to keep the mutation close to the component tree. Use a route handler when the endpoint needs to be called by non-React clients, webhooks, or other services, or when you want a clear HTTP boundary. Traditional form submit still makes sense when progressive enhancement matters and you can let the browser handle the request. The trade-off is mostly between ergonomics, reusability, and how explicit you want the network contract to be.",
+    "real_world": "A checkout form might use a Server Action for the normal browser flow, while the same order creation logic is also exposed through a route handler for webhook retries or mobile clients. Teams often start with Server Actions and later extract shared business logic once multiple entry points appear.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you validate and handle errors consistently across those three approaches?"
+   },
+   {
+    "question": "What is a practical reason to use nested layouts in the app router, and what can go wrong if you put shared UI in the wrong place?",
+    "answer": "Nested layouts let you preserve shared UI like navigation, sidebars, and auth shell state across route changes without remounting everything. That improves perceived performance and avoids losing local state in persistent chrome. If you place a component too high, it may wrap routes that do not need it and force unnecessary data fetching or client-side bundles. If you place it too low, you can duplicate chrome or reset state when navigating between sibling routes.",
+    "real_world": "In a dashboard, keeping the sidebar in a parent layout prevents it from re-rendering on every page change and preserves collapsed/open state. If that sidebar lives inside each page, users see flicker and lose their scroll or toggle state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle a dashboard layout that needs one sidebar for authenticated users and a different shell for marketing pages?"
+   },
+   {
+    "question": "How do you cache fetches in the app router, and when would you intentionally opt out of caching?",
+    "answer": "In the app router, server-side data fetching can be cached and reused across requests depending on how the request is made and what dynamic data it depends on. You opt out when the data is user-specific, highly volatile, or must always reflect the latest state, such as notifications or stock levels. The key trade-off is freshness versus latency and origin load. If you cache too aggressively, users see stale data; if you disable caching everywhere, you lose a big performance benefit.",
+    "real_world": "A product listing page can usually tolerate short-lived caching, but an account balance page cannot. Teams often end up mixing cached catalog data with uncached per-user data in the same route.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you debug a page that is unexpectedly serving stale data after a deployment?"
+   },
+   {
+    "question": "What is the point of `useTransition` in a Next.js client component, and when does it help more than a normal loading state?",
+    "answer": "`useTransition` lets you mark a state update as non-urgent so the UI stays responsive while a route change or expensive update is in progress. It is useful when the user should still be able to type, click, or keep interacting while navigation or filtering happens. A normal loading state often blocks or replaces too much of the UI too early. The trade-off is more complexity, but smoother interaction for slower operations.",
+    "real_world": "On a search page, typing into an input while route-driven filters update can feel laggy without a transition. Teams use this to keep keystrokes responsive while the results area updates in the background.",
+    "code_lang": "javascript",
+    "code": "\"use client\";\nimport { useTransition } from \"react\";\n\nexport default function SearchButton({ onSearch }) {\n  const [pending, startTransition] = useTransition();\n  return <button onClick={() => startTransition(() => onSearch())}>\n    {pending ? \"Searching...\" : \"Search\"}\n  </button>;\n}",
+    "follow_up": "How is that different from just showing a spinner while waiting for a promise?"
+   },
+   {
+    "question": "What happens if you call `router.refresh()` in the app router, and when is that better than a full page reload?",
+    "answer": "`router.refresh()` asks Next.js to re-fetch the current route’s server components and merge the new result into the page without a full browser reload. It is useful after a mutation when you want fresh server data but do not want to lose client state or remount the whole app. This is lighter than `window.location.reload()`, which drops client state and re-downloads everything. The trade-off is that it only refreshes the current route tree, not arbitrary client-only state.",
+    "real_world": "After saving a profile setting, a team might call `router.refresh()` so the header and sidebar pick up the updated user name immediately. A full reload would be slower and could wipe unsaved UI state elsewhere on the page.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of stale UI problems can still remain after a refresh?"
+   },
+   {
+    "question": "How do you avoid shipping too much JavaScript from a Next.js page, and what are the first things you would check when bundle size grows?",
+    "answer": "Start by pushing as much logic as possible into Server Components and keeping Client Components small and focused. Check whether large dependencies were pulled into a client boundary, whether shared components accidentally became client components, and whether code splitting is happening where you expect. Also inspect third-party libraries, since one heavy import can dominate the bundle. The trade-off is between interactive features and the amount of code the browser must hydrate.",
+    "real_world": "A page can become slow after someone imports a date library or charting package into a shared client component. Teams usually catch this by looking at the build output and profiling the largest client chunks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a good way to confirm whether a specific library is responsible for the slowdown?"
+   },
+   {
+    "question": "How would you handle authentication checks in Next.js without duplicating the same guard in every page?",
+    "answer": "A common pattern is to centralize auth in middleware for broad request gating, then do a finer-grained check in server components or route handlers where the actual data access happens. Middleware is good for redirecting obvious unauthenticated requests early, but it should not be the only security layer. For data access, server-side checks are still required because middleware can be bypassed by direct calls to backend endpoints. The trade-off is convenience versus defense in depth.",
+    "real_world": "A SaaS app may redirect anonymous users from `/dashboard` in middleware, but still verify the session again before fetching account data. That prevents accidental leaks if a route is reached through another path.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you avoid putting a check in middleware and do it later in the request flow instead?"
+   },
+   {
+    "question": "What are the trade-offs between CSS Modules, global CSS, and a component library in a Next.js project?",
+    "answer": "CSS Modules are a good default because they scope styles to components and reduce naming collisions. Global CSS is useful for resets, base typography, and truly app-wide tokens, but it becomes hard to reason about as the app grows. A component library gives consistency and speed, but can hide styling decisions and make customization harder. The main trade-off is between isolation, consistency, and how much styling flexibility the team wants.",
+    "real_world": "In a growing product, global CSS often starts simple and then becomes a source of regressions when unrelated pages affect each other. Teams usually keep only foundational styles global and move feature styles into modules or design-system components.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure styles for a page with both shared app chrome and a one-off marketing section?"
+   },
+   {
+    "question": "What does `dynamic = 'force-dynamic'` or a similar per-route dynamic setting change conceptually in the app router, and why would you use it sparingly?",
+    "answer": "It tells Next.js not to treat that route as statically cacheable and to render it dynamically on each request. You use that when the page depends on request-specific data like cookies, headers, or rapidly changing content that cannot be safely reused. It should be used sparingly because you give up caching and some performance benefits. If only part of the route is dynamic, it is often better to isolate that part instead of making the whole page dynamic.",
+    "real_world": "A personalized homepage might need to read the user session and therefore cannot be fully static. Teams try to keep the rest of the shell cacheable so only the personalized portion pays the dynamic cost.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide whether to move the dynamic piece into a smaller component instead of making the whole route dynamic?"
+   },
+   {
+    "question": "How do you debug a production-only bug in Next.js when it works in development but breaks after build?",
+    "answer": "First reproduce with a production build locally, because dev mode hides some optimization and rendering differences. Then check for issues that only show up after bundling, such as server/client boundary mistakes, environment differences, or code that relies on development-only behavior. I would also inspect logs from both server and client, since failures can happen during server render, hydration, or a client transition. The important thing is to narrow down which render phase is failing before changing code.",
+    "real_world": "A component may work in `next dev` but fail in production because it reads `window` during server rendering or depends on a value that is only available in the browser. Teams often catch this only after a real deployment or a local production run.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signs help you tell whether the bug is in server rendering, hydration, or client-side navigation?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does streaming rendering actually work in the Next.js app router, and what are the failure modes when part of the tree is slow or throws?",
+    "answer": "Next.js renders the React Server Component tree in chunks and can stream HTML and component payloads as Suspense boundaries resolve, instead of waiting for the whole page. A slow subtree delays only the boundary around it, while already-ready parts can flush early. If a streamed subtree throws, the nearest error boundary handles it; without one, you can lose a much larger portion of the response. The trade-off is better time-to-first-byte and perceived speed, but more complexity around boundary placement, waterfall risks, and partial failure behavior.",
+    "real_world": "A common incident is putting one top-level Suspense around the whole page, which turns a single slow backend call into an all-or-nothing response. Teams usually place boundaries around independently slow sections like recommendations, comments, or personalization.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose where to place Suspense and error boundaries on a dashboard with several independent data sources?"
+   },
+   {
+    "question": "What is the React Server Component payload in Next.js, and why does it matter for performance even when you are not shipping much client JavaScript?",
+    "answer": "The browser does not just get HTML; it also receives a serialized server component payload that describes the rendered tree and how to hydrate client component islands. That payload can become large if you pass big props, duplicate fetched data across boundaries, or overuse client components high in the tree. So low JS bundle size is not the full story: you also need to watch server payload size and request count. The trade-off is that RSC reduces client execution cost, but it can still create network and serialization overhead.",
+    "real_world": "Teams sometimes migrate to server components and expect major wins, then find pages are still slow on weak networks because the RSC payload is huge. This often happens when entire CMS documents or large arrays are passed through multiple component layers.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of props or component boundaries tend to inflate the RSC payload the most?"
+   },
+   {
+    "question": "If two components in the same request fetch the same data in Next.js, when is it deduplicated and when can you still accidentally double-hit the backend?",
+    "answer": "Within a single render pass, identical fetch calls are often deduplicated so the same resource is not requested twice. But dedupe depends on the request being effectively the same and happening within the same server render context; different URLs, headers, cache options, or separate code paths outside that context can still cause duplicate backend calls. Wrapping non-fetch data loaders with a cache layer can help when the source is a database client or SDK. The key trade-off is convenience versus being explicit about request identity and cache scope.",
+    "real_world": "This matters on product pages where price, inventory, and metadata components all ask for the same product record. Without dedupe, one page render can fan out into multiple identical origin calls and overload a slow service.",
+    "code_lang": "typescript",
+    "code": "import { cache } from 'react'\n\nexport const getUser = cache(async (id: string) => {\n  return db.user.findUnique({ where: { id } })\n})\n\nexport default async function Page() {\n  const [a, b] = await Promise.all([getUser('1'), getUser('1')])\n  return <div>{a?.name === b?.name ? 'same' : 'diff'}</div>\n}",
+    "follow_up": "What would make two fetches that look similar stop deduplicating in practice?"
+   },
+   {
+    "question": "How would you think about invalidation in Next.js with time-based revalidation versus on-demand revalidation, and what can go wrong under load?",
+    "answer": "Time-based revalidation is simple for content that can be slightly stale, but it lets stale data live until the timer expires. On-demand revalidation gives fresher results after writes, but now your mutation path must reliably trigger invalidation and handle retries or failures. Under load, many requests can notice stale content at once and stampede the origin if regeneration is not controlled by the platform or your architecture. The trade-off is freshness versus operational simplicity and backend protection.",
+    "real_world": "A common production issue is a CMS publish event failing silently, so marketing sees old pages for much longer than expected. Another is a hot page expiring and causing a burst of expensive recomputations against the origin.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design revalidation for a site with rare content changes but very high read traffic?"
+   },
+   {
+    "question": "What are the important differences between running Next.js logic on the Edge runtime versus the Node.js runtime, and how do those differences affect architecture?",
+    "answer": "Edge runtime can reduce latency by running closer to users, but it has a more constrained environment and is best for small, fast request-time logic. Some Node-specific libraries, large dependencies, or long-running work may not fit well there, while Node runtime is more flexible for richer server behavior. You also need to think about where data lives, because moving compute to the edge does not remove latency to a centralized database. The trade-off is lower request latency versus runtime constraints and potentially more distributed complexity.",
+    "real_world": "Teams often move auth or geolocation checks to the edge and get faster redirects, then discover their database-backed personalization still pays the same cross-region round trip. Another failure mode is importing a package that works in Node but breaks in the edge runtime.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of code would you keep out of middleware or edge handlers even if they technically work?"
+   },
+   {
+    "question": "How do server actions actually change the request flow compared with a client-side mutation followed by a refetch, and what are the main risks?",
+    "answer": "A server action lets the client invoke server-side code directly through the framework's transport, often followed by re-rendering affected server components. That can remove a lot of custom API plumbing and keep validation and secrets on the server, but it couples mutations to framework behavior and makes cache invalidation and optimistic UI more important. You still need authorization and input validation because calling a server action is not the same as trusting the client. The trade-off is faster development and tighter server integration versus less explicit network boundaries.",
+    "real_world": "In production, teams get into trouble when a server action updates data but forgets to revalidate the affected views, so the user submits successfully and still sees stale content. Another issue is assuming hidden form fields are trustworthy because the code runs on the server.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you still prefer a route handler or external API over a server action for a write path?"
+   },
+   {
+    "question": "What causes request waterfalls in Next.js server rendering, and how do you restructure a page to avoid them?",
+    "answer": "Waterfalls happen when one awaited fetch blocks discovery of the next, so total latency becomes the sum of multiple backend calls instead of roughly the max of them. In server components this often comes from awaiting data too high in the tree, or from nested components that cannot start work until parent props arrive. The fix is to start independent work in parallel, push awaits down toward the component that truly needs the data, and use Suspense boundaries to reveal ready sections sooner. The trade-off is slightly more orchestration for much better tail latency.",
+    "real_world": "This shows up on dashboards where user, permissions, metrics, and notifications are fetched one after another. A page that should feel near-instant becomes slow because three 200 ms calls turn into 600 ms plus rendering.",
+    "code_lang": "typescript",
+    "code": "export default async function Page() {\n  const userPromise = getUser()\n  const statsPromise = getStats()\n  const alertsPromise = getAlerts()\n\n  const [user, stats, alerts] = await Promise.all([\n    userPromise, statsPromise, alertsPromise\n  ])\n  return <Dashboard user={user} stats={stats} alerts={alerts} />\n}",
+    "follow_up": "How would Suspense change your approach if one of those data sources is much slower than the others?"
+   },
+   {
+    "question": "If a Next.js route is statically generated and a dependency goes down during regeneration, what behavior would you want and why?",
+    "answer": "For most content pages, I would prefer serving the last known good version rather than failing requests while regeneration is broken. That keeps availability high and limits blast radius from transient origin issues, even though it means temporary staleness. For highly dynamic or correctness-critical pages, you may choose to fail or bypass cache instead. The trade-off is stale-but-available versus fresh-but-fragile, and the right answer depends on the business impact of old data.",
+    "real_world": "An e-commerce team may accept a stale marketing page for minutes or hours, but not a stale checkout total. Incidents often happen when one generic strategy is applied to every route regardless of correctness requirements.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which routes in a typical product would you classify as correctness-critical rather than availability-first?"
+   },
+   {
+    "question": "How would you diagnose a memory or CPU issue in a busy Next.js server process, and what Next.js-specific patterns commonly cause it?",
+    "answer": "I would first separate build-time, request-time, and background workload, then inspect heap growth, event loop delay, and request latency under realistic traffic. In Next.js, common causes are loading large datasets in server components, serializing oversized props, doing expensive work in layouts that run frequently, or keeping in-memory caches that do not fit a multi-instance deployment. Client/server boundary mistakes can also bloat both server work and client hydration cost. The trade-off is often between convenience and resource predictability at scale.",
+    "real_world": "A real incident is a shared layout fetching and holding a huge navigation tree or tenant config on every request, driving up memory and GC pauses. Another is assuming a process-local cache will save backend load, only to see poor hit rates once traffic is spread across many instances.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would tell you this is a CPU saturation problem versus a memory leak?"
+   },
+   {
+    "question": "How do parallel routes and intercepting routes change composition in the app router, and what are the gotchas around state, URL semantics, and refreshes?",
+    "answer": "They let you render multiple route segments together or overlay a route, like showing a details page in a modal while preserving the background context. That is powerful for UX, but it complicates mental models: the same URL might render differently depending on navigation path, and refresh or direct entry may produce a full page instead of the in-app overlay. You also need to be careful about where state lives, because segment remounting can reset client state unexpectedly. The trade-off is richer navigation patterns versus more routing complexity and edge cases.",
+    "real_world": "This often matters in media galleries or admin tables where clicking an item opens a modal but should still support deep links. Teams get bugs when QA refreshes the modal URL and sees a different layout than when arriving through client navigation.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a modal route so it still behaves sensibly on direct navigation and browser back?"
+   },
+   {
+    "question": "How does partial prerendering work conceptually in Next.js, and what trade-offs would you evaluate before enabling it on a high-traffic route?",
+    "answer": "Partial prerendering splits a route into a static shell that can be served immediately and dynamic parts that stream in later. The benefit is lower time to first byte and better cacheability for the stable parts, without forcing the whole page to be dynamic. The trade-off is that your suspense boundaries become part of your delivery architecture: bad boundary placement can create janky reveal order or hide critical content behind slow dynamic sections. I would evaluate whether the shell is actually useful without the dynamic data, how often the dynamic regions vary per user, and whether the extra complexity beats a simpler fully static or fully dynamic route.",
+    "real_world": "A product listing page might serve header, filters, and category copy from cache while personalized pricing or inventory streams later. Teams get into trouble when they move key above-the-fold content behind a dynamic boundary and improve TTFB while hurting perceived usability.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Where would you place suspense boundaries so the shell is meaningful but you do not create too many tiny streamed fragments?"
+   },
+   {
+    "question": "When would you use `unstable_cache` or a similar explicit server cache instead of relying on fetch caching, and what can go wrong?",
+    "answer": "I’d use an explicit server cache when the expensive work is not a plain fetch, like a database query, a computed aggregation, or a call through an SDK Next.js cannot automatically cache. It gives you cache keys and revalidation semantics for arbitrary async work, but then cache correctness becomes your responsibility. The main risks are key collisions, stale results after writes, and accidentally caching user-specific data in a shared scope. It also does not fix a poor invalidation model; it just makes it faster to return the wrong thing.",
+    "real_world": "This comes up when a team wraps a CMS or database layer instead of calling `fetch` directly. A common production incident is caching results by slug but forgetting locale or tenant in the key, so one customer sees another customer’s content.",
+    "code_lang": "typescript",
+    "code": "import { unstable_cache } from 'next/cache'\n\nconst getProduct = unstable_cache(\n  async (id: string) => db.product.findUnique({ where: { id } }),\n  ['product'],\n  { revalidate: 300 }\n)\n",
+    "follow_up": "How would you design the cache key and invalidation strategy for multi-tenant or per-locale data?"
+   },
+   {
+    "question": "What actually happens when you call `revalidateTag` or `revalidatePath`, and how would you choose between them?",
+    "answer": "Both mark cached output as stale so later requests recompute it, but they target different scopes. `revalidatePath` is route-oriented and is useful when a page or layout tree should be refreshed because its rendered output changed. `revalidateTag` is data-oriented and is better when many routes depend on the same underlying entity, so you invalidate the shared dependency once instead of naming every path. I choose tags for content models and shared resources, and paths when the coupling is mostly at the page level.",
+    "real_world": "After editing a product, you may need the product detail page, listing pages, and search landing pages to show fresh data. Teams that only revalidate the detail path often ship stale list pages for minutes or hours because those pages cached the old product summary independently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure mode do you watch for if a write path triggers a very broad tag invalidation under heavy traffic?"
+   },
+   {
+    "question": "How would you explain the lifecycle of a route segment during soft navigation in the app router, especially around what gets preserved versus remounted?",
+    "answer": "On soft navigation, Next.js requests a new React Server Component payload for the parts of the tree that changed, then merges it with the existing client state. Layouts and client state can persist if their segment stays mounted, while pages or lower segments that changed remount and rerender. That preservation is powerful for keeping UI state like open panels or scroll containers, but it also means stale assumptions can survive if state is stored too high in the tree. The key is understanding that URL changes do not imply a full app reset anymore.",
+    "real_world": "A dashboard can preserve sidebar state and expensive client widgets while only replacing the main content segment. Bugs appear when a shared client provider lives in a persistent layout and unintentionally keeps state from one entity view when navigating to another.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you force a subtree to reset when navigating between two entities that share the same parent layout?"
+   },
+   {
+    "question": "What are the performance and correctness implications of reading from a database directly in a Server Component instead of going through a route handler or API layer?",
+    "answer": "Direct database access in a Server Component removes an extra network hop and can simplify code, so it is often the fastest path on the server. The downside is architectural: you can blur boundaries, duplicate authorization rules, and make the rendering path depend tightly on database latency and connection limits. A route handler or service layer can centralize auth, validation, observability, and non-UI consumers, but adds indirection. I usually separate the domain logic into shared server-side functions, then call them from Server Components or handlers as needed.",
+    "real_world": "Teams often start with direct ORM calls in components and later struggle when the same logic is needed from webhooks, jobs, or mobile clients. Under load, opening too many database-backed renders can also expose connection pool exhaustion much faster than a batched backend API would.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent N+1 database queries when several nested Server Components each load related data?"
+   },
+   {
+    "question": "How do redirects and `notFound()` behave differently in the app router, and why does that distinction matter for caching and SEO?",
+    "answer": "A redirect short-circuits rendering and tells the client or crawler the resource lives somewhere else, while `notFound()` renders the route’s not-found boundary and represents absence at that URL. That semantic difference matters because search engines and caches should treat a missing page very differently from a canonical move. It also affects product logic: a deleted item might deserve a 404, but an old slug with a known replacement should redirect. Using the wrong one can preserve dead URLs in the index or erase ranking signals from moved content.",
+    "real_world": "A content team changing article slugs usually wants redirects to preserve traffic, not 404s. On ecommerce sites, returning a redirect for truly unavailable products can confuse analytics and keep expired inventory pages indexed longer than intended.",
+    "code_lang": "typescript",
+    "code": "import { notFound, redirect } from 'next/navigation'\n\nif (!product) notFound()\nif (product.slug !== params.slug) {\n  redirect(`/products/${product.slug}`)\n}\n",
+    "follow_up": "How would you handle a case where the old slug could map to multiple possible current records?"
+   },
+   {
+    "question": "What is your strategy for controlling cache stampedes or regeneration bursts in Next.js when a hot page expires?",
+    "answer": "The goal is to avoid many concurrent requests all triggering expensive regeneration or backend fetches for the same content. I combine sensible TTLs, shared cache keys, request deduplication where possible, and stale-while-revalidate behavior so users keep getting the old result while one request refreshes it. For highly volatile hot paths, I prefer on-demand invalidation from the write side instead of very short time-based revalidation. If the backend is fragile, serving slightly stale content is often a better failure mode than synchronized cache misses.",
+    "real_world": "A homepage with a 60-second revalidation window can produce a thundering herd at the minute boundary after a traffic spike. Teams often notice this as periodic CPU and database spikes, not as obvious app errors, because the cache expires successfully but too many renders pile up together.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your answer change if freshness requirements were under a few seconds for a very hot route?"
+   },
+   {
+    "question": "How would you approach serving the same Next.js app for many tenants or domains without blowing up build size and cache fragmentation?",
+    "answer": "I would keep tenant-specific content and configuration out of the build whenever possible and resolve it at request time or from a shared cache, so I am not generating separate artifacts per tenant. The main challenge is cache key design: every layer that caches HTML, data, or images needs tenant identity included, but not so broadly that you destroy reuse. I also separate truly shared assets and code from tenant content to keep bundle and deployment size stable. For a small number of premium tenants, selective static generation can still make sense, but it should be deliberate.",
+    "real_world": "Multi-tenant SaaS teams get burned when marketing asks for hundreds of custom domains and the original strategy was one statically generated site per tenant. Build times, ISR storage, and CDN hit rate all degrade quickly if tenant variance leaks into every path and asset.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What tenant information would you resolve in middleware versus later in the request lifecycle?"
+   },
+   {
+    "question": "What are the biggest gotchas with using browser-only libraries in Next.js, and how do you decide between dynamic import, client boundaries, and replacement?",
+    "answer": "The core issue is that many browser libraries touch `window`, the DOM, or side effects at module load, which breaks during server rendering or increases client bundle size unexpectedly. A client boundary isolates them, and dynamic import can defer loading until needed, but both move work to the browser and can delay interactivity. Sometimes the right answer is replacing the library with one that supports SSR better or using a smaller specialized alternative. I decide based on whether the feature is critical at first paint and how much JavaScript cost it adds.",
+    "real_world": "Rich text editors, charting libraries, and map SDKs are common offenders. A frequent production regression is shipping a large dashboard dependency in a shared client layout, which quietly adds hundreds of kilobytes to routes that never render the widget.",
+    "code_lang": "typescript",
+    "code": "import dynamic from 'next/dynamic'\n\nconst Editor = dynamic(() => import('./Editor'), {\n  ssr: false,\n  loading: () => <p>Loading editor...</p>,\n})\n",
+    "follow_up": "Why is `ssr: false` sometimes a useful escape hatch but still a bad default?"
+   },
+   {
+    "question": "How do you reason about observability in a Next.js app where work is split across middleware, server rendering, route handlers, edge functions, and the browser?",
+    "answer": "I treat a navigation or user action as one distributed transaction and make sure a request or trace ID can flow through each boundary. Server logs alone are not enough because latency can come from RSC rendering, an edge middleware decision, a route handler mutation, or a client-side hydration problem. I want timings around data fetches, cache hits, suspense stalls, and downstream calls, plus error grouping by route segment and runtime. Without that, Next.js incidents often look like random slowness because the expensive part is hidden in a different execution context than the visible failure.",
+    "real_world": "A login redirect loop may start in middleware, render an error boundary on the server, and only surface to the user as a client navigation that never settles. Teams that do not correlate those layers end up debugging each piece in isolation and miss the real root cause.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you instrument first if users report that client navigations feel slow but initial loads are fine?"
+   }
+  ]
+ }
+}

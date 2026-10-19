@@ -1,0 +1,381 @@
+{
+  "slug": "dashboards-green-checkout-down",
+  "title": "All dashboards are green while checkout is unusable",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "observability",
+    "sli",
+    "alerting",
+    "incident-response",
+    "sre"
+  ],
+  "scenario": "For 17 minutes, users cannot complete checkout, but the main service dashboard shows 99.98% availability. The only alerting SLI is GET /health returning 200, and aggregate API latency is dominated by cheap read endpoints. Checkout POST /checkout errors at 35%, but it is only 1.5% of total request volume.",
+  "goal": "Find why the outage stayed invisible and design alerting that detects user-impacting checkout failures quickly.",
+  "concepts": [
+    {
+      "key": "health-check",
+      "name": "Health check",
+      "summary": "A simple endpoint that reports whether a service process is alive enough to answer a basic request. It often does not exercise important business flows.",
+      "used_here": "GET /health returns 200, so the main dashboard stays green even while checkout fails."
+    },
+    {
+      "key": "aggregate-metrics",
+      "name": "Aggregate metrics",
+      "summary": "Metrics that combine many different request types into one number. They can hide a small but important flow when high-volume cheap endpoints dominate the total.",
+      "used_here": "Overall API latency looks fine because read endpoints dominate request volume."
+    },
+    {
+      "key": "endpoint-breakdown",
+      "name": "Endpoint breakdown",
+      "summary": "Splitting metrics by route, method, status, or operation. This shows whether one user action is failing while the whole service average looks normal.",
+      "used_here": "Breaking out POST /checkout reveals a 35% error rate."
+    },
+    {
+      "key": "critical-journey",
+      "name": "Critical user journey",
+      "summary": "A user action that is important to the business, such as checkout, login, or signup. These flows deserve their own reliability signals.",
+      "used_here": "Checkout is low volume but business-critical, so it cannot be monitored only through service-wide averages."
+    },
+    {
+      "key": "sli",
+      "name": "Service level indicator",
+      "summary": "A measured signal that represents user-visible reliability, such as success rate or latency. A good SLI matches what users actually need to work.",
+      "used_here": "The existing SLI measures only GET /health availability, not whether checkout succeeds."
+    },
+    {
+      "key": "slo",
+      "name": "Service level objective",
+      "summary": "A target for an SLI over a time window, such as 99.9% checkout success per month. It defines how reliable the user experience should be.",
+      "used_here": "Checkout needs its own objective so alerts can be tied to user impact."
+    },
+    {
+      "key": "status-code",
+      "name": "HTTP status code",
+      "summary": "A number in an HTTP response that describes the result, such as 200 for success or 500 for server error. Status codes are often used to classify request success and failure.",
+      "used_here": "Checkout 5xx responses should count as system failures for the checkout success SLI."
+    },
+    {
+      "key": "latency-percentile",
+      "name": "Latency percentile",
+      "summary": "A percentile says how slow the slowest portion of requests are, such as p95 being slower than 95% of requests. It is usually more useful than an average for user experience.",
+      "used_here": "Checkout latency should be measured separately because aggregate API latency is dominated by fast reads."
+    },
+    {
+      "key": "synthetic-transaction",
+      "name": "Synthetic transaction",
+      "summary": "An automated test that repeatedly performs a user flow like a real client would. It can detect failures even when real traffic is low.",
+      "used_here": "A test checkout can exercise the path continuously without creating real revenue orders."
+    },
+    {
+      "key": "burn-rate-alert",
+      "name": "Burn-rate alert",
+      "summary": "An alert that fires when errors are consuming the allowed error budget too quickly. Multi-window burn alerts reduce noise while still catching fast outages.",
+      "used_here": "A 35% checkout error rate burns a 99.9% checkout SLO budget very quickly."
+    },
+    {
+      "key": "error-budget",
+      "name": "Error budget",
+      "summary": "The amount of unreliability allowed by an SLO. For a 99.9% success SLO, the error budget is 0.1% failures in the window.",
+      "used_here": "Checkout failing at 35% is 350 times a 0.1% failure budget."
+    },
+    {
+      "key": "shadow-mode",
+      "name": "Shadow mode",
+      "summary": "Running a new alert or system without paging people yet. Teams use it to see whether it would have fired correctly before making it active.",
+      "used_here": "The new checkout alerts can be tested against real traffic before they page engineers."
+    },
+    {
+      "key": "alert-tuning",
+      "name": "Alert tuning",
+      "summary": "Adjusting thresholds, filters, and routing so alerts catch real incidents without too much noise. It usually uses historical data and known incidents.",
+      "used_here": "Checkout alerts need to exclude expected user-caused failures and page only on system impact."
+    },
+    {
+      "key": "runbook",
+      "name": "Runbook",
+      "summary": "A short operational guide for responding to a known alert. It tells the on-call what to check and how to escalate.",
+      "used_here": "A checkout alert should link to steps for checking dependencies, recent deploys, and checkout-specific dashboards."
+    },
+    {
+      "key": "cpu-utilization",
+      "name": "CPU utilization",
+      "summary": "The percentage of compute capacity currently being used. It is useful for capacity issues but does not directly prove a user journey works.",
+      "used_here": "CPU can remain normal while checkout fails because the failure may be in checkout logic or a dependency."
+    },
+    {
+      "key": "fault-injection",
+      "name": "Fault injection",
+      "summary": "A controlled way to introduce a failure to verify detection and recovery. It should be scoped so it does not hurt real users.",
+      "used_here": "A test-only checkout failure can confirm the new SLI and alert fire as expected."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the signal that can explain the mismatch",
+      "question": "The dashboard says 99.98% availability, but users report failed checkout for 17 minutes. Where should you look first to understand how both can be true?",
+      "concept_keys": [
+        "health-check",
+        "aggregate-metrics",
+        "endpoint-breakdown",
+        "critical-journey",
+        "status-code"
+      ],
+      "options": [
+        {
+          "text": "Compare average API latency before and during the incident, because latency usually rises before errors appear.",
+          "correct": false,
+          "hint": "Average latency can be dominated by high-volume endpoints. In this incident, checkout is only 1.5% of traffic, so the average may not represent it.",
+          "id": "a"
+        },
+        {
+          "text": "Break request metrics down by method, endpoint, and status code, especially POST /checkout versus cheap reads.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Read only the GET /health logs, because the availability dashboard is based on that endpoint.",
+          "correct": false,
+          "hint": "That confirms why the current dashboard stayed green, but it does not show whether checkout worked. The failing path may not be exercised by the health endpoint at all.",
+          "id": "c"
+        },
+        {
+          "text": "Check service CPU and memory graphs first, because a real outage should show resource saturation somewhere.",
+          "correct": false,
+          "hint": "Resource saturation is one possible cause, but the symptom is a mismatch between user impact and what the dashboard measures. Start by checking whether the measured signal represents the failing user action.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The reported failure is on POST /checkout, so the first useful view is per-endpoint and per-status behavior. GET /health returning 200 explains the green availability number, and aggregate latency can stay low because cheap reads dominate total traffic. CPU might help later, but it does not explain why users cannot check out while the dashboard is green."
+    },
+    {
+      "title": "Interpret what the endpoint view tells you",
+      "question": "The breakdown shows POST /checkout has a 35% error rate while GET /health remains 200 and read endpoints are fast. What is the best diagnosis of the monitoring failure?",
+      "concept_keys": [
+        "sli",
+        "health-check",
+        "aggregate-metrics",
+        "critical-journey"
+      ],
+      "options": [
+        {
+          "text": "The checkout issue is probably not severe, because checkout is only 1.5% of total request volume.",
+          "correct": false,
+          "hint": "Business impact is not proportional to request volume. A low-volume endpoint can still be the most important user journey.",
+          "id": "a"
+        },
+        {
+          "text": "The dashboard has a math bug, because 35% checkout errors must always make every dashboard red.",
+          "correct": false,
+          "hint": "It depends what the dashboard counts. Here the availability SLI is GET /health returning 200, not all endpoint success.",
+          "id": "b"
+        },
+        {
+          "text": "The observability measures infrastructure liveness and service-wide averages instead of checkout user success.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The main issue is missing host metrics, because checkout errors usually come from overloaded machines.",
+          "correct": false,
+          "hint": "Host metrics may help find a cause, but the immediate monitoring failure is that the alerting signal did not represent the failing user action.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The existing alerting SLI is only GET /health returning 200, so it measures process liveness rather than checkout success. Aggregate API latency also hides the problem because cheap read endpoints dominate the total. The tempting volume-based answer is wrong because checkout can be only 1.5% of requests and still be the critical revenue path."
+    },
+    {
+      "title": "Define the checkout SLI",
+      "question": "You need a production SLI for checkout. Which definition best represents user-visible checkout reliability?",
+      "concept_keys": [
+        "sli",
+        "critical-journey",
+        "status-code",
+        "latency-percentile"
+      ],
+      "options": [
+        {
+          "text": "Database connection count during checkout, because checkout depends on storage being reachable.",
+          "correct": false,
+          "hint": "A dependency metric can help debugging, but it is not the same as measuring whether users completed checkout. The SLI should be about the user-visible result.",
+          "id": "a"
+        },
+        {
+          "text": "Eligible POST /checkout attempts that create an order and return success, plus checkout p95 latency, excluding user-correctable validation declines.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "GET /health success rate plus process uptime, because those signals are stable and easy to collect.",
+          "correct": false,
+          "hint": "Stable signals are not enough if they do not exercise the user journey. A service can be alive and still fail checkout.",
+          "id": "c"
+        },
+        {
+          "text": "Average latency across all API endpoints, because it includes checkout and avoids high-cardinality dashboards.",
+          "correct": false,
+          "hint": "Including checkout is not the same as representing checkout. High-volume read endpoints can dominate the average and hide checkout-specific pain.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A good checkout SLI measures the outcome users care about: an eligible checkout attempt completes successfully and within an acceptable time. Excluding user-correctable validation declines avoids paging on expected business outcomes such as bad input. Average API latency is tempting, but the incident already shows aggregate latency can stay green while checkout fails."
+    },
+    {
+      "title": "Add coverage when real traffic is low",
+      "question": "Checkout traffic is low at night, and you want to know quickly if the path is broken even before many real users try it. What should you add?",
+      "concept_keys": [
+        "synthetic-transaction",
+        "critical-journey",
+        "sli"
+      ],
+      "options": [
+        {
+          "text": "Run a scheduled test checkout with a test cart and test payment path, verify success from multiple regions, and keep it out of real revenue.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Ask support to place a manual order every hour and report failures in the incident channel.",
+          "correct": false,
+          "hint": "Manual checks are slow and inconsistent. A critical path needs automated, repeatable detection.",
+          "id": "b"
+        },
+        {
+          "text": "Add a homepage browser load test, because users usually visit the homepage before checkout.",
+          "correct": false,
+          "hint": "The homepage is a different journey with different dependencies. It can work while checkout is broken.",
+          "id": "c"
+        },
+        {
+          "text": "Increase the frequency of GET /health checks from every 30 seconds to every 5 seconds.",
+          "correct": false,
+          "hint": "More frequent checks only help if the check exercises the failing behavior. A faster liveness check can still be green during a checkout outage.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A synthetic checkout continuously exercises the same path users need, so it can catch failures even during low traffic. It must use a test-safe path so it does not create real orders or revenue side effects. Increasing GET /health frequency is tempting, but it still would not have detected this incident because health stayed 200."
+    },
+    {
+      "title": "Choose an alert that pages on user impact",
+      "question": "Assume the checkout SLO is 99.9% successful eligible checkouts over 30 days. During this incident, checkout has 35% errors. What alerting approach should page the on-call?",
+      "concept_keys": [
+        "slo",
+        "error-budget",
+        "burn-rate-alert",
+        "sli",
+        "critical-journey"
+      ],
+      "options": [
+        {
+          "text": "Page on CPU above 80% for ten minutes, because sustained CPU pressure often causes request errors.",
+          "correct": false,
+          "hint": "CPU pressure is a useful symptom for some incidents, but it is not a user-impact SLI. Checkout can fail badly with normal CPU.",
+          "id": "a"
+        },
+        {
+          "text": "Page on multi-window burn rate for the checkout success SLO, using checkout errors from real and safe synthetic attempts.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Page when average API latency doubles over a five-minute window.",
+          "correct": false,
+          "hint": "Averages can move for many reasons and can also stay flat when a low-volume critical path fails. The alert should be tied to the checkout SLI.",
+          "id": "c"
+        },
+        {
+          "text": "Page only when GET /health availability drops below 99.9% for five minutes.",
+          "correct": false,
+          "hint": "That alert follows the old signal. It will miss failures where the process is alive but checkout is broken.",
+          "id": "d"
+        }
+      ],
+      "explanation": "With a 99.9% SLO, the failure budget is 0.1%. A 35% checkout error rate burns that budget at 350 times the allowed rate, so a checkout burn-rate alert should page quickly. Health-check availability and CPU alerts may remain green during exactly this kind of user-impacting failure."
+    },
+    {
+      "title": "Make the new alert safe to enable",
+      "question": "The team is worried that a new checkout alert will be noisy. What is the safest production rollout plan?",
+      "concept_keys": [
+        "shadow-mode",
+        "alert-tuning",
+        "runbook",
+        "sli",
+        "burn-rate-alert"
+      ],
+      "options": [
+        {
+          "text": "Publish a checkout dashboard without paging, because dashboards avoid alert noise and engineers can inspect them when needed.",
+          "correct": false,
+          "hint": "Dashboards are useful during investigation, but they do not wake anyone during a 17-minute outage. Critical user impact needs an actionable page.",
+          "id": "a"
+        },
+        {
+          "text": "Enable paging immediately on any single checkout failure, then relax the threshold if on-call load becomes too high.",
+          "correct": false,
+          "hint": "A single failure can be normal in distributed systems. Start with thresholds tied to the SLO so the alert means user impact.",
+          "id": "b"
+        },
+        {
+          "text": "Replace all existing alerts with the checkout alert, because checkout is the most important business flow.",
+          "correct": false,
+          "hint": "Checkout needs dedicated coverage, but other flows and infrastructure still need appropriate alerts. Removing all existing alerts creates blind spots.",
+          "id": "c"
+        },
+        {
+          "text": "Run the checkout SLI and burn alerts in shadow mode, tune them with historical data, exclude expected user-caused declines, add a runbook, then enable paging.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Shadow mode lets the team see whether the new alert would have caught real incidents without creating immediate paging noise. Tuning should use historical data and exclude expected user-caused outcomes, while the runbook makes the page actionable. Paging on every single failure is tempting, but it will create noise and train engineers to ignore the alert."
+    },
+    {
+      "title": "Confirm the fix works",
+      "question": "After enabling the tuned checkout SLI, synthetic transaction, and burn-rate alert, how should you verify the observability fix without hurting real users?",
+      "concept_keys": [
+        "fault-injection",
+        "synthetic-transaction",
+        "burn-rate-alert",
+        "health-check",
+        "sli"
+      ],
+      "options": [
+        {
+          "text": "Confirm that GET /health still returns 200 and the main dashboard still shows high availability.",
+          "correct": false,
+          "hint": "That proves the old liveness signal still works, not that the new checkout detection catches checkout failures.",
+          "id": "a"
+        },
+        {
+          "text": "Wait for the next real checkout incident, then check whether the new alert fires before support tickets arrive.",
+          "correct": false,
+          "hint": "Waiting for a real incident is risky and slow. Verification should be controlled and safe.",
+          "id": "b"
+        },
+        {
+          "text": "Inject a test-only checkout failure in staging or for a test tenant and verify the checkout SLI drops, the synthetic check fails, and the burn-rate page fires.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Create a report showing that aggregate API latency is unchanged after the new instrumentation is deployed.",
+          "correct": false,
+          "hint": "Low instrumentation overhead matters, but it does not prove the alert detects checkout impact. The test should exercise the failure path.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A controlled test-only failure proves the new signals detect the exact class of outage without harming real customers. The expected result is that checkout-specific SLI and synthetic checks fail and the burn-rate alert pages, even if GET /health remains green. Waiting for a real incident would leave the team unsure during the next outage."
+    }
+  ],
+  "takeaway": "Green health checks and service-wide averages do not prove critical user journeys are working. Define SLIs for important flows such as checkout success and latency, add safe synthetic coverage, and alert on SLO burn rates. Tune alerts carefully, but make sure they page on real user impact rather than infrastructure liveness alone.",
+  "review_issues": [
+    "Step 5: The correct option says to page on checkout SLO burn rate using errors from both real and synthetic attempts. For a user-facing 99.9% checkout SLO, synthetic transactions should usually be monitored separately or carefully excluded from the customer SLO/error-budget calculation, because they can distort burn rate, especially when real checkout traffic is low. The option is still closest, but technically imprecise."
+  ]
+}

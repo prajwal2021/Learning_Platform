@@ -1,0 +1,477 @@
+{
+ "slug": "sql",
+ "name": "SQL",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a primary key and a foreign key?",
+    "answer": "A primary key uniquely identifies each row in a table, and it cannot be NULL. A foreign key is a column or set of columns that references a primary key or unique key in another table, which enforces relationships between tables. Use a primary key for row identity and a foreign key to keep related data consistent.",
+    "real_world": "This matters when modeling users and orders: each order belongs to one user, and the database should prevent orders from pointing to a user that does not exist.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens when you delete a row that is referenced by a foreign key?"
+   },
+   {
+    "question": "What does a JOIN do in SQL?",
+    "answer": "A JOIN combines rows from two tables based on a related column or condition. You use it when the data you need is split across tables, such as getting an order along with the customer's name. The type of JOIN determines whether unmatched rows are kept or dropped.",
+    "real_world": "A reporting query often needs data from orders, customers, and products, which are usually stored in separate tables for normalization.",
+    "code_lang": "sql",
+    "code": "SELECT o.id, c.name\nFROM orders o\nJOIN customers c ON o.customer_id = c.id;",
+    "follow_up": "What is the difference between INNER JOIN, LEFT JOIN, and RIGHT JOIN?"
+   },
+   {
+    "question": "When would you use WHERE versus HAVING?",
+    "answer": "WHERE filters rows before grouping happens, while HAVING filters groups after GROUP BY. Use WHERE for row-level conditions like status or date ranges, and HAVING for aggregate conditions like count or sum thresholds. If you try to filter on an aggregate in WHERE, it will not work because the aggregation has not happened yet.",
+    "real_world": "This comes up in analytics queries, such as finding customers with more than five orders or products with total sales above a threshold.",
+    "code_lang": "sql",
+    "code": "SELECT customer_id, COUNT(*)\nFROM orders\nGROUP BY customer_id\nHAVING COUNT(*) > 5;",
+    "follow_up": "Can you filter grouped results without using HAVING?"
+   },
+   {
+    "question": "What is NULL in SQL?",
+    "answer": "NULL means the value is unknown or missing, not zero and not an empty string. Comparisons with NULL do not behave like normal comparisons, so you use IS NULL or IS NOT NULL instead of = NULL. This matters because NULL can affect filters, joins, and aggregate results in surprising ways.",
+    "real_world": "A user profile might have a missing middle name or a customer record might not yet have a phone number, and queries need to handle that explicitly.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM users\nWHERE middle_name IS NULL;",
+    "follow_up": "How does NULL affect COUNT, SUM, and other aggregate functions?"
+   },
+   {
+    "question": "What is the difference between DELETE, TRUNCATE, and DROP?",
+    "answer": "DELETE removes selected rows and can usually be filtered with WHERE. TRUNCATE removes all rows from a table much faster than deleting row by row, but you cannot choose specific rows. DROP removes the table itself, including its definition, so the table no longer exists.",
+    "real_world": "A developer might use DELETE to remove old test data, TRUNCATE to reset a staging table, and DROP when a table is no longer needed at all.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which of these can be rolled back depends on the database and transaction settings?"
+   },
+   {
+    "question": "What does GROUP BY do?",
+    "answer": "GROUP BY collects rows that share the same values in one or more columns so you can calculate aggregates for each group. Common uses are counting orders per customer or averaging salary by department. Every selected column should either be grouped or aggregated, otherwise the result is ambiguous.",
+    "real_world": "Dashboards often need totals by day, by region, or by product category, which is exactly what GROUP BY is for.",
+    "code_lang": "sql",
+    "code": "SELECT department, COUNT(*)\nFROM employees\nGROUP BY department;",
+    "follow_up": "Why do many databases reject selecting non-grouped columns in a GROUP BY query?"
+   },
+   {
+    "question": "What is the difference between UNION and UNION ALL?",
+    "answer": "UNION combines the results of two queries and removes duplicate rows, while UNION ALL keeps all rows, including duplicates. UNION ALL is usually faster because it does not need to deduplicate. Use UNION when duplicate elimination matters, and UNION ALL when you want every row preserved.",
+    "real_world": "This is common when combining results from multiple partitions, logs, or yearly tables into one report.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What must match between the two SELECT statements in a UNION?"
+   },
+   {
+    "question": "Why would you create an index on a table?",
+    "answer": "An index speeds up lookups on one or more columns by letting the database find rows without scanning the whole table. It is useful for columns used often in WHERE, JOIN, ORDER BY, or GROUP BY clauses. The trade-off is that indexes take storage and can slow down writes because they must be maintained.",
+    "real_world": "A customer search page can become slow on a large table if the name or email column is not indexed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why might an index not be used even if one exists?"
+   },
+   {
+    "question": "What is the difference between a subquery and a join?",
+    "answer": "A subquery is a query nested inside another query, while a join combines tables directly in one FROM clause. You use a subquery when you need an intermediate result, such as a list of IDs, and a join when you want related rows side by side. Either can be valid, but joins are often easier to read for simple relationships.",
+    "real_world": "A team might use a subquery to find customers above average spending, or a join to fetch each customer with their latest order details.",
+    "code_lang": "sql",
+    "code": "SELECT name\nFROM customers\nWHERE id IN (\n  SELECT customer_id FROM orders\n);",
+    "follow_up": "When would you prefer EXISTS over IN?"
+   },
+   {
+    "question": "What does ORDER BY do, and what should you watch out for?",
+    "answer": "ORDER BY sorts the result set by one or more columns. You use it when the output needs a predictable order, like newest first or alphabetical by name. A common mistake is assuming rows come back in insertion order without ORDER BY; SQL does not guarantee that.",
+    "real_world": "Pagination, recent activity feeds, and leaderboards all depend on explicit ordering to be correct and stable.",
+    "code_lang": "sql",
+    "code": "SELECT id, created_at\nFROM orders\nORDER BY created_at DESC;",
+    "follow_up": "How does ORDER BY interact with LIMIT or TOP?"
+   },
+   {
+    "question": "What is a database schema?",
+    "answer": "A schema is the logical structure that defines how data is organized, including tables, columns, relationships, and sometimes constraints. In some databases, schema also means a namespace that groups tables together. It matters because it helps keep data consistent and makes the database easier to understand and maintain.",
+    "real_world": "Teams often use separate schemas for development, testing, and production data, or to separate application modules. That helps avoid name collisions and keeps permissions cleaner.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a schema and a table?"
+   },
+   {
+    "question": "What is a UNIQUE constraint used for?",
+    "answer": "A UNIQUE constraint prevents duplicate values in one column or a set of columns. It is used when a field must identify a record in a way that should not repeat, like an email address or username. Unlike a primary key, a UNIQUE column usually can allow NULLs, depending on the database.",
+    "real_world": "This protects against duplicate user accounts or repeated customer codes caused by application bugs or concurrent inserts. Without it, duplicates can slip in even if the app tries to validate first.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE users (\n  id INT PRIMARY KEY,\n  email VARCHAR(255) UNIQUE\n);",
+    "follow_up": "How is a UNIQUE constraint different from an index?"
+   },
+   {
+    "question": "What does the DISTINCT keyword do?",
+    "answer": "DISTINCT removes duplicate rows from the result set. It is useful when you want one value per unique combination of selected columns. The trade-off is that it can hide problems in your data model or be more expensive than expected on large result sets.",
+    "real_world": "People often use DISTINCT to clean up repeated rows from a join or to list unique customer names. If overused, it can mask a bad query that should be fixed at the source.",
+    "code_lang": "sql",
+    "code": "SELECT DISTINCT country\nFROM customers;",
+    "follow_up": "What happens if you select DISTINCT on multiple columns?"
+   },
+   {
+    "question": "What is a constraint in SQL?",
+    "answer": "A constraint is a rule the database enforces on data in a table. Common constraints include NOT NULL, UNIQUE, PRIMARY KEY, FOREIGN KEY, and CHECK. They matter because they move important validation into the database, where it is harder to bypass.",
+    "real_world": "Constraints prevent bad data from entering production when multiple services or scripts write to the same database. They are especially useful when the application layer is not the only writer.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer a database constraint over application-side validation?"
+   },
+   {
+    "question": "What does the LIKE operator do?",
+    "answer": "LIKE is used for pattern matching on text. The percent sign matches any sequence of characters, and the underscore matches exactly one character. It is useful for searching by partial text, but leading wildcards can make searches slower.",
+    "real_world": "Support teams often use LIKE to find users whose emails or names follow a certain pattern. In larger tables, a poorly chosen pattern can turn a quick lookup into a slow scan.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM products\nWHERE name LIKE 'Pro%';",
+    "follow_up": "How is LIKE different from using a regular expression?"
+   },
+   {
+    "question": "What is the purpose of an alias in SQL?",
+    "answer": "An alias gives a temporary name to a table or column in a query. It makes queries easier to read, especially when column names are long or when the same table appears more than once. Aliases are only for the query result and do not rename the underlying database objects.",
+    "real_world": "Aliases are common in reports and joins where you need shorter names like c and o instead of full table names. They make complex queries much easier to maintain.",
+    "code_lang": "sql",
+    "code": "SELECT c.name AS customer_name\nFROM customers AS c;",
+    "follow_up": "When do aliases become necessary in a query?"
+   },
+   {
+    "question": "What is the difference between a timestamp and a date column?",
+    "answer": "A date stores only the calendar day, while a timestamp stores a specific date and time. Use date when you only care about the day, and use timestamp when the exact time matters, such as logging or event tracking. The choice affects sorting, filtering, and how you group records.",
+    "real_world": "For orders, the order date may be enough for daily reports, but audit logs usually need a timestamp to know the exact sequence of events. Choosing the wrong type can make later analysis awkward.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do time zones affect timestamp storage and queries?"
+   },
+   {
+    "question": "What does an UPDATE statement do, and what is a common mistake with it?",
+    "answer": "UPDATE changes existing rows in a table. The most common mistake is forgetting the WHERE clause, which can update every row in the table. A careful UPDATE usually starts by selecting the rows you expect to change before running the write.",
+    "real_world": "A missing WHERE can corrupt a whole production table in seconds, especially in admin scripts or manual fixes. Teams often review risky UPDATE statements very carefully or run them inside a transaction.",
+    "code_lang": "sql",
+    "code": "UPDATE accounts\nSET status = 'inactive'\nWHERE last_login < '2024-01-01';",
+    "follow_up": "How would you verify an UPDATE before running it?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do INNER JOIN, LEFT JOIN, and RIGHT JOIN differ in practice?",
+    "answer": "An INNER JOIN returns only rows with matches on both sides. A LEFT JOIN keeps all rows from the left table and fills unmatched right-side columns with NULLs, which is useful when you need the “optional” relationship. RIGHT JOIN is the same idea mirrored, but many teams avoid it for readability and prefer swapping table order with a LEFT JOIN. The main trade-off is whether unmatched rows should be preserved or filtered out.",
+    "real_world": "This matters when building reports like “all customers and their latest order,” where customers with no orders must still appear. A wrong join type can silently drop records and make totals look smaller than they should.",
+    "code_lang": "sql",
+    "code": "SELECT c.id, o.id AS order_id\nFROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id;",
+    "follow_up": "What happens if the join condition matches multiple rows on the right side?"
+   },
+   {
+    "question": "What is a composite primary key, and when would you choose one over a surrogate key?",
+    "answer": "A composite primary key uses two or more columns to uniquely identify a row. It makes sense when the natural uniqueness is already defined by a combination, such as an order_id and product_id in an order_items table. The trade-off is that foreign keys and joins become wider and sometimes more awkward, while a surrogate key can simplify references but may hide real business uniqueness. In practice, many teams use a surrogate key plus a unique constraint on the natural columns.",
+    "real_world": "This comes up in link tables and event tables where one row should exist only once per parent combination. Choosing badly can lead to duplicate relationships or cumbersome schema changes later.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE order_items (\n  order_id bigint,\n  product_id bigint,\n  quantity int,\n  PRIMARY KEY (order_id, product_id)\n);",
+    "follow_up": "When would you still add a separate unique constraint if you already have a primary key?"
+   },
+   {
+    "question": "How do you find duplicate rows in a table, and what usually causes them?",
+    "answer": "You typically group by the columns that should be unique and filter groups with more than one row. That shows whether duplicates come from missing constraints, a buggy ETL job, or a join that multiplied rows unexpectedly. The important distinction is whether you want duplicates across all columns or duplicates by business key only. Once found, you usually dedupe the data and add a constraint so it cannot happen again.",
+    "real_world": "Teams often discover duplicates after a dashboard suddenly overcounts revenue or users. The underlying issue is often a retrying import job or an app path that inserted the same entity twice.",
+    "code_lang": "sql",
+    "code": "SELECT email, COUNT(*)\nFROM users\nGROUP BY email\nHAVING COUNT(*) > 1;",
+    "follow_up": "How would you delete duplicates while keeping one row per group?"
+   },
+   {
+    "question": "What is the difference between COUNT(*), COUNT(column), and COUNT(DISTINCT column)?",
+    "answer": "COUNT(*) counts rows, including rows with NULLs in any column. COUNT(column) counts only rows where that column is not NULL. COUNT(DISTINCT column) counts the number of unique non-NULL values in that column. The trade-off is accuracy versus cost: DISTINCT usually requires more work, so it can be slower on large data sets.",
+    "real_world": "This matters in metrics like active users, signups, or nullable foreign-key reports. A query that uses the wrong COUNT form can produce numbers that look valid but are materially wrong.",
+    "code_lang": "sql",
+    "code": "SELECT\n  COUNT(*) AS rows,\n  COUNT(referrer_id) AS non_null_refs,\n  COUNT(DISTINCT referrer_id) AS unique_refs\nFROM signups;",
+    "follow_up": "What happens to COUNT(DISTINCT) when there are many duplicate values?"
+   },
+   {
+    "question": "What is a CTE, and when would you use one instead of a subquery?",
+    "answer": "A common table expression, or CTE, is a named temporary result set defined with WITH. It often makes complex queries easier to read, and it can let you break a problem into steps. Compared with subqueries, CTEs are usually better for clarity and reuse within the same statement, but they are not automatically faster. For recursive problems, CTEs also let you express hierarchical traversal directly.",
+    "real_world": "This is useful when a production query grows into several nested layers and becomes hard to debug. Teams often refactor into CTEs so each step can be validated independently.",
+    "code_lang": "sql",
+    "code": "WITH active_users AS (\n  SELECT id FROM users WHERE last_login >= CURRENT_DATE - INTERVAL '30 days'\n)\nSELECT COUNT(*) FROM active_users;",
+    "follow_up": "When can a CTE make performance worse or change the execution plan?"
+   },
+   {
+    "question": "What is the difference between an IN list and an EXISTS condition?",
+    "answer": "IN checks whether a value appears in a list or result set, while EXISTS checks whether a subquery returns at least one row. EXISTS is often better when you only care about presence, especially with correlated subqueries, because the database can stop as soon as it finds a match. IN can be clearer for small static lists, but it can behave differently with NULLs and large subqueries depending on the database. The main trade-off is readability versus how the optimizer handles the query.",
+    "real_world": "This matters in membership checks like “customers who have at least one unpaid invoice.” A poorly chosen form can make a query much slower on large tables.",
+    "code_lang": "sql",
+    "code": "SELECT c.id\nFROM customers c\nWHERE EXISTS (\n  SELECT 1 FROM invoices i\n  WHERE i.customer_id = c.id AND i.status = 'unpaid'\n);",
+    "follow_up": "How does NULL affect an IN query?"
+   },
+   {
+    "question": "What does an UPDATE with a FROM clause or join do, and what is the risk?",
+    "answer": "It lets you update rows in one table using values from another table. This is useful for backfills and sync jobs, but the risk is that the join is not one-to-one and the database may update a target row using an arbitrary matching source row or otherwise produce unintended results depending on the database. You have to be sure the join condition is unique for the rows you intend to change. A safe pattern is to preview the join with SELECT before running the update.",
+    "real_world": "Teams use this for correcting denormalized columns after a data migration. A bad join can quietly overwrite thousands of rows with the wrong values.",
+    "code_lang": "sql",
+    "code": "UPDATE users u\nSET status = s.new_status\nFROM staging_users s\nWHERE s.user_id = u.id;",
+    "follow_up": "How would you test this update before running it on production data?"
+   },
+   {
+    "question": "What is an aggregate function, and how do you avoid mixing aggregated and non-aggregated columns incorrectly?",
+    "answer": "Aggregate functions like SUM, AVG, MIN, MAX, and COUNT reduce multiple rows into one value per group or query. If you select a non-aggregated column alongside aggregates, you usually need a GROUP BY for that column or an equivalent rule in your database. The key idea is that every output column must be well-defined for each group. If not, you can get an error or, in some databases, nondeterministic results.",
+    "real_world": "This matters in analytics queries where people try to add “one more column” to a summary report. The query may run in one database and fail or produce misleading results in another.",
+    "code_lang": "sql",
+    "code": "SELECT customer_id, SUM(amount) AS total_spend\nFROM orders\nGROUP BY customer_id;",
+    "follow_up": "What happens if you want one row per customer but also the latest order date?"
+   },
+   {
+    "question": "How do you think about transaction isolation levels in day-to-day SQL work?",
+    "answer": "Isolation levels control how much one transaction can see changes from another. At a high level, stronger isolation reduces anomalies like dirty reads and sometimes non-repeatable reads, but it can also reduce concurrency and increase locking or retry pressure. In day-to-day work, you usually choose the weakest level that still keeps business rules correct. The exact behavior depends on the database, so you need to test the read and write patterns you care about.",
+    "real_world": "This matters in checkout, inventory, or ledger systems where two concurrent requests can both think stock is available. A too-weak isolation choice can create overselling or double-spending bugs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you describe a race condition that transactions do not fully solve?"
+   },
+   {
+    "question": "What is an execution plan, and how do you use it to debug a slow query?",
+    "answer": "An execution plan shows how the database intends to run the query, including scan types, join order, and whether indexes are used. It helps you confirm whether the database is filtering early, scanning too many rows, or choosing a bad join strategy. The usual workflow is to check the plan, compare estimated versus actual rows if available, and then adjust indexes, predicates, or query shape. The trade-off is that plan interpretation is database-specific, so you have to understand the engine you use.",
+    "real_world": "This is how teams diagnose a query that was fine in staging but times out on production-sized data. The root cause is often a full table scan or a join that explodes intermediate rows.",
+    "code_lang": "sql",
+    "code": "EXPLAIN ANALYZE\nSELECT *\nFROM orders\nWHERE customer_id = 42;",
+    "follow_up": "What clues in a plan tell you an index is not being used effectively?"
+   },
+   {
+    "question": "How do you decide whether to store data in one table or split it into multiple normalized tables?",
+    "answer": "Normalize when the same fact would otherwise be repeated and updated in many places, because it reduces inconsistency and makes writes safer. Keep related entities separate when they have different lifecycles or cardinality, like orders and order items. Denormalize only when you have a measured read-performance need and you can tolerate extra write complexity. The trade-off is simpler reads versus harder consistency and maintenance.",
+    "real_world": "A team might keep customer addresses in a separate table so one address change updates all related records. In analytics systems, they may duplicate a few fields into a reporting table to avoid expensive joins.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you intentionally denormalize a schema, and how do you keep the duplicated data consistent?"
+   },
+   {
+    "question": "What is the difference between an inner query and a common table expression in terms of readability and performance?",
+    "answer": "A CTE is mainly a readability and structuring tool; it lets you name an intermediate result and reuse it in the same statement. A subquery can be fine for one-off filtering or projection, but nested subqueries get hard to reason about as they grow. Performance usually depends on the database optimizer and the query shape, not just whether you wrote a CTE or subquery. In practice, choose the form that makes the logic clearest, then check the plan if it is slow.",
+    "real_world": "In a production report query, a CTE can make each step of a multi-stage calculation easier to test and review. That matters when analysts and engineers both need to understand the logic.",
+    "code_lang": "sql",
+    "code": "WITH recent_orders AS (\n  SELECT * FROM orders\n  WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'\n)\nSELECT customer_id, COUNT(*)\nFROM recent_orders\nGROUP BY customer_id;",
+    "follow_up": "Can a CTE ever hurt performance compared with an equivalent inline subquery?"
+   },
+   {
+    "question": "What is an index seek versus an index scan, and why should you care?",
+    "answer": "An index seek means the database can jump to a narrow range of index entries, while an index scan means it reads a much larger portion of the index. Seeks are usually faster for selective predicates, but scans can be cheaper when many rows match or when the index order already fits the query. You care because the difference often explains why a query is fast in dev but slow on production data. The right index depends on filter columns, ordering, and cardinality.",
+    "real_world": "A dashboard query filtering on a timestamp range may work well until the table grows, and then a scan over millions of rows becomes visible to users. An execution plan often shows whether the database is using the index effectively.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of predicates or query patterns make an index unusable or much less useful?"
+   },
+   {
+    "question": "How do you approach writing a query that returns one row per parent record when the child table has many rows?",
+    "answer": "Use aggregation, window functions, or a correlated filter depending on what result you need. If you want one child per parent, define the rule explicitly, such as latest child by timestamp, highest priority, or a count summary. The main risk is accidental duplication from a join, which inflates counts and produces repeated parent rows. I would test the query on a small sample and verify the row counts at each step.",
+    "real_world": "This comes up when joining users to sessions or orders to line items, where a naive join suddenly multiplies the result set. Teams often discover a KPI bug because totals are much higher than expected.",
+    "code_lang": "sql",
+    "code": "SELECT o.id, o.customer_id, x.last_status\nFROM orders o\nJOIN (\n  SELECT order_id, status AS last_status,\n         ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY created_at DESC) AS rn\n  FROM order_statuses\n) x ON x.order_id = o.id AND x.rn = 1;",
+    "follow_up": "When would you prefer a window function over GROUP BY for this kind of problem?"
+   },
+   {
+    "question": "What happens if you insert a row that violates a foreign key constraint?",
+    "answer": "The database rejects the insert, and the entire statement fails because the referenced parent row does not exist. That protects referential integrity and prevents orphaned child records. In some systems and workflows, the failure can happen at statement time or be deferred until commit, depending on how the constraint is defined. In application code, that usually means you need to insert parent records first or wrap the operations in one transaction.",
+    "real_world": "This often appears in ETL jobs when child records are loaded before reference data. The job may work in test data but fail in production when the load order changes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a bulk import so foreign key checks do not make the load fragile?"
+   },
+   {
+    "question": "How do transactions help with multi-step changes, and what is the trade-off?",
+    "answer": "Transactions group related statements so they either all succeed or all roll back, which prevents partial updates. That is essential when one change depends on another, like debiting one account and crediting another. The trade-off is that longer transactions hold locks and can reduce concurrency, so they should be as short as practical. Good transaction design is about correctness first, then minimizing contention.",
+    "real_world": "A checkout flow may need to create an order, reserve inventory, and record payment together. If payment succeeds but inventory fails, a transaction prevents inconsistent state.",
+    "code_lang": "sql",
+    "code": "BEGIN;\nUPDATE accounts SET balance = balance - 100 WHERE id = 1;\nUPDATE accounts SET balance = balance + 100 WHERE id = 2;\nCOMMIT;",
+    "follow_up": "What kinds of work should you avoid doing inside a long-running transaction?"
+   },
+   {
+    "question": "How would you debug a query that is correct but suddenly much slower after the data grows?",
+    "answer": "First check the execution plan and row estimates to see whether the optimizer is choosing a bad join order or access path. Then look for missing or ineffective indexes, stale statistics, and predicates that prevent index use, such as functions on filtered columns. Data growth can also change selectivity, so a plan that was fine on small tables may not scale. I would compare the slow query against the actual production data distribution, not just a local sample.",
+    "real_world": "A report that filters by status might be fast until one status becomes very common, and then the planner’s assumptions no longer match reality. This is a common cause of sudden performance regressions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What clues in an execution plan tell you the optimizer’s estimate is wrong?"
+   },
+   {
+    "question": "What is a window function, and how is it different from an aggregate query?",
+    "answer": "A window function computes values across a related set of rows while still returning one row per input row. That lets you calculate running totals, ranks, or partitioned totals without collapsing the result set. An aggregate query with GROUP BY reduces rows, which is useful when you want summaries instead. Window functions are often the cleaner choice when you need both detail and summary in the same result.",
+    "real_world": "A product team might want each order row plus the customer’s lifetime spend so far. Doing that with GROUP BY would lose the individual order rows.",
+    "code_lang": "sql",
+    "code": "SELECT order_id, customer_id, amount,\n       SUM(amount) OVER (PARTITION BY customer_id ORDER BY created_at) AS running_total\nFROM orders;",
+    "follow_up": "When would a window function be slower or harder to use than a grouped aggregate?"
+   },
+   {
+    "question": "How do you think about NULL-safe comparisons and why do they matter in filters or joins?",
+    "answer": "NULL is not equal to anything, including another NULL, so ordinary equality checks can miss rows you expect to match. That matters in joins and filters when missing data is a valid state and you need to treat two missing values as equal or intentionally exclude them. Some databases provide NULL-safe comparison operators or functions, but the exact syntax varies. The key is to be explicit about whether NULL means unknown, absent, or intentionally separate.",
+    "real_world": "A reconciliation query between two systems may fail to match records because both sides have missing middle names or optional foreign keys. That can create false mismatches in audits or sync jobs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you write a join that matches rows when both join columns are NULL?"
+   },
+   {
+    "question": "What is a deadlock in SQL, and how do you reduce the chance of one?",
+    "answer": "A deadlock happens when two transactions each hold locks the other needs, so neither can continue. The database usually detects it and aborts one transaction so the other can proceed. You reduce the chance by keeping transactions short, locking rows in a consistent order, and avoiding unnecessary read-modify-write sequences. In application code, you also need retry logic for deadlock failures because they can still happen under load.",
+    "real_world": "This is common when two background jobs update the same set of rows in different orders. Without retries, users see intermittent failures even though the logic is correct.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What application-level retry strategy would you use for deadlock or serialization failures?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How do covering indexes actually speed up a query, and what do they cost on writes?",
+    "answer": "A covering index contains all columns needed for the predicate, join, and projection, so the engine can answer the query from the index alone without looking up the base table row. That saves random I/O and CPU, especially when many rows match. The trade-off is larger indexes, more memory pressure, and slower INSERT/UPDATE/DELETE because every maintained index must be updated. They help most on hot read paths with stable access patterns, not on columns that change constantly.",
+    "real_world": "A common production pattern is a dashboard query dropping from hundreds of milliseconds to single digits after adding a covering index, but bulk loads and write latency get worse because index maintenance dominates.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide which extra columns belong in the index key versus just being included for coverage?"
+   },
+   {
+    "question": "Can you explain keyset pagination versus OFFSET pagination, and why one scales better?",
+    "answer": "OFFSET pagination makes the database sort and skip N rows before returning the next page, so later pages get progressively more expensive and can become inconsistent under concurrent writes. Keyset pagination uses a stable ordered key, like `(created_at, id)`, and asks for rows after the last seen key, which lets the engine continue from an index position. It scales much better for deep pagination and avoids duplicates or missing rows caused by inserts between requests. The trade-off is you need a deterministic sort order and it is less convenient for jumping directly to page 500.",
+    "real_world": "APIs often look fine in staging with page 1 to 5, then time out in production when clients request page 1000 using OFFSET. Keyset pagination is a standard fix for feeds, activity logs, and admin lists.",
+    "code_lang": "sql",
+    "code": "SELECT id, created_at, title\nFROM posts\nWHERE (created_at, id) < (:last_created_at, :last_id)\nORDER BY created_at DESC, id DESC\nLIMIT 50;",
+    "follow_up": "What index would you create to support that query efficiently?"
+   },
+   {
+    "question": "What causes a sort or hash operation to spill to disk, and why is that a big deal?",
+    "answer": "A spill happens when the engine estimates or allocates too little memory for a sort, hash aggregate, or hash join, so intermediate data overflows to temporary disk space. Disk is much slower than memory, and spills also increase contention on temp storage, so one bad query can hurt many sessions. Common causes are underestimation from stale statistics, wide rows, and queries processing far more data than expected. Fixes usually involve better cardinality estimates, smaller row widths, more selective filters, or a different plan shape.",
+    "real_world": "In production, temp space saturation from repeated hash spills can turn a single slow report into a database-wide incident because many other queries start waiting on the same temp I/O.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell from an execution plan or runtime metrics that a spill is happening?"
+   },
+   {
+    "question": "How do database statistics influence the optimizer, and what kinds of mistakes happen when they are wrong?",
+    "answer": "The optimizer relies on statistics to estimate row counts and value distribution, and those estimates drive join order, join algorithm, index choice, and memory usage. If stats are stale or miss skewed distributions or correlated columns, the optimizer can pick a plan that is logically valid but physically terrible. Typical failures are nested loops over millions of rows, hash tables sized far too small, or choosing a scan where a seek would have been better. Keeping statistics fresh helps, but some workloads also need schema or query changes because not all data patterns are modeled well.",
+    "real_world": "A classic incident is a nightly load changing data distribution enough that the same query flips from fast to slow without any code deployment, just because the old stats no longer represent reality.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is parameter sniffing or plan instability, and how is it related to statistics?"
+   },
+   {
+    "question": "What is an anti-join, and why can `NOT IN` be dangerous compared with `NOT EXISTS`?",
+    "answer": "An anti-join returns rows from one side that have no match on the other side. `NOT EXISTS` expresses that directly and handles NULLs safely because it checks for the existence of matching rows. `NOT IN` can produce surprising results if the subquery returns any NULL, because the comparison becomes unknown and may filter out everything. Optimizers often transform both forms, but semantically `NOT EXISTS` is usually safer unless you can guarantee non-NULL input.",
+    "real_world": "Teams get bitten by exclusion queries that suddenly return zero rows after a single NULL appears in a lookup table or subquery result.",
+    "code_lang": "sql",
+    "code": "-- safer anti-join\nSELECT c.id\nFROM customers c\nWHERE NOT EXISTS (\n  SELECT 1\n  FROM orders o\n  WHERE o.customer_id = c.id\n);",
+    "follow_up": "When would a LEFT JOIN ... WHERE right.id IS NULL be equivalent, and what can make it less safe?"
+   },
+   {
+    "question": "How do you enforce idempotency for inserts under concurrency without creating duplicates?",
+    "answer": "The reliable pattern is to put a unique constraint on the business key or idempotency key and let the database arbitrate races. Then use an atomic insert or upsert pattern so two concurrent requests cannot both win. Application-side existence checks alone are unsafe because both sessions can read no row and then insert. The trade-off is you must define the right key and decide whether conflicts should be ignored, retried, or merged.",
+    "real_world": "Payment, webhook, and job-processing systems depend on this because retries are normal; without a unique key, transient network failures turn into duplicate charges or duplicated work.",
+    "code_lang": "sql",
+    "code": "INSERT INTO payment_events(idempotency_key, payload)\nVALUES (:key, :payload)\nON CONFLICT (idempotency_key) DO NOTHING;",
+    "follow_up": "If you need to return the existing row on conflict, how would you design that safely?"
+   },
+   {
+    "question": "What is write amplification in a relational database, and how does schema or index design make it worse?",
+    "answer": "Write amplification means one logical row change causes many physical writes: the table page changes, every affected index changes, and the transaction log or WAL records all of it. Wide rows, many secondary indexes, and frequently updated indexed columns amplify that cost. This matters because systems that look CPU-light can still become log-bound or storage-bound under heavy writes. The trade-off is that read-optimized schemas often carry a hidden write penalty.",
+    "real_world": "A table with ten secondary indexes can make a simple status update unexpectedly expensive, showing up as replication lag, increased WAL volume, and slower batch loads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you measure whether a table is write-bound because of index maintenance rather than the query text itself?"
+   },
+   {
+    "question": "How do optimistic and pessimistic locking differ when multiple sessions are updating the same rows?",
+    "answer": "Pessimistic locking acquires locks before or during the read-for-update path and prevents conflicting writers immediately, which reduces lost updates but can increase blocking and deadlocks. Optimistic locking assumes conflicts are rare and checks at write time, often with a version column or timestamp, retrying if the row changed. Optimistic approaches improve concurrency for read-heavy workloads, but they push retry logic into the application and can frustrate users under contention. The right choice depends on how expensive conflicts are and whether waiting or retrying is more acceptable.",
+    "real_world": "Inventory, seat booking, and account-balance workflows often choose pessimistic locking for correctness, while profile edits or metadata updates usually prefer optimistic locking to keep throughput high.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What anomaly are you preventing with a version check, and what does the update statement usually look like?"
+   },
+   {
+    "question": "What is partition pruning, and when does partitioning help less than people expect?",
+    "answer": "Partition pruning means the optimizer can ignore partitions that cannot match the filter, reducing I/O and planning work. Partitioning helps most when queries regularly target a subset like a date range, and when maintenance tasks such as retention or bulk loads benefit from partition-level operations. It helps less if predicates do not align with the partition key, if most queries still touch many partitions, or if too many partitions add planning and management overhead. Partitioning is primarily a data management feature with performance benefits in the right access pattern, not a universal speed button.",
+    "real_world": "Time-series tables often use monthly or daily partitions so old data can be dropped quickly, but teams are disappointed when ad hoc queries remain slow because they filter on customer_id instead of the partition key.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose between partitioning by time versus by tenant for a large multi-tenant table?"
+   },
+   {
+    "question": "Why do long-running transactions cause operational problems even if they are mostly just reading?",
+    "answer": "Long transactions keep an old snapshot alive, which can delay cleanup of obsolete row versions and increase storage, memory, and background maintenance work. They also hold locks longer if they touched locked resources, and they can increase replication lag or recovery work because the system must preserve visibility for them. The result is that a harmless-looking report can contribute to table bloat, slower vacuum or purge, and broader performance degradation. Short transactions reduce those side effects and make failure recovery simpler.",
+    "real_world": "A forgotten transaction in a BI tool can quietly hold a snapshot open for hours, leading to growing table bloat and sudden storage alarms even though no one is actively writing much data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What monitoring signals would tell you a long-running transaction is harming the system?"
+   },
+   {
+    "question": "How do clustered and nonclustered indexes differ physically, and how does that change query and write behavior?",
+    "answer": "A clustered index defines the table’s physical row order, so reading a range on its key is efficient, but changing that key or inserting into random spots can cause page splits and row movement. A nonclustered index is a separate structure that stores key values plus a row locator, so it can speed up selective lookups but may need an extra lookup to fetch columns not in the index. The trade-off is read performance versus write cost and storage. On hot OLTP tables, too many secondary indexes often hurt inserts and updates more than teams expect.",
+    "real_world": "A common production issue is a UUID-like clustered key causing fragmented pages and poor cache locality, making both writes and range reads slower. Teams often switch the clustering key or lower fill factor after seeing sustained page split pressure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What makes a clustered key a good choice for a high-write table?"
+   },
+   {
+    "question": "When a query uses multiple predicates, how do you decide the column order in a composite index?",
+    "answer": "I start with the access pattern, not a generic rule like “most selective first.” Equality predicates usually belong before range predicates, and the index should also support the join, sort, or grouping the query actually performs. After the first range condition, later columns often help less for seeking, though they may still help with ordering or covering. The right order depends on the exact workload, because an index optimized for one query shape can be poor for another.",
+    "real_world": "This matters when a query filters by tenant, status, and time and then sorts by time. Putting the columns in the wrong order can turn a cheap ordered seek into a larger scan plus sort under production traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle two important queries that want different column orders?"
+   },
+   {
+    "question": "What is sargability, and what kinds of expressions make an otherwise indexed query slow?",
+    "answer": "A predicate is sargable when the optimizer can use an index to narrow the search efficiently, typically by comparing the indexed column directly to a value or range. Wrapping the column in a function, doing implicit type conversion on the column side, or using patterns that prevent range matching can force scans. The fix is usually to rewrite the predicate so the transformation happens on the constant side, or to add a computed or expression index if the database supports it. Sargability matters because the same logical filter can differ by orders of magnitude in I/O.",
+    "real_world": "A classic incident is filtering a timestamp with a date-extraction function, which disables the time index and scans a large fact table during peak hours.",
+    "code_lang": "sql",
+    "code": "-- less sargable\nWHERE DATE(created_at) = '2026-10-16'\n\n-- usually better\nWHERE created_at >= '2026-10-16'\n  AND created_at <  '2026-10-17'",
+    "follow_up": "Can leading-wildcard LIKE predicates be made efficient, and if so how?"
+   },
+   {
+    "question": "How do MVCC databases let readers and writers proceed concurrently, and what are the operational downsides?",
+    "answer": "With MVCC, updates create new row versions instead of overwriting rows in place, and each transaction reads a snapshot based on visibility rules. That reduces read-write blocking because readers can often see an older committed version while writers proceed. The downside is storage bloat, cleanup work, and extra pressure on vacuum or purge processes if old snapshots stay open too long. It also means some anomalies move from blocking behavior into retry behavior, especially under higher isolation.",
+    "real_world": "In production, one forgotten long-running report can hold old row versions alive and cause table or undo growth, slower vacuuming, and suddenly worse read performance.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does snapshot isolation differ from full serializable isolation in terms of anomalies?"
+   },
+   {
+    "question": "What are lost updates, write skew, and phantom reads, and which ones still happen under snapshot-style isolation?",
+    "answer": "A lost update is when two transactions overwrite each other’s change without noticing; write skew is when each transaction reads shared state and updates different rows, violating an invariant; a phantom is when re-running a predicate read sees a different set of matching rows. Snapshot-based isolation usually prevents many read-write conflicts and can prevent lost updates depending on the engine and statement pattern, but write skew is the classic anomaly it can still allow. Serializable isolation is used when the invariant matters more than throughput. The key is to reason about predicates and invariants, not just single-row conflicts.",
+    "real_world": "A scheduling system can allow two doctors to be assigned to the last available slot because each transaction sees the same snapshot and updates different rows. That bug often survives tests and only appears under real concurrency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you enforce a cross-row business invariant without running everything at serializable?"
+   },
+   {
+    "question": "How do lock escalation and lock granularity affect throughput on busy systems?",
+    "answer": "Databases lock at different granularities such as row, key range, page, or table, and finer locks improve concurrency but increase bookkeeping overhead. Under pressure, some engines may escalate many fine-grained locks into a coarser lock to reduce memory and management cost. That can protect the server but suddenly reduce concurrency by blocking unrelated work on the same object. For high-throughput systems, you want transactions that touch fewer rows, use supporting indexes, and avoid batch sizes that trigger broad locking.",
+    "real_world": "A maintenance job that updates millions of rows in one transaction can escalate into table-level blocking and stall customer traffic even though each row change is small.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes would you make to a bulk update job that is blocking OLTP traffic?"
+   },
+   {
+    "question": "What is predicate pushdown, and why does it matter for views, CTEs, and remote or columnar storage?",
+    "answer": "Predicate pushdown means applying filters as early as possible, ideally where the data is stored, so fewer rows are read, joined, transferred, or materialized. It matters because some query shapes or engine choices act as optimization barriers, making the system process a much larger intermediate result than the final answer needs. In remote sources and columnar engines, pushdown can save a huge amount of network and I/O by scanning only needed partitions, columns, or row groups. When performance is unexpectedly bad, I check whether the filter is really being applied early.",
+    "real_world": "Teams often see a federated query go from seconds to minutes because a remote source returns a huge dataset and the filtering happens only after transfer to the local engine.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of SQL constructs commonly prevent the optimizer from pushing predicates down?"
+   },
+   {
+    "question": "How do hash join, merge join, and nested loop join actually behave, and when is each a bad choice?",
+    "answer": "A nested loop join works well when the outer side is small and the inner side can be probed efficiently, usually via an index. A hash join is strong for large unsorted inputs and equality joins, but it needs memory and can spill badly if the build side is underestimated. A merge join is efficient when both inputs are already ordered on the join keys, but sorting to make that true can outweigh the benefit. The optimizer’s choice is only as good as row estimates, available indexes, and memory assumptions.",
+    "real_world": "A bad plan often appears when the optimizer expects a few rows and picks nested loops, but production parameters return millions, causing repeated index lookups and a latency spike.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If the optimizer keeps picking the wrong join algorithm, what would you change first?"
+   },
+   {
+    "question": "What does it mean for a query to be parameter-sensitive, and how does that create plan instability?",
+    "answer": "Parameter sensitivity means the best execution plan depends heavily on the specific parameter values, because some values match a tiny slice of data and others match a large fraction. If the engine compiles a plan using one set of values and reuses it for very different values, performance can swing from excellent to terrible. The root cause is often skewed data distribution combined with plan caching. Mitigations include query or schema rewrites, better statistics, separating query shapes, or engine-specific features for handling multiple plans.",
+    "real_world": "A support endpoint can be fast for most customers but time out for one large tenant because the cached plan was compiled for a tiny tenant and reused for a very large one.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you confirm parameter sensitivity instead of just guessing it?"
+   },
+   {
+    "question": "How do replicas affect correctness, and what application bugs come from reading from a lagging replica?",
+    "answer": "Replicas improve read scaling and isolation from primary load, but replication is often asynchronous, so a replica can be behind the primary. That means read-after-write consistency is not guaranteed unless the application routes certain reads to the primary or uses a consistency mechanism the platform provides. Bugs show up as users not seeing their just-created data, duplicate actions when a stale read says something does not exist, or background jobs making decisions from old state. The trade-off is throughput and availability versus freshness and consistency guarantees.",
+    "real_world": "A common failure mode is an app writing an order to the primary, then immediately reading from a replica and telling the user the order was not created, which leads to retries and duplicate work.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What strategies do you use when only some requests need read-after-write consistency?"
+   }
+  ]
+ }
+}

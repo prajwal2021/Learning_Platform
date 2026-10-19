@@ -1,0 +1,477 @@
+{
+ "slug": "javascript",
+ "name": "JavaScript",
+ "category": "Languages",
+ "levels": {
+  "basic": [
+   {
+    "question": "What’s the difference between `==` and `===` in JavaScript?",
+    "answer": "`==` compares after doing type coercion, so different types may be converted before the comparison. `===` compares both value and type, so it avoids surprising matches like `0 == \"0\"`. In most code, `===` is the safer default because it makes comparisons predictable.",
+    "real_world": "A common bug is checking form input against a number and accidentally matching strings. Using `===` helps catch those mistakes early.",
+    "code_lang": "javascript",
+    "code": "0 == '0'   // true\n0 === '0'  // false\nnull == undefined // true\nnull === undefined // false",
+    "follow_up": "When would you intentionally use `==` instead of `===`?"
+   },
+   {
+    "question": "What is the difference between `let`, `const`, and `var`?",
+    "answer": "`let` and `const` are block-scoped, while `var` is function-scoped. `const` means the binding cannot be reassigned, but the object or array it points to can still be mutated. `var` also has hoisting behavior that often confuses beginners, so `let` and `const` are usually preferred.",
+    "real_world": "A loop declared with `var` can leak its index outside the loop or behave unexpectedly in callbacks. `let` avoids a lot of those scoping bugs.",
+    "code_lang": "javascript",
+    "code": "if (true) {\n  let x = 1;\n  const y = 2;\n}\n// x and y are not accessible here",
+    "follow_up": "If `const` prevents reassignment, can you still change the contents of an array or object?"
+   },
+   {
+    "question": "What does it mean that JavaScript is single-threaded?",
+    "answer": "It means JavaScript runs one piece of code at a time on the main call stack. That does not mean it can only do one thing overall, because asynchronous work like timers, network requests, and events is handled by the runtime and queued back to JavaScript later. This is why long-running synchronous code can freeze the page or block a server request handler.",
+    "real_world": "A heavy loop in a browser can make the UI stop responding until it finishes. In Node.js, blocking the event loop can slow down every request in the process.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "So how do async callbacks still work if JavaScript is single-threaded?"
+   },
+   {
+    "question": "What is the difference between `null` and `undefined`?",
+    "answer": "`undefined` usually means a variable exists but has not been assigned a value, or a property is missing. `null` is an explicit value that means “intentionally empty.” In practice, `undefined` often comes from JavaScript itself, while `null` is something you set deliberately.",
+    "real_world": "APIs often use `null` to mean a known empty field, while missing JSON fields may end up as `undefined` in application code. Mixing the two can cause validation bugs.",
+    "code_lang": "javascript",
+    "code": "let a;\nlet b = null;\nconsole.log(a); // undefined\nconsole.log(b); // null",
+    "follow_up": "How would you check for both `null` and `undefined` safely?"
+   },
+   {
+    "question": "What is a function in JavaScript, and why do we use them?",
+    "answer": "A function is a reusable block of code that can take inputs, do work, and return a result. We use functions to avoid duplication, make code easier to test, and give names to repeated behavior. They are also first-class values, which means you can pass them around like data.",
+    "real_world": "UI code often wraps repeated behavior like formatting a date or validating an email in a function so the same logic is used everywhere. That reduces inconsistency across screens.",
+    "code_lang": "javascript",
+    "code": "function add(a, b) {\n  return a + b;\n}\nconsole.log(add(2, 3)); // 5",
+    "follow_up": "What is the difference between a function declaration and a function expression?"
+   },
+   {
+    "question": "What is an array, and when would you use one?",
+    "answer": "An array is an ordered list of values. Use it when you need to store multiple items and care about order, indexing, or iterating over the collection. Arrays are common for lists of users, search results, or any repeatable set of values.",
+    "real_world": "A search page may receive a list of matching items from the server and render each one in order. Arrays make that pattern straightforward.",
+    "code_lang": "javascript",
+    "code": "const fruits = ['apple', 'banana', 'cherry'];\nconsole.log(fruits[0]); // apple\nfruits.push('date');",
+    "follow_up": "What is the difference between `push` and `map`?"
+   },
+   {
+    "question": "How do `map`, `filter`, and `forEach` differ?",
+    "answer": "`map` transforms each item and returns a new array. `filter` keeps only items that match a condition and returns a new array. `forEach` is for running side effects on each item and does not return a transformed array.",
+    "real_world": "A team might use `filter` to remove inactive users, `map` to build display labels, and `forEach` to log or send analytics events. Picking the wrong one often leads to code that does nothing useful or is hard to read.",
+    "code_lang": "javascript",
+    "code": "const nums = [1, 2, 3];\nnums.map(n => n * 2);      // [2, 4, 6]\nnums.filter(n => n > 1);   // [2, 3]\nnums.forEach(n => console.log(n));",
+    "follow_up": "Why is `map` usually preferred over `forEach` when you need a new array?"
+   },
+   {
+    "question": "What is an object in JavaScript?",
+    "answer": "An object is a collection of key-value pairs used to represent structured data. It is useful when you want to group related properties, like a user’s name, email, and age. Objects are the basic building block for many JavaScript data models.",
+    "real_world": "API responses are often parsed into objects so you can access fields like `user.name` or `order.total`. That makes application code easier to understand than working with raw text.",
+    "code_lang": "javascript",
+    "code": "const user = {\n  name: 'Ava',\n  age: 30\n};\nconsole.log(user.name);",
+    "follow_up": "When would you choose an array instead of an object?"
+   },
+   {
+    "question": "What does hoisting mean in JavaScript?",
+    "answer": "Hoisting means declarations are processed before code runs, so some names are available earlier than their physical location in the file suggests. Function declarations are callable before they appear, but `let` and `const` are in a temporal dead zone until their declaration is reached. This is one reason `let` and `const` reduce confusion compared with `var`.",
+    "real_world": "A beginner may call a function before its definition and be surprised that it works, then make the same assumption with a `const` function expression and get an error. Knowing hoisting prevents that kind of inconsistency.",
+    "code_lang": "javascript",
+    "code": "sayHi();\nfunction sayHi() {\n  console.log('hi');\n}\n// const f = () => {} cannot be used before its declaration",
+    "follow_up": "What error do you get if you access a `let` variable before its declaration?"
+   },
+   {
+    "question": "What is a callback?",
+    "answer": "A callback is a function passed into another function to be run later or in response to an event. Callbacks are common in array methods, timers, and event handlers. They let you customize behavior without rewriting the surrounding logic.",
+    "real_world": "Button clicks, network responses, and file reads often use callbacks or callback-like functions to decide what to do when the work finishes. Without them, async code would be much harder to structure.",
+    "code_lang": "javascript",
+    "code": "setTimeout(() => {\n  console.log('done');\n}, 1000);",
+    "follow_up": "How is a callback different from a promise-based API?"
+   },
+   {
+    "question": "What is a closure in JavaScript?",
+    "answer": "A closure is when a function keeps access to variables from its outer scope even after that outer function has finished. This matters because it lets you create private state and build factory functions, event handlers, and callbacks that remember data. A common mistake is assuming the outer variables are copied; they are referenced, so later changes can be seen by the inner function.",
+    "real_world": "Closures are often used in UI code to keep per-button state without putting it on the global object. They also show up in bugs where a loop variable has the value you did not expect when a callback runs later.",
+    "code_lang": "javascript",
+    "code": "function makeCounter() {\n  let count = 0;\n  return function () {\n    count += 1;\n    return count;\n  };\n}\nconst counter = makeCounter();\nconsole.log(counter()); // 1\nconsole.log(counter()); // 2",
+    "follow_up": "How is a closure different from just passing a value into a function?"
+   },
+   {
+    "question": "What is the difference between a function declaration and a function expression?",
+    "answer": "A function declaration defines a named function directly, while a function expression creates a function as a value and stores it in a variable or property. Declarations are available earlier in their scope because they are hoisted differently, while expressions behave like normal values. In practice, both work, but expressions are common when you want to pass a function around or keep it anonymous.",
+    "real_world": "Teams often use function expressions inside object properties, event listeners, or conditionally assigned logic. Knowing the difference helps when a function is called before its definition appears in the file.",
+    "code_lang": "javascript",
+    "code": "sayHi();\nfunction sayHi() {\n  console.log('hi');\n}\n\nconst greet = function () {\n  console.log('hello');\n};",
+    "follow_up": "When would you choose an arrow function over a regular function?"
+   },
+   {
+    "question": "What is an arrow function, and how is it different from a regular function?",
+    "answer": "An arrow function is a shorter function syntax, but the key difference is that it does not have its own `this`. It also does not behave like a constructor function. You use it for small callbacks and inline logic, but you should be careful when you need method behavior or dynamic `this` binding.",
+    "real_world": "Arrow functions are common in array callbacks and promise chains. They can also prevent bugs in methods where a nested callback should use the surrounding `this` value.",
+    "code_lang": "javascript",
+    "code": "const nums = [1, 2, 3];\nconst doubled = nums.map(n => n * 2);\nconsole.log(doubled); // [2, 4, 6]",
+    "follow_up": "What does `this` refer to inside an arrow function?"
+   },
+   {
+    "question": "What is destructuring in JavaScript?",
+    "answer": "Destructuring is a syntax for pulling values out of arrays or objects into variables. It makes code shorter and clearer when you only need a few properties or items. The main thing to watch for is matching the structure correctly, because missing properties become `undefined` unless you provide defaults.",
+    "real_world": "Destructuring is common in data fetching, React props, and configuration objects. It helps reduce repetitive property access and makes function parameters easier to read.",
+    "code_lang": "javascript",
+    "code": "const user = { name: 'Sam', age: 30 };\nconst { name, age } = user;\nconsole.log(name); // Sam\nconsole.log(age);  // 30",
+    "follow_up": "How do defaults work with destructuring?"
+   },
+   {
+    "question": "What is the spread operator used for in JavaScript?",
+    "answer": "The spread operator expands an array, object, or iterable into individual elements or properties. It is useful for copying values, combining arrays, or creating new objects without mutating the original. The trade-off is that it makes shallow copies, so nested objects are still shared.",
+    "real_world": "This is used a lot when updating state in frontend apps or merging configuration objects. A shallow copy bug can cause one part of the app to accidentally change data another part is using.",
+    "code_lang": "javascript",
+    "code": "const a = [1, 2];\nconst b = [...a, 3];\nconsole.log(b); // [1, 2, 3]\n\nconst obj = { x: 1 };\nconst copy = { ...obj, y: 2 };",
+    "follow_up": "How is the spread operator different from `Object.assign` or array methods like `concat`?"
+   },
+   {
+    "question": "What is a string, and how do you work with one in JavaScript?",
+    "answer": "A string is a sequence of text characters. You use strings for names, messages, JSON, and anything else that is text-based, and you can combine them, slice them, or inspect their length. A common beginner mistake is trying to change one character in place, because strings are immutable.",
+    "real_world": "Strings are everywhere in user input, API responses, and logs. Many bugs start with assuming a string can be edited like an array.",
+    "code_lang": "javascript",
+    "code": "const first = 'Ada';\nconst last = 'Lovelace';\nconsole.log(first + ' ' + last);\nconsole.log(first.length);",
+    "follow_up": "How do template literals improve on string concatenation?"
+   },
+   {
+    "question": "What is JSON, and how is it different from a JavaScript object?",
+    "answer": "JSON is a text format for storing and sending data, while a JavaScript object is an in-memory language feature. JSON only supports a limited set of value types and uses double-quoted strings, so not every object can be turned into JSON directly. This matters when sending data over an API or saving it to a file.",
+    "real_world": "Backend services often exchange JSON over HTTP, and frontend code has to parse it before using it. A common bug is trying to call object methods on a JSON string before parsing it.",
+    "code_lang": "javascript",
+    "code": "const text = '{\"name\":\"Ada\"}';\nconst obj = JSON.parse(text);\nconsole.log(obj.name); // Ada\nconsole.log(JSON.stringify(obj));",
+    "follow_up": "What happens if you try to stringify a value like a function or `undefined`?"
+   },
+   {
+    "question": "What is the difference between `setTimeout` and immediate execution?",
+    "answer": "`setTimeout` schedules a function to run later, after at least the given delay, instead of running it right away. It is useful for deferring work, showing UI changes, or creating retries and delays. The important detail is that the delay is not exact timing; it depends on the event loop and other work happening in the page or process.",
+    "real_world": "You see this in loading spinners, debounce behavior, and delayed notifications. A common mistake is expecting the callback to run exactly when the timer expires, even if the main thread is busy.",
+    "code_lang": "javascript",
+    "code": "console.log('start');\nsetTimeout(() => console.log('later'), 0);\nconsole.log('end');",
+    "follow_up": "Why does the `setTimeout(..., 0)` callback run after the synchronous code?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do promises help compared with nested callbacks, and what problems do they solve in real code?",
+    "answer": "Promises give you a standard way to represent work that finishes later, so you can chain steps and centralize error handling instead of nesting callbacks. They make control flow easier to read and let you combine multiple async operations with helpers like `Promise.all`. The trade-off is that promises model completion, not cancellation by default, so you still need other patterns for aborting work. They also make it easier to test async code because the return value is explicit.",
+    "real_world": "This comes up when a frontend has to load user data, permissions, and feature flags before rendering a page. With callbacks, error paths and success paths often get duplicated or deeply nested.",
+    "code_lang": "javascript",
+    "code": "fetchUser()\n  .then(user => fetchPermissions(user.id))\n  .then(perms => render(perms))\n  .catch(err => showError(err));",
+    "follow_up": "When would you choose `Promise.all` versus handling requests one by one?"
+   },
+   {
+    "question": "What is the event loop doing when asynchronous code seems to run in the wrong order?",
+    "answer": "The event loop coordinates when queued callbacks run after the current synchronous code finishes. That means microtasks, like promise reactions, are processed before the next macrotask, which can make promise-based code run sooner than timer-based code. Debugging usually means separating synchronous work from queued work and checking which queue a callback enters. This matters because timing bugs often come from assuming \"async\" means \"later in the same order\".",
+    "real_world": "A common production bug is a loading spinner disappearing too early because a promise resolves before a `setTimeout`-based cleanup runs. Teams also hit race conditions in tests when they assume timer callbacks and promise callbacks flush in the same way.",
+    "code_lang": "javascript",
+    "code": "console.log('A');\nsetTimeout(() => console.log('B'));\nPromise.resolve().then(() => console.log('C'));\nconsole.log('D');",
+    "follow_up": "How would you explain the difference between microtasks and macrotasks to a teammate?"
+   },
+   {
+    "question": "When would you use `async`/`await` instead of chaining promises directly?",
+    "answer": "Use `async`/`await` when it makes a sequence of async steps read like normal code and keeps error handling straightforward with `try`/`catch`. It is usually better for imperative flows, branching logic, and step-by-step validation. Promise chaining can be cleaner when you are building a small pipeline or returning the chain directly. The main trade-off is readability versus explicit chaining and composition.",
+    "real_world": "In a service that calls several APIs in order, `async`/`await` often makes retry logic and early returns much easier to maintain. In a library function, direct promise chaining can stay more compact and composable.",
+    "code_lang": "javascript",
+    "code": "async function load() {\n  try {\n    const user = await fetchUser();\n    return await fetchProfile(user.id);\n  } catch (err) {\n    throw err;\n  }\n}",
+    "follow_up": "What happens if one `await` inside `Promise.all` rejects?"
+   },
+   {
+    "question": "How do you decide between `Promise.all`, `Promise.allSettled`, and `Promise.race`?",
+    "answer": "`Promise.all` is for running tasks in parallel when all results are required and any failure should fail the whole operation. `Promise.allSettled` is for cases where you need every outcome, including failures, such as partial reporting or batch jobs. `Promise.race` returns the first settled promise, which is useful for timeouts or choosing the fastest source, but you need to handle the losing promises separately. The trade-off is between fail-fast behavior, completeness, and responsiveness.",
+    "real_world": "A dashboard may want to show some widgets even if one backend call fails, which fits `allSettled`. A login flow, on the other hand, often needs all required data and should fail fast with `all`.",
+    "code_lang": "javascript",
+    "code": "const timeout = new Promise((_, reject) =>\n  setTimeout(() => reject(new Error('timeout')), 2000)\n);\nPromise.race([fetch('/api'), timeout]);",
+    "follow_up": "How do you cancel or ignore the slower promises after a race?"
+   },
+   {
+    "question": "What is shallow copying versus deep copying in JavaScript, and why does it matter?",
+    "answer": "A shallow copy duplicates only the top-level structure, so nested objects are still shared by reference. A deep copy recursively copies nested data so changes do not leak between the original and the copy. It matters when you are updating state or passing data through code that should not mutate the source. The trade-off is that deep copies cost more and are not always necessary.",
+    "real_world": "This shows up in UI state bugs where updating a nested field unexpectedly changes previously saved data. It also matters in tests when a fixture object gets mutated and breaks later assertions.",
+    "code_lang": "javascript",
+    "code": "const a = { user: { name: 'A' } };\nconst b = { ...a };\nb.user.name = 'B';\nconsole.log(a.user.name); // 'B'",
+    "follow_up": "What are safe ways to update nested state without mutating the original object?"
+   },
+   {
+    "question": "How do you usually handle immutability for nested state updates in JavaScript?",
+    "answer": "For small updates, copy each level you change so the original references stay untouched. In React-style state management, that often means spreading the outer object and the nested object you are changing. For more complex data, helper libraries can reduce boilerplate, but you should still understand what is being copied. The key trade-off is predictable updates versus more code and allocations.",
+    "real_world": "This matters when a UI fails to re-render because a nested object was mutated in place and the reference did not change. It also helps avoid accidental cross-request data leakage in shared objects.",
+    "code_lang": "javascript",
+    "code": "const state = { user: { name: 'Ann', age: 30 } };\nconst next = {\n  ...state,\n  user: { ...state.user, age: 31 }\n};",
+    "follow_up": "How would you verify in a test that your update function does not mutate input?"
+   },
+   {
+    "question": "What is the difference between `this` in a regular function and in an arrow function?",
+    "answer": "A regular function gets its `this` value from how it is called, so the same function can point at different objects in different contexts. An arrow function captures `this` from the surrounding scope and does not rebind it on call. That makes arrows useful for callbacks, but not for methods that rely on dynamic `this`. The trade-off is convenience versus control over binding.",
+    "real_world": "This is a common source of bugs in class methods or event handlers where a callback loses its object context. It also shows up in code reviews when an arrow function is used where a method needs its own `this`.",
+    "code_lang": "javascript",
+    "code": "const obj = {\n  x: 1,\n  regular() { return this.x; },\n  arrow: () => this.x\n};",
+    "follow_up": "When would binding a function with `.bind()` be better than using an arrow function?"
+   },
+   {
+    "question": "When would you choose `Map` over a plain object for key-value data?",
+    "answer": "Use `Map` when keys are not just strings, when insertion order matters, or when you need predictable iteration over many entries. `Map` also has a cleaner API for frequent inserts, deletes, and size checks. Plain objects are fine for simple records with known string keys and JSON-like data. The trade-off is API clarity and flexibility versus easier serialization and a more familiar shape.",
+    "real_world": "A cache keyed by user objects or composite IDs is usually a better fit for `Map`. A config object loaded from JSON is usually better as a plain object because it serializes naturally.",
+    "code_lang": "javascript",
+    "code": "const cache = new Map();\ncache.set({ id: 1 }, 'value');\nconsole.log(cache.size);\nfor (const [key, value] of cache) console.log(key, value);",
+    "follow_up": "How would you serialize or persist a `Map` if you needed to send it over the network?"
+   },
+   {
+    "question": "How do you think about `try`/`catch` with asynchronous JavaScript?",
+    "answer": "`try`/`catch` works with `await` because the awaited rejection becomes a thrown error in that block. It does not catch errors from code that runs later unless that code is awaited or otherwise returned into the same async flow. That means you should place the `try` as close as possible to the operation you want to guard. The trade-off is broader error coverage versus accidentally swallowing unrelated failures.",
+    "real_world": "A service might catch a fetch failure but still miss a parsing error thrown after the response arrives. In production, that leads to inconsistent logs and error handling that looks correct but does not cover the full flow.",
+    "code_lang": "javascript",
+    "code": "async function load() {\n  try {\n    const res = await fetch('/api');\n    return await res.json();\n  } catch (err) {\n    return null;\n  }\n}",
+    "follow_up": "What is the difference between handling an error locally and letting it bubble up?"
+   },
+   {
+    "question": "How do you approach testing asynchronous JavaScript code reliably?",
+    "answer": "Tests should wait for the async operation to finish instead of assuming it already happened. That usually means returning the promise, using `await`, or flushing timers when the code depends on them. You also want to avoid mixing real network calls with unit tests, so mocks or stubs keep tests deterministic. The main trade-off is realism versus speed and reliability.",
+    "real_world": "Flaky tests often come from assertions running before a promise resolves or a timer fires. Teams usually fix this by making the test await the same contract the production code uses.",
+    "code_lang": "javascript",
+    "code": "test('loads user', async () => {\n  const user = await loadUser();\n  expect(user.name).toBe('Ada');\n});",
+    "follow_up": "How would you test code that uses both promises and timers?"
+   },
+   {
+    "question": "How does prototype inheritance work in JavaScript, and when would you care about it in everyday code?",
+    "answer": "Objects can delegate property lookup to another object through the prototype chain. When you read a property, JavaScript checks the object first and then walks up the chain until it finds the property or reaches null. This matters for understanding why methods are shared across instances, how built-in objects work, and why some property checks succeed even when the property is not an own property. In day-to-day code, you mostly rely on classes or object literals, but prototypes explain behavior that otherwise looks magical.",
+    "real_world": "This comes up when debugging why a method exists on an instance even though it was never assigned directly, or when a library mutates a prototype and affects all instances. It also matters when checking whether a key came from the object itself or was inherited.",
+    "code_lang": "javascript",
+    "code": "const parent = { greet() { return 'hi'; } };\nconst child = Object.create(parent);\nchild.name = 'Ava';\nconsole.log(child.greet()); // hi\nconsole.log(child.hasOwnProperty('greet')); // false",
+    "follow_up": "How would you check safely whether a property is an own property rather than inherited?"
+   },
+   {
+    "question": "What’s the difference between a plain object and a `Map` when you need dynamic keys?",
+    "answer": "A plain object is convenient for fixed-shaped data and simple string or symbol keys, while `Map` is better for frequent insertions, deletions, and arbitrary key types. `Map` also preserves insertion order and has a clear size property. Objects still work well for JSON-like data and when you want literal syntax, but they can be awkward for non-string keys and accidental prototype collisions. The trade-off is convenience versus more explicit collection semantics.",
+    "real_world": "This matters in caching layers, deduping logic, and in-memory indexes where keys are computed at runtime. A team may switch to `Map` after discovering that object keys are being coerced to strings or that `Object.keys()` is too costly for frequent size checks.",
+    "code_lang": "javascript",
+    "code": "const cache = new Map();\nconst user = { id: 1 };\ncache.set(user, 'profile');\nconsole.log(cache.get(user)); // profile\nconsole.log(cache.size);",
+    "follow_up": "When would a plain object still be the better choice than a `Map`?"
+   },
+   {
+    "question": "How do `class` syntax and constructor functions compare in JavaScript?",
+    "answer": "`class` is syntax built on top of the prototype system, not a separate object model. It makes inheritance and shared methods easier to read, but the runtime behavior is still prototype-based. Constructor functions give you the same underlying mechanics with older syntax, which you may still see in legacy code or libraries. In new code, classes usually improve readability, while understanding the prototype behavior helps with debugging and mocking.",
+    "real_world": "This shows up when maintaining older codebases or integrating with libraries that expose constructor functions. It also helps when diagnosing why a method override or `instanceof` check behaves differently than expected.",
+    "code_lang": "javascript",
+    "code": "class User {\n  constructor(name) { this.name = name; }\n  greet() { return `Hi ${this.name}`; }\n}\nconst u = new User('Mina');\nconsole.log(u.greet());",
+    "follow_up": "What actually happens on the prototype when you define a method inside a class?"
+   },
+   {
+    "question": "What is the purpose of `bind`, `call`, and `apply` in JavaScript?",
+    "answer": "They let you control what `this` refers to when invoking a function. `call` and `apply` invoke immediately, with `apply` taking arguments as an array-like list, while `bind` returns a new function with `this` fixed for later use. This matters when passing methods as callbacks, attaching event handlers, or adapting one function to different receivers. The main trade-off is flexibility versus readability; overusing them can make control flow harder to follow.",
+    "real_world": "This comes up when a class method is passed to `setTimeout`, an event listener, or a callback library and loses its object context. It’s a common source of bugs where `this` becomes undefined or points at the wrong object.",
+    "code_lang": "javascript",
+    "code": "const user = {\n  name: 'Rita',\n  greet() { return `Hi ${this.name}`; }\n};\nconst fn = user.greet.bind(user);\nconsole.log(fn());",
+    "follow_up": "When would you prefer binding once in a constructor versus using an arrow property method?"
+   },
+   {
+    "question": "How do you decide between `for...of`, `for...in`, and array methods like `reduce`?",
+    "answer": "`for...of` iterates values from iterable data like arrays, strings, and sets. `for...in` iterates enumerable property keys and is usually a poor choice for arrays because it can include inherited or unexpected keys. `reduce` is useful when you want one pass that accumulates into a single result, but it can be less readable than a loop. In practice, choose the clearest tool for the job and avoid `for...in` for array traversal unless you specifically need object keys.",
+    "real_world": "This matters when processing list data from APIs or when a bug appears because array iteration starts visiting custom properties. It also affects code review quality, since a well-named loop is often easier to maintain than a dense reducer.",
+    "code_lang": "javascript",
+    "code": "const nums = [1, 2, 3];\nlet sum = 0;\nfor (const n of nums) sum += n;\nconsole.log(sum); // 6\nconsole.log(nums.reduce((a, n) => a + n, 0));",
+    "follow_up": "When is `reduce` a good fit, and when does it hurt readability?"
+   },
+   {
+    "question": "What’s the difference between synchronous exceptions and promise rejections?",
+    "answer": "A synchronous exception is thrown immediately in the current call stack, while a promise rejection represents a failed asynchronous operation. Inside `async` functions, a thrown error becomes a rejected promise, which is why `await` should usually be wrapped in `try`/`catch` when you need local handling. Understanding the difference matters because mixing them incorrectly can leave errors unhandled or caught in the wrong place. In practice, you want one consistent error path per code boundary.",
+    "real_world": "This comes up when a function sometimes throws before returning a promise and sometimes rejects later, making tests and callers inconsistent. It also affects logging and retry logic in request pipelines.",
+    "code_lang": "javascript",
+    "code": "async function loadData() {\n  if (!navigator.onLine) throw new Error('offline');\n  const res = await fetch('/api');\n  return res.json();\n}",
+    "follow_up": "How would you structure error handling so callers don’t have to care whether a failure was sync or async?"
+   },
+   {
+    "question": "How do you use optional chaining and nullish coalescing correctly in real code?",
+    "answer": "Optional chaining lets you safely access nested properties without throwing when an intermediate value is null or undefined. Nullish coalescing gives you a default only for nullish values, not for other falsy values like 0 or an empty string. That distinction matters when valid data can be falsy, such as a zero count or a blank label. The trade-off is brevity versus overusing it in places where explicit validation would be clearer.",
+    "real_world": "This is common when reading API responses that may omit nested fields or when handling user settings with legitimate zero values. It prevents noisy guard code but can hide missing-data bugs if used too casually.",
+    "code_lang": "javascript",
+    "code": "const title = response?.data?.title ?? 'Untitled';\nconst count = stats?.items?.length ?? 0;\nconsole.log(title, count);",
+    "follow_up": "When would you prefer explicit checks over optional chaining?"
+   },
+   {
+    "question": "What are pure functions, and why do they matter in JavaScript applications?",
+    "answer": "A pure function always returns the same output for the same input and has no side effects. They are easier to test, memoize, and reason about because they don’t depend on hidden state or mutate shared data. This matters a lot in reducers, selectors, and business logic, even if the surrounding app still has side effects like network calls or DOM updates. The trade-off is that pure code can sometimes require more data to be passed around explicitly.",
+    "real_world": "Teams use this pattern to make state updates and calculations predictable, especially in front-end apps where debugging hidden mutation is painful. Pure functions also make regression tests much simpler because they are deterministic.",
+    "code_lang": "javascript",
+    "code": "function total(price, taxRate) {\n  return price + price * taxRate;\n}\nconsole.log(total(100, 0.2)); // 120",
+    "follow_up": "How would you handle side effects while still keeping most of the logic pure?"
+   },
+   {
+    "question": "What is memoization in JavaScript, and when is it worth using?",
+    "answer": "Memoization caches the result of a function call so repeated calls with the same inputs can return the cached value. It can improve performance for expensive deterministic computations, but it adds memory usage and cache invalidation concerns. It is most useful when the function is pure and called many times with repeated arguments. For cheap operations, memoization often makes the code more complex without meaningful benefit.",
+    "real_world": "This comes up in UI code when derived values are recomputed on every render, or in server code where the same expensive calculation happens for many requests. It can also cause subtle bugs if you cache results for inputs that are not truly stable.",
+    "code_lang": "javascript",
+    "code": "function memoize(fn) {\n  const cache = new Map();\n  return x => cache.has(x) ? cache.get(x) : (cache.set(x, fn(x)), cache.get(x));\n}\nconst square = memoize(n => n * n);",
+    "follow_up": "What kinds of functions should not be memoized?"
+   },
+   {
+    "question": "How do you handle events and prevent common memory leaks in browser JavaScript?",
+    "answer": "You should register listeners deliberately and remove them when the component or page section is torn down. Leaks happen when listeners hold references to DOM nodes, timers, or closures that never get released because cleanup is missing. In modern apps, the key is to pair setup and teardown in one place, such as a component lifecycle or a cleanup function. The trade-off is a bit more boilerplate in exchange for fewer long-lived references and less surprising behavior.",
+    "real_world": "This matters in single-page apps where navigating around causes event handlers and timers to accumulate. Over time, that can create duplicated behavior, rising memory use, and slower interactions.",
+    "code_lang": "javascript",
+    "code": "function onResize() { console.log(window.innerWidth); }\nwindow.addEventListener('resize', onResize);\n// later\nwindow.removeEventListener('resize', onResize);",
+    "follow_up": "How would you debug a suspected listener leak in a production app?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "Can you explain how the JavaScript microtask queue actually behaves, especially when code keeps queuing more microtasks?",
+    "answer": "Microtasks run after the current call stack finishes and before the runtime moves on to the next macrotask like a timer or I/O callback. If a microtask schedules more microtasks, the runtime keeps draining that queue before yielding, so you can starve timers, rendering, or socket handling. Promise callbacks and `queueMicrotask` use this path, which makes them useful for ordering but dangerous in hot loops. The trade-off is low-latency follow-up work versus fairness to the rest of the system.",
+    "real_world": "A production incident pattern is code that recursively resolves promises and causes the UI to freeze or a Node server to delay incoming requests even though CPU looks busy but not crashed.",
+    "code_lang": "javascript",
+    "code": "setTimeout(() => console.log('timer'));\nPromise.resolve().then(() => {\n  console.log('p1');\n  queueMicrotask(() => console.log('qm'));\n}).then(() => console.log('p2'));\nconsole.log('sync');",
+    "follow_up": "How would you break up that work so you keep ordering guarantees without starving the event loop?"
+   },
+   {
+    "question": "What’s the practical difference between CommonJS and ES modules in how they load, initialize, and behave under cycles?",
+    "answer": "CommonJS loads modules synchronously and exports a mutable object, so consumers often see a partially initialized module during a cycle. ES modules are statically linked, have live bindings, and go through separate linking and evaluation phases, which makes cycles more predictable but also exposes temporal dead zone issues if you read an import before its module has initialized it. ES module syntax also enables better tree shaking because the dependency graph is analyzable ahead of time. The right choice depends on runtime support, tooling, and whether you need synchronous loading semantics.",
+    "real_world": "Cyclic dependencies are a common source of startup bugs where one side reads `undefined` only in production build order. Teams also hit cold-start and bundle-size issues that improve when moving code to analyzable ES modules.",
+    "code_lang": "javascript",
+    "code": "// a.mjs\nimport { b } from './b.mjs';\nexport const a = 'A';\nconsole.log('from a:', b);\n\n// b.mjs\nimport { a } from './a.mjs';\nexport const b = 'B';\nconsole.log('from b:', a);",
+    "follow_up": "How do bundlers handle ESM tree shaking, and what coding patterns tend to defeat it?"
+   },
+   {
+    "question": "What are hidden classes and inline caches in JavaScript engines, and how do object shape changes affect performance?",
+    "answer": "Modern engines optimize property access by assigning objects internal shapes and caching access paths when many objects are laid out the same way. If you add properties in different orders, delete properties, or mix unrelated shapes at the same call site, the cache becomes polymorphic or megamorphic and property access gets slower. This matters most in hot code and data-heavy paths, not general business logic. The trade-off is writing simple code versus preserving stable object layouts where profiling shows it matters.",
+    "real_world": "This shows up in services that deserialize large volumes of records and then mutate them inconsistently; a small refactor to normalize object construction can reduce CPU noticeably.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What coding patterns tend to create megamorphic call sites, and how would you confirm that with profiling?"
+   },
+   {
+    "question": "How do `WeakMap`, `WeakSet`, `WeakRef`, and `FinalizationRegistry` differ, and when are they safe or unsafe to use?",
+    "answer": "`WeakMap` and `WeakSet` hold keys weakly, so entries disappear when the key object becomes unreachable; they are good for per-object metadata without preventing garbage collection. `WeakRef` lets you peek at an object that may already have been collected, and `FinalizationRegistry` lets you request cleanup callbacks after collection, but timing is explicitly nondeterministic. That makes weak refs and finalizers poor choices for core correctness, resource management, or business logic. Use them only for caches, diagnostics, or best-effort cleanup where eventual loss is acceptable.",
+    "real_world": "A common leak is storing DOM-node metadata in a normal `Map`; switching to `WeakMap` avoids retaining detached nodes. A common bug is relying on finalizers to close critical resources, which fails under load or never runs before process exit.",
+    "code_lang": "javascript",
+    "code": "const meta = new WeakMap();\nfunction track(node) {\n  meta.set(node, { seenAt: Date.now() });\n}\n",
+    "follow_up": "If you need predictable cleanup for a file handle or socket, what should you do instead?"
+   },
+   {
+    "question": "What happens to memory in V8 or similar engines when you create lots of short-lived objects versus long-lived ones, and how does that change performance tuning?",
+    "answer": "Generational garbage collectors optimize for the common case that most objects die young. Short-lived allocations are usually cheap because they go into a young generation that is collected frequently, while long-lived objects get promoted and become more expensive to scan and compact later. The practical implication is that allocation itself is often not the bottleneck; retaining data accidentally is. Performance tuning should focus on object lifetime, cache size, and references that keep graphs alive rather than avoiding every temporary object.",
+    "real_world": "Teams often blame object creation for latency, but the real issue is an unbounded cache or request context accidentally retained across requests, causing old-space growth and long GC pauses.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you investigate a suspected memory leak in a long-running Node.js service?"
+   },
+   {
+    "question": "Can you compare `structuredClone` with `JSON.parse(JSON.stringify(...))` and with hand-rolled deep cloning?",
+    "answer": "`structuredClone` is the platform deep-clone operation for many built-in JavaScript data types and handles cycles, unlike the JSON round-trip. JSON cloning drops unsupported values, loses type information for several built-ins, and fails on cyclic graphs. Hand-rolled deep cloning is easy to get wrong because prototypes, accessors, circular references, and special built-ins all have edge cases. The trade-off is portability and control versus correctness and maintenance; if `structuredClone` is available and semantics fit, it is usually the safest default.",
+    "real_world": "This matters in worker communication, state snapshots, and defensive copying of request payloads, where JSON cloning can silently corrupt data or crash on circular structures.",
+    "code_lang": "javascript",
+    "code": "const x = { d: new Date(), m: new Map([['k', 1]]) };\nconst y = structuredClone(x);\nconsole.log(y.d instanceof Date, y.m instanceof Map);",
+    "follow_up": "When would cloning still be the wrong fix compared with redesigning ownership or using immutable updates?"
+   },
+   {
+    "question": "How do you reason about backpressure and event-loop blocking in Node.js when processing streams or many concurrent requests?",
+    "answer": "Backpressure means the producer must slow down when the consumer or destination cannot keep up. In Node streams, that usually means respecting the return value of `write`, waiting for drain, and using `pipeline` or async iteration so errors and flow control propagate correctly. Separately, CPU-heavy synchronous work blocks the event loop entirely, so no amount of stream backpressure helps; that work needs chunking, worker threads, or another service boundary. The trade-off is throughput versus latency and memory growth.",
+    "real_world": "Ignoring backpressure can balloon memory when a fast source floods a slow database or network sink. Blocking the event loop with JSON transformation or crypto can make health checks fail and trigger cascading restarts.",
+    "code_lang": "javascript",
+    "code": "for (const chunk of chunks) {\n  if (!dest.write(chunk)) {\n    await once(dest, 'drain');\n  }\n}\ndest.end();",
+    "follow_up": "How would you tell from metrics whether the problem is backpressure, GC pressure, or pure CPU saturation?"
+   },
+   {
+    "question": "What are the edge cases around property enumeration order and why can relying on object key order become a bug?",
+    "answer": "JavaScript defines an order for many property-iteration operations, but it is not simply insertion order for all keys. Integer-like keys are treated specially, then other string keys, and symbols are separate again. That means code that assumes a plain object preserves business-significant order can break when numeric-looking IDs or mixed key types appear. If order matters semantically, use arrays for sequences or `Map` when you need ordered key-value pairs explicitly.",
+    "real_world": "A subtle production bug is rendering or signing data from object keys and getting a different order once IDs change from `a1` to `1`, causing mismatches that only appear with some datasets.",
+    "code_lang": "javascript",
+    "code": "const o = {};\no.b = 1;\no[2] = 2;\no.a = 3;\no[1] = 4;\nconsole.log(Object.keys(o));",
+    "follow_up": "Which language operations use this ordering, and which ones should you avoid for stable serialization?"
+   },
+   {
+    "question": "How do proxies work under the hood from a language semantics point of view, and what are the main correctness and performance trade-offs?",
+    "answer": "A `Proxy` interposes on core object operations like property lookup, assignment, enumeration, and function calls through traps, but the traps must obey invariants of the target, especially for non-configurable properties and object extensibility. Because proxies make behavior dynamic and hard to predict, they tend to defeat engine optimizations and can slow hot paths substantially. They are powerful for virtualization, validation, and instrumentation, but risky as a blanket abstraction over normal application state. You should use them at boundaries, not everywhere.",
+    "real_world": "Framework internals sometimes use proxies for reactivity, but putting them into performance-critical data processing can create surprising slowdowns and difficult debugging around identity and stack traces.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What proxy invariants can throw at runtime even if your trap code seems logically correct?"
+   },
+   {
+    "question": "If you had to choose between `Array`, `TypedArray`, and `Buffer`-style binary handling in JavaScript, what are the real differences and trade-offs?",
+    "answer": "Regular arrays hold general JavaScript values and are flexible, but they are inefficient for dense numeric or binary data because each element follows normal JS value semantics. Typed arrays are fixed-length views over `ArrayBuffer` memory, which gives compact storage and predictable numeric conversions, making them better for binary protocols, parsing, and compute-heavy numeric work. In Node, `Buffer` builds on binary memory ergonomics for I/O and networking. The trade-off is raw performance and memory efficiency versus flexibility and JS-friendly semantics.",
+    "real_world": "This matters when parsing large payloads, image data, or network frames; using normal arrays can multiply memory use and copy costs, while the binary types let teams avoid unnecessary allocations.",
+    "code_lang": "javascript",
+    "code": "const buf = new ArrayBuffer(4);\nconst u8 = new Uint8Array(buf);\nu8[0] = 255;\nconsole.log(u8[0]);",
+    "follow_up": "What kinds of bugs come from shared underlying buffers and sliced views?"
+   },
+   {
+    "question": "What actually happens during a JavaScript module cycle, and why do some cycles work while others fail at runtime?",
+    "answer": "In ES modules, imports are live bindings and the loader links the whole graph before running code, so simple cycles can work if each side only reads values after both modules have initialized. They fail when code touches a binding while the exporting module is still in its temporal dead zone or before its initialization has run. CommonJS behaves differently because modules execute as they are required and consumers can observe partially initialized exports objects. The key trade-off is that ESM gives more predictable linkage, but cycles still need careful design around initialization timing.",
+    "real_world": "A production incident often shows up as `Cannot access 'x' before initialization` after a refactor that moved side effects to module top level. Teams usually break the cycle by extracting shared types/constants or by deferring initialization behind functions.",
+    "code_lang": "javascript",
+    "code": "// a.mjs\nimport { b } from './b.mjs';\nexport const a = 1;\nconsole.log(b);\n\n// b.mjs\nimport { a } from './a.mjs';\nexport const b = a + 1;",
+    "follow_up": "How would you refactor a cyclic dependency between two services without introducing a global singleton?"
+   },
+   {
+    "question": "When does top-level `await` become an architectural problem rather than just a convenience?",
+    "answer": "Top-level `await` pauses evaluation of the importing module graph until the awaited work completes, so it can serialize startup and widen blast radius from one slow dependency. That is fine for boot-time configuration or one-time initialization, but risky for libraries or shared modules because every importer inherits that latency and failure mode. It also complicates cycles and can make startup ordering harder to reason about. I use it when startup must block on a resource, and avoid it when lazy initialization or explicit bootstrap gives better control.",
+    "real_world": "In a serverless service, putting a network fetch in top-level `await` can add cold-start latency to every request path that imports that module. Teams often move that work into an explicit `init()` with timeout, retry, and fallback behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you expose asynchronous initialization in a library without forcing every consumer into top-level `await`?"
+   },
+   {
+    "question": "Can you explain the temporal dead zone in terms of how bindings are created and initialized, not just the user-facing error?",
+    "answer": "For `let`, `const`, and `class`, the scope gets a binding when the environment is created, but that binding starts uninitialized. Any read before the declaration runs throws, which is the temporal dead zone. This is different from `var`, which is created and initialized to `undefined` at environment creation. The benefit is catching use-before-initialize bugs early, especially across block scopes and module imports.",
+    "real_world": "This matters in large refactors where moving a declaration below a helper call starts throwing only on certain code paths. In modules, the same mechanism is why some cyclic imports fail immediately instead of producing stale `undefined` values.",
+    "code_lang": "javascript",
+    "code": "{\n  // console.log(x); // ReferenceError\n  let x = 3;\n  console.log(x);\n}",
+    "follow_up": "Why do function declarations behave differently from `class` declarations here?"
+   },
+   {
+    "question": "What’s the difference between script code and module code in JavaScript, and why does it matter in production?",
+    "answer": "Module code is always strict mode, has its own top-level scope, supports static imports and exports, and uses live bindings. Script code can pollute globals, has different top-level `this` behavior, and historically allows patterns that modules reject. In practice this changes bundling, tree-shaking, startup ordering, and how safely files compose. For production systems, choosing modules usually reduces accidental globals and makes dependency structure analyzable.",
+    "real_world": "A browser bug can happen when an old script expects top-level variables to land on `window`, then stops working after being converted to a module. On the server, mixed CommonJS and ESM packages often create initialization and tooling surprises during migration.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does top-level `this` differ between browsers and Node in scripts versus modules?"
+   },
+   {
+    "question": "How do sparse arrays actually behave, and why can they create correctness or performance bugs?",
+    "answer": "A sparse array has holes, which are missing elements rather than elements with the value `undefined`. Different operations treat holes differently: iteration methods often skip them, while some conversions materialize them as `undefined`. Engines also optimize dense arrays better than holey arrays, so introducing holes can deoptimize element access. I avoid sparse arrays unless the semantics are intentional, because they make both behavior and performance less predictable.",
+    "real_world": "A common production bug is a data pipeline using `new Array(n).map(...)` and getting an array full of holes because `map` skips missing elements. Performance regressions can also appear after code starts deleting array indexes instead of compacting or using a map-like structure.",
+    "code_lang": "javascript",
+    "code": "const a = [1, , 3];\nconsole.log(1 in a, a[1]);\nconsole.log(a.map(x => 0)); // hole is preserved\nconsole.log([...a]);        // hole becomes undefined",
+    "follow_up": "Why is `delete arr[i]` usually the wrong operation on arrays?"
+   },
+   {
+    "question": "What are the real semantics of `Object.freeze`, and what does it not protect you from?",
+    "answer": "`Object.freeze` prevents adding, removing, or reconfiguring properties on that object, and makes data properties non-writable, but it is shallow. Nested objects can still mutate unless they are frozen too, and accessors can still return changing data. It also does not create value semantics or thread safety; it just constrains property-level mutation. I treat it as a defensive boundary tool, not as a substitute for immutable data design.",
+    "real_world": "Teams freeze config objects in development to catch accidental mutation, then still get bugs because nested arrays or maps remain mutable. It is useful for API contracts, but not enough if you need deep immutability guarantees across a large state tree.",
+    "code_lang": "javascript",
+    "code": "const cfg = Object.freeze({ nested: { x: 1 } });\n// cfg.newKey = 1; // fails\ncfg.nested.x = 2;\nconsole.log(cfg.nested.x); // 2",
+    "follow_up": "How would you enforce deep immutability without paying too much runtime cost?"
+   },
+   {
+    "question": "How do getters, setters, and property descriptors affect correctness and optimization in JavaScript objects?",
+    "answer": "A property access is not always a field read; it may invoke getter or setter code defined by the property descriptor or found on the prototype chain. That matters for correctness because reads can have side effects and writes may be validated, ignored, or redirected. It matters for performance because engines can optimize stable data-property access better than polymorphic accessor-heavy patterns. I use accessors when they encode an invariant, but avoid making ordinary field access unexpectedly expensive or stateful.",
+    "real_world": "A production latency issue can come from an ORM entity where reading a property triggers lazy loading inside a getter. Another class of bugs appears when code clones objects and assumes descriptors are preserved, but plain spread only copies current enumerable values.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What’s the difference between `Object.defineProperty` and plain assignment in terms of defaults and enumerability?"
+   },
+   {
+    "question": "What are JavaScript realms, and why do they break some assumptions about identity and type checks?",
+    "answer": "A realm is a separate set of intrinsic objects and global environment, like another window, iframe, or VM context. Values crossing realms can fail identity-based checks because each realm has its own `Array`, `Error`, and other constructors, so `instanceof` against your realm’s constructor may be false. That is why brand checks like `Array.isArray` are safer across realms. It also affects security and sandboxing, because sharing objects across realms can expose surprising capabilities.",
+    "real_world": "Frontend code often breaks when data comes from an iframe and `value instanceof Array` suddenly returns false. Test runners and server sandboxes can hit the same issue with `Error` checks and custom serialization.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If `instanceof` is unreliable across realms, what checks would you use for built-ins and for your own domain objects?"
+   },
+   {
+    "question": "How does `eval` change the way engines and tools can reason about JavaScript, and when is it unacceptable?",
+    "answer": "`eval` turns a string into executable code in the current or global scope, which destroys many static assumptions about bindings, control flow, and security boundaries. Engines and bundlers have to be more conservative around optimization and tree-shaking because names may be referenced dynamically. It also creates obvious injection risk if any input is not fully trusted. In production code, I treat direct `eval` as unacceptable except in tightly controlled tooling or sandboxed environments built specifically for code execution.",
+    "real_world": "A security incident can come from templating or admin tooling that evaluates user-provided expressions without real sandboxing. Even when inputs are trusted, use of `eval` often blocks CSP in browsers and complicates minification or dead-code elimination.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What’s the difference between direct and indirect `eval`, and why does that matter?"
+   },
+   {
+    "question": "What does tail-call optimization mean in the JavaScript spec, and why can’t you usually rely on it in real systems?",
+    "answer": "Proper tail calls in the spec mean a call in tail position can reuse the current stack frame, allowing some recursive patterns to run in constant stack space. In practice, support has been limited and inconsistent, so production JavaScript should not assume deep recursion is safe just because a call is in tail position. For reliability, I prefer iterative forms or an explicit work queue when depth can grow with input size. The trade-off is a bit more boilerplate for predictable behavior across engines.",
+    "real_world": "Recursive tree walkers or parsers can work in small tests and then crash with stack overflows on large customer inputs. Teams usually replace recursion with loops or stacks in hot or unbounded paths to avoid engine-specific limits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you rewrite a recursive DFS over a large graph to avoid stack overflow while preserving order?"
+   }
+  ]
+ }
+}

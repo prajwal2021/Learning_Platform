@@ -1,0 +1,336 @@
+{
+  "slug": "zero-byte-upload-success",
+  "title": "Uploads complete successfully, but downloads are zero bytes",
+  "difficulty": "medium",
+  "est_minutes": 12,
+  "tags": [
+    "uploads",
+    "object-storage",
+    "presigned-urls",
+    "data-consistency",
+    "mobile"
+  ],
+  "scenario": "Roughly 0.6% of direct-to-storage uploads appear successful in the UI but download as 0-byte files. Clients receive a presigned URL, upload directly to object storage, then call an application callback. The application marks the file complete when that callback arrives. Network traces show some mobile clients abort after creating the object key but before sending the 20 to 80 MB payload.",
+  "goal": "Find the cause and change the upload flow so completed file metadata matches the bytes actually stored.",
+  "concepts": [
+    {
+      "key": "direct-to-storage-upload",
+      "name": "Direct-to-storage upload",
+      "summary": "A client uploads file bytes straight to an object store instead of sending them through the application server. This reduces application server bandwidth but splits the workflow across the client, app, and storage system.",
+      "used_here": "Mobile clients upload 20 to 80 MB files directly after the app gives them upload instructions."
+    },
+    {
+      "key": "presigned-url",
+      "name": "Presigned URL",
+      "summary": "A presigned URL is a temporary URL that grants limited permission to perform an object-store operation. It commonly allows a client to upload or download one object without having broad storage credentials.",
+      "used_here": "The app gives clients a URL they can use to upload a specific file object."
+    },
+    {
+      "key": "object-store",
+      "name": "Object store",
+      "summary": "An object store saves data as objects addressed by keys, with metadata such as size and sometimes checksum fields. Examples include S3-like systems and cloud blob stores.",
+      "used_here": "It stores the uploaded files and later serves downloads."
+    },
+    {
+      "key": "application-callback",
+      "name": "Application callback",
+      "summary": "An application callback is a request from the client back to the app after the client has performed some work elsewhere. The app can use it to advance workflow state.",
+      "used_here": "The client calls the app after attempting the direct upload."
+    },
+    {
+      "key": "database-state",
+      "name": "Database state",
+      "summary": "Database state is the application’s durable record of what stage a workflow or entity is in. It is often what the UI reads to decide what to display.",
+      "used_here": "The file row has states such as in progress, pending, complete, or failed."
+    },
+    {
+      "key": "head-request",
+      "name": "HEAD request",
+      "summary": "A HEAD request asks a server for an object’s metadata without returning the object body. In object storage, it can return fields such as existence, content length, and stored checksum headers when available.",
+      "used_here": "The app can inspect stored object metadata without downloading a 20 to 80 MB file."
+    },
+    {
+      "key": "content-length",
+      "name": "Content-Length",
+      "summary": "Content-Length is the number of bytes stored or transferred for an object. It is a basic metadata field for detecting empty or truncated content.",
+      "used_here": "A completed upload should not have length 0 when the expected file is 20 to 80 MB."
+    },
+    {
+      "key": "checksum",
+      "name": "Checksum",
+      "summary": "A checksum is a compact value computed from bytes to detect whether the bytes match an expected value. Different storage systems expose and validate checksums differently, especially for multipart or encrypted objects.",
+      "used_here": "It can help compare the stored object against the expected uploaded content when the checksum is recorded and interpreted correctly."
+    },
+    {
+      "key": "multipart-upload",
+      "name": "Multipart upload",
+      "summary": "Multipart upload splits a large file into parts and then completes them into one object. In S3-like systems, unfinished multipart uploads are not normal completed objects visible to a simple HEAD request.",
+      "used_here": "Some 20 to 80 MB uploads may use multipart behavior depending on the client and storage configuration."
+    },
+    {
+      "key": "storage-event",
+      "name": "Storage event",
+      "summary": "A storage event is a notification emitted by an object store after an object operation. Delivery behavior and exact event types depend on the storage platform.",
+      "used_here": "It can provide a server-side signal that the object store observed an upload-related operation."
+    },
+    {
+      "key": "idempotency",
+      "name": "Idempotency",
+      "summary": "An idempotent operation can be retried or received more than once without corrupting state. It is important when callbacks, events, or network requests may be duplicated.",
+      "used_here": "Upload completion handling must tolerate repeated client callbacks or storage notifications."
+    },
+    {
+      "key": "reconciliation",
+      "name": "Reconciliation",
+      "summary": "Reconciliation compares records across systems and repairs or reports mismatches. It is commonly used when one system’s state may have drifted from another’s.",
+      "used_here": "It is useful for checking existing file rows against stored object metadata."
+    },
+    {
+      "key": "canary-rollout",
+      "name": "Canary rollout",
+      "summary": "A canary rollout sends a change to a small percentage of traffic before full deployment. It limits blast radius while collecting real production signals.",
+      "used_here": "The upload finalization change can be enabled gradually and watched with metrics."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the mismatch",
+      "question": "You need to investigate the 0.6% of uploads that show complete in the UI but download as 0 bytes. Which first check gives the most useful evidence?",
+      "concept_keys": [
+        "object-store",
+        "database-state",
+        "head-request",
+        "content-length",
+        "application-callback"
+      ],
+      "options": [
+        {
+          "text": "Review authentication logs for expired presigned URLs and count how many clients received 403 responses during upload.",
+          "correct": false,
+          "hint": "Expired URLs can break uploads, but the incident says the UI marks these files complete and the downloaded object is 0 bytes. Start by comparing the app’s record with storage metadata.",
+          "id": "a"
+        },
+        {
+          "text": "Join completed file rows to object metadata and compare callback time, stored Content-Length, and download size for affected keys.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Replay several failed downloads through the application server and compare latency with successful file downloads.",
+          "correct": false,
+          "hint": "Latency can reveal serving problems, but this incident is about completed records whose stored bytes may not match the expected file.",
+          "id": "c"
+        },
+        {
+          "text": "Inspect CDN access logs for 200 responses with zero response bytes and group them by browser and region.",
+          "correct": false,
+          "hint": "Download logs show the symptom users see, but they do not tell you whether the stored object itself is empty or the download path is failing.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The key question is whether the database says complete while storage metadata says the object has length 0. Comparing completed rows, callback timestamps, and object Content-Length directly tests that boundary. CDN or replay checks may confirm zero-byte downloads, but they do not explain why a 20 to 80 MB upload became a completed 0-byte object."
+    },
+    {
+      "title": "Identify the failure mode",
+      "question": "The comparison shows affected rows were marked complete seconds after the client callback, and HEAD on those object keys returns Content-Length: 0. Network traces show some mobile clients opened the upload request and then aborted before sending the body. What is the most likely root cause?",
+      "concept_keys": [
+        "application-callback",
+        "database-state",
+        "object-store",
+        "content-length",
+        "direct-to-storage-upload"
+      ],
+      "options": [
+        {
+          "text": "The download service is truncating responses after reading metadata for a valid object.",
+          "correct": false,
+          "hint": "If storage metadata already says the object length is 0, the empty result exists before the download service reads it.",
+          "id": "a"
+        },
+        {
+          "text": "The database is storing file sizes in a field that overflows for files larger than 20 MB.",
+          "correct": false,
+          "hint": "An overflow could corrupt recorded metadata, but it would not make object storage report Content-Length: 0 for the object itself.",
+          "id": "b"
+        },
+        {
+          "text": "The presigned URL duration is too short for normal mobile uploads over slow networks.",
+          "correct": false,
+          "hint": "Short URL duration can cause failed uploads, but the important clue is that the app advances state after a callback while the object has zero stored bytes.",
+          "id": "c"
+        },
+        {
+          "text": "The application treats the client callback as final completion even when the stored object contains no payload bytes.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The app is advancing the database to complete based on a client message, while storage shows the object contains 0 bytes. A mobile abort can leave an empty object or otherwise fail to deliver the intended payload, yet the callback still moves the row to complete. A short presigned URL might increase failures, but it does not explain why the app records success for an object whose Content-Length is 0."
+    },
+    {
+      "title": "Choose the production fix",
+      "question": "You are changing the completion path for new uploads. Which design correctly prevents a 20 to 80 MB upload from becoming a completed 0-byte file?",
+      "concept_keys": [
+        "presigned-url",
+        "head-request",
+        "content-length",
+        "checksum",
+        "multipart-upload",
+        "storage-event",
+        "database-state"
+      ],
+      "options": [
+        {
+          "text": "Require the client callback to include the final byte count and checksum, then trust those values when updating the row to complete.",
+          "correct": false,
+          "hint": "This improves the metadata sent by the client, but it still lets the party that may have failed the upload decide the final stored state.",
+          "id": "a"
+        },
+        {
+          "text": "Wait 30 seconds after the callback before marking complete, so mobile clients have time to finish sending the remaining bytes.",
+          "correct": false,
+          "hint": "A fixed delay changes timing but does not establish what object bytes were actually accepted by storage.",
+          "id": "b"
+        },
+        {
+          "text": "When the client callback arrives, check that HEAD returns 200 for the key, then mark the row complete and save the returned object key.",
+          "correct": false,
+          "hint": "An existing object can still be empty or otherwise not match what the app expected for that upload.",
+          "id": "c"
+        },
+        {
+          "text": "Record the expected size and checksum when issuing the upload, then complete the row only after storage-side evidence shows the object exists with matching Content-Length and a correctly interpreted checksum for that upload type.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The completion decision must be based on storage-side facts, not just a client callback. A HEAD request can confirm existence and Content-Length, and stored checksum fields or metadata can validate bytes when they are recorded and interpreted correctly. For multipart uploads, do not assume a generic ETag is a content checksum; incomplete multipart uploads are not visible as completed objects via HEAD, and completion or object-created signals must be handled according to the storage API."
+    },
+    {
+      "title": "Make the state transition safe",
+      "question": "After deciding to verify storage metadata before completion, how should the application update workflow state so retries, duplicate callbacks, and delayed storage events do not corrupt the row?",
+      "concept_keys": [
+        "database-state",
+        "application-callback",
+        "storage-event",
+        "idempotency",
+        "head-request"
+      ],
+      "options": [
+        {
+          "text": "Ignore all client callbacks and mark every upload complete from a daily batch job that scans object storage.",
+          "correct": false,
+          "hint": "A batch scan can reduce mismatches, but daily timing is far slower than users expect for normal uploads.",
+          "id": "a"
+        },
+        {
+          "text": "Let the client choose the final state in a signed callback payload, and reject the callback if the signature is invalid.",
+          "correct": false,
+          "hint": "A signature can authenticate who sent the message, but it does not prove the object contains the intended bytes.",
+          "id": "b"
+        },
+        {
+          "text": "Keep marking the row complete on callback, then run an asynchronous verifier that changes it back to failed if the object is wrong.",
+          "correct": false,
+          "hint": "That still exposes bad files as complete, even if a later task repairs some of them.",
+          "id": "c"
+        },
+        {
+          "text": "Use states like uploading, pending verification, complete, and failed; let callbacks or storage events move to pending, and use an idempotent server-side verifier to atomically move only matching rows to complete.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Separate workflow states prevent the UI from showing a file as complete until verification has passed. The verifier should be idempotent and use an atomic conditional update, such as moving from pending verification to complete only if the upload id and expected metadata still match. Marking complete first and fixing later leaves a window where users can download the same 0-byte files that caused the incident."
+    },
+    {
+      "title": "Repair existing bad records",
+      "question": "The new completion path will protect future uploads, but thousands of historical rows were completed by the old path. What is the safest cleanup plan?",
+      "concept_keys": [
+        "reconciliation",
+        "database-state",
+        "head-request",
+        "content-length",
+        "checksum",
+        "object-store"
+      ],
+      "options": [
+        {
+          "text": "Ask mobile clients to retry all old uploads in the background and overwrite the same object keys when they reconnect.",
+          "correct": false,
+          "hint": "Many clients may no longer have the file, and overwriting final keys can create races with current downloads.",
+          "id": "a"
+        },
+        {
+          "text": "Mark all files completed before the fix as failed, because any of them may have used the unsafe path.",
+          "correct": false,
+          "hint": "Most historical uploads are probably valid; a broad state change would create unnecessary user-visible damage.",
+          "id": "b"
+        },
+        {
+          "text": "Run reconciliation for completed rows: HEAD each object, compare size and available checksum data, move mismatches to failed or needs reupload, notify owners, and retain audit data until references are safe.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Delete every 0-byte object immediately, then leave the completed database rows untouched so existing links keep working.",
+          "correct": false,
+          "hint": "Removing objects without updating database state creates broken links and makes recovery harder.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Reconciliation targets the actual inconsistency: completed database rows whose stored object metadata does not match expectations. It avoids harming the 99.4% of uploads that likely succeeded while giving a controlled path for 0-byte or mismatched files. Immediate deletion or blanket failure either breaks references or punishes valid uploads."
+    },
+    {
+      "title": "Roll out and confirm",
+      "question": "You are ready to deploy the new finalization path. Which rollout and success criteria best show the incident is fixed without hiding new problems?",
+      "concept_keys": [
+        "canary-rollout",
+        "database-state",
+        "content-length",
+        "head-request",
+        "storage-event",
+        "reconciliation"
+      ],
+      "options": [
+        {
+          "text": "Stop the incident once support tickets decrease for one day, then remove the extra verification metrics to reduce noise.",
+          "correct": false,
+          "hint": "Support volume is delayed and incomplete; this bug needs direct consistency metrics between database state and storage metadata.",
+          "id": "a"
+        },
+        {
+          "text": "Deploy to 100% immediately and use the UI upload success rate as the main metric, because users only care whether the upload screen succeeds.",
+          "correct": false,
+          "hint": "The old system already showed success in the UI while some stored files were empty, so that metric can miss the failure.",
+          "id": "b"
+        },
+        {
+          "text": "Enable the verifier only for desktop clients first, since mobile clients caused the aborts and should be isolated until later.",
+          "correct": false,
+          "hint": "The highest-risk path is where you need evidence earliest, though a limited rollout can still control blast radius.",
+          "id": "c"
+        },
+        {
+          "text": "Canary the verifier, shadow-compare old and new decisions, and monitor completed-object size mismatches, pending-verification age, verification errors, storage API rate, and zero-byte downloads.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "A canary limits blast radius while checking whether the new verifier changes outcomes compared with the old callback-only path. The right metrics measure the invariant directly: completed rows should have stored objects with expected nonzero length and valid metadata, while pending-verification age and API errors reveal availability or cost regressions. UI success rate alone is insufficient because the incident’s core symptom was false success."
+    }
+  ],
+  "takeaway": "Do not let a client callback be the sole authority for direct-to-storage upload completion. Finalize only after server-side evidence from storage matches the expected size and correctly interpreted integrity metadata, then update application state safely and idempotently. Expect a trade-off: slightly delayed availability and more storage metadata calls in exchange for database records that reflect real stored bytes.",
+  "review_issues": [
+    "Step 2: The scenario/root-cause wording is technically ambiguous for S3-like presigned PUT uploads: aborting after opening a request but before sending a nonzero body usually does not create a visible 0-byte object; a 0-byte object normally requires a completed zero-length PUT or equivalent storage behavior. The challenge should specify that the client/storage path can commit an empty object on such aborts.",
+    "Step 1: The hint for the expired-presigned-URL option says to start by comparing the app record with storage metadata, which effectively gives away the correct option if hints are visible before answering.",
+    "Step 2: The hint for the short-presigned-URL option states that the app advances state after callback while the object has zero stored bytes, which effectively reveals the correct root cause.",
+    "Step 3: The hints for the wrong options collectively reveal the answer by explicitly steering the user to verify what object bytes storage actually accepted rather than trusting existence, client metadata, or timing."
+  ]
+}

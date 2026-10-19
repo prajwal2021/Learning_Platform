@@ -1,0 +1,493 @@
+{
+ "slug": "data-engineering",
+ "name": "Data engineering and warehousing",
+ "category": "Data and AI",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is the difference between a data warehouse and a database used for an application?",
+    "answer": "A database for an application is usually optimized for frequent small writes and reads from a live product. A data warehouse is optimized for analytics: large scans, aggregations, and historical queries across many tables. Warehouses often store cleaned, integrated data from multiple systems, while application databases store operational data for one system. The trade-off is that warehouses are better for analysis but are usually not the system of record for transactions.",
+    "real_world": "A product team may keep user orders in PostgreSQL but send them to a warehouse so analysts can compute revenue by region and cohort without slowing the app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is a warehouse often modeled differently from an OLTP database?"
+   },
+   {
+    "question": "What does ETL mean, and how is it different from ELT?",
+    "answer": "ETL means extract, transform, load: data is cleaned or reshaped before it reaches the warehouse. ELT means extract, load, transform: raw data is loaded first, then transformed inside the warehouse. ELT is common in modern cloud warehouses because they can handle transformations well and keep raw data available for reprocessing. The main trade-off is when and where you pay the transformation cost.",
+    "real_world": "A team may load raw clickstream events into the warehouse first, then build cleaned reporting tables from them later as business rules change.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer ETL over ELT?"
+   },
+   {
+    "question": "What is a fact table in a dimensional model?",
+    "answer": "A fact table stores measurable events or metrics, such as orders, payments, or page views. It usually contains foreign keys to dimension tables and numeric values you want to aggregate. Facts are often at a chosen grain, like one row per order line or one row per event. The key mistake is mixing different grains in the same table, which makes aggregates wrong or confusing.",
+    "real_world": "In e-commerce, a fact table might contain each purchase with columns for customer_id, product_id, quantity, and revenue.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What do you mean by the grain of a fact table?"
+   },
+   {
+    "question": "What is a dimension table used for?",
+    "answer": "A dimension table stores descriptive attributes that help filter, group, or label facts. Examples include customer, product, date, or store dimensions. Dimensions make queries easier to read and let analysts slice metrics by business meaning. A common mistake is putting changing descriptive data in the fact table when it belongs in a dimension.",
+    "real_world": "An analyst might join sales facts to a product dimension to report revenue by category and brand.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is the date dimension so common in warehouses?"
+   },
+   {
+    "question": "What is a primary key, and why does it matter in warehousing?",
+    "answer": "A primary key uniquely identifies a row in a table. In warehousing, it matters because it helps prevent duplicates, supports joins, and defines the identity of a dimension or fact record. Some warehouse tables do not enforce constraints physically, but the logical key still matters for modeling and deduplication. If keys are unstable or duplicated, downstream joins and aggregates can become wrong.",
+    "real_world": "If two customer rows share the same customer_id, a join can double-count purchases or attach the wrong attributes.",
+    "code_lang": "sql",
+    "code": "SELECT customer_id, COUNT(*)\nFROM customers\nGROUP BY customer_id\nHAVING COUNT(*) > 1;",
+    "follow_up": "What is the difference between a primary key and a foreign key?"
+   },
+   {
+    "question": "What is a foreign key?",
+    "answer": "A foreign key is a column in one table that points to the primary key of another table. It expresses a relationship, such as orders belonging to customers or sales belonging to products. In analytics models, foreign keys make joins possible and keep fact tables connected to dimensions. A common beginner mistake is assuming the warehouse will automatically fix broken references; missing dimension rows can still cause null joins or dropped records.",
+    "real_world": "A sales fact table may store product_id, which joins to the product dimension so analysts can group sales by category.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What happens if a foreign key value has no matching row in the dimension table?"
+   },
+   {
+    "question": "What is a star schema?",
+    "answer": "A star schema is a model with one central fact table linked to multiple dimension tables. It is called a star because the dimensions radiate around the fact table. This design is common in warehouses because it is simple for analysts to query and performs well for common reporting patterns. The trade-off is some duplication in dimensions, but that is usually acceptable for easier analytics.",
+    "real_world": "A dashboard may query a sales fact table joined to customer, product, and date dimensions to show revenue trends by segment.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is a star schema different from a snowflake schema?"
+   },
+   {
+    "question": "What is data normalization, and why might a warehouse use denormalized tables instead?",
+    "answer": "Normalization breaks data into smaller related tables to reduce duplication and update anomalies. In warehouses, denormalized tables or dimensional models are often preferred because they make queries simpler and faster for analytics. The trade-off is more repeated data, but read performance and usability are usually more important than minimizing storage. Normalization is still useful when you need strong consistency and frequent updates.",
+    "real_world": "A warehouse may keep a wide reporting table with customer and order attributes together so analysts do not need many joins for every query.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When could denormalization become a problem?"
+   },
+   {
+    "question": "What is an incremental data load?",
+    "answer": "An incremental load only processes new or changed data since the last run, instead of reloading everything. It is used to reduce cost and runtime for large datasets. Common approaches rely on timestamps, change flags, or source-system change tracking. The tricky part is handling late-arriving or updated records correctly so you do not miss changes or create duplicates.",
+    "real_world": "Instead of rebuilding a 10-billion-row events table every night, a pipeline may append only the events from the last hour.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle updates to rows that were already loaded?"
+   },
+   {
+    "question": "What is a NULL value in SQL, and what beginner mistake do people make with it?",
+    "answer": "NULL means missing or unknown, not zero and not an empty string. In SQL, comparisons with NULL do not behave like normal equality checks, so you must use IS NULL or IS NOT NULL. A common mistake is writing `= NULL`, which does not work as intended. This matters a lot in warehouses because missing values can affect filters, joins, and aggregates.",
+    "real_world": "A report may unexpectedly miss records if a filter uses `status = NULL` instead of checking for nulls properly.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM orders\nWHERE shipped_at IS NULL;",
+    "follow_up": "How do NULLs affect joins and COUNT calculations?"
+   },
+   {
+    "question": "What is a staging area in a data pipeline, and why do teams use one?",
+    "answer": "A staging area is a temporary place where raw data lands before it is cleaned, transformed, or loaded into final tables. It helps separate ingestion from business logic, makes debugging easier, and lets you replay loads if something goes wrong. Teams use it to keep source data close to its original form and to avoid polluting downstream models with half-processed records.",
+    "real_world": "This matters when a source file arrives with bad rows or a schema change. If data first lands in staging, you can inspect and fix the issue without breaking analytics tables.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is staging different from a final warehouse table?"
+   },
+   {
+    "question": "What is a data mart?",
+    "answer": "A data mart is a smaller, subject-focused slice of warehouse data, usually built for one team or domain like sales, finance, or marketing. It makes common queries faster and simpler because users do not need to understand the full warehouse schema. The trade-off is that too many independent marts can create inconsistent definitions across teams.",
+    "real_world": "A sales team may want one mart with orders, pipeline, and revenue metrics so analysts can work quickly without joining dozens of tables every time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you build a data mart instead of querying the warehouse directly?"
+   },
+   {
+    "question": "What is a surrogate key, and why use one instead of a natural key?",
+    "answer": "A surrogate key is an artificial identifier created for a row, often an integer or generated ID, rather than a business identifier from the source system. Warehouses use them because source keys can change, be reused, or be messy across systems, while surrogate keys stay stable inside the model. They are especially useful for dimensions that need consistent joins over time.",
+    "real_world": "If a customer changes email or merges accounts, the source natural key may shift, but the warehouse can keep one internal customer key for reporting continuity.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can happen if you join warehouse tables on natural keys?"
+   },
+   {
+    "question": "What is slowly changing dimension, and what problem does it solve?",
+    "answer": "A slowly changing dimension is a dimension table design for tracking changes to descriptive attributes over time, such as a customer’s address or a product’s category. It solves the problem of whether you want to overwrite old values or preserve history for reporting. Different approaches keep current values only, add history rows, or store some changes in separate columns, depending on the business need.",
+    "real_world": "This matters when finance wants reports as they were at month-end, not just the current customer address. Without history, past reports can silently change after source updates.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you preserve history versus overwrite it?"
+   },
+   {
+    "question": "What is a partition in a warehouse table?",
+    "answer": "A partition is a way to physically split a large table into smaller chunks based on a column such as date. It can reduce the amount of data scanned for queries that filter on that column, which improves performance and can lower cost in systems that charge by scanned data. The downside is that poor partition choices can make queries slower or harder to manage.",
+    "real_world": "Daily reporting on event data often filters by event date, so partitioning by date helps queries read only the needed days instead of the whole table.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose a partition column?"
+   },
+   {
+    "question": "What is the difference between truncating a table and deleting rows from it?",
+    "answer": "Deleting rows removes matching records one by one, while truncating clears the whole table much more directly. In warehouses, truncation is often used for full refreshes because it is simpler and usually faster. The trade-off is that truncation is coarse-grained, so you should be careful not to wipe out data you meant to keep.",
+    "real_world": "A bad refresh job can leave duplicate data if it appends every run; truncating and reloading a small dimension or staging table may be the safer pattern.",
+    "code_lang": "sql",
+    "code": "DELETE FROM staging_orders WHERE load_date < CURRENT_DATE;\nTRUNCATE TABLE staging_orders;",
+    "follow_up": "When would you prefer a delete over a truncate?"
+   },
+   {
+    "question": "What does an inner join do?",
+    "answer": "An inner join returns only rows where the join condition matches in both tables. It is the most common join in warehousing because it combines facts with matching dimension records or filters to valid linked records. The main risk is accidentally dropping rows when keys are missing or inconsistent.",
+    "real_world": "If an order fact table has customer IDs that are missing from the customer dimension, an inner join will hide those orders from the result.",
+    "code_lang": "sql",
+    "code": "SELECT o.order_id, c.customer_name\nFROM orders o\nINNER JOIN customers c\n  ON o.customer_id = c.customer_id;",
+    "follow_up": "What is the difference between an inner join and a left join?"
+   },
+   {
+    "question": "What is the purpose of GROUP BY in SQL?",
+    "answer": "GROUP BY combines rows that share one or more column values so you can calculate aggregates like count, sum, or average. It is used constantly in reporting because warehouses often need rollups by day, product, region, or other business categories. A common mistake is selecting non-grouped columns without an aggregate, which makes the query invalid or ambiguous depending on the database.",
+    "real_world": "A dashboard that shows revenue by day usually comes from a GROUP BY date query rather than reading row-level order data directly.",
+    "code_lang": "sql",
+    "code": "SELECT order_date, COUNT(*) AS orders, SUM(amount) AS revenue\nFROM orders\nGROUP BY order_date;",
+    "follow_up": "How is GROUP BY different from DISTINCT?"
+   },
+   {
+    "question": "What is a primary benefit of using a view in a warehouse?",
+    "answer": "A view is a saved SQL query that presents data without storing a separate copy of the result. It is useful for simplifying repeated logic, hiding complexity, and giving users a stable interface even if the underlying tables change. The trade-off is that complex views can make debugging and performance tuning harder.",
+    "real_world": "A team may create a view for “active customers” so analysts do not have to repeat the same filters in every query.",
+    "code_lang": "sql",
+    "code": "CREATE VIEW active_customers AS\nSELECT *\nFROM customers\nWHERE is_active = TRUE;",
+    "follow_up": "When would you choose a materialized view instead?"
+   },
+   {
+    "question": "What is data lineage, and why does it matter?",
+    "answer": "Data lineage is the record of where data came from, how it changed, and where it ended up. It matters because it helps teams debug broken pipelines, understand metric definitions, and answer trust questions like “why did this number change?” Good lineage reduces the time spent tracing issues across source systems, transformations, and reports.",
+    "real_world": "When a dashboard metric drops suddenly, lineage helps an analyst trace the number back to the exact source table or transformation that changed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you document lineage in a pipeline or warehouse project?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you decide whether a warehouse table should be partitioned, clustered, both, or neither?",
+    "answer": "Start from the most common query patterns, not from the table size alone. Partitioning helps most when queries consistently filter on a date or another coarse-grained column; clustering helps when filters and joins repeatedly touch a smaller set of values within each partition. Both can improve scan pruning, but they add maintenance overhead and can hurt write performance if the layout no longer matches access patterns. If the table is small or access is unpredictable, neither may be worth the complexity.",
+    "real_world": "A team with a large events table often partitions by event date because almost every dashboard filters the last 7 or 30 days. They may cluster by customer or account ID when analysts repeatedly drill into the same entities.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you validate that partitioning actually improved performance instead of just making the table more complex?"
+   },
+   {
+    "question": "What is an idempotent pipeline, and why is it important in data engineering?",
+    "answer": "An idempotent pipeline can be run multiple times with the same input and end up in the same final state. That matters because retries, backfills, and orchestrator restarts happen all the time in production. Common approaches are overwrite-by-partition, merge by business key, or deduplicate before writing. The trade-off is that stronger idempotency usually requires more logic and careful key design.",
+    "real_world": "If a daily job fails halfway through, the scheduler may rerun it automatically. Without idempotency, you can duplicate rows or double-count metrics in downstream reports.",
+    "code_lang": "sql",
+    "code": "MERGE INTO target t\nUSING staging s\nON t.order_id = s.order_id\nWHEN MATCHED THEN UPDATE SET amount = s.amount\nWHEN NOT MATCHED THEN INSERT (order_id, amount)\nVALUES (s.order_id, s.amount);",
+    "follow_up": "What kinds of pipeline bugs can still happen even if the load itself is idempotent?"
+   },
+   {
+    "question": "How do you handle late-arriving data in a warehouse pipeline?",
+    "answer": "Late-arriving data is data that belongs in an earlier reporting period but shows up after that period was already loaded. A common fix is to reprocess a rolling window, such as the last few days, so late records can update the correct aggregates or dimensions. For facts, that may mean upserting or recomputing affected partitions; for dimensions, it may mean correcting reference data before downstream joins. The trade-off is extra compute and more complex backfill logic versus cleaner, more accurate reporting.",
+    "real_world": "A payment event may arrive hours late because an upstream service was down. Finance dashboards need the earlier day’s totals to correct themselves rather than stay wrong forever.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your approach change if late data can arrive weeks or months later?"
+   },
+   {
+    "question": "When would you choose a merge/upsert pattern over a full refresh of a warehouse table?",
+    "answer": "Use a full refresh when the table is small enough or cheap enough to rebuild and you want the simplest logic. Use merge/upsert when the table is large, refreshes are frequent, or only a small subset changes each run. Merge reduces compute and can preserve history, but it is more sensitive to duplicate keys and imperfect change detection. Full refresh is simpler and often safer, but it can be too expensive or too slow at scale.",
+    "real_world": "A daily customer snapshot with millions of rows is usually not rebuilt from scratch if only a few thousand customers change. But a small reference table may be easier to fully replace than to maintain incrementally.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What data quality checks would you add before allowing an upsert into a critical table?"
+   },
+   {
+    "question": "How do you debug a warehouse query that suddenly became much slower?",
+    "answer": "First check whether the row counts, filters, or join cardinality changed, because a data change often explains a performance regression. Then look at the query plan and confirm whether partition pruning, predicate pushdown, or join strategy changed. Also check for new skew, a missing filter, statistics becoming stale, or a downstream table growing much faster than expected. The key trade-off is that you want to distinguish a code regression from a data-growth problem before tuning blindly.",
+    "real_world": "A dashboard query that used to run in seconds may start scanning far more data after a new column is added or a partition filter is accidentally removed. Teams often discover the issue only when BI users complain.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you inspect first if the query plan changed from a broadcast join to a shuffle join?"
+   },
+   {
+    "question": "What is data skew in distributed warehousing, and why does it hurt joins and aggregations?",
+    "answer": "Data skew means some keys or partitions contain far more rows than others. In distributed systems, one worker can end up doing most of the work, which slows the whole job and can cause memory pressure or spill to disk. Skew is especially painful in joins and group-bys because the hot key becomes a bottleneck. Typical mitigations include salting hot keys, filtering earlier, or redesigning the data model so the skewed column is not the shuffle key.",
+    "real_world": "A single ‘unknown’ customer ID or a popular tenant can dominate a join and make one task run much longer than the rest. The whole job waits for that straggler even though most partitions finished quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect skew from job metrics or a query plan?"
+   },
+   {
+    "question": "How do you design data quality checks for a warehouse pipeline without making the pipeline brittle?",
+    "answer": "Focus checks on the failures that would actually break downstream logic: schema drift, duplicate keys, missing critical fields, unexpected row-count drops, and referential issues on important joins. Keep hard-fail checks for high-confidence invariants, and use warnings or alerting for softer expectations so one bad batch does not stop all reporting unnecessarily. It also helps to compare today’s loads to recent history rather than using fixed thresholds everywhere. The trade-off is between catching bad data early and avoiding noisy alerts that people ignore.",
+    "real_world": "A pipeline that fails on every minor null spike quickly loses trust from the team. Better tests prevent silent corruption but still allow normal business fluctuations.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which checks would you put before load, and which would you run after the data is published?"
+   },
+   {
+    "question": "What is schema evolution, and what problems can it cause in downstream models?",
+    "answer": "Schema evolution is when columns are added, removed, renamed, or change type over time. It matters because warehouse jobs, dbt models, BI tools, and downstream consumers may assume a fixed shape and break or silently change behavior when the schema shifts. Additive changes are usually easier to handle than renames or type changes, which often require coordinated updates and backfills. Good pipelines version contracts, validate schemas, and isolate raw ingestion from curated models.",
+    "real_world": "A source system adding a new field may sound harmless, but a renamed column can break a dashboard or cause a model to read nulls if the mapping is not updated. Teams often discover this during the next refresh rather than immediately.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely roll out a breaking schema change from an upstream system?"
+   },
+   {
+    "question": "What is the trade-off between storing raw event data and only storing curated business entities in the warehouse?",
+    "answer": "Raw event data preserves the original source, supports reprocessing, and lets you answer new questions later without going back to the source system. Curated entities are easier for analysts to use and usually perform better for common reporting. The downside of raw storage is higher volume and more modeling work; the downside of only curated storage is that you lose flexibility and may not be able to reconstruct the truth when business logic changes. In practice, many teams keep both and treat raw as the immutable system of record.",
+    "real_world": "If finance changes how refunds should be attributed, raw events let the team rebuild the logic. If only curated tables exist, the history may be impossible to recover cleanly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you organize raw, staging, and curated layers so they stay maintainable?"
+   },
+   {
+    "question": "How do you compare batch processing and near-real-time processing for warehouse reporting?",
+    "answer": "Batch is simpler, cheaper, and usually easier to test because data arrives in larger, more predictable chunks. Near-real-time reduces freshness lag, but it adds operational complexity, more failure modes, and harder correctness problems around ordering, duplicates, and late data. The right choice depends on business tolerance for stale numbers and the cost of being wrong for a short period. Many teams use batch for most reporting and real-time only for a few critical metrics.",
+    "real_world": "A support dashboard may need fresh counts every few minutes, while executive financial reporting can usually tolerate a daily refresh. Trying to make everything streaming often increases complexity without clear value.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What extra correctness problems appear when events can arrive out of order?"
+   },
+   {
+    "question": "How do you choose between a full-table refresh and an incremental model when building a warehouse table?",
+    "answer": "I choose based on table size, source change pattern, and correctness risk. Full refresh is simpler and safer when the table is small or logic changes often, but it gets expensive as data grows. Incremental models are better when only a small fraction changes each run, but they require reliable change detection and careful handling of updates, deletes, and late data. The main trade-off is operational simplicity versus compute cost and complexity.",
+    "real_world": "This comes up when a daily report starts taking hours and driving up warehouse cost. A team may switch to incremental processing, but only after verifying they can still correct late-arriving records.",
+    "code_lang": "python",
+    "code": "if table_size < small_threshold or logic_changing_often:\n    mode = 'full_refresh'\nelse:\n    mode = 'incremental'\nprint(mode)",
+    "follow_up": "What checks would you add to make sure an incremental model stays correct over time?"
+   },
+   {
+    "question": "What is a common reason a LEFT JOIN in a warehouse query returns more rows than you expected?",
+    "answer": "The most common reason is that the join key is not unique on the right side, so one left row matches multiple right rows and gets duplicated. Another cause is joining on incomplete business keys or on columns with unexpected nulls or formatting differences. To debug it, I usually check cardinality on both sides before the join and aggregate the joined result to see where duplication starts. The fix is often deduplicating the dimension, joining on a better key, or pre-aggregating the many-side.",
+    "real_world": "This often shows up in revenue dashboards where totals suddenly increase after a join is added. The underlying issue is usually row multiplication, not a bug in the reporting tool.",
+    "code_lang": "sql",
+    "code": "SELECT left_key, COUNT(*)\nFROM left_table l\nLEFT JOIN right_table r ON l.key = r.key\nGROUP BY left_key\nHAVING COUNT(*) > 1;",
+    "follow_up": "How would you prove whether the duplication came from the source data or from the join logic?"
+   },
+   {
+    "question": "When would you use a view instead of a materialized table in a warehouse, and what is the trade-off?",
+    "answer": "A view is good when you want a reusable definition without storing another copy of the data, especially for lightweight transformations or access control. The trade-off is that the query is computed at read time, so repeated or expensive logic can make dashboards slower and less predictable. A materialized table costs more storage and refresh work, but it gives more stable performance for frequently queried results. In practice, I use views for logic reuse and curated tables for performance-critical consumption.",
+    "real_world": "Teams often start with views for speed of development, then hit performance issues once many dashboards depend on the same logic. At that point they move the expensive part into a persisted table.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you decide whether a specific transformation is cheap enough to leave in a view?"
+   },
+   {
+    "question": "How do you handle schema changes in an upstream source without breaking downstream warehouse models?",
+    "answer": "I start by separating breaking changes from additive ones. Additive changes like new columns can usually be tolerated if the pipeline ignores unknown fields or defaults them safely, but renames, type changes, and dropped columns need explicit handling. I also try to version contracts or at least validate schemas at ingestion so failures happen early and clearly. The key is to protect consumers from silent semantic changes, not just syntactic ones.",
+    "real_world": "This matters when a source team renames a field during a release and a downstream dashboard quietly goes empty. Good schema validation turns that into an immediate pipeline failure instead of a business incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do if the source adds a column that changes the meaning of an existing metric?"
+   },
+   {
+    "question": "What is data skew, and why can it make a warehouse job slow even when the cluster looks large enough?",
+    "answer": "Data skew happens when a small number of keys or partitions contain much more data than the rest. In distributed processing, that means a few workers do most of the work while others finish quickly and sit idle, so the job is limited by the slowest task. It often appears in joins and group-bys on popular keys. The fix is usually to reduce hotspot keys, repartition better, or change the aggregation strategy.",
+    "real_world": "A common example is events joined on a country or customer segment where one value dominates. The query looks parallel on paper, but one partition becomes the bottleneck and drives up runtime.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect skew from query runtime or execution plans?"
+   },
+   {
+    "question": "How do you design deduplication in a warehouse pipeline when the source can send the same record more than once?",
+    "answer": "I define a deterministic rule for which record wins, usually based on a business key plus a timestamp or version field. Then I deduplicate as close to ingestion as possible so downstream models do not have to keep solving the same problem. If duplicates can differ slightly, I also need to decide whether they are truly duplicates or distinct revisions. The important part is that the rule is explicit and stable across reruns.",
+    "real_world": "This is common with event streams, retries, and partner feeds that resend files after failures. Without a clear dedup rule, counts and revenue can drift between runs.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM (\n  SELECT t.*, ROW_NUMBER() OVER (PARTITION BY business_key ORDER BY updated_at DESC) AS rn\n  FROM staging t\n)\nWHERE rn = 1;",
+    "follow_up": "What would change if there is no reliable timestamp to rank duplicates?"
+   },
+   {
+    "question": "What is a data contract, and how is it different from just documenting a schema?",
+    "answer": "A data contract is an agreement between producer and consumer about structure, meaning, quality, and change management. A schema describes fields and types, but a contract also covers semantic expectations like allowed null rates, freshness, and how changes are communicated. That matters because many data failures are semantic, not just structural. Contracts make ownership and alerting clearer across teams.",
+    "real_world": "A warehouse team might receive a table that still matches the schema but changes the meaning of a status column. A contract helps catch that before dashboards silently report the wrong business metric.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts of a data contract are worth enforcing automatically versus by process?"
+   },
+   {
+    "question": "How do you test a warehouse transformation before you let it power business reporting?",
+    "answer": "I combine small deterministic tests with a few realistic end-to-end cases. At minimum I check row counts, uniqueness where expected, not-null constraints for required fields, and a handful of known input-to-output examples. I also test edge cases like empty inputs, duplicates, and late data because those often expose logic bugs. Good tests are specific enough to catch regressions but cheap enough to run on every build.",
+    "real_world": "This is important when a metrics table feeds finance or executive dashboards. A small logic change can otherwise ship and only be noticed after a board report is wrong.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which tests would you run in CI, and which would you run only in a scheduled validation job?"
+   },
+   {
+    "question": "What is a common cause of duplicate counts after changing a table from append-only to merge/upsert logic?",
+    "answer": "A common cause is using an incomplete match condition in the merge, so one source record matches multiple target rows or the wrong row gets updated. Another issue is non-deterministic source ordering, where repeated runs pick different records as the latest. Upserts also need clear handling for deletes and late corrections, or old rows can remain visible alongside new ones. I usually validate the merge key and then inspect whether the target still has more than one active row per business key.",
+    "real_world": "This often happens when a team adds corrections to a customer table and suddenly downstream counts no longer match source totals. The logic looked correct, but the merge key was too weak.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design the target table to make those duplicate states impossible?"
+   },
+   {
+    "question": "How do you think about freshness versus correctness when a business wants near-real-time dashboards?",
+    "answer": "I treat freshness and correctness as separate requirements that need an explicit latency budget. Near-real-time data is useful if users can tolerate occasional corrections later, but some metrics like billing or compliance need stronger guarantees before they are shown. A common pattern is to serve fast provisional data first and reconcile it with a more authoritative batch layer later. The trade-off is user experience versus operational complexity and trust.",
+    "real_world": "This comes up in sales or operations dashboards where leaders want updates within minutes but also expect final numbers to reconcile by the end of the day. Teams often need to label provisional metrics clearly to avoid confusion.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you communicate to users that a metric is not yet final?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How would you explain snapshot isolation in a warehouse, and what anomalies can still happen under concurrent writes?",
+    "answer": "Snapshot isolation means each query reads a consistent version of the data as of a point in time, so readers usually do not block writers. It prevents many read anomalies, but it can still allow write skew or last-writer-wins behavior depending on the engine and statement pattern. In warehouses this matters most for concurrent MERGE, backfills, and compaction jobs touching the same partitions or keys. The safe design is to make writes partition-disjoint when possible and add deterministic conflict handling when they are not.",
+    "real_world": "A common incident is two backfills running at once against the same date range: both succeed, but one silently overwrites rows or produces nondeterministic results. Teams often serialize writes per table or per partition window to avoid hard-to-reproduce data drift.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a backfill safe if the warehouse does not guarantee strong serializable behavior for concurrent MERGE operations?"
+   },
+   {
+    "question": "What actually happens under the hood when a warehouse executes a large distributed join, and where do the biggest performance costs come from?",
+    "answer": "The engine scans column chunks, applies pushdown filters, repartitions one or both sides on the join key, and then performs local hash or sort-merge joins on each worker. The expensive parts are usually network shuffle, spilling when hash tables do not fit in memory, and skew that leaves a few workers with most of the rows. Good physical design reduces bytes scanned and bytes shuffled, while query design reduces row explosion before the join. At scale, moving 10x more data over the network is often worse than a modestly more complex local computation.",
+    "real_world": "A query can look simple in SQL but spend most of its wall time shuffling terabytes because a filter was applied after the join instead of before it. Execution plans often show the join itself is cheap compared with repartition and spill stages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you force a broadcast-style join instead of repartitioning both sides?"
+   },
+   {
+    "question": "What trade-offs do you consider when choosing file size and row group size for a lakehouse table format like Parquet-backed warehouse storage?",
+    "answer": "Very small files hurt planning overhead, metadata operations, and parallel scan efficiency; very large files reduce parallelism and can make rewrites expensive. Row group sizing affects predicate pushdown and compression: too small wastes metadata and too large can force unnecessary reads. The right target depends on read patterns, cluster size, and update frequency, but the general goal is to avoid both tiny-file explosion and giant immutable objects that are costly to compact. Compaction policy is as important as the initial write size.",
+    "real_world": "Streaming ingestion often produces thousands of small files per hour, and query latency degrades long before raw storage cost does. Teams add scheduled compaction jobs, then discover those jobs can contend with readers or rewrite more data than expected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your answer change for a table that is heavily filtered on one timestamp column but also receives frequent late updates?"
+   },
+   {
+    "question": "Suppose a dimension change arrives before the corresponding fact, or the fact arrives before the dimension change you need for historical accuracy. How do you model and process that cleanly?",
+    "answer": "You need a strategy for referential gaps and temporal correctness. Common patterns are inferred dimension members, suspense tables, or loading facts with an unknown surrogate key and later repairing them once the dimension version is available. For history-sensitive joins, the fact should resolve to the dimension version valid at the event time, not load time. The trade-off is between timely fact availability and the complexity of re-keying or restating facts later.",
+    "real_world": "Customer events often land from application logs before the CRM update that creates or changes the customer record. If you join on current-state dimensions, historical reports drift whenever the dimension is updated.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the risks of repairing historical facts in place versus publishing restated partitions?"
+   },
+   {
+    "question": "How do you decide whether a metric should be computed at query time, pre-aggregated, or stored as a fully materialized serving table?",
+    "answer": "I start with access pattern, concurrency, cardinality, and acceptable staleness. Query-time computation is flexible but can be expensive and inconsistent if business logic is duplicated; pre-aggregation reduces scan cost for stable dimensions and common grains; a serving table makes latency predictable but increases maintenance and backfill complexity. The key is whether the metric logic changes often and whether users need ad hoc slicing beyond the precomputed grain. If hundreds of dashboards hit the same expensive logic, materialization usually wins.",
+    "real_world": "Monthly active users might be cheap enough to compute nightly into a serving table, while exploratory behavioral cuts still need rawer data. Teams get into trouble when they materialize too early and then cannot answer a new slice without rebuilding everything.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent two teams from shipping slightly different definitions of the same KPI across separate materializations?"
+   },
+   {
+    "question": "What is the difference between exactly-once, at-least-once, and effectively-once processing in warehouse ingestion, and which one is realistic in practice?",
+    "answer": "At-least-once means duplicates can occur, exactly-once means each logical event affects the target once, and effectively-once means duplicates may happen in transport but downstream state converges correctly because writes are idempotent or deduplicated. In practice, true exactly-once across source, transport, compute, and sink boundaries is rare and expensive. Most production systems aim for effectively-once with stable event IDs, deterministic merges, and replay-safe checkpoints. That gives the operational benefits of correctness without requiring perfect global transactions.",
+    "real_world": "A stream job restarts after acknowledging some source messages but before persisting all target writes. If the sink logic is not replay-safe, daily revenue or user counts can drift with every retry.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What fields would you require from producers to make effectively-once ingestion reliable?"
+   },
+   {
+    "question": "Can you walk through the watermark concept in streaming pipelines and the failure modes around out-of-order data and state growth?",
+    "answer": "A watermark is the system's estimate that no more events earlier than some event-time threshold are likely to arrive. It lets the engine close windows and evict state, but if it advances too aggressively you drop late data, and if it lags too much state grows and latency rises. Real systems also need separate handling for idle partitions, clock skew, and sources that replay old events. The hard part is that the right lateness threshold is a business correctness decision, not just an infrastructure setting.",
+    "real_world": "One partition going quiet can stall a global watermark, so a dashboard stays behind even though most traffic is current. The opposite problem is setting a short lateness bound and then silently undercounting mobile events that sync hours later.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design a correction path for events that arrive after the watermark has already closed the window?"
+   },
+   {
+    "question": "What are the main trade-offs between a warehouse-native stack and a lakehouse architecture for a large analytics platform?",
+    "answer": "A warehouse-native stack gives tight integration, strong optimizer behavior, simpler governance, and less operational surface area. A lakehouse can lower storage cost, support multiple engines, and make open file formats available for ML and non-SQL workloads, but you take on metadata, compaction, small-file management, and cross-engine consistency concerns. The right choice depends on whether your bottleneck is analytical agility inside one platform or interoperability across several compute systems. In practice many teams end up hybrid rather than pure either way.",
+    "real_world": "A company may start warehouse-native for speed of execution, then hit cost or interoperability pressure when data science wants direct access to the same raw data. Moving too early to a lakehouse can also create a lot of platform work before there is enough scale to justify it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What capabilities would you insist on before trusting multiple engines to read and write the same analytical tables?"
+   },
+   {
+    "question": "How do you design a safe backfill for a very large table without taking down production workloads or corrupting downstream outputs?",
+    "answer": "I define an immutable input snapshot, choose a bounded backfill scope, write results to isolated partitions or shadow tables, and validate before cutover. The key controls are throttling resource usage, making the run restartable, and preventing overlap with live incremental writers unless partition ownership is explicit. I also plan downstream impact: cache invalidation, rebuilt aggregates, and whether consumers need restatement signals. A backfill is less about rerunning SQL and more about controlled re-publication of history.",
+    "real_world": "A naive backfill can saturate slots or cluster memory and starve business dashboards during working hours. Another common failure is publishing recomputed history before downstream aggregates are rebuilt, so executive reports show mixed old and new logic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What validation checks would you run before swapping a shadow backfill table into production?"
+   },
+   {
+    "question": "What is the difference between a correlated subquery and an equivalent join in terms of execution behavior, and when can the subquery become a serious problem?",
+    "answer": "A correlated subquery references columns from the outer query, so the optimizer may need to evaluate it repeatedly per outer row unless it can decorrelate it into a join or semi-join. When decorrelation fails, performance can collapse because work scales with the outer row count rather than with set-based execution. Joins are usually easier for the optimizer to parallelize and reorder, but they can change row multiplicity if you are not careful. The right mental model is not syntax preference but whether the engine can transform the query into one efficient plan.",
+    "real_world": "This shows up in seemingly harmless 'latest row per key' or existence checks that run fast on a sample and then blow up on full data. An execution plan often reveals repeated scans of the inner table instead of one distributed join.",
+    "code_lang": "sql",
+    "code": "SELECT o.id\nFROM orders o\nWHERE EXISTS (\n  SELECT 1\n  FROM payments p\n  WHERE p.order_id = o.id\n    AND p.status = 'settled'\n);",
+    "follow_up": "What plan clues tell you the optimizer failed to decorrelate a subquery?"
+   },
+   {
+    "question": "How do you choose a distribution or sharding key for a large warehouse table, and what failures do you see when it is wrong?",
+    "answer": "The key should spread data evenly while aligning with the biggest joins or aggregations, because you are trading data movement against skew. A low-cardinality or highly seasonal key creates hot partitions, long tails, and poor parallelism; a random key spreads well but can force expensive reshuffles on every join. I also check how the data evolves over time, not just total cardinality, because a key that looked fine at 100 million rows can collapse at 10 billion. The right choice is workload-driven, and sometimes you deliberately optimize one critical join and accept weaker performance elsewhere.",
+    "real_world": "A common incident is one customer or region growing much faster than the rest, so one node gets most of the work and queries slow down dramatically even though cluster CPU looks mostly idle.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If your current distribution key is causing skew, how would you migrate to a better one with minimal disruption?"
+   },
+   {
+    "question": "What is the point of columnar storage in analytics systems, and where does it stop helping?",
+    "answer": "Columnar storage helps because scans usually touch a small subset of columns, so the engine reads less data and compresses repeated values much better than row storage. It also enables vectorized execution and predicate pushdown, which reduces CPU and I/O for large aggregations and filters. It helps less for point lookups, wide row reconstruction, or workloads that need many columns from a small number of rows. If the data is badly ordered or the query pattern is highly selective on non-pruned columns, the benefit drops.",
+    "real_world": "This shows up when teams port OLTP-style access patterns into the warehouse and then wonder why single-record queries are slow despite having a large cluster.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do sort order and statistics interact with columnar storage to improve pruning?"
+   },
+   {
+    "question": "Can you explain cardinality estimation in query planning and why bad estimates create production problems?",
+    "answer": "The optimizer predicts row counts after filters and joins so it can choose join order, join algorithm, and memory allocation. When the estimate is wrong, the engine may broadcast a table that is actually huge, spill a hash table to disk, or join large tables in the worst possible order. Estimates go bad with stale statistics, correlated columns, heavy skew, and predicates on expressions the engine cannot model well. Good plans depend as much on metadata quality as on SQL text.",
+    "real_world": "A classic failure is after a major backfill or distribution shift: the same SQL suddenly spills and runs for hours because the planner still assumes the old data shape.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you look for to tell whether a slowdown came from bad estimates versus resource contention?"
+   },
+   {
+    "question": "What is predicate pushdown, and what can prevent it from happening even when the filter looks simple?",
+    "answer": "Predicate pushdown means applying filters as early as possible, ideally while reading files or storage blocks, so the engine avoids moving and decoding irrelevant data. It fails when the filter is wrapped in non-sargable expressions, hidden behind casts, applied after a view expansion the engine cannot simplify, or depends on functions the storage layer cannot evaluate. Encryption, nested formats, and missing file-level statistics can also limit pruning. The result is often a full scan that looks surprising from the SQL alone.",
+    "real_world": "Teams often add a convenience cast or date function in a shared model and accidentally turn partition pruning off for every downstream dashboard.",
+    "code_lang": "sql",
+    "code": "-- Often blocks pruning\nWHERE DATE(event_ts) = DATE '2026-10-16'\n\n-- Usually better for pruning\nWHERE event_ts >= TIMESTAMP '2026-10-16 00:00:00'\n  AND event_ts <  TIMESTAMP '2026-10-17 00:00:00'",
+    "follow_up": "How would you verify from the query plan whether pushdown or partition pruning actually happened?"
+   },
+   {
+    "question": "When do approximate aggregations make sense in a warehouse, and what are the real trade-offs?",
+    "answer": "They make sense when exactness is expensive and the business can tolerate bounded error, especially for high-cardinality distinct counts or percentile-style summaries over very large datasets. The win is usually much lower memory and data movement, which matters in distributed systems where exact distincts can trigger large shuffles. The trade-off is error, merge semantics you need to understand, and sometimes limited support for slicing the same sketch in arbitrary ways after the fact. I only use them when stakeholders agree on acceptable error and the metric is not used for finance or compliance.",
+    "real_world": "This is common for daily active users, reach, and latency percentiles where exact computation over trillions of events would be too slow or too expensive for routine dashboards.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you communicate approximation error and confidence to analysts so they do not misuse the metric?"
+   },
+   {
+    "question": "How do you design a robust change data capture pipeline from an OLTP system into a warehouse?",
+    "answer": "I want ordered changes, durable offsets, idempotent application, and clear semantics for inserts, updates, and deletes. In practice that means using the source log when possible, carrying transaction metadata, and applying changes in a deterministic way so retries do not duplicate or reorder state. You also need a strategy for schema changes, snapshot plus catch-up bootstrapping, and handling source-side anomalies like long transactions or log retention gaps. The biggest design choice is whether you preserve the full history of changes or only the latest state plus tombstones.",
+    "real_world": "Production failures often come from losing a replication slot or binlog position, then silently re-snapshotting and double-applying changes into downstream warehouse tables.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you recover if the CDC consumer was down long enough that the source log no longer retained the needed history?"
+   },
+   {
+    "question": "What are tombstones and delete propagation in warehouse ingestion, and why do teams get them wrong?",
+    "answer": "A tombstone is a record that says a previously seen entity was deleted, even if the actual row payload is absent. Warehouses get this wrong when pipelines only model inserts and updates, so deleted entities keep showing up in dimensions, snapshots, or aggregates forever. The hard part is deciding whether deletes mean physical removal, soft-delete state, or just a correction for one downstream model. You need explicit semantics because facts, dimensions, and historical audit use cases often want different behavior.",
+    "real_world": "This commonly breaks user counts after GDPR-style deletions or when an operational system uses hard deletes and the warehouse never receives a matching delete event.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you model deletes differently for a current-state dimension versus an immutable event history?"
+   },
+   {
+    "question": "How do you prevent double counting when joining facts at different grains, like sessions to orders or impressions to clicks?",
+    "answer": "I first make the grain explicit for every table and refuse to join two many-to-many datasets without an intermediate allocation rule or a bridge. If the business question is session-level, I aggregate orders to session before joining; if it is order-level, I aggregate the other side or choose a canonical attribution rule. Window functions and distincts can hide the symptom but usually do not fix the semantic problem. The core issue is not SQL syntax; it is mismatched grains and ambiguous ownership of measures.",
+    "real_world": "This is a frequent source of inflated revenue when marketing tables at event grain are joined directly to transaction facts and each order gets repeated across multiple touches.",
+    "code_lang": "sql",
+    "code": "WITH orders_by_session AS (\n  SELECT session_id, SUM(revenue) AS revenue\n  FROM orders\n  GROUP BY session_id\n)\nSELECT s.channel, SUM(o.revenue)\nFROM sessions s\nJOIN orders_by_session o USING (session_id)\nGROUP BY s.channel;",
+    "follow_up": "If attribution is many-to-many by design, how would you allocate revenue across touches?"
+   },
+   {
+    "question": "What trade-offs do you consider when using materialized aggregates or summary tables to accelerate BI workloads?",
+    "answer": "You are buying lower query latency and lower compute cost at the expense of freshness, storage, maintenance complexity, and possible semantic drift from the base model. The design questions are grain, dimensions included, update cadence, invalidation strategy, and whether the aggregate is additive enough to roll up safely. Summary tables help most when many dashboards repeat the same expensive joins and aggregations, but they become a liability if business logic changes often. I also check whether the warehouse result cache or automatic optimization already solves enough of the problem before adding another data product.",
+    "real_world": "Teams often create too many near-duplicate summary tables, then spend more time reconciling numbers across them than they save in query runtime.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether a dashboard slowdown should be solved with a summary table versus query/model redesign?"
+   },
+   {
+    "question": "Suppose a warehouse load partially succeeds and then fails midway through publishing a table. How do you design for atomicity and recovery?",
+    "answer": "I separate compute from publish: build the new data in an isolated location, validate it, and then perform a metadata swap or partition-level commit so readers see either the old version or the new one, never a mix. Recovery depends on durable run metadata, deterministic inputs, and cleanup rules for orphaned files or temporary tables. For partitioned loads, I prefer replacing whole partitions atomically over row-by-row mutations where possible, because the blast radius and rollback story are much simpler. The goal is to make retries safe and visibility transitions explicit.",
+    "real_world": "Without this, downstream jobs can read half-updated data and publish inconsistent dashboards, which is much worse than a clean failed run.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your design change if the target system does not support atomic table swaps or transactional multi-partition commits?"
+   }
+  ]
+ }
+}

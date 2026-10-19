@@ -1,0 +1,501 @@
+{
+ "slug": "terraform",
+ "name": "Terraform and infrastructure as code",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Terraform, and why would you use it instead of creating infrastructure manually?",
+    "answer": "Terraform is infrastructure as code software that lets you define cloud and other resources in configuration files, then create and manage them consistently. You use it to make infrastructure repeatable, reviewable, and version-controlled instead of clicking through a console. It also helps reduce drift because the desired state is expressed in code and can be reapplied. The main trade-off is that you need to learn its workflow and accept that changes are planned and applied through Terraform rather than directly.",
+    "real_world": "A team moving from manual AWS console changes to Terraform can recreate environments for dev, staging, and prod in a consistent way. This reduces mistakes like one environment having a different security group rule or database setting.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problem does Terraform state solve?"
+   },
+   {
+    "question": "What is the purpose of the Terraform state file?",
+    "answer": "The state file records which real infrastructure resources Terraform is managing and the mapping between code and those resources. Terraform uses it to know what already exists, detect changes, and plan updates instead of recreating everything. Without state, Terraform would not reliably track resource identity across runs. Because state can contain sensitive data and is critical to correctness, teams usually store it remotely with locking.",
+    "real_world": "If two engineers run Terraform at the same time against the same stack, state locking helps prevent one apply from overwriting the other’s work. A lost or corrupted state file can cause Terraform to try to create duplicate resources or lose track of existing ones.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is remote state, and why do teams use it?"
+   },
+   {
+    "question": "What is the difference between `terraform plan` and `terraform apply`?",
+    "answer": "`terraform plan` shows what Terraform would change without making those changes. `terraform apply` performs the changes after confirming the plan. The plan step is important because it lets you review impact before touching real infrastructure. A common beginner mistake is skipping review and applying unexpected destructive changes.",
+    "real_world": "In production, a plan can reveal that a security group rule will be removed or a database will be replaced before anyone runs apply. Teams often require plan review in pull requests before allowing deployment.",
+    "code_lang": "bash",
+    "code": "terraform plan\nterraform apply",
+    "follow_up": "What does Terraform do if the real infrastructure changes outside Terraform?"
+   },
+   {
+    "question": "What is a Terraform provider?",
+    "answer": "A provider is the plugin Terraform uses to talk to an API for a specific system, such as a cloud platform or SaaS service. Providers define the resource types and data sources available for that system. You choose a provider based on what you are managing, and Terraform downloads and uses it during initialization. A common beginner issue is forgetting that each provider has its own configuration and authentication requirements.",
+    "real_world": "A single Terraform project might use one provider for AWS, another for DNS, and another for a monitoring tool. If credentials are wrong or missing, the plan and apply steps fail when Terraform tries to call those APIs.",
+    "code_lang": "hcl",
+    "code": "provider \"aws\" {\n  region = \"us-east-1\"\n}\n\nresource \"aws_s3_bucket\" \"logs\" {\n  bucket = \"my-app-logs\"\n}",
+    "follow_up": "What is the difference between a resource and a data source?"
+   },
+   {
+    "question": "What is a Terraform resource versus a data source?",
+    "answer": "A resource is something Terraform creates or manages, like a VM, bucket, or network rule. A data source reads information about something that already exists, but Terraform does not own it. Use a resource when Terraform should control lifecycle, and a data source when you need to reference existing infrastructure. Beginners often use a resource when they only need to look up an existing object, which can accidentally create duplicates.",
+    "real_world": "A team may use a data source to find the default VPC or an existing subnet, then create new instances inside it. That avoids Terraform trying to recreate foundational network resources that were built elsewhere.",
+    "code_lang": "hcl",
+    "code": "data \"aws_vpc\" \"default\" {\n  default = true\n}\n\nresource \"aws_instance\" \"app\" {\n  ami           = \"ami-123456\"\n  instance_type = \"t3.micro\"\n  subnet_id     = data.aws_vpc.default.id\n}",
+    "follow_up": "What does Terraform mean by desired state?"
+   },
+   {
+    "question": "What are Terraform variables, and why are they useful?",
+    "answer": "Variables let you parameterize your configuration so the same code can work across environments or be reused with different values. They reduce duplication and make modules and environments easier to maintain. You usually use them for things like region, instance size, names, and tags. A common mistake is hardcoding environment-specific values directly in resource blocks.",
+    "real_world": "A junior engineer may copy the same module for dev and prod, then change only variable values instead of editing the infrastructure code itself. This lowers the chance of forgetting a setting in one environment.",
+    "code_lang": "hcl",
+    "code": "variable \"instance_type\" {\n  type    = string\n  default = \"t3.micro\"\n}\n\nresource \"aws_instance\" \"app\" {\n  instance_type = var.instance_type\n}",
+    "follow_up": "What is the difference between variables, locals, and outputs?"
+   },
+   {
+    "question": "What are Terraform outputs used for?",
+    "answer": "Outputs expose useful values from a Terraform configuration after apply, such as a load balancer DNS name or an IP address. They make it easier for humans and other configurations to consume information produced by the stack. Outputs are often used to connect separate layers of infrastructure. A beginner mistake is trying to use outputs for sensitive secrets without understanding how they are stored and displayed.",
+    "real_world": "After creating a new application environment, a team can print the service URL as an output so QA knows where to test. Another stack can read that output when wiring DNS or monitoring.",
+    "code_lang": "hcl",
+    "code": "output \"app_url\" {\n  value = aws_lb.app.dns_name\n}",
+    "follow_up": "What is a Terraform module?"
+   },
+   {
+    "question": "What is a Terraform module, and why would you use one?",
+    "answer": "A module is a reusable package of Terraform configuration, usually used to group related resources into a single unit. Modules help you avoid copy-pasting the same infrastructure pattern and make code easier to organize. The root module is the configuration you run Terraform from, and it can call child modules. A common beginner mistake is making modules too generic too early or not versioning them carefully.",
+    "real_world": "A company might build one module for an application server stack and reuse it across many teams with different inputs. That keeps networking, tagging, and security patterns consistent.",
+    "code_lang": "hcl",
+    "code": "module \"web\" {\n  source        = \"./modules/web\"\n  instance_type = \"t3.micro\"\n}",
+    "follow_up": "What is `terraform init` doing?"
+   },
+   {
+    "question": "What does `terraform init` do?",
+    "answer": "`terraform init` prepares a working directory for Terraform by downloading providers, setting up modules, and initializing the backend if one is configured. You usually run it first in a new checkout or after changing providers or module sources. It does not create infrastructure by itself. If initialization fails, Terraform often cannot plan or apply because it lacks the plugins or backend setup it needs.",
+    "real_world": "When a new engineer clones a repo, init is usually the first command they run before planning the stack. If the project uses remote state, init also connects Terraform to that backend.",
+    "code_lang": "bash",
+    "code": "terraform init\nterraform plan",
+    "follow_up": "What is the purpose of a backend in Terraform?"
+   },
+   {
+    "question": "What is Terraform remote state, and why is it important?",
+    "answer": "Remote state stores the state file in a shared location such as a cloud bucket or Terraform Cloud instead of a local file. Teams use it so multiple people and automation systems can work on the same infrastructure safely, often with locking to avoid concurrent writes. It also makes state easier to back up and share across environments. The trade-off is that the backend must be secured carefully because state may include sensitive data.",
+    "real_world": "In a team setting, local state quickly becomes a problem when different laptops each have a partial view of the infrastructure. Remote state prevents lost updates and makes CI/CD apply the same state file every time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the risk of storing state in source control?"
+   },
+   {
+    "question": "What is `terraform destroy`, and when should you use it?",
+    "answer": "`terraform destroy` removes resources that Terraform manages in the current state. You use it for temporary environments, cleanup, or intentionally tearing down a stack. It is powerful and dangerous because it can delete real infrastructure, so it should be used carefully and usually with review. A beginner mistake is running destroy in the wrong workspace or against the wrong backend.",
+    "real_world": "Teams often use destroy for short-lived review environments after a feature branch is merged. In the wrong environment, it can take down production resources if the state is pointed at the wrong stack.",
+    "code_lang": "bash",
+    "code": "terraform destroy",
+    "follow_up": "How does Terraform know whether to update, replace, or delete a resource?"
+   },
+   {
+    "question": "What does HCL look like in a Terraform file, and how do you read a basic resource block?",
+    "answer": "Terraform uses HCL, which is a declarative syntax made of blocks and arguments. A resource block usually names the provider type and the local name, then sets arguments that describe the desired configuration. You read it as “manage this kind of object with these settings,” not as step-by-step imperative code. This matters because the structure tells you what Terraform will try to create or update.",
+    "real_world": "A junior engineer often confuses the resource name with the real cloud object name and ends up editing the wrong field. Being able to read the block correctly helps during code review and incident response when you need to spot a bad setting fast.",
+    "code_lang": "hcl",
+    "code": "resource \"aws_instance\" \"web\" {\n  ami           = \"ami-123456\"\n  instance_type = \"t3.micro\"\n}",
+    "follow_up": "What is the difference between a block label and an argument in HCL?"
+   },
+   {
+    "question": "What is an idempotent infrastructure tool, and why is that important in Terraform?",
+    "answer": "An idempotent tool gets you to the same desired end state even if you run it multiple times. Terraform is designed this way so repeated applies do not keep changing infrastructure once it already matches the configuration. That matters because automation should be safe to rerun in CI/CD and after failures. It also makes drift and recovery easier to reason about.",
+    "real_world": "Teams rely on this when a deployment job retries after a timeout. If the tool were not idempotent, a retry could create duplicate load balancers, extra databases, or other costly resources.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does Terraform decide whether a resource needs to change on the next apply?"
+   },
+   {
+    "question": "What is the difference between `count` and `for_each` in Terraform?",
+    "answer": "Both are used to create multiple copies of a resource, but `count` uses numeric indexes while `for_each` uses stable keys. `for_each` is usually better when each instance has a distinct identity, because the keys stay consistent if items are added or removed. `count` is simpler for a fixed number of identical resources. The trade-off is that `count` can cause more churn when the list changes.",
+    "real_world": "If you use `count` for a list of servers and remove one item from the middle, Terraform may shift indexes and replace resources you did not intend to touch. `for_each` is often safer for things like per-environment IAM users or subnets.",
+    "code_lang": "hcl",
+    "code": "resource \"aws_iam_user\" \"users\" {\n  for_each = toset([\"alice\", \"bob\"])\n  name     = each.value\n}",
+    "follow_up": "When would `count` be the better choice than `for_each`?"
+   },
+   {
+    "question": "What does a Terraform provider block do, and why might you specify a version constraint there?",
+    "answer": "The provider block configures how Terraform talks to a specific platform, such as AWS or Kubernetes. Version constraints limit which provider releases can be used so your infrastructure does not unexpectedly change behavior after a provider upgrade. This matters because provider updates can introduce new defaults or deprecations. Pinning versions helps keep builds reproducible.",
+    "real_world": "A team may have a working configuration suddenly fail after the provider auto-updates in CI. Locking the provider version reduces surprise changes and makes rollouts easier to test.",
+    "code_lang": "hcl",
+    "code": "terraform {\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"~> 5.0\"\n    }\n  }\n}",
+    "follow_up": "What is the difference between a required provider and a provider configuration?"
+   },
+   {
+    "question": "What is the `.tfstate.lock` idea in Terraform, and why do teams care about state locking?",
+    "answer": "State locking prevents two Terraform runs from modifying the same state at the same time. Without locking, concurrent applies can overwrite each other and leave infrastructure in an inconsistent state. This is especially important when many people or automated jobs share the same backend. Locking reduces race conditions during apply operations.",
+    "real_world": "In a busy team, two engineers might run apply against the same environment within minutes of each other. Locking makes one run wait or fail fast instead of corrupting the shared state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of backends typically support locking, and what happens if locking is unavailable?"
+   },
+   {
+    "question": "How do Terraform input variable values get set, and what is the usual precedence you should know as a beginner?",
+    "answer": "Variable values can come from defaults in code, environment variables, `*.tfvars` files, command-line flags, or interactive prompts. The main idea is that more specific inputs override less specific ones. This matters because the same configuration should be reusable across dev, staging, and production without editing the source each time. Beginners often hardcode values instead of passing them in cleanly.",
+    "real_world": "A common mistake is committing environment-specific values directly into a module. That makes reuse hard and can lead to deploying a staging setting into production by accident.",
+    "code_lang": "hcl",
+    "code": "variable \"region\" {\n  type    = string\n  default = \"us-east-1\"\n}\n\nprovider \"aws\" {\n  region = var.region\n}",
+    "follow_up": "Why is it better to validate variable types and constraints early?"
+   },
+   {
+    "question": "What is a Terraform module source, and how is using a local module different from a registry module?",
+    "answer": "A module source tells Terraform where to load the module code from. A local module comes from a directory in your repository, while a registry module is published and versioned for reuse by many teams. Local modules are good for shared patterns inside one codebase, and registry modules are better when you want explicit versioning and broader reuse. The key trade-off is convenience versus governance and version control.",
+    "real_world": "A team may start with local modules for speed, then move stable building blocks to a registry so multiple repositories can consume the same tested infrastructure pattern.",
+    "code_lang": "hcl",
+    "code": "module \"network\" {\n  source = \"./modules/network\"\n}\n\nmodule \"vpc\" {\n  source  = \"terraform-aws-modules/vpc/aws\"\n  version = \"~> 5.0\"\n}",
+    "follow_up": "What problems can happen if you depend on a module source without pinning its version?"
+   },
+   {
+    "question": "What does `terraform fmt` do, and why should a team use it?",
+    "answer": "`terraform fmt` rewrites Terraform files into a standard style. It does not change the intent of your infrastructure, but it makes diffs easier to read and reviews more consistent. Teams use it so everyone formats code the same way and style noise does not hide real changes. It is a simple but important part of code hygiene.",
+    "real_world": "In a shared repository, inconsistent formatting can make a one-line infrastructure change look much bigger than it is. Running `fmt` in CI or a pre-commit hook avoids that noise.",
+    "code_lang": "bash",
+    "code": "terraform fmt -recursive",
+    "follow_up": "What is the difference between formatting code and validating configuration?"
+   },
+   {
+    "question": "What does `terraform validate` check for, and what does it not check?",
+    "answer": "`terraform validate` checks that the configuration is syntactically valid and internally consistent. It can catch missing arguments, bad references, and type mismatches before you run a plan or apply. It does not contact most remote APIs to prove the resources will work in the real cloud. That makes it useful for fast local feedback, but not a replacement for planning and testing.",
+    "real_world": "A broken variable reference can be caught in seconds by validate instead of after a long apply attempt. Teams often run it in CI to block obviously bad changes early.",
+    "code_lang": "bash",
+    "code": "terraform validate",
+    "follow_up": "How is `terraform validate` different from `terraform plan`?"
+   },
+   {
+    "question": "What is a lifecycle block in Terraform, and when would you use `create_before_destroy`?",
+    "answer": "A lifecycle block changes how Terraform manages a resource during updates. `create_before_destroy` tells Terraform to create the replacement first, then remove the old resource, which helps avoid downtime for resources that cannot disappear before the replacement exists. It is useful for things like load balancers or instances behind a service. The trade-off is that it may temporarily require extra capacity or fail if names must be unique.",
+    "real_world": "A team replacing a production server can use this to keep traffic flowing while a new instance is brought up. Without it, an update might briefly remove the only running instance.",
+    "code_lang": "hcl",
+    "code": "resource \"aws_instance\" \"app\" {\n  ami           = var.ami\n  instance_type = \"t3.micro\"\n\n  lifecycle {\n    create_before_destroy = true\n  }\n}",
+    "follow_up": "When can `create_before_destroy` cause a problem instead of helping?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you structure Terraform code in a real repository so it stays maintainable as the number of resources grows?",
+    "answer": "A common pattern is to separate reusable modules from environment-specific root configurations, so shared logic lives in one place and each environment only sets inputs. Keep modules focused on a single concern, avoid over-abstracting too early, and use clear naming and folder boundaries. This makes changes safer because you can reason about blast radius and review diffs by layer instead of by hundreds of resources. Teams also usually keep provider and backend setup in the root module, not inside reusable modules.",
+    "real_world": "This matters when one repo grows from a few files into dozens of resources across dev, staging, and prod. Without a structure, teams start copying files and every change becomes a risky search-and-replace across environments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide what belongs in a reusable module versus an environment root?"
+   },
+   {
+    "question": "What problem does Terraform data flow solve when one resource needs an attribute from another resource, and what is the trade-off of relying on that relationship?",
+    "answer": "Terraform builds a dependency graph from references, so if one resource uses another resource’s attribute, Terraform can create them in the right order and refresh changes consistently. The trade-off is tighter coupling: a change to the referenced resource can cascade into replacements or updates elsewhere. That is usually good for correctness, but it can make plans larger and more sensitive to upstream changes. In practice, you want references for true dependencies, not just convenience, because that keeps the graph accurate.",
+    "real_world": "Teams often discover accidental coupling when a rename or replacement in one module triggers downstream changes in several others. That can turn a routine update into a production-risky rollout if the dependency graph was modeled loosely.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer passing a value as an input variable instead of directly referencing another resource?"
+   },
+   {
+    "question": "How do `terraform plan` results help you catch risk before applying, and what should you watch for in a plan when debugging a surprise change?",
+    "answer": "The plan shows exactly what Terraform thinks will be created, changed, or destroyed, so it is the best place to catch unintended drift or replacement before impact. In a surprising plan, look for attribute changes that force replacement, provider-defaulted values, and resources being recreated because an input changed shape. You should also compare the plan against recent manual changes or provider version upgrades. A plan is only as good as the state and configuration behind it, so if it looks wrong, refresh assumptions before applying.",
+    "real_world": "This is how teams catch a database or load balancer replacement before it reaches production. A single unexpected diff can reveal that a provider upgrade changed a default or that someone edited infrastructure outside Terraform.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of changes usually force replacement versus an in-place update?"
+   },
+   {
+    "question": "What is Terraform drift, and how do you handle it when the real infrastructure no longer matches the code?",
+    "answer": "Drift is when live infrastructure differs from what Terraform state and configuration say should exist, often because someone changed something manually or another system modified it. The first step is to refresh and compare the planned changes to understand whether Terraform should accept the new reality or revert it. If the manual change is legitimate, update the code so the desired state matches production; if it is accidental, let Terraform correct it. The key trade-off is speed versus control: direct changes are quick, but they undermine repeatability and auditing.",
+    "real_world": "Drift shows up after emergency console fixes, one-off hot patches, or platform teams making changes outside the normal workflow. If it is ignored, future plans become noisy and people stop trusting Terraform output.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect and reduce drift in a team that still sometimes makes manual changes?"
+   },
+   {
+    "question": "How do you manage secrets or sensitive values in Terraform without leaking them into code, logs, or state more than necessary?",
+    "answer": "The main rule is to avoid hardcoding secrets in configuration and to source them from a secret manager, environment variables, or a secure pipeline mechanism. Marking a variable as sensitive hides it from normal CLI output, but it does not make the secret disappear from state, so state storage and access control still matter. For high-value secrets, prefer systems designed for secret lifecycle management over embedding them in Terraform. The trade-off is convenience versus security and auditability.",
+    "real_world": "This matters when a password or API key accidentally lands in a repository, a plan file, or a shared state backend. Those leaks can persist long after the resource itself has been rotated.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do differently for a secret that must be generated during provisioning versus one that already exists?"
+   },
+   {
+    "question": "When would you choose `for_each` over `count`, and what bug does `count` commonly cause in real deployments?",
+    "answer": "Use `for_each` when each instance has a stable identity, like a map key or unique name, because it lets Terraform track instances by that identity instead of by position. `count` is simpler for uniform lists, but inserting or removing an item in the middle can shift indexes and cause unintended replacements. That makes `count` fragile when the list order can change. In practice, `for_each` is safer for long-lived infrastructure because it preserves instance identity across changes.",
+    "real_world": "A common outage pattern is a `count`-based security group rule list where reordering one entry makes Terraform think several rules changed. That can briefly remove and recreate rules that production traffic depends on.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of a good `for_each` key design and a bad one?"
+   },
+   {
+    "question": "How do `lifecycle` settings like `ignore_changes` and `prevent_destroy` help, and what risk do they introduce?",
+    "answer": "`ignore_changes` tells Terraform to stop managing specific attributes that are expected to vary outside code, while `prevent_destroy` acts as a safety guard against accidental deletion. They are useful when a resource has external controllers or when destruction would be too dangerous. The trade-off is that they can hide real configuration drift or block legitimate changes, so they should be applied narrowly. Overusing lifecycle exceptions can make Terraform less truthful about the actual desired state.",
+    "real_world": "Teams use `prevent_destroy` for critical databases or buckets to avoid a fat-fingered delete during refactoring. `ignore_changes` is often used for attributes that another system mutates, but it can mask bugs if applied too broadly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether an attribute should be ignored or modeled in Terraform?"
+   },
+   {
+    "question": "What are Terraform workspaces good for, and when would you avoid using them?",
+    "answer": "Workspaces let you keep separate state instances for the same configuration, which can be useful for simple parallel environments like ephemeral test stacks. They are not a substitute for good environment separation when the infrastructure, credentials, or provider settings differ materially. In many real projects, separate directories or root modules are clearer because they make environment differences explicit. The trade-off is convenience versus clarity and safety, especially when production and non-production have different controls.",
+    "real_world": "Workspaces can be handy for temporary preview environments created by pull requests. They can also become confusing if a team expects them to encode major environment differences and ends up applying to the wrong state.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the main risks of using one configuration with multiple workspaces for dev and prod?"
+   },
+   {
+    "question": "How do you test Terraform code before merging it, and what kinds of issues can unit-style tests actually catch?",
+    "answer": "At minimum, teams run formatting, validation, and a plan in a controlled environment, but stronger testing usually adds policy checks and automated assertions against module outputs. Unit-style tests are good at catching bad variable wiring, unexpected defaults, and regressions in module behavior for known inputs. They do not replace real integration testing, because they cannot fully prove that the cloud provider will accept the configuration or behave as expected. The goal is to catch expensive mistakes early while keeping the test suite fast enough to use on every change.",
+    "real_world": "This matters when a module is reused by multiple teams and a small change can break many deployments at once. Fast tests help catch a wrong subnet, tag, or IAM attachment before it reaches a live account.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you test at the module level versus the live environment level?"
+   },
+   {
+    "question": "What is the difference between writing Terraform that is reusable and writing Terraform that is easy to operate, and how do you balance those goals?",
+    "answer": "Reusable Terraform abstracts common patterns into modules and parameters, while operable Terraform stays easy to read, debug, and change during incidents. If you abstract too aggressively, plans become hard to understand and troubleshooting gets slower; if you duplicate too much, maintenance becomes painful and inconsistent. The balance is to extract stable patterns, keep interfaces small, and prefer readability over clever generic design. In real projects, the best code is often the one the on-call engineer can safely modify at 2 a.m.",
+    "real_world": "This comes up when a highly generic module saves copy-paste work but makes every change require reading four layers of indirection. Teams then spend more time debugging the module than managing infrastructure.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals tell you a module has become too generic or too hard to use?"
+   },
+   {
+    "question": "How do you manage Terraform state safely in a team, especially when multiple people or automation might run applies at the same time?",
+    "answer": "In a team, state should live in a shared backend with locking so only one actor can change it at a time. You also want access controls around the backend, because state can contain sensitive values and the full resource graph. In practice, this means avoiding local state for shared environments, using one state per environment or stack, and making sure CI and humans use the same backend configuration. The main trade-off is operational complexity versus preventing corruption and accidental overlap.",
+    "real_world": "This matters when two engineers run applies from different laptops or when a CI job overlaps with a manual hotfix. Without locking and a shared backend, one apply can overwrite the other’s state and leave Terraform with a wrong view of reality.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What failure modes have you seen when state becomes stale or partially updated?"
+   },
+   {
+    "question": "How do you decide whether to split a Terraform configuration into multiple states instead of keeping everything in one state?",
+    "answer": "I split state when the blast radius, ownership, or deployment cadence differs enough that one change should not force the whole stack to be planned and applied together. Separate states help with scaling, reduce plan noise, and make permissions easier, but they also make cross-stack references and coordination harder. A good rule is to separate by lifecycle and team ownership, not just by resource count. If two sets of resources always change together and share strong dependencies, one state may still be simpler.",
+    "real_world": "A common example is putting networking, shared security controls, and application stacks into different states. That keeps app deploys from touching VPC-level infrastructure and lets platform and app teams work independently.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you safely pass values between two separate Terraform states?"
+   },
+   {
+    "question": "What happens if you rename a resource or move it to a module, and how do you avoid Terraform trying to recreate it?",
+    "answer": "If Terraform no longer sees the same resource address in configuration, it usually treats the old one as removed and the new one as something to create. To avoid that, you need to tell Terraform that the stateful object is being moved rather than replaced, using the appropriate state-move mechanism for your workflow. The key idea is preserving the state address during refactors so the real infrastructure stays intact. This matters a lot during module extraction or large cleanups.",
+    "real_world": "Teams often hit this when refactoring a monolithic root module into reusable modules. Without planning the move, a routine refactor can turn into an accidental delete-and-recreate of production infrastructure.",
+    "code_lang": "hcl",
+    "code": "# conceptual example\n# old address: aws_s3_bucket.logs\n# new address: module.logging.aws_s3_bucket.logs\n# tell Terraform this is a move, not a replacement\n",
+    "follow_up": "What checks do you do before and after a large Terraform refactor?"
+   },
+   {
+    "question": "How do you handle a change that will force replacement of a production resource, like a database or load balancer?",
+    "answer": "First, confirm whether the replacement is truly necessary or whether a safer in-place update, separate resource, or staged migration is possible. If replacement is unavoidable, I usually introduce the new resource alongside the old one, migrate traffic or data, verify it, and only then remove the original. The important trade-off is time and complexity versus avoiding downtime or data loss. Terraform can express the desired end state, but it does not remove the need for migration planning.",
+    "real_world": "This comes up with resources that cannot be updated in place because a provider marks a field as requiring replacement. In production, the difference between a safe cutover and a destructive apply is often whether the team planned the migration outside Terraform.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you validate that the new resource is ready before switching traffic?"
+   },
+   {
+    "question": "What is the difference between using modules from a registry and sourcing them from a Git repository, and when would you choose each?",
+    "answer": "Registry modules are easier to consume, version, and standardize, which makes them good for shared internal patterns. Git-sourced modules are more flexible when you need an unreleased fix, a custom branch, or tighter coupling to a specific repository workflow. The trade-off is convenience and governance versus control and immediacy. In mature teams, stable modules usually come from a registry-like publishing flow, even if the source of truth is Git.",
+    "real_world": "A platform team might publish vetted network and IAM modules so application teams can use them consistently. During an urgent fix, though, engineers sometimes pin a module directly to a Git commit until the change is released properly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you version and upgrade modules without breaking existing consumers?"
+   },
+   {
+    "question": "How do you keep Terraform plans reviewable when a change touches a lot of resources across several modules?",
+    "answer": "I try to make the plan show intent clearly by keeping resources small and composable, avoiding unnecessary churn, and grouping changes into logical pull requests. It also helps to separate structural refactors from behavioral changes so reviewers can tell what is cosmetic and what changes real infrastructure. In large plans, I watch for replacement actions, accidental destroys, and provider-driven diffs that indicate drift or schema changes. If a plan is noisy, it often means the configuration is too coupled or the module interface is too broad.",
+    "real_world": "A giant plan with hundreds of unrelated diffs is hard to review and easy to approve blindly. Teams often discover hidden bugs only after reducing the plan noise and making each change set smaller.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns help reduce plan churn from unstable values or provider-computed fields?"
+   },
+   {
+    "question": "How would you debug a Terraform apply that fails after some resources were already created?",
+    "answer": "I would first determine whether Terraform stopped because of a provider error, a dependency issue, or an external limit such as permissions or quotas. Then I’d inspect the state to see what succeeded, what failed, and whether the partially created resources are usable or need cleanup. After fixing the root cause, I’d re-run apply carefully rather than blindly recreating everything, because Terraform may already track some of the new objects. Partial failure is normal in infrastructure work; the important part is understanding the current state before retrying.",
+    "real_world": "This happens when an apply creates a network resource but fails later on an IAM or DNS step. If the operator retries without checking, they can end up with duplicate resources or a confused state file.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you manually edit state, and what precautions would you take first?"
+   },
+   {
+    "question": "What are the pros and cons of using data sources versus hardcoding values or passing them in as variables?",
+    "answer": "Data sources are good when the value is owned elsewhere and can be looked up reliably at apply time, such as an existing subnet or shared security group. Variables are better when the value is part of the module contract and should be explicit for reuse and testing. Hardcoding is the least flexible and usually makes refactoring and environment differences painful. The trade-off is coupling to live infrastructure versus keeping configuration self-contained and deterministic.",
+    "real_world": "A common mistake is depending on a data lookup for something that is supposed to be created by the same stack or by a different team’s changing stack. That can make applies fragile and hard to test in isolated environments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you avoid hidden dependencies when one stack looks up values from another?"
+   },
+   {
+    "question": "How do you handle provider upgrades in a real Terraform codebase without causing surprise changes?",
+    "answer": "I upgrade providers deliberately, usually in a branch with a plan against representative environments, and I read the release notes for breaking behavior changes. Then I look for plan differences that indicate schema changes, default changes, or resources that need import or migration. If the upgrade is large, I prefer incremental version bumps so it is easier to identify which change caused a diff. The main goal is to avoid mixing a provider upgrade with unrelated infrastructure changes.",
+    "real_world": "Teams often get surprised when a provider upgrade changes a default or starts normalizing fields differently, creating large plans on otherwise stable infrastructure. Doing the upgrade in isolation helps distinguish a real infrastructure change from a provider behavior change.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What do you look for in a plan to tell whether a diff is provider churn or an actual desired change?"
+   },
+   {
+    "question": "How do you approach testing Terraform modules in a way that gives confidence without trying to treat Terraform like application code?",
+    "answer": "I focus on checking module behavior at the boundaries: that inputs render the expected resources, required variables are enforced, and important invariants hold across environments. Static checks and plan-based tests can catch many mistakes, but they do not prove the cloud provider will accept every change or that an architecture is operationally sound. For higher confidence, I add integration tests in a real or ephemeral environment for the critical paths. The balance is to test enough logic to prevent regressions without making the test suite slow or brittle.",
+    "real_world": "This matters when a shared module is used by many teams and a small change can break dozens of deployments. A lightweight test suite can catch bad defaults or missing arguments before the module is published.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of bugs are better caught by integration tests than by Terraform plan checks?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does Terraform build and walk its dependency graph during plan and apply, and where do advanced teams get surprised by graph behavior?",
+    "answer": "Terraform builds a directed acyclic graph from references, explicit `depends_on`, provider configuration dependencies, and some implicit ordering around create and destroy. It evaluates as much as it can in parallel, but only where the graph allows and the provider can handle concurrent operations. Teams get surprised when hidden dependencies are missing, especially with side effects outside Terraform, or when overusing `depends_on` serializes large parts of the graph and slows applies. Unknown values at plan time also matter because they can defer decisions until apply and make plans less precise.",
+    "real_world": "A common incident is IAM, DNS, or policy propagation not being modeled as a dependency, so Terraform races ahead and later resources fail intermittently. The opposite problem is adding broad `depends_on` at module level and turning a fast apply into a long mostly-serial rollout.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use explicit `depends_on` on a module, and what cost does that have?"
+   },
+   {
+    "question": "What actually happens inside Terraform when a value is unknown at plan time, and why does that matter for module design?",
+    "answer": "If an attribute depends on something the provider can only return after creation, Terraform marks downstream expressions as unknown during planning. That can prevent `for_each` keys, `count`, or certain nested arguments from being fully determined, which either causes planning errors or produces vague plans with many values shown as computed. Good module design keeps collection keys and resource addressing based on stable, known inputs, not provider-generated IDs. That reduces churn and makes plans deterministic and reviewable.",
+    "real_world": "This shows up when someone tries to drive `for_each` from IDs returned by newly created resources, causing a plan-time failure in CI. In larger estates, these unknowns also make change review harder because reviewers cannot tell whether a replacement is harmless or risky.",
+    "code_lang": "hcl",
+    "code": "resource \"aws_subnet\" \"s\" {\n  for_each = { for n in var.names : n => n }\n  vpc_id   = aws_vpc.main.id\n}\n\n# Bad pattern: keys derived from apply-time values\n# for_each = toset(aws_subnet.s[*].id)",
+    "follow_up": "Which expression contexts in Terraform require values to be known during planning?"
+   },
+   {
+    "question": "How do provider plugins actually participate in plan and apply, and what failure modes come from that boundary?",
+    "answer": "Terraform Core computes the graph and desired operations, then calls provider plugins to validate config, read current remote objects, propose diffs, and perform CRUD actions. The provider is where API semantics, retries, eventual consistency handling, and import/read logic live, so many surprising diffs or flaky applies are really provider behavior, not Core. Failures at this boundary include provider crashes, inconsistent reads, schema changes across versions, and APIs returning partial success. That is why provider version pinning, acceptance testing, and careful upgrade rollout matter.",
+    "real_world": "A provider bug can return a field normalized differently on every read, creating permanent drift and noisy plans. Teams often discover this only after upgrading the provider in one pipeline and seeing thousands of unexpected updates.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether a bad diff is caused by Terraform Core, the provider, or the cloud API itself?"
+   },
+   {
+    "question": "If a team has thousands of resources and plans are getting slow, what would you look at first to improve Terraform performance without reducing safety?",
+    "answer": "First, look at state boundaries, graph shape, and provider read behavior. Large monolithic states slow refresh and planning because Terraform has to read many remote objects, so splitting along ownership or lifecycle boundaries often helps more than tuning flags. Also remove unnecessary data sources, avoid broad module-level `depends_on`, and check whether the provider or API is rate limiting parallel reads. The trade-off is that more states improve performance and blast radius, but increase orchestration overhead and cross-state dependency management.",
+    "real_world": "In production, slow plans are often dominated by refresh against cloud APIs, not by HCL evaluation. A team with one huge networking-and-app state may wait a long time for every pipeline, while several smaller states can cut feedback time and isolate failures.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals tell you a state should be split, and how do you avoid creating a tangled web of remote-state dependencies?"
+   },
+   {
+    "question": "What are the risks of turning up Terraform parallelism, and how do you decide whether to do it?",
+    "answer": "Higher parallelism can reduce apply time, but only if the graph has enough independent work and the provider and target APIs tolerate the concurrency. The risks are API throttling, eventual consistency races, provider bugs exposed by concurrency, and harder incident analysis when many operations fail at once. I treat parallelism as a workload-specific tuning knob: start from the default behavior, measure, and increase only after confirming the provider's API patterns and rate limits. If failures become bursty or nondeterministic, back off and fix graph design before pushing concurrency further.",
+    "real_world": "Teams often raise parallelism during a long migration and then hit cloud API throttling, causing retries, longer applies, and occasional partial rollouts. The fastest stable setting is often lower than the maximum the system technically allows.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish a true dependency bug from a pure API throttling problem during a highly parallel apply?"
+   },
+   {
+    "question": "What is Terraform refresh, why can it be dangerous or expensive at scale, and how do you handle that in CI?",
+    "answer": "Refresh is the step where Terraform reads real remote objects to reconcile state before planning or applying. It is expensive at scale because it drives many API calls, and it can be dangerous if read paths are flaky or if credentials only see part of the estate, because Terraform may infer misleading changes from incomplete information. In CI, I want plans based on accurate refresh for authoritative environments, but I also separate speculative review workflows from privileged apply workflows and watch for permissions gaps. The key trade-off is plan accuracy versus speed and operational noise.",
+    "real_world": "A common production issue is a read-only or scoped-down CI role that cannot read every attribute, leading to noisy plans or proposed replacements that would not appear under the apply role. Another is a cloud control plane outage making refresh fail for unrelated changes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do mismatched plan-time and apply-time credentials create false confidence or false alarms?"
+   },
+   {
+    "question": "How do you use `moved` blocks and `import` in a large refactor, and what are the edge cases that still cause churn?",
+    "answer": "`moved` blocks tell Terraform that an object’s address changed in configuration, so state is relinked instead of the resource being destroyed and recreated. `import` brings existing remote objects under management, but you still need configuration that matches reality well enough to avoid immediate drift. Edge cases include changing resource shape while moving it, changing `for_each` keys, or importing objects whose provider read does not exactly round-trip the remote API. In big refactors, I do address changes first, behavior changes second, and keep plans small enough to verify each step.",
+    "real_world": "Without a staged refactor, a team can accidentally rename hundreds of addresses and get a plan that wants to recreate production resources. Import-heavy migrations also fail when real resources have hand-edited settings the module does not model yet.",
+    "code_lang": "hcl",
+    "code": "moved {\n  from = aws_instance.web\n  to   = module.compute.aws_instance.web\n}",
+    "follow_up": "Why are `for_each` key changes often more dangerous than a simple resource rename?"
+   },
+   {
+    "question": "How do you reason about eventual consistency and propagation delays in Terraform, given that the graph may be correct but the platform is not immediately consistent?",
+    "answer": "A correct dependency graph only guarantees order, not that the downstream API can observe the upstream change immediately. Cloud platforms often have delayed propagation for IAM, DNS, routing, certificates, and policy attachment, so create calls can still fail right after the dependency finishes. The right fix is usually provider-supported retries or resources that model the dependency more precisely, not arbitrary sleep hacks unless there is no better option. I treat intermittent first-apply failures as a platform-consistency problem until proven otherwise.",
+    "real_world": "Classic examples are creating a role and immediately using it, or validating a certificate before DNS changes have propagated. Pipelines look flaky because the second apply succeeds, masking the real consistency gap.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When is using a time-based wait acceptable, and how would you contain the damage if you have to use one?"
+   },
+   {
+    "question": "How would you design Terraform around a multi-account or multi-region estate without ending up with brittle provider alias sprawl?",
+    "answer": "I keep account and region boundaries explicit in the architecture and pass only the provider aliases a module truly needs. Root modules usually own provider configuration and credentials, while child modules stay mostly provider-agnostic except where multiple aliases are part of the contract. The failure mode is leaking environment topology deep into generic modules, which makes reuse harder and refactors expensive. Clear module interfaces, consistent alias naming, and state separation by trust boundary help keep the graph understandable.",
+    "real_world": "In large estates, one module accidentally using the default provider instead of the intended alias can create resources in the wrong account or region. Teams usually catch this only after seeing drift, failed lookups, or billing anomalies.",
+    "code_lang": "hcl",
+    "code": "module \"replica\" {\n  source = \"./db\"\n  providers = {\n    aws.primary = aws.us_east_1\n    aws.dr      = aws.us_west_2\n  }\n}",
+    "follow_up": "What are the trade-offs between one highly parameterized multi-region module and separate root modules per region?"
+   },
+   {
+    "question": "What kinds of production incidents come from Terraform state corruption or inconsistency, and how do you recover safely?",
+    "answer": "The dangerous cases are partial writes, manual state edits, interrupted applies combined with out-of-band changes, and importing or moving objects incorrectly so addresses no longer match reality. Recovery starts by stopping concurrent runs, backing up the current state, comparing state to real infrastructure, and making the smallest corrective move with state commands or targeted configuration changes. I avoid guessing: verify one object at a time, prefer relinking over recreating, and only resume normal pipelines once plans are clean. The trade-off is speed versus blast radius; rushed state repair can turn a metadata problem into an outage.",
+    "real_world": "A failed apply that created a resource but never recorded it in state can lead Terraform to try creating a duplicate on the next run. Manual state surgery during an incident has also caused teams to orphan production resources and lose track of ownership.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which state repair operations do you consider safe enough for routine use, and which ones need extra review or a maintenance window?"
+   },
+   {
+    "question": "How do you use Terraform with APIs that have strict rate limits or flaky control planes without making applies unreliable?",
+    "answer": "I treat it as a provider and workflow design problem, not just a retry problem. First I reduce unnecessary reads and writes by narrowing state scope, avoiding expensive data sources, and reviewing refresh behavior in CI; then I tune parallelism conservatively because more concurrency often just amplifies throttling. If the provider supports retries and backoff, I rely on that before adding wrapper logic, and I separate especially slow or quota-sensitive resources into their own states. The trade-off is slower applies, but usually a predictable 15-minute apply is better than a 5-minute apply that fails half the time.",
+    "real_world": "This shows up with IAM, DNS, Kubernetes, and cloud networking APIs where one large apply can trigger bursts of reads and writes. Teams often see intermittent failures only under CI load, not on a laptop, because multiple pipelines hit the same account limits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would tell you the bottleneck is provider/API throttling rather than Terraform graph size or local CPU?"
+   },
+   {
+    "question": "When would you intentionally use `-target`, and why is it considered risky in normal operations?",
+    "answer": "I use `-target` mainly for break-glass recovery, imports, or bootstrapping a dependency that cannot be planned cleanly in one pass. It is risky because it asks Terraform to operate on a partial graph, so you can skip changes that should have happened elsewhere and leave the state in a misleading intermediate condition. After using it, I want a full plan and usually a normal apply to converge everything. As a routine deployment tool, it hides coupling instead of fixing it.",
+    "real_world": "A common case is recovering from a failed apply where a single dependency, like a KMS key or cluster, must be created or repaired before the rest can succeed. Teams get into trouble when they start using `-target` in CI to make plans smaller and accidentally stop seeing side effects.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example where `-target` appears to work but causes drift or missed updates in dependent resources?"
+   },
+   {
+    "question": "What is your strategy for importing large amounts of existing infrastructure into Terraform with minimal churn?",
+    "answer": "I import in small, well-bounded batches and make the configuration match reality before trying to improve the design. The first goal is a no-op or near-no-op plan, which usually means being careful with provider defaults, computed fields, and attributes the API normalizes. I avoid giant one-shot imports because a single mistaken assumption can produce hundreds of replacements. Once the imported baseline is stable, I refactor with moves and module extraction in separate steps.",
+    "real_world": "This matters in brownfield cloud estates where networking, IAM, and databases already exist and downtime is unacceptable. The biggest failures happen when teams import and refactor at the same time, then cannot tell whether a planned change is real or self-inflicted.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which kinds of attributes most often cause surprise diffs right after import?"
+   },
+   {
+    "question": "How do you keep Terraform from fighting with controllers or other systems that also mutate infrastructure, like Kubernetes operators or cloud autoscaling?",
+    "answer": "You need a clear ownership boundary. If another controller is expected to change a field continuously, Terraform should usually manage the parent object but ignore that specific drift, or stop managing that object entirely and treat it as external. The danger is that broad `ignore_changes` can mask real configuration drift, so I keep it narrow and documented. In some cases the better architecture is to let Terraform create the platform and let the controller own day-two behavior.",
+    "real_world": "Classic examples are Kubernetes objects modified by admission controllers, autoscaling groups changing desired capacity, or tags added by cloud governance tooling. Without a boundary, every plan becomes noisy or destructive because each system tries to revert the other's updates.",
+    "code_lang": "hcl",
+    "code": "resource \"aws_autoscaling_group\" \"app\" {\n  desired_capacity = 3\n\n  lifecycle {\n    ignore_changes = [desired_capacity]\n  }\n}\n",
+    "follow_up": "How would you decide whether to ignore one attribute versus removing the whole resource from Terraform management?"
+   },
+   {
+    "question": "What are the operational trade-offs between running Terraform locally, in a centralized CI pipeline, or in a dedicated control plane like Terraform Cloud?",
+    "answer": "Local runs are fast for iteration but weak on consistency, auditability, and credential control. Centralized pipelines improve policy enforcement, logs, and serialized execution, but they add queueing, runner complexity, and secret-management overhead. A dedicated control plane adds remote execution, state, policy, and approvals in one place, but it creates platform dependence and another critical service boundary. For senior teams the main question is usually not convenience, but who is allowed to apply, from where, with which credentials, and how failures are recovered.",
+    "real_world": "This becomes critical in regulated environments where direct cloud admin access is restricted and every apply needs an audit trail. It also matters at scale when dozens of repositories are changing infrastructure daily and ad hoc local applies become an incident source.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you were migrating from local applies to centralized runs, what failure modes would you expect in the first month?"
+   },
+   {
+    "question": "How do you handle Terraform in ephemeral preview environments without creating runaway cost or state sprawl?",
+    "answer": "I make the environment lifecycle explicit: deterministic naming, tags for ownership and expiry, isolated state per preview, and automatic cleanup outside the happy path. The hard part is not creation but deletion, because failed pipelines, renamed branches, and orphaned states leave resources behind. I also avoid putting heavy shared infrastructure in every preview; previews should usually attach to stable shared services where possible. The trade-off is reduced fidelity versus dramatically lower cost and simpler cleanup.",
+    "real_world": "Teams that create a full VPC, database, and cluster per pull request often discover the real problem is garbage collection, not provisioning. Without expiry tagging and janitor jobs, cloud bills climb quietly and quota exhaustion starts breaking production changes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you isolate per preview environment, and what would you share across previews?"
+   },
+   {
+    "question": "How do you make Terraform changes safe for globally replicated or cross-region resources where propagation and rollback are hard?",
+    "answer": "I bias toward staged rollouts and explicit separation of concerns. Global resources like DNS, certificates, edge distributions, or replicated identity config often deserve their own state and their own deployment cadence because the blast radius is wider and rollback can be slower than creation. I also avoid combining these with unrelated regional changes in one apply, since a failure halfway through can leave users seeing mixed behavior across regions. The trade-off is more operational overhead in exchange for much better control during incidents.",
+    "real_world": "A single apply that updates edge routing and backend infrastructure together can create a partial rollout where some regions serve the new path and others do not. Teams usually learn this after a painful incident involving caches, DNS TTLs, or delayed replication.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of resources would you classify as global enough to deserve their own state or pipeline?"
+   },
+   {
+    "question": "What is your approach to policy enforcement for Terraform, and where do you put the line between static checks and runtime guardrails?",
+    "answer": "I use static checks early for fast feedback on things visible in code or plan output, like naming, tagging, insecure defaults, or disallowed resource types. Runtime guardrails belong closer to the cloud platform, because Terraform policy cannot stop out-of-band changes and cannot fully model provider or API behavior. The important trade-off is false confidence: if policy only exists in Terraform, teams may think the platform is protected when manual or other automated changes can still bypass it. The best setups combine repository checks, plan policy, and cloud-native controls.",
+    "real_world": "This matters when organizations require encryption, restricted regions, or network controls across many teams. Incidents happen when a Terraform policy blocks bad code in CI but production is still vulnerable because someone used the console or another deployment tool.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which controls would you enforce in cloud-native policy even if they already exist as Terraform checks?"
+   },
+   {
+    "question": "How do you deal with provider schema changes or diff noise that causes recurring plan churn even when nothing meaningful changed?",
+    "answer": "First I identify whether the churn is from provider normalization, API reordering, computed fields, or a real semantic difference. Then I fix it at the right layer: pin or upgrade the provider deliberately, normalize inputs in code, avoid unstable data sources, or in limited cases ignore a truly non-semantic attribute. I do not accept persistent noisy plans because they train reviewers to ignore diffs and hide dangerous replacements. The cost is extra engineering time upfront, but it pays back by making plans trustworthy again.",
+    "real_world": "Examples include tag ordering, policy document formatting, or APIs that rewrite values into canonical forms. In large estates, even a small amount of recurring noise can turn every review into a wall of meaningless change and let a real deletion slip through.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish harmless formatting churn from a provider bug that could cause destructive updates?"
+   },
+   {
+    "question": "If you had to review a Terraform architecture for blast radius, what are the first concrete things you would inspect?",
+    "answer": "I start with state boundaries, credential scopes, and where destructive resources sit. I want to know which apply can touch production networking, IAM, databases, or global routing; whether one repository can affect many environments; and whether pipelines assume broad cloud permissions. Then I inspect dependencies between states, use of shared modules, and how emergency changes are made, because hidden coupling often creates the biggest surprise blast radius. Blast radius is less about line count and more about what a single mistaken apply is authorized to mutate.",
+    "real_world": "This review often uncovers that a 'small' service repo can also update account-wide IAM or DNS through a shared module, or that one state spans dev and prod. Those are the architectures that turn a routine refactor or bad variable value into a multi-environment incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What architecture changes would you recommend first if one state currently manages both application resources and account-wide IAM?"
+   }
+  ]
+ }
+}

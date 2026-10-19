@@ -1,0 +1,330 @@
+{
+  "slug": "invoices-from-other-accounts",
+  "title": "A few users download invoices that belong to someone else",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "cdn",
+    "caching",
+    "security",
+    "incident-response",
+    "http"
+  ],
+  "scenario": "Support receives 37 reports in an hour from users seeing another customer's PDF invoice from /api/invoices/latest. The endpoint sits behind a CDN with a 7-day default TTL and receives about 900 requests/second at peak. The application authenticates correctly, but the CDN cache key is only the URL path and query string.",
+  "goal": "Stop the data leak, identify the root cause, and make invoice delivery safe without unnecessarily disabling caching for the whole site.",
+  "concepts": [
+    {
+      "key": "cdn",
+      "name": "CDN",
+      "summary": "A content delivery network serves responses from edge locations near users. It can return cached responses without contacting the application.",
+      "used_here": "The invoice endpoint is served through a CDN before requests reach the application."
+    },
+    {
+      "key": "cache-key",
+      "name": "Cache key",
+      "summary": "A cache key is the value a cache uses to decide whether two requests can share the same stored response. It often includes the URL, and may include headers or other request attributes.",
+      "used_here": "The configured key for the invoice endpoint includes only the URL path and query string."
+    },
+    {
+      "key": "ttl",
+      "name": "TTL",
+      "summary": "Time to live is how long a cached response can be reused before it is considered expired. Longer TTLs increase cache reuse but also keep mistakes around longer.",
+      "used_here": "The CDN has a 7-day default TTL for stored responses."
+    },
+    {
+      "key": "authenticated-content",
+      "name": "Authenticated content",
+      "summary": "Authenticated content is a response whose body depends on who the requester is. Two users requesting the same URL may be entitled to different data.",
+      "used_here": "The latest invoice PDF depends on the logged-in account."
+    },
+    {
+      "key": "access-log",
+      "name": "Access log",
+      "summary": "An access log records details about handled requests. For a CDN, it commonly includes the URL, cache status, timestamps, and request metadata.",
+      "used_here": "CDN logs can show whether reported downloads were served from edge cache or forwarded to the application."
+    },
+    {
+      "key": "cache-status",
+      "name": "Cache status",
+      "summary": "Cache status labels such as HIT, MISS, and BYPASS describe how a cache handled a request. A HIT means the cache served a stored response.",
+      "used_here": "Cache status helps separate application responses from CDN-served responses."
+    },
+    {
+      "key": "content-hash",
+      "name": "Content hash",
+      "summary": "A content hash is a fingerprint of bytes, such as a SHA-256 digest. Matching hashes are strong evidence that two files are identical.",
+      "used_here": "It can compare PDFs seen by different users without relying on filenames or visual inspection."
+    },
+    {
+      "key": "cache-purge",
+      "name": "Cache purge",
+      "summary": "A purge is an explicit command to remove selected stored objects from a cache. It changes cache state before natural expiration.",
+      "used_here": "It is one available incident-response action when cached state may be unsafe."
+    },
+    {
+      "key": "cache-control",
+      "name": "Cache-Control",
+      "summary": "Cache-Control is an HTTP response header that tells browsers and shared caches how a response may be stored and reused. Caches must be configured to respect it for the policy to work.",
+      "used_here": "The application can send cache instructions with invoice responses."
+    },
+    {
+      "key": "shared-cache",
+      "name": "Shared cache",
+      "summary": "A shared cache stores responses for use by more than one user. CDNs and corporate proxies are common shared caches.",
+      "used_here": "The CDN cache is shared across many customers."
+    },
+    {
+      "key": "signed-url",
+      "name": "Signed URL",
+      "summary": "A signed URL contains a cryptographic token that a server or CDN can verify. It is commonly used to grant time-limited access to a specific object.",
+      "used_here": "It is a possible mechanism for controlled PDF downloads."
+    },
+    {
+      "key": "canary",
+      "name": "Canary rollout",
+      "summary": "A canary rollout sends a change to a small slice of traffic before full deployment. It reduces blast radius while measuring real behavior.",
+      "used_here": "A cache-policy change can be tested on limited traffic before broad rollout."
+    },
+    {
+      "key": "synthetic-test",
+      "name": "Synthetic test",
+      "summary": "A synthetic test is an automated request that simulates user behavior. It checks a known condition repeatedly and predictably.",
+      "used_here": "Test accounts can request invoices through the CDN to verify cache behavior."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Choose the first place to look",
+      "question": "You know the app authenticates correctly, the CDN has a 7-day default TTL, and the CDN cache key is only the URL path and query string. What should you inspect first to test whether the CDN is serving one account's invoice to other accounts?",
+      "concept_keys": [
+        "cdn",
+        "cache-key",
+        "ttl",
+        "authenticated-content",
+        "access-log",
+        "cache-status"
+      ],
+      "options": [
+        {
+          "text": "Compare application authentication logs for affected users and confirm the middleware resolved the expected account IDs.",
+          "correct": false,
+          "hint": "That is useful if requests reached the application. A CDN HIT may never call the authentication middleware for that request.",
+          "id": "a"
+        },
+        {
+          "text": "Ask affected users to clear browser cache and retry while support collects screenshots of the PDF they received.",
+          "correct": false,
+          "hint": "Browser cache can cause stale responses for one user, but it does not explain many accounts receiving the same customer’s PDF through a shared endpoint.",
+          "id": "b"
+        },
+        {
+          "text": "Pull database ownership rows for the invoice IDs mentioned in the tickets and check whether the rows changed recently.",
+          "correct": false,
+          "hint": "Ownership data matters, but the symptom can happen even when the database and application authorization are correct. Start where a response might be reused without reaching the app.",
+          "id": "c"
+        },
+        {
+          "text": "Inspect CDN access logs for /api/invoices/latest, grouped by cache key, cache status, timestamp, and authenticated account metadata if available.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The CDN is the first suspect because the cache key ignores user identity while the response depends on the authenticated account. CDN access logs can show whether /api/invoices/latest was served as a HIT for different users under the same key. Application auth logs are tempting, but CDN HITs can bypass the application entirely, so they may show nothing for the bad responses."
+    },
+    {
+      "title": "Confirm the cached object",
+      "question": "The CDN logs show that the reported requests were HITs for the same cache key, /api/invoices/latest. The first MISS for that key at 10:02 went to the origin for account A, followed by HITs for other accounts. What evidence best confirms that those users received account A's PDF from the CDN?",
+      "concept_keys": [
+        "cdn",
+        "cache-key",
+        "cache-status",
+        "content-hash",
+        "authenticated-content"
+      ],
+      "options": [
+        {
+          "text": "Check that the affected accounts do not have database rows referencing account A's invoice ID.",
+          "correct": false,
+          "hint": "That can rule out a database relationship bug, but it does not prove which bytes the CDN actually returned.",
+          "id": "a"
+        },
+        {
+          "text": "Confirm that TLS terminated at the CDN and that the certificate covered the invoice API hostname.",
+          "correct": false,
+          "hint": "TLS termination affects transport security, not whether one cached response body was reused for multiple accounts.",
+          "id": "b"
+        },
+        {
+          "text": "Verify that the 10:02 origin request authenticated as account A and returned HTTP 200.",
+          "correct": false,
+          "hint": "The first MISS explains how an object could enter the cache, but you still need to connect the cached bytes to what later users saw.",
+          "id": "c"
+        },
+        {
+          "text": "Compare a SHA-256 hash of the PDF bytes served from the CDN with account A's correct invoice PDF and with PDFs attached to the reports.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Matching content hashes directly ties the bytes served to later users to account A's invoice. The database check is plausible, but this incident can occur with perfect invoice ownership rows because the wrong response is reused after the origin returns it once. The 10:02 MISS is important context, but byte-level comparison is stronger confirmation."
+    },
+    {
+      "title": "Contain the leak now",
+      "question": "You have confirmed that /api/invoices/latest is serving cached account-specific PDFs across accounts. What is the safest immediate containment action while preserving unrelated CDN benefits?",
+      "concept_keys": [
+        "cdn",
+        "cache-key",
+        "ttl",
+        "cache-purge",
+        "shared-cache",
+        "authenticated-content"
+      ],
+      "options": [
+        {
+          "text": "Lower the CDN default TTL from 7 days to 60 seconds and wait for the existing cached object to expire naturally.",
+          "correct": false,
+          "hint": "Changing future freshness does not necessarily remove an object that is already stored. Even 60 seconds is too long for a known privacy leak.",
+          "id": "a"
+        },
+        {
+          "text": "Add a CDN rule that bypasses shared caching for /api/invoices/* and purge the existing /api/invoices/latest cached object.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Rotate the application's session-signing keys so affected users must log in again before downloading invoices.",
+          "correct": false,
+          "hint": "The reports are not caused by users authenticating as the wrong account. Re-login does not remove a bad object from a shared cache.",
+          "id": "c"
+        },
+        {
+          "text": "Disable the CDN for the entire domain until the application team finishes a full caching audit.",
+          "correct": false,
+          "hint": "That would stop this path, but it also removes caching for static and public content without proving they are unsafe. Prefer a targeted blast-radius reduction when possible.",
+          "id": "d"
+        }
+      ],
+      "explanation": "A targeted bypass stops new shared-cache reuse for invoice responses, and purging removes the already-stored unsafe object instead of waiting up to 7 days. Disabling the whole CDN is a tempting emergency move, but it unnecessarily affects unrelated static and public traffic. Lowering TTL alone is not enough because the known bad object may continue to be served until it is removed or bypassed."
+    },
+    {
+      "title": "Make the endpoint safe by default",
+      "question": "After containment, you need a durable application-level policy for /api/invoices/latest, which returns an account-specific PDF. Which response policy is safest for this endpoint?",
+      "concept_keys": [
+        "cache-control",
+        "shared-cache",
+        "authenticated-content",
+        "cdn"
+      ],
+      "options": [
+        {
+          "text": "Keep the current cache headers but include the account name inside the generated PDF filename.",
+          "correct": false,
+          "hint": "Changing the filename or metadata does not change whether the shared cache reuses the response body for the same URL.",
+          "id": "a"
+        },
+        {
+          "text": "Return Cache-Control: no-store for account-specific invoice responses, and verify the CDN is configured to honor that header.",
+          "correct": true,
+          "hint": "",
+          "id": "b"
+        },
+        {
+          "text": "Return Vary: User-Agent so different browsers do not share the same cached invoice response.",
+          "correct": false,
+          "hint": "The invoice body varies by account, not by browser type. Varying on an unrelated header still allows users with the same browser class to collide.",
+          "id": "c"
+        },
+        {
+          "text": "Return Cache-Control: public, max-age=604800 because the endpoint already requires authentication at the application.",
+          "correct": false,
+          "hint": "Authentication at the origin does not protect requests that are later served from a shared cache. Public caching says the response may be reused broadly.",
+          "id": "d"
+        }
+      ],
+      "explanation": "For an endpoint whose response is private to an account, no-store is the safest default because it prevents storage rather than trying to partition it correctly. The CDN also has to honor the header; otherwise the origin policy will not be enforced at the edge. Relying on origin authentication is the common trap here because the bad HIT never reaches the origin."
+    },
+    {
+      "title": "Allow CDN delivery where it is safe",
+      "question": "Product says monthly invoice PDFs are large, and they still want CDN delivery for downloads when possible. Which design avoids the /api/invoices/latest leak while still allowing controlled CDN use?",
+      "concept_keys": [
+        "cdn",
+        "signed-url",
+        "cache-key",
+        "ttl",
+        "authenticated-content",
+        "shared-cache"
+      ],
+      "options": [
+        {
+          "text": "Create per-invoice signed download URLs; configure the CDN to validate the signature and expiry before serving cached content, or ensure the CDN cache TTL is no longer than the URL expiry.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Add Vary: Cookie globally for invoice PDFs and keep a 7-day public cache for all matching responses.",
+          "correct": false,
+          "hint": "Cookie-based variation can be fragile and can destroy cache efficiency. It also still depends on every relevant cookie being included and safely handled by the CDN.",
+          "id": "b"
+        },
+        {
+          "text": "Keep /api/invoices/latest, but append a random query parameter generated once per account during signup.",
+          "correct": false,
+          "hint": "A stable per-account value can reduce collisions, but it is not a complete access-control design. Think about who verifies entitlement on each download and what object is being addressed.",
+          "id": "c"
+        },
+        {
+          "text": "Use a 5-minute signed URL, but leave the CDN configured to serve any cached HIT for the PDF for the default 7-day TTL.",
+          "correct": false,
+          "hint": "A short URL lifetime only helps if the CDN enforces that lifetime on requests that hit cache, or if cached entries cannot outlive the URL.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Signed per-invoice URLs can work if the CDN enforces the signature and expiry before it serves a cached object, or if the cache entry cannot outlive the signed URL. Otherwise, a 5-minute URL could still produce a 7-day cached HIT after the URL has expired. Keeping downloads tied to a specific invoice object also avoids caching a moving account-specific alias like /latest."
+    },
+    {
+      "title": "Verify the fix and watch for regressions",
+      "question": "You have deployed the bypass/no-store policy for /api/invoices/latest and purged the known cached object. What verification plan best proves the leak is stopped without hiding new problems?",
+      "concept_keys": [
+        "cdn",
+        "cache-status",
+        "cache-control",
+        "canary",
+        "synthetic-test",
+        "content-hash"
+      ],
+      "options": [
+        {
+          "text": "Rely on unit tests for the authentication middleware and watch whether support receives fewer tickets over the next day.",
+          "correct": false,
+          "hint": "Authentication tests do not exercise CDN cache behavior. Support volume is a lagging signal for a privacy issue.",
+          "id": "a"
+        },
+        {
+          "text": "Check only origin application logs for 200 responses from /api/invoices/latest after the deployment.",
+          "correct": false,
+          "hint": "Origin logs miss what the CDN serves directly. The failure mode you just fixed lived at the edge.",
+          "id": "b"
+        },
+        {
+          "text": "Monitor global CDN hit rate and rollback if it drops after the invoice cache policy change.",
+          "correct": false,
+          "hint": "A lower hit rate for personalized data is expected and may be correct. You need path-specific correctness checks, not only aggregate cache efficiency.",
+          "id": "c"
+        },
+        {
+          "text": "Run synthetic tests through the CDN with two accounts: request /api/invoices/latest for each, verify no shared-cache HIT for that path, verify no-store headers, compare PDF hashes, and monitor CDN logs during rollout.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "Two-account synthetic tests exercise the exact failure mode: the same endpoint requested by different identities through the CDN. Cache status and headers prove the edge is not storing or reusing /api/invoices/latest, while hash comparison proves the bodies are account-specific. A drop in overall hit rate is not by itself a failure; correctness and privacy outweigh cache hits for personalized invoice data."
+    }
+  ],
+  "takeaway": "Never cache authenticated, account-specific responses in a shared cache unless the cache key and access checks are deliberately designed for that data. For private endpoints, use no-store or private policies and purge unsafe cached objects during incidents. If you use signed URLs for CDN delivery, make sure expiry is enforced on cached HITs or the cache TTL cannot outlive the URL.",
+  "review_issues": []
+}

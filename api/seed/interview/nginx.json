@@ -1,0 +1,493 @@
+{
+ "slug": "nginx",
+ "name": "Nginx and load balancers",
+ "category": "DevOps and cloud",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Nginx, and why would you put it in front of an application server?",
+    "answer": "Nginx is a web server that is also commonly used as a reverse proxy, load balancer, and static file server. Putting it in front of an app server lets Nginx handle client connections, TLS termination, compression, caching, and static assets while the app server focuses on application logic. It can also make deployments safer by shielding backend services from direct internet traffic.",
+    "real_world": "A team might run a Node.js app behind Nginx so the app does not manage TLS certificates or serve CSS and images itself. That usually reduces load on the app and simplifies scaling.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a reverse proxy and a forward proxy?"
+   },
+   {
+    "question": "What does a reverse proxy do in a typical web setup?",
+    "answer": "A reverse proxy sits between clients and backend servers and forwards requests to them. From the client’s point of view, it looks like the server they are talking to, even though Nginx may be routing traffic to one of several app instances. This helps with load balancing, SSL termination, and hiding internal network details.",
+    "real_world": "In production, a reverse proxy is often the public entry point for several services like an API, admin panel, and static site. If one backend fails, the proxy can route traffic to healthy instances.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does Nginx decide which backend server to send a request to?"
+   },
+   {
+    "question": "What is load balancing, and why is it useful?",
+    "answer": "Load balancing is distributing incoming traffic across multiple backend servers so no single server takes all the requests. It improves availability, helps handle more traffic, and can reduce the impact of one slow or unhealthy instance. It is useful whenever one server is not enough or when you want redundancy.",
+    "real_world": "A shopping site may spread requests across several app servers so a traffic spike does not knock the site over. If one server goes down, the others can keep serving users.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are some common load balancing algorithms?"
+   },
+   {
+    "question": "What is the difference between round-robin and least-connections load balancing?",
+    "answer": "Round-robin sends requests to backends in order, cycling through them evenly. Least-connections sends new requests to the server currently handling the fewest active connections, which can help when requests take very different amounts of time. Round-robin is simpler; least-connections can perform better for uneven workloads.",
+    "real_world": "For long-lived connections or slow endpoints, round-robin can overload one instance while others sit idle. Least-connections often helps more in that case.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would round-robin still be a better choice?"
+   },
+   {
+    "question": "How do you configure Nginx as a reverse proxy for an application?",
+    "answer": "You define a server block that listens on a port and use a location block with proxy_pass pointing to the backend. Nginx then forwards matching requests to the app server. You usually also set headers like Host and X-Forwarded-For so the backend can see the original request information.",
+    "real_world": "This is a common setup for exposing an app running on localhost:3000 to the internet on port 80 or 443. Without the proxy, the app would need to listen directly on a public port.",
+    "code_lang": "nginx",
+    "code": "server {\n  listen 80;\n  location / {\n    proxy_pass http://127.0.0.1:3000;\n    proxy_set_header Host $host;\n    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n  }\n}",
+    "follow_up": "Why do we forward the Host and X-Forwarded-For headers?"
+   },
+   {
+    "question": "What is the difference between a 301 redirect and proxy_pass in Nginx?",
+    "answer": "A 301 redirect tells the client to make a new request to a different URL, while proxy_pass keeps the request on the server side and returns the backend’s response to the client. Redirects change the URL in the browser; proxying does not. Use a redirect when you want the client to know the new location, and proxy_pass when you want to hide the backend or route traffic internally.",
+    "real_world": "If a site moves from HTTP to HTTPS, a redirect sends browsers to the secure URL. If the site is split across services, proxy_pass can route traffic without exposing those service URLs.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use rewrite instead of a redirect?"
+   },
+   {
+    "question": "How does Nginx handle static files differently from passing requests to an app server?",
+    "answer": "Nginx can serve static files directly from disk without involving the application. That is faster and uses fewer app resources than sending those requests to the backend. For dynamic requests, Nginx proxies to the app server instead.",
+    "real_world": "Serving images, CSS, and JavaScript through Nginx often improves response time and lowers CPU usage on the app server. It also keeps the application code simpler.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a common mistake when serving static files with Nginx?"
+   },
+   {
+    "question": "What does an upstream block do in Nginx?",
+    "answer": "An upstream block defines a group of backend servers that Nginx can send traffic to. You reference that group from proxy_pass instead of naming a single backend, which makes load balancing configuration cleaner. It is also where you can list multiple app instances for failover and distribution.",
+    "real_world": "A team running three API instances behind Nginx might put them in one upstream block so they can scale horizontally by adding another server entry. This avoids changing every location block separately.",
+    "code_lang": "nginx",
+    "code": "upstream app_servers {\n  server 10.0.0.11:3000;\n  server 10.0.0.12:3000;\n}\nserver {\n  location / { proxy_pass http://app_servers; }\n}",
+    "follow_up": "How does Nginx know if one upstream server is unhealthy?"
+   },
+   {
+    "question": "What is health checking in a load balancer, and why does it matter?",
+    "answer": "Health checking means testing whether a backend server is able to serve traffic before sending requests to it. If a server is unhealthy, the load balancer should stop routing traffic there until it recovers. This prevents users from being sent to broken or overloaded instances.",
+    "real_world": "Without health checks, a load balancer may keep sending requests to a crashed app instance and cause repeated failures. With health checks, traffic shifts away automatically.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between passive and active health checks?"
+   },
+   {
+    "question": "What is one common beginner mistake when using Nginx as a proxy?",
+    "answer": "A common mistake is not forwarding the original client information, especially Host and X-Forwarded-For headers. Without those, the app may log the proxy’s address instead of the client’s IP, and features like generating correct absolute URLs or IP-based rate limiting can break. Another common issue is proxying to the wrong protocol or port.",
+    "real_world": "This often shows up when logs suddenly show every request coming from 127.0.0.1 or a load balancer IP. It can make debugging, auditing, and abuse detection much harder.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you configure Nginx so your app sees the original client IP?"
+   },
+   {
+    "question": "What is the difference between a forward proxy and a reverse proxy?",
+    "answer": "A forward proxy sits in front of clients and makes requests on their behalf, often for filtering or anonymity. A reverse proxy sits in front of servers and represents them to the outside world. In web infrastructure, Nginx is commonly used as a reverse proxy, not a forward proxy. The key idea is whether the proxy is acting for the client or for the server.",
+    "real_world": "Companies use forward proxies to control employee internet access, while reverse proxies are used to hide and protect application servers behind a single public endpoint.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does that difference affect DNS, routing, and TLS termination?"
+   },
+   {
+    "question": "What does it mean to terminate TLS at Nginx?",
+    "answer": "TLS termination means Nginx handles the HTTPS connection from the client and decrypts the traffic before forwarding it to the backend. This reduces work for the app server and centralizes certificate management. It also means the traffic between Nginx and the backend may be plain HTTP unless you encrypt that leg too. The trade-off is simpler backend configuration versus needing to trust the internal network.",
+    "real_world": "Teams often terminate TLS at the load balancer so they can rotate certificates in one place instead of on every application host.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you preserve the original client IP after TLS termination?"
+   },
+   {
+    "question": "What is the purpose of the `upstream` block in Nginx, and how is it used?",
+    "answer": "An `upstream` block groups backend servers into a named pool that Nginx can send requests to. You then reference that pool from `proxy_pass` instead of hardcoding one server. This makes configuration cleaner and supports load balancing across multiple backends. It also gives you a place to mark servers as backups or set balancing behavior.",
+    "real_world": "When a team adds a second app instance, they usually put both hosts into one upstream group so traffic can be spread without changing the public-facing config.",
+    "code_lang": "nginx",
+    "code": "upstream app_pool {\n    server 10.0.0.11:3000;\n    server 10.0.0.12:3000;\n}\n\nserver {\n    location / {\n        proxy_pass http://app_pool;\n    }\n}",
+    "follow_up": "What happens when one server in the upstream becomes unavailable?"
+   },
+   {
+    "question": "How does Nginx decide which upstream server gets a request by default?",
+    "answer": "By default, Nginx uses round-robin across the available upstream servers. That means requests are distributed in order rather than based on current connection count or request latency. If a server is marked down or fails, Nginx skips it. The simple default works well for many basic setups, but it does not account for server capacity differences.",
+    "real_world": "A small service with two identical app instances often starts with the default because it is predictable and easy to reason about.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a different balancing method?"
+   },
+   {
+    "question": "What does the `proxy_set_header Host` directive do, and why is it sometimes needed?",
+    "answer": "It sets the `Host` header that Nginx sends to the backend. This matters because many applications use the host name to generate links, validate requests, or route traffic in a multi-tenant setup. If you do not pass the expected host, the app may build wrong URLs or reject the request. A common pattern is to forward the original host rather than the backend server name.",
+    "real_world": "This shows up when an app works locally but generates bad absolute links behind Nginx because it only sees the internal upstream hostname.",
+    "code_lang": "nginx",
+    "code": "location / {\n    proxy_set_header Host $host;\n    proxy_pass http://app_pool;\n}",
+    "follow_up": "What other headers are commonly forwarded to preserve client information?"
+   },
+   {
+    "question": "Why would you use `X-Forwarded-For` or `X-Real-IP` in a proxy setup?",
+    "answer": "These headers help the backend know the original client IP instead of only seeing the proxy’s IP. That matters for logging, rate limiting, abuse detection, and geolocation. `X-Forwarded-For` can contain a chain of IPs through multiple proxies, while `X-Real-IP` usually carries one address. The backend should only trust them if they come from a proxy it controls.",
+    "real_world": "Without forwarded client IPs, every request may appear to come from Nginx, which makes debugging and security controls much less useful.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How should an application decide whether to trust these headers?"
+   },
+   {
+    "question": "What is a 502 Bad Gateway from Nginx usually telling you?",
+    "answer": "It usually means Nginx could not get a valid response from the upstream server. Common causes are the app being down, the wrong port, a crashed process, or a protocol mismatch. It is a symptom at the proxy layer, not necessarily a bug in Nginx itself. Checking the upstream service and Nginx error logs is the first step.",
+    "real_world": "A deployment can look successful but still return 502s if the app is listening on a different port than Nginx expects.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you differentiate a 502 from a 504?"
+   },
+   {
+    "question": "What is the difference between an upstream timeout and a connection failure?",
+    "answer": "A connection failure means Nginx could not establish a TCP connection to the backend at all, often because the service is down or unreachable. A timeout means the connection was established, but the backend did not respond fast enough within the configured limit. Both can lead to errors for the client, but they point to different parts of the problem. One is about reachability; the other is about backend slowness.",
+    "real_world": "A slow database query can make the app miss proxy timeouts even though the backend host is healthy and reachable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which Nginx settings control those timeout behaviors?"
+   },
+   {
+    "question": "Why is it important to keep Nginx config syntax simple and test it before reloading?",
+    "answer": "A small syntax mistake can prevent Nginx from reloading cleanly and can take a site partially or fully offline. Nginx is often used in critical traffic paths, so validating config before applying it reduces risk. The usual workflow is to test the config, then reload only if the test passes. This is especially important when multiple people edit shared configs.",
+    "real_world": "A typo in a production Nginx config can block a deployment or leave the old config running while operators think the new one is active.",
+    "code_lang": "bash",
+    "code": "nginx -t\nnginx -s reload",
+    "follow_up": "What is the difference between a reload and a restart?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you preserve the original client IP when traffic passes through one or more proxies or load balancers?",
+    "answer": "You usually pass the client IP in forwarded headers, most commonly `X-Forwarded-For`, and configure the app or the next proxy to trust only known proxy hops. If you control both ends, you may also use the standardized `Forwarded` header, but support is less uniform. The key trade-off is observability versus trust: forwarded headers are useful only if you prevent clients from spoofing them at the edge. Without that, logs, rate limits, and access control can all become inaccurate.",
+    "real_world": "A team sees every request in their app logs coming from the load balancer’s private IP, which makes abuse investigation and per-user rate limiting useless. Fixing forwarded IP handling restores meaningful logs and alerts.",
+    "code_lang": "nginx",
+    "code": "proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\nproxy_set_header X-Real-IP $remote_addr;\nproxy_set_header Host $host;",
+    "follow_up": "How do you decide which proxies are trusted when reading the client IP from forwarded headers?"
+   },
+   {
+    "question": "What’s the difference between sticky sessions and stateless load balancing, and when would you avoid sticky sessions?",
+    "answer": "Sticky sessions keep a given client bound to the same backend, usually by cookie or source hash, while stateless balancing lets any healthy backend handle any request. Sticky sessions can simplify legacy apps that keep user state in memory, but they reduce failover quality and can create uneven load. In modern systems, it is usually better to move session state to shared storage or a cache so any instance can serve the request. That makes scaling and deployments much safer.",
+    "real_world": "A deployment starts dropping user carts after traffic shifts to a new backend because session data lives only in memory. Moving session state to Redis removes the need for stickiness and makes rolling deploys reliable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can sticky sessions cause during deploys or partial outages?"
+   },
+   {
+    "question": "How do you tell the difference between Nginx returning a 499 and a 504 in practice?",
+    "answer": "A 499 usually means the client closed the connection before Nginx finished responding, while a 504 means Nginx waited too long for an upstream response. In debugging, 499 points you toward slow clients, browser cancellations, or timeouts higher in the chain; 504 points you toward the backend or network path to it. They matter because they have different root causes and different fixes. You look at Nginx logs, upstream latency, and any proxy or app timeouts between the client and the service.",
+    "real_world": "An API starts showing 504s after a backend release, which leads the team to find a slow database query. Separately, 499 spikes during mobile app usage reveal that clients are abandoning requests when they switch networks.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What Nginx and upstream timeouts would you inspect first when you see a spike in 504s?"
+   },
+   {
+    "question": "When would you use load balancer health checks at the TCP level versus the HTTP level?",
+    "answer": "TCP checks only verify that the port is open and the service accepts connections, while HTTP checks verify application behavior, such as a successful response from a specific endpoint. TCP is simpler and cheaper, but it can miss cases where the process is alive yet the app is broken or overloaded. HTTP checks are better for user-facing services because they can detect dependency failures and degraded readiness, but they add more moving parts. The best choice depends on whether you care about raw process liveness or real request handling.",
+    "real_world": "A web server process keeps accepting connections even though its database dependency is down, so TCP health checks keep sending traffic to a broken pod. Switching to an HTTP readiness endpoint stops routing users to instances that cannot serve requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should a good health check endpoint test, and what should it avoid testing?"
+   },
+   {
+    "question": "How does Nginx behave when one upstream server is slow but still responding, and how can you reduce the impact on other requests?",
+    "answer": "Nginx does not magically isolate a slow backend unless you configure your routing and timeouts carefully; requests assigned to that backend can pile up and tie up workers or connections. You can reduce impact by setting sensible proxy timeouts, limiting retries, and using load-balancing methods or upstream tuning that spread traffic away from congested nodes. The trade-off is between retrying aggressively for availability and failing fast to protect overall latency. In production, a backend that is only partly healthy can hurt the whole fleet more than a hard failure.",
+    "real_world": "One overloaded instance starts answering slowly, and a naïve retry policy doubles the request volume against the cluster. Tightening timeouts and health checks prevents the slow node from dragging down the rest of the service.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the risk of retrying idempotent and non-idempotent requests in a proxy?"
+   },
+   {
+    "question": "What is the purpose of `proxy_next_upstream`, and when can it make outages worse instead of better?",
+    "answer": "`proxy_next_upstream` tells Nginx to retry another upstream when specific failures happen, such as certain errors or timeouts. It improves resilience for transient failures, but it can also amplify load if the backend is already overloaded or if the request is not safe to repeat. For example, retrying a write request can duplicate side effects if the first attempt actually reached the app. The rule is to retry only when the request is safe or the application is designed for idempotency.",
+    "real_world": "During a backend incident, retries from the proxy cause a thundering herd and make recovery slower. The team limits retries so the load balancer stops multiplying work the failing service can’t handle.",
+    "code_lang": "nginx",
+    "code": "location / {\n  proxy_pass http://app;\n  proxy_next_upstream error timeout http_502 http_503;\n}",
+    "follow_up": "How do you make an API safe to retry at the application level?"
+   },
+   {
+    "question": "How would you debug a case where Nginx returns 502s only for some requests and not others?",
+    "answer": "First compare the failing requests with the successful ones: path, headers, backend target, and whether the same upstream server is involved. Then check Nginx error logs for connection refused, timeout, upstream reset, or invalid response, because the exact wording usually narrows the cause quickly. Intermittent 502s often come from one bad backend instance, DNS issues, connection exhaustion, or mismatched protocol expectations like HTTP versus HTTPS. The goal is to determine whether the failure is deterministic per node, per route, or per load spike.",
+    "real_world": "A single pod in a pool starts returning malformed responses, so only a fraction of requests fail with 502. Error logs and per-upstream metrics point to the bad instance and let the team remove it quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or logs would you add to make intermittent upstream failures easier to spot?"
+   },
+   {
+    "question": "When would you choose an L4 load balancer over an L7 load balancer?",
+    "answer": "Use an L4 load balancer when you mainly need fast, simple connection forwarding based on IP and port, and you do not need HTTP-aware features. Use L7 when you need routing by host, path, headers, TLS termination, or application-aware retries and observability. L4 is usually lower overhead and can handle non-HTTP protocols more naturally, but it gives up routing flexibility. The choice is about control versus simplicity and protocol awareness.",
+    "real_world": "A team runs both HTTP APIs and a custom TCP service. They use L7 for the APIs because they need path routing and header inspection, and L4 for the TCP service because they just need port-based forwarding.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are the operational costs of moving from L4 to L7 at the edge?"
+   },
+   {
+    "question": "What is the difference between `proxy_pass` with a hostname and with an IP address in Nginx?",
+    "answer": "A hostname lets Nginx rely on DNS resolution, which is useful for dynamic backends but can introduce caching and re-resolution behavior you need to understand. An IP address is simpler and more predictable, but you lose flexibility when backends change. If the backend IPs change often, DNS-based service discovery is usually better; if they are stable, static IPs are easier to reason about. The important part is knowing how name resolution happens in your deployment, especially during failover or scaling.",
+    "real_world": "A containerized service is redeployed with new pod IPs, but Nginx keeps sending traffic to old addresses until its DNS behavior is fixed. Switching to a service name with proper re-resolution solves the stale-backend problem.",
+    "code_lang": "nginx",
+    "code": "location / {\n  proxy_pass http://backend.example.internal;\n}",
+    "follow_up": "How do you handle backend IP changes safely without restarting Nginx every time?"
+   },
+   {
+    "question": "Why does the `Host` header matter so much in reverse proxy setups behind shared infrastructure?",
+    "answer": "Many applications use the `Host` header to decide which virtual site, tenant, or route should handle the request. If the proxy forwards the wrong host, the backend may generate bad links, reject the request, or route it to the wrong tenant. Preserving the original host is especially important with virtual hosts, multi-tenant apps, and TLS name-based routing. The trade-off is that you must be deliberate about what the backend should trust from the client versus what the proxy should normalize.",
+    "real_world": "A SaaS app starts serving the wrong tenant after requests go through a proxy that rewrites the host incorrectly. Restoring the original host header fixes routing and customer-specific branding.",
+    "code_lang": "nginx",
+    "code": "location / {\n  proxy_set_header Host $host;\n  proxy_pass http://app;\n}",
+    "follow_up": "When might you intentionally override the Host header instead of preserving it?"
+   },
+   {
+    "question": "How would you test an Nginx or load balancer change before putting it into production?",
+    "answer": "Start with config validation, then test the exact routing, headers, and failure cases in a staging environment that resembles production. I would verify normal requests, TLS behavior, redirects, upstream failures, and log output, because many proxy bugs only show up in edge cases. For safer rollout, add canary traffic or a small percentage of production traffic before a full cutover if your platform supports it. The key is testing not just happy paths but the failure modes that affect real users.",
+    "real_world": "A new proxy rule works for normal traffic but breaks WebSocket upgrades and large uploads. A pre-production test plan catches the issue before the release reaches all users.",
+    "code_lang": "bash",
+    "code": "nginx -t\nnginx -T\ncurl -I https://example.com\ncurl -v https://example.com/health",
+    "follow_up": "What specific request types or protocol features are easy to miss in proxy testing?"
+   },
+   {
+    "question": "How do keepalive connections change the behavior and performance of Nginx when it proxies to upstream servers?",
+    "answer": "Keepalive lets Nginx reuse existing TCP connections to upstreams instead of opening a new one for every request. That reduces connection setup overhead and can improve latency and CPU usage, especially at high request rates. The trade-off is that upstream connection pools consume resources, and if you size them poorly you can hold connections open without getting much benefit. It also changes failure patterns, because a bad persistent connection can affect multiple requests until it is closed.",
+    "real_world": "This matters when a team sees high CPU on Nginx or app servers even though request volume is unchanged. Enabling upstream keepalive often fixes connection churn in production APIs with lots of short requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What can go wrong if you enable keepalive to upstreams without tuning the app server or connection limits?"
+   },
+   {
+    "question": "What is the difference between `proxy_read_timeout`, `proxy_connect_timeout`, and `proxy_send_timeout`?",
+    "answer": "`proxy_connect_timeout` is how long Nginx waits to establish a connection to the upstream. `proxy_send_timeout` is how long it waits while sending the request to the upstream, and `proxy_read_timeout` is how long it waits for a response from the upstream after the request has been sent. They protect different phases of the request path, so using the wrong one can hide the real problem. In practice, a 504 often comes from a read timeout, but the logs tell you which phase timed out.",
+    "real_world": "This comes up when a service is slow only during certain endpoints, or when a network path is failing intermittently. If the wrong timeout is too low, Nginx may cut off healthy long-running requests and create noisy incidents.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide reasonable timeout values for an API versus a file download?"
+   },
+   {
+    "question": "When would you choose `ip_hash` or another session affinity approach over stateless balancing, and what are the downsides?",
+    "answer": "You use session affinity when the application stores user state in memory and cannot share it easily across instances. `ip_hash` can keep a client routed to the same backend, but it is a weak form of affinity because many users may share one IP and a single user’s IP can change. The downside is uneven load and harder failover, because you are tying clients to specific servers instead of letting any healthy server handle them. In most modern systems, external session storage is a better fix than sticky routing.",
+    "real_world": "This matters in legacy apps where login state disappears after a request lands on a different backend. Teams often discover that sticky routing masks the real design issue until scale or failover exposes it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a better architecture than sticky sessions if you need horizontal scaling?"
+   },
+   {
+    "question": "How does Nginx buffering affect proxied requests, and when would you disable buffering?",
+    "answer": "By default, Nginx can buffer response data from the upstream before sending it to the client. Buffering helps protect slower clients from tying up upstream connections and can smooth out bursts, but it adds latency for streaming-style responses. You would disable buffering for things like server-sent events, long-lived streaming APIs, or when you need immediate chunked delivery. The trade-off is that the upstream stays busy longer, so you need to understand both client behavior and server capacity.",
+    "real_world": "This shows up when an event stream works in local testing but appears delayed in production behind Nginx. Disabling buffering is often the difference between a real-time feed and one that seems frozen.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you look for in logs or curl output to confirm buffering is the cause?"
+   },
+   {
+    "question": "What is the difference between `proxy_http_version 1.0` and `1.1` in Nginx proxying, and why does it matter?",
+    "answer": "HTTP/1.1 is usually needed for features like persistent connections and chunked transfer encoding to the upstream. If you proxy with HTTP/1.0, some backends may close connections more often or fail to handle streaming behavior the way you expect. The choice matters for performance and for compatibility with apps that rely on headers or connection reuse. In many setups, HTTP/1.1 is the practical default for upstream proxying.",
+    "real_world": "This matters when an app server behaves differently behind Nginx than it does on direct requests. A subtle protocol mismatch can cause buffering issues, broken uploads, or needless connection churn.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What other proxy headers or settings commonly need to be paired with HTTP/1.1?"
+   },
+   {
+    "question": "How do you interpret and troubleshoot an Nginx access log and error log together during an outage?",
+    "answer": "The access log tells you what request was made, what status was returned, and often how long it took. The error log explains why Nginx could not complete the request, such as a timeout, connection refusal, or header parsing problem. You usually correlate the timestamp, request path, upstream address, and status code across both logs. The key is to distinguish client aborts, upstream failures, and Nginx configuration issues instead of treating every 5xx the same.",
+    "real_world": "This is how teams narrow down whether an outage is caused by Nginx, a backend deployment, or a network issue. Good log correlation can save hours during an incident when only some routes are failing.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What fields would you add to logs to make that correlation easier?"
+   },
+   {
+    "question": "What does it mean to drain a backend server from a load balancer, and why is it safer than removing it immediately?",
+    "answer": "Draining means stopping new requests from reaching a server while allowing existing in-flight requests to finish. That reduces the chance of dropping user actions, cutting off uploads, or interrupting long polls during deploys or maintenance. If you remove the server immediately, active connections can fail and users may see errors even though the backend was otherwise healthy. The trade-off is slower rollout or scale-in, but it is usually worth it for reliability.",
+    "real_world": "This is important during zero-downtime deployments and autoscaling down events. Without draining, a server can be terminated while still serving requests, causing sporadic 502s or truncated responses.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement draining differently for HTTP traffic versus long-lived WebSocket connections?"
+   },
+   {
+    "question": "How does path-based routing in Nginx compare with host-based routing, and what are the trade-offs?",
+    "answer": "Path-based routing sends different URL prefixes to different backends, while host-based routing uses the hostname to decide the destination. Host-based routing is usually cleaner for separating applications and avoids rewriting paths, but it requires DNS and certificate management for multiple names. Path-based routing can be simpler operationally for a single domain, but apps often need to know about the prefix and generate correct links. The trade-off is between cleaner application boundaries and simpler public-facing URLs.",
+    "real_world": "This matters when a company hosts an API and a web app behind one domain or one load balancer. A bad routing choice can break cookies, redirects, and absolute links in production.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems arise when the backend application is unaware that it is mounted under a path prefix?"
+   },
+   {
+    "question": "What is an upstream zone or shared state useful for in Nginx-style load balancing setups?",
+    "answer": "Shared state lets worker processes use the same view of upstream health, connection counters, or other load-balancing data instead of each worker making decisions in isolation. That improves consistency when multiple workers are proxying traffic at once. Without shared state, one worker might keep sending traffic to a backend that another worker has already marked as bad. The main benefit is more predictable behavior under load and during failures.",
+    "real_world": "This becomes relevant when a production issue only appears under high concurrency and requests seem to be split unevenly across workers. Shared state helps reduce per-worker drift in upstream decisions.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of load-balancing behavior still remain per-worker even with shared state?"
+   },
+   {
+    "question": "How would you safely roll out a load balancer configuration change that could affect thousands of requests per second?",
+    "answer": "You validate the syntax, test the behavior in a staging environment that mirrors production, and then deploy gradually if the platform allows it. For Nginx, you also want a reload strategy that avoids dropping active connections. Monitoring should focus on error rates, latency, and upstream health immediately after the change so you can revert quickly if needed. The key trade-off is speed versus blast radius, so the rollout should be controlled and observable.",
+    "real_world": "This matters when a seemingly small timeout or header change can break authentication or overload backends in minutes. Teams use canary or phased rollouts to catch issues before they hit every user.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would tell you within five minutes that the change is hurting traffic?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does Nginx’s event-driven worker model actually handle concurrency, and what are the practical limits in a high-throughput proxy tier?",
+    "answer": "Nginx uses a small number of worker processes, each running an event loop that multiplexes many sockets instead of creating one thread per connection. That keeps memory overhead low and works very well for idle or I/O-bound connections, but a worker can still become the bottleneck if it does blocking disk I/O, expensive TLS work, or heavy regex/config processing. Practical limits usually come from file descriptors, kernel socket queues, CPU saturation, and connection state memory rather than from the worker model itself. You size workers, connection limits, and OS tunables together; increasing one without the others does not raise capacity much.",
+    "real_world": "A proxy tier can look underutilized by CPU while still dropping connections because the listen backlog or open-file limit is exhausted. Teams often discover this only during flash traffic or when many slow clients hold connections open for a long time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kernel and Nginx limits would you check first if accepted connections plateau well below expected capacity?"
+   },
+   {
+    "question": "What actually happens during an Nginx reload, and why can a seemingly safe reload still cause request failures or latency spikes?",
+    "answer": "A reload starts new workers with the new config and asks old workers to stop accepting new connections while they finish existing work. In principle that is graceful, but failures still happen if the new config points to bad certificates, bad DNS results, different upstream behavior, or reduced limits that cause immediate pressure. Long-lived connections such as WebSockets or very slow responses can keep old workers around for a long time, so you can temporarily run both generations and increase memory use. Reloads are safer than restarts, but they are not risk-free because they change live routing and resource usage instantly.",
+    "real_world": "A common incident is a clean `nginx -t` followed by a reload that shifts traffic to an upstream name that now resolves differently, breaking only new requests. Another is repeated reloads during a deploy causing many worker generations and surprising memory growth.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect whether old workers are stuck during repeated reloads?"
+   },
+   {
+    "question": "How does connection backlog and accept handling affect Nginx under sudden traffic spikes, and what failure pattern does that create?",
+    "answer": "Incoming TCP connections first sit in kernel queues before Nginx accepts them, so under a spike the effective capacity depends on the listen backlog, SYN handling, how quickly workers call accept, and downstream resource pressure. If those queues overflow, clients see connection timeouts or resets before a request even reaches Nginx logic. This often looks different from an application outage because request logs may be sparse while network-level errors climb. Tuning helps, but if upstreams are saturated, letting the proxy accept more can just move the bottleneck and increase tail latency.",
+    "real_world": "During a burst, dashboards may show low request counts at Nginx even though users are failing to connect, because the drops happen before HTTP processing. Teams often misdiagnose this as DNS or app failure when it is really socket queue exhaustion.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you correlate to distinguish backlog overflow from slow upstream response handling?"
+   },
+   {
+    "question": "If you put a cloud load balancer in front of Nginx, what timeout mismatches cause the worst production bugs?",
+    "answer": "The worst bugs come from idle, request, and keepalive timeouts being inconsistent across layers. If the front load balancer closes an idle connection earlier than Nginx expects, clients see resets or sporadic 502/499-style behavior; if Nginx times out earlier than the outer load balancer, the client may wait much longer than necessary and then retry. Mismatches around long uploads, streaming responses, and WebSockets are especially painful because one layer may consider the connection idle while another considers it active. The fix is to define one timeout policy end to end instead of tuning each hop independently.",
+    "real_world": "A classic incident is successful health checks but broken large uploads because the cloud LB idle timeout is shorter than the upload path through Nginx and the app. Another is SSE or WebSocket traffic getting cut off at a regular interval by the outer LB, not by Nginx.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you validate end-to-end timeout behavior without waiting for users to report it?"
+   },
+   {
+    "question": "When can upstream DNS resolution in Nginx become a hidden single point of failure or a source of stale routing?",
+    "answer": "If Nginx resolves an upstream name only at config load, it may keep sending traffic to addresses that are no longer valid until the next reload. If you enable runtime resolution, you then depend on the configured resolver and its TTL behavior, so DNS outages or bad records can directly affect request routing. The trade-off is between stability and agility: static resolution avoids DNS churn during request handling, while dynamic resolution adapts to ephemeral backends but adds another live dependency. You need to know which mode your config is using or service discovery changes can behave very differently than expected.",
+    "real_world": "This matters in container and autoscaling environments where backend IPs change often. Teams sometimes scale or replace backends successfully at the orchestrator layer but Nginx keeps talking to dead addresses because it never re-resolved them.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What patterns reduce DNS-related risk when backends are highly ephemeral?"
+   },
+   {
+    "question": "What are the real trade-offs between doing TLS termination on Nginx versus passing TLS through to another load balancer or the application?",
+    "answer": "Terminating at Nginx gives you control over ciphers, certificates, redirects, header handling, and observability at HTTP level, and it can offload expensive crypto from the app. Passing TLS through preserves end-to-end encryption to the backend and avoids an extra trust boundary, but you lose most L7 routing and header-based policy at the Nginx layer unless you re-encrypt after termination. Re-encryption adds CPU and latency, though often modest compared with the operational simplicity or compliance requirement it satisfies. The right choice depends on whether routing, inspection, and centralized cert handling are more valuable than minimizing decrypted hops.",
+    "real_world": "In regulated environments, teams may be required to encrypt all the way to the service, so they terminate and re-encrypt or avoid L7 features entirely. In high-QPS edge tiers, central TLS termination often simplifies certificate rotation and gives much better request-level logging.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you terminate and re-encrypt, what headers or trust controls become especially important?"
+   },
+   {
+    "question": "How would you explain HTTP/2 and HTTP/3 in front of Nginx when the upstream side is still HTTP/1.1, and what bottlenecks remain?",
+    "answer": "HTTP/2 and HTTP/3 mainly improve the client-facing side by reducing connection count, multiplexing requests, and avoiding some head-of-line issues, especially over lossy networks. But if Nginx still talks HTTP/1.1 to upstreams, the backend side keeps HTTP/1.1 semantics and connection pool behavior, so upstream connection limits and app concurrency still matter. Nginx can shield the app from many client connections, but it cannot magically remove backend bottlenecks such as slow responses or too few reusable upstream sockets. So the edge protocol upgrade helps latency and efficiency, but not all scaling problems.",
+    "real_world": "Teams sometimes enable HTTP/2 or HTTP/3 at the edge and expect app capacity to rise dramatically, then find the real bottleneck is the upstream service or database. The user experience improves, but backend saturation patterns remain largely the same.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What workload characteristics benefit most from HTTP/2 or HTTP/3 at the edge, even if the backend stays on HTTP/1.1?"
+   },
+   {
+    "question": "What happens if you cache at Nginx, and how do cache stampedes or stale content failures show up in production?",
+    "answer": "Caching at Nginx can absorb huge read traffic and protect upstreams, but it also introduces coherence and stampede problems. If a hot object expires and many requests miss at once, upstream traffic can spike sharply unless you use cache locking or stale-serving patterns. Serving stale content can improve availability during backend trouble, but you are explicitly trading freshness for resilience and need clear rules about what can be stale. Cache incidents usually show up as sudden origin QPS bursts, uneven latency, and users seeing inconsistent versions of the same content.",
+    "real_world": "A homepage or API response that expires on a boundary can trigger a thundering herd against the app tier. Teams often pair edge caching with stale-on-error behavior so a brief backend outage does not become a full-site outage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Which responses would you refuse to cache even if they are expensive to generate?"
+   },
+   {
+    "question": "Can you show a subtle `proxy_pass` URI rewriting bug that changes what path the upstream receives?",
+    "answer": "The trailing slash behavior is a common footgun: with a URI in `proxy_pass`, Nginx rewrites the matching location prefix; without it, it usually forwards the original URI more directly. That means two configs that look nearly identical can send different paths upstream and break only some routes. It matters most in API gateways and apps that depend on exact path prefixes. I always test with concrete example URLs instead of reasoning from memory.",
+    "real_world": "This causes production bugs where `/api/users` works in one environment but becomes `/users` or `/api/users` in another after a small config change. It is especially nasty when only nested routes break.",
+    "code_lang": "nginx",
+    "code": "location /api/ {\n    proxy_pass http://backend/;\n    # /api/v1/users -> /v1/users upstream\n}\n\nlocation /api/ {\n    proxy_pass http://backend;\n    # /api/v1/users -> /api/v1/users upstream\n}",
+    "follow_up": "How would you structure locations to avoid accidental URI rewrite differences across teams?"
+   },
+   {
+    "question": "How do retries, duplicate requests, and non-idempotent operations interact in a load-balanced Nginx setup?",
+    "answer": "Retries can improve availability for safe requests, but they become dangerous when a request may already have been processed by the first upstream. A timeout or connection drop does not always mean the backend did nothing, so retrying POST-like operations can create duplicate charges, duplicate jobs, or conflicting writes. You need idempotency at the application level, careful retry conditions, and clear observability for which upstream handled which attempt. The load balancer cannot infer business safety from HTTP failure alone.",
+    "real_world": "Payment, order, and job-submission systems get bitten by this when a proxy retries after a partial failure and the app lacks idempotency keys. The incident looks like random duplication, but the root cause is often well-intentioned retry behavior under packet loss or overloaded backends.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you use to decide whether a request is safe to retry automatically?"
+   },
+   {
+    "question": "How would you size and tune Nginx worker processes and file descriptor limits for a very high connection-count proxy tier?",
+    "answer": "Start from the concurrency model: each worker can hold many sockets, but every client and upstream connection consumes file descriptors and memory. A proxy often uses roughly two sockets per in-flight request, so the practical limit is usually `worker_processes`, `worker_connections`, OS `ulimit -n`, and kernel socket limits together, not CPU alone. I size workers near available CPU cores for mostly network-bound traffic, then verify with real connection counts, accept queue metrics, and per-worker imbalance. Oversizing workers can increase contention; undersizing hits EMFILE or dropped accepts under load.",
+    "real_world": "A common incident is Nginx looking healthy on CPU while new requests fail because the process or system file descriptor limit is exhausted. At high fan-in, teams also see one layer run out of ephemeral resources long before the application does.",
+    "code_lang": "nginx",
+    "code": "worker_processes auto;\nevents {\n  worker_connections 16384;\n  multi_accept on;\n}\n",
+    "follow_up": "What metrics would you watch to tell whether you're limited by CPU, file descriptors, or the listen/accept path?"
+   },
+   {
+    "question": "What are the real trade-offs between `reuseport` and a single shared listen socket in Nginx?",
+    "answer": "With a shared listen socket, workers compete to accept from one queue; with `reuseport`, each worker gets its own listening socket and usually better multicore scaling with less lock contention. The trade-off is distribution can become uneven under some traffic patterns, especially with long-lived connections, because flows are hashed to a worker-facing socket earlier. That can improve throughput but worsen tail latency if one worker ends up holding a disproportionate share of hot connections. I use it when accept contention is measurable, not as a blind default.",
+    "real_world": "On busy TLS edges, `reuseport` can reduce accept lock contention and smooth CPU usage. But teams sometimes enable it and then wonder why one worker has much higher active connections during WebSocket-heavy traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would long-lived HTTP/2 or WebSocket connections change your decision here?"
+   },
+   {
+    "question": "How do request body buffering and temporary files affect failure modes for large uploads through Nginx?",
+    "answer": "If Nginx buffers request bodies, it can protect the upstream from slow clients, but large bodies may spill to disk in the temp path, turning network pressure into disk I/O and space pressure. If buffering is off, the upstream receives the body as the client sends it, which lowers disk use but ties backend capacity to client speed and can amplify slow-upload attacks. The right choice depends on whether you want to shield the app or minimize proxy-side storage and latency. You also need to size temp storage and watch for cleanup behavior during aborted uploads.",
+    "real_world": "A classic production incident is upload traffic filling the temp filesystem, after which unrelated proxied requests start failing or get much slower. Another is disabling buffering for convenience and then discovering app workers are stuck behind slow mobile uploads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you change for a service that accepts multi-gigabyte uploads from unreliable mobile networks?"
+   },
+   {
+    "question": "How do Nginx rate limiting and connection limiting actually work internally, and what are their gotchas behind another load balancer?",
+    "answer": "They’re keyed counters stored in shared memory, usually by client IP or another variable, and enforced either on request rate or concurrent connections. The biggest gotcha is identity: behind a CDN or cloud load balancer, limiting by `$remote_addr` often limits the proxy tier instead of end users unless real client IP restoration is correct. Another gotcha is HTTP/2 multiplexing, where many logical requests share one TCP connection, so connection limits and request-rate limits behave very differently. Memory sizing matters too, because undersized zones evict state and make enforcement unpredictable.",
+    "real_world": "Teams often think they’re throttling abusive users, but in reality they’re throttling the fronting load balancer because the wrong address is used as the key. During bot spikes, that mistake can turn a partial attack into a broad outage.",
+    "code_lang": "nginx",
+    "code": "limit_req_zone $binary_remote_addr zone=perip:10m rate=20r/s;\nlimit_conn_zone $binary_remote_addr zone=addr:10m;\n\nlocation /api/ {\n  limit_req zone=perip burst=40 nodelay;\n  limit_conn addr 20;\n}\n",
+    "follow_up": "How would you rate-limit fairly when clients arrive through NATs or a CDN where many users share one source IP?"
+   },
+   {
+    "question": "What is the difference between active and passive failure detection in load balancers, and how does that affect recovery behavior?",
+    "answer": "Passive detection marks trouble only after real requests fail or time out, so it reacts to actual traffic but can sacrifice user requests before isolating a bad backend. Active detection probes independently, so it can remove a backend before users hit it, but probe design can lie if the health endpoint is cheaper than real work. Recovery behavior matters as much as failure detection: if a node flaps back too quickly, you can create synchronized retries and repeated overload. Good setups combine conservative removal with gradual reintroduction.",
+    "real_world": "A backend can pass `/healthz` while its database pool is exhausted, so active checks stay green while users see failures. The opposite happens too: passive checks suppress only the nodes serving traffic, making a low-traffic bad node look healthy until a spike arrives.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would a health check look like for an application that depends on a database but should still serve some degraded traffic?"
+   },
+   {
+    "question": "How do long-lived connections like WebSockets, SSE, and gRPC streams change load balancer capacity planning?",
+    "answer": "They shift the bottleneck from requests per second to concurrent connections, memory per connection, and fairness of connection distribution. A backend that handles many short HTTP requests well may perform poorly when thousands of mostly idle streams pin worker slots, file descriptors, or per-connection state. They also make rebalancing harder, because load is sticky for the lifetime of the stream, so a node can remain overloaded even after you stop sending it new connections. Capacity planning has to use connection lifetime and fan-out, not just average RPS.",
+    "real_world": "A rollout can look fine in standard HTTP tests and then fail in production because chat or streaming clients hold connections for hours, preventing even balancing. This also shows up during node drains, which can take far longer than teams expect.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you drain or migrate long-lived connections without causing a visible client outage?"
+   },
+   {
+    "question": "What are the operational trade-offs between putting Nginx behind a cloud load balancer versus making Nginx the public edge?",
+    "answer": "Putting a cloud load balancer in front gives managed anycast, DDoS absorption, health checking, and simpler failover, but adds another hop, another timeout layer, and often hides client and transport details unless headers or proxy protocol are configured correctly. Making Nginx the edge gives more direct control over TLS, routing, and observability, but you now own IP failover, exposure, and more of the attack surface. The right choice depends on whether you value managed availability features over lower complexity in the request path. I usually decide based on failure domains and operational burden, not just raw latency.",
+    "real_world": "Many outages come from split ownership: the cloud LB retries or times out one way, Nginx another way, and the app team only sees the symptoms in the middle. Teams running Nginx as the edge often gain simpler debugging but take on harder networking and security responsibilities.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would you log or propagate so you can tell which layer actually generated a timeout or reset?"
+   },
+   {
+    "question": "How do PROXY protocol and forwarded headers differ, and when is PROXY protocol the safer choice?",
+    "answer": "Forwarded headers are HTTP metadata added after the TCP connection is established, so they only help HTTP-aware proxies and can be spoofed unless you strictly trust and constrain the sender. PROXY protocol carries the original connection information at the start of the transport session, before the application protocol, so it works for TCP services and is harder to fake when accepted only from trusted peers. The trade-off is both ends must explicitly support it, and a mismatch causes immediate broken connections. It’s often the safer choice when you need source IP integrity across L4 hops.",
+    "real_world": "A frequent production bug is enabling PROXY protocol on the load balancer but not on Nginx, which makes every new connection look malformed. The reverse mistake also happens: Nginx expects PROXY protocol and treats normal clients as invalid traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you safely roll out PROXY protocol in a multi-layer path without cutting off traffic?"
+   },
+   {
+    "question": "What failure pattern do you get when upstreams close idle keepalive connections earlier than Nginx expects?",
+    "answer": "Nginx may try to reuse an upstream keepalive connection that the backend has already closed, which surfaces as intermittent upstream errors on the first request that reuses that socket. It often looks random because fresh connections work while only some reused ones fail, especially after quiet periods. The fix is usually to align idle timeouts so the proxy retires connections before the backend does, or to reduce reuse when backends are aggressive about closing idle sockets. This is a classic source of low-rate 502s that are hard to reproduce in load tests.",
+    "real_world": "Teams often see a small but persistent error rate after deploying an app server with shorter idle timeouts than before. It passes basic health checks and synthetic tests, but real users hit sporadic failures after traffic lulls.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or packet-level evidence would confirm that stale keepalive reuse is the cause?"
+   },
+   {
+    "question": "How would you approach balancing fairness versus throughput when one tenant or request class can dominate the proxy tier?",
+    "answer": "Raw throughput tuning can let a few expensive or long-lived request classes monopolize connections, buffers, or upstream concurrency, so fairness controls matter at the proxy. I’d separate traffic with routing, per-class limits, or dedicated upstream pools, then tune queueing and backpressure so latency-sensitive requests are not trapped behind bulk work. The trade-off is utilization: strict isolation reduces noisy-neighbor impact but can leave spare capacity stranded. In multi-tenant systems, predictable tail latency is usually worth some loss in peak efficiency.",
+    "real_world": "This matters when one customer starts large exports or many streaming calls and suddenly everybody else’s API latency spikes even though average CPU still looks fine. Teams often fix it by splitting pools or applying per-tenant shaping at the edge.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What signals would tell you whether to isolate by tenant, by endpoint, or by request cost?"
+   }
+  ]
+ }
+}

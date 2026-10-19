@@ -1,0 +1,453 @@
+{
+ "slug": "elasticsearch",
+ "name": "Elasticsearch",
+ "category": "Databases",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is Elasticsearch, and when would you use it instead of a relational database?",
+    "answer": "Elasticsearch is a distributed search and analytics engine built around indexing documents for fast full-text search, filtering, and aggregations. You use it when search relevance, typo tolerance, faceting, and near-real-time querying matter more than strict relational joins and transactional updates. It usually complements a primary database rather than replacing it. For source-of-truth data and transactions, a relational database is still often the better fit.",
+    "real_world": "A product catalog might keep orders in Postgres but copy searchable product data into Elasticsearch so users can search by keywords, filter by price, and sort by relevance quickly. A common mistake is trying to use Elasticsearch as the only database for transactional workflows.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of queries are Elasticsearch especially good at?"
+   },
+   {
+    "question": "What is an index in Elasticsearch?",
+    "answer": "An index is a logical collection of documents, similar to a table in a relational database, but designed for search. Each index has mappings that define the fields and how they are stored and analyzed. Queries run against one or more indices, and Elasticsearch distributes the data across shards behind the scenes. The mapping matters because it determines whether a field is searchable as text, exact keyword, numeric, date, and so on.",
+    "real_world": "Teams often create separate indices for different data sets like logs, users, or products. A beginner mistake is putting very different document shapes into one index and then fighting mapping conflicts later.",
+    "code_lang": "json",
+    "code": "PUT products\n{\n  \"mappings\": {\n    \"properties\": {\n      \"name\": { \"type\": \"text\" },\n      \"sku\": { \"type\": \"keyword\" }\n    }\n  }\n}",
+    "follow_up": "What is the difference between a text field and a keyword field?"
+   },
+   {
+    "question": "What is the difference between a text field and a keyword field?",
+    "answer": "A text field is analyzed, meaning it is broken into tokens for full-text search. A keyword field is not analyzed and is used for exact matching, sorting, and aggregations. If you want to search inside a sentence, use text; if you want exact values like IDs, tags, or status, use keyword. Many fields need both behaviors, so it is common to map one field as text and add a keyword subfield.",
+    "real_world": "Searching product descriptions uses text, but filtering or grouping by brand or status usually uses keyword. A common bug is trying to sort or aggregate on a text field and getting unexpected results or field-data issues.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does analysis mean in Elasticsearch?"
+   },
+   {
+    "question": "What are shards and replicas in Elasticsearch?",
+    "answer": "A shard is a partition of an index, which lets Elasticsearch distribute data and queries across nodes. A replica is a copy of a shard used for high availability and read scaling. More shards can improve parallelism, but too many shards add overhead and can hurt performance. Replicas help if a node fails and can also serve read traffic.",
+    "real_world": "In production, replicas protect you from losing search availability when a node dies. A common beginner mistake is creating too many small shards, which wastes memory and makes the cluster harder to manage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does Elasticsearch decide which shard stores a document?"
+   },
+   {
+    "question": "How does Elasticsearch route a document to a shard when you index it?",
+    "answer": "By default, Elasticsearch uses the document ID to determine the target shard. That means documents with different IDs are spread across shards, which helps balance load. If you use a custom routing key, you can force related documents to land on the same shard, which can make some queries faster. The trade-off is that poor routing can create hotspots and uneven shard sizes.",
+    "real_world": "A multi-tenant application might route all documents for one tenant together so tenant-specific queries are faster. But if one tenant is much larger than the others, that shard can become a bottleneck.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use custom routing, and what is the downside?"
+   },
+   {
+    "question": "What is near real-time search in Elasticsearch?",
+    "answer": "Elasticsearch is near real-time because newly indexed documents are not visible to searches instantly; they become searchable after a refresh. This is usually a very short delay, which is why search feels immediate in practice. The trade-off is better indexing efficiency versus instant visibility. If you need strict read-after-write behavior, you need to understand refresh timing instead of assuming every write is immediately searchable.",
+    "real_world": "An order is saved and then searched for in a support tool, but it may not appear immediately if the index has not refreshed yet. Teams often mistake this for data loss when it is really refresh latency.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between refresh and flush?"
+   },
+   {
+    "question": "What is the difference between indexing and searching in Elasticsearch?",
+    "answer": "Indexing is writing documents into Elasticsearch so they can be searched later. Searching is querying the indexed data using match, term, filters, sorts, and aggregations. Indexing cost is paid up front to build the data structures that make searches fast. The main trade-off is that writes do extra work so reads are efficient.",
+    "real_world": "A logging pipeline spends most of its effort indexing incoming events, while analysts later run many searches and aggregations over them. If indexing falls behind, search results become incomplete until the backlog clears.",
+    "code_lang": "json",
+    "code": "GET products/_search\n{\n  \"query\": {\n    \"match\": { \"name\": \"wireless mouse\" }\n  }\n}",
+    "follow_up": "What is the difference between a match query and a term query?"
+   },
+   {
+    "question": "What is the difference between a match query and a term query?",
+    "answer": "A match query analyzes the search text and is usually used for full-text search on text fields. A term query looks for an exact value and does not analyze the input, so it is better for keyword, numeric, boolean, or ID-like fields. Using term on analyzed text often gives surprising results because the stored tokens are not the same as the original phrase. The common rule is full-text search with match, exact filtering with term.",
+    "real_world": "If you search product titles with match, you get relevant results for phrases and partial words. If you filter by status or SKU with term, you get exact matches without relevance scoring noise.",
+    "code_lang": "json",
+    "code": "GET products/_search\n{\n  \"query\": {\n    \"term\": { \"sku\": \"ABC-123\" }\n  }\n}",
+    "follow_up": "When would you use filters instead of queries?"
+   },
+   {
+    "question": "What is a mapping in Elasticsearch, and why does it matter?",
+    "answer": "A mapping defines the fields in an index, their data types, and how Elasticsearch should index them. It matters because the mapping determines what queries work, how values are analyzed, and how efficiently data is stored and searched. If a field is mapped incorrectly, you may get wrong search behavior or be unable to change the type later without reindexing.",
+    "real_world": "This comes up when a team starts indexing JSON from an API and later discovers that a field was inferred as the wrong type. Fixing it usually means creating a new index with the correct mapping and reindexing the data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do dynamic mappings work, and what can go wrong with them?"
+   },
+   {
+    "question": "What does the `_source` field do in Elasticsearch?",
+    "answer": "`_source` stores the original JSON document that was indexed. Elasticsearch uses it to return the document in search results, and it is also helpful for updating or reindexing documents. It is separate from the inverted index, so searching uses indexed fields, not `_source` directly.",
+    "real_world": "A common issue is expecting a field to be searchable just because it exists in `_source`. If the field was not indexed or mapped correctly, it may still be visible in the returned document but not searchable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is `_source` different from stored fields?"
+   },
+   {
+    "question": "What is a document in Elasticsearch?",
+    "answer": "A document is the basic unit of data in Elasticsearch, usually represented as JSON. Each document lives in an index and contains fields that can be searched, filtered, and aggregated. In practice, you can think of it as one record, but Elasticsearch is optimized around searching many documents quickly.",
+    "real_world": "Teams often model users, products, or log events as documents. A bad document shape, such as putting too much unrelated data into one document, can make updates and searches harder.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to store nested data in one document or split it into multiple documents?"
+   },
+   {
+    "question": "What does pagination look like in Elasticsearch, and why is deep pagination a concern?",
+    "answer": "Basic pagination uses `from` and `size` to skip and return a page of results. This is fine for shallow pages, but deep pagination becomes expensive because Elasticsearch still has to collect and sort many documents before it can return later pages. For large result sets, you usually want a cursor-style approach instead of large offsets.",
+    "real_world": "This shows up when someone builds a “page 500” endpoint over search results and the query becomes slow or unstable. Search UIs and export jobs often need a different pagination strategy than normal browsing.",
+    "code_lang": "json",
+    "code": "{\n  \"from\": 20,\n  \"size\": 10,\n  \"query\": { \"match\": { \"title\": \"elasticsearch\" } }\n}",
+    "follow_up": "When would you use `search_after` instead of `from` and `size`?"
+   },
+   {
+    "question": "What does bulk indexing do, and why would you use it?",
+    "answer": "Bulk indexing lets you send many indexing or delete operations in one request. It reduces network overhead and is much faster than sending one request per document. The trade-off is that you need to handle partial failures, because some operations in the batch may succeed while others fail.",
+    "real_world": "Bulk indexing is common when loading data for the first time or when ingesting logs continuously. Teams often see huge performance gains once they stop indexing documents one at a time.",
+    "code_lang": "json",
+    "code": "{ \"index\": { \"_index\": \"products\", \"_id\": \"1\" } }\n{ \"name\": \"Phone\" }\n{ \"index\": { \"_index\": \"products\", \"_id\": \"2\" } }\n{ \"name\": \"Laptop\" }",
+    "follow_up": "How do you check which items in a bulk request failed?"
+   },
+   {
+    "question": "What is the difference between updating a document and reindexing it?",
+    "answer": "An update changes an existing document, usually by sending partial fields or a script. Reindexing means reading documents from one index and writing them into another, often because the mapping or structure needs to change. Reindexing is slower but is the normal fix when you need a mapping change that cannot be applied in place.",
+    "real_world": "This matters when a field type was chosen badly, such as indexing a number as text. Since many mapping changes are not safe on an existing field, teams create a new index and move the data across.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can’t some mapping changes be applied directly to an existing field?"
+   },
+   {
+    "question": "What are index aliases, and why are they useful?",
+    "answer": "An alias is a stable name that points to one or more indices. It is useful because applications can query the alias while you swap the underlying index during reindexing, rollover, or other maintenance. This avoids downtime and keeps your application from needing to know the physical index name.",
+    "real_world": "Aliases are often used during schema changes so you can build a new index in the background and then switch traffic over instantly. They are also common in log pipelines where the active index changes over time.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you use an alias for zero-downtime reindexing?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do analyzers affect search results, and how would you choose one for a field like product names?",
+    "answer": "An analyzer controls how text is broken into tokens at index time and query time, so it directly changes what matches. For product names, you often want lowercase normalization and careful tokenization, but not aggressive stemming that could hurt exact brand matching. The main trade-off is recall versus precision: more normalization finds more documents, but can also create noisy matches. If exact matching matters too, it is common to keep both a `text` field and a `keyword` subfield.",
+    "real_world": "A team indexing catalog data may suddenly see searches for one product returning many unrelated items because the default analyzer split or normalized names in an unexpected way. Fixing the analyzer usually requires reindexing, so this is a design-time decision.",
+    "code_lang": "json",
+    "code": "{\n  \"settings\": {\n    \"analysis\": {\n      \"analyzer\": {\n        \"product_name\": {\n          \"type\": \"custom\",\n          \"tokenizer\": \"standard\",\n          \"filter\": [\"lowercase\"]\n        }\n      }\n    }\n  }\n}",
+    "follow_up": "How would you verify what tokens a custom analyzer produces before putting it into production?"
+   },
+   {
+    "question": "When would you use a multi-field, and what problem does it solve?",
+    "answer": "A multi-field lets the same logical field be indexed in more than one way, usually for different query patterns. A common case is indexing a field as both analyzed text for full-text search and keyword for exact matching, sorting, or aggregations. This avoids duplicating data in your application model and keeps query behavior explicit. The trade-off is extra index storage and a bit more mapping complexity.",
+    "real_world": "This is common for titles, categories, and usernames, where users need fuzzy search but product or reporting queries need exact values. Without a keyword subfield, sorting or aggregating on a text field often fails or performs poorly.",
+    "code_lang": "json",
+    "code": "{\n  \"mappings\": {\n    \"properties\": {\n      \"title\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"raw\": { \"type\": \"keyword\" }\n        }\n      }\n    }\n  }\n}",
+    "follow_up": "What query types would you send to the `title` field versus `title.raw`?"
+   },
+   {
+    "question": "How do bool queries work, and how do `must`, `filter`, and `should` differ in practice?",
+    "answer": "A bool query combines other queries with boolean logic. `must` affects scoring and requires a match, `filter` also requires a match but does not score and is cache-friendly, and `should` is optional unless it is the only clause type or you set minimum matches. In practice, `filter` is best for structured constraints like status or date ranges, while `must` is for relevance-bearing text queries. The trade-off is relevance flexibility versus performance and simplicity.",
+    "real_world": "A search endpoint often starts slow because every constraint is put under `must`, even ones that never need scoring. Moving stable predicates like tenant ID or published state into `filter` can reduce query cost.",
+    "code_lang": "json",
+    "code": "{\n  \"query\": {\n    \"bool\": {\n      \"must\": [{ \"match\": { \"title\": \"elasticsearch guide\" } }],\n      \"filter\": [{ \"term\": { \"status\": \"published\" } }]\n    }\n  }\n}",
+    "follow_up": "When would `should` clauses change the result set versus only changing ranking?"
+   },
+   {
+    "question": "What is aggregating on a field, and why can it become expensive on some mappings?",
+    "answer": "Aggregations summarize sets of documents, such as counts by category or histograms by price. They are usually efficient on `keyword`, numeric, and date fields, but aggregating on analyzed text is either unsupported or inefficient because the values are not stored as exact terms. The cost comes from loading and processing lots of field data, so large cardinality fields can use significant memory. In real systems, that means you should model fields for the aggregations you know you need.",
+    "real_world": "Dashboards often start fast in testing and then stall in production when someone adds a high-cardinality aggregation like user email or request ID. Teams usually need to redesign the field choice or precompute metrics.",
+    "code_lang": "json",
+    "code": "{\n  \"size\": 0,\n  \"aggs\": {\n    \"by_status\": {\n      \"terms\": { \"field\": \"status.keyword\" }\n    }\n  }\n}",
+    "follow_up": "How would you debug an aggregation that is slow or returns more buckets than expected?"
+   },
+   {
+    "question": "What does Elasticsearch refresh do, and how would you use that knowledge in an indexing pipeline?",
+    "answer": "Refresh makes recently indexed documents visible to search by opening a new searcher on a shard. It is what gives Elasticsearch near real-time behavior, but refreshing too often increases overhead and can reduce indexing throughput. In a bulk ingestion pipeline, you usually want to minimize unnecessary refreshes and let Elasticsearch refresh on its normal interval or control it deliberately for special cases. The trade-off is search freshness versus ingestion performance.",
+    "real_world": "During a backfill, a team may see indexing slow down because they are forcing refreshes after every request. Turning that off during the load and refreshing once at the end can make the job dramatically faster.",
+    "code_lang": "json",
+    "code": "POST /products/_refresh",
+    "follow_up": "What is the difference between refresh and flush?"
+   },
+   {
+    "question": "How does the `_update` API differ from sending a full document, and what should you watch out for?",
+    "answer": "The `_update` API applies a partial change server-side, often by merging fields or running a script, instead of replacing the whole document payload. That reduces client work and can be safer for small changes, but it still reads and reindexes the full document internally. You need to watch for concurrent updates and remember that deleting or nulling fields may require special handling. For large documents or complex transforms, full reindexing may still be clearer.",
+    "real_world": "Teams use partial updates for counters, status changes, or small metadata edits. A common bug is assuming the API edits a document in place without any reindex cost or conflict risk.",
+    "code_lang": "json",
+    "code": "POST /orders/_update/123\n{\n  \"doc\": {\n    \"status\": \"shipped\"\n  }\n}",
+    "follow_up": "How would you handle version conflicts on concurrent updates?"
+   },
+   {
+    "question": "What is a delete-by-query operation good for, and what are the risks compared with deleting documents individually?",
+    "answer": "Delete-by-query removes every document matching a query, which is useful for expired data, tenant removal, or cleanup jobs. It is much simpler than fetching IDs one by one, but it can be expensive because Elasticsearch must scan matching documents and perform many deletions. You also need to think about timing, conflicts, and whether the query is precise enough to avoid accidental data loss. For destructive operations, test the query first with a search and counts.",
+    "real_world": "A common production use is GDPR cleanup or expiring old logs. A bad predicate can delete far more data than intended, so teams often require a manual review or dry run before executing it.",
+    "code_lang": "json",
+    "code": "POST /logs/_delete_by_query\n{\n  \"query\": {\n    \"range\": {\n      \"created_at\": { \"lt\": \"now-90d\" }\n    }\n  }\n}",
+    "follow_up": "How would you validate a delete-by-query safely before running it in production?"
+   },
+   {
+    "question": "What is a nested field, and why is it different from a plain object field?",
+    "answer": "A nested field stores arrays of objects so each object can be queried independently as a separate hidden document. Without nested mapping, fields from different objects in the same array can get mixed together during matching, which leads to incorrect results. Nested queries are more accurate but more expensive than regular object fields because they require extra join-like handling. Use them when object boundaries matter in search semantics.",
+    "real_world": "This matters for things like product variants, where size and color must belong to the same variant. If mapped incorrectly, a query can match size from one object and color from another, producing false positives.",
+    "code_lang": "json",
+    "code": "{\n  \"mappings\": {\n    \"properties\": {\n      \"variants\": {\n        \"type\": \"nested\"\n      }\n    }\n  }\n}",
+    "follow_up": "What would go wrong if the same data were mapped as a normal object instead?"
+   },
+   {
+    "question": "How would you debug a query that returns the right documents but in the wrong order?",
+    "answer": "First check whether the sort is using the field you think it is, and whether that field is mapped as sortable, usually as a keyword, numeric, or date field. Then confirm whether the query is being ranked by relevance instead of explicit sort, because search score can make ordering look unstable. Tie-breaking also matters when many documents share the same sort value, so you may need a secondary sort for deterministic pagination. The key is to separate filtering, ranking, and sorting when debugging.",
+    "real_world": "This comes up in feeds and search results where users complain that pinned or recent items are not appearing in the expected order. The issue is often a sort field mismatch or an accidental reliance on score.",
+    "code_lang": "json",
+    "code": "{\n  \"sort\": [\n    { \"created_at\": \"desc\" },\n    { \"_id\": \"asc\" }\n  ]\n}",
+    "follow_up": "How would you make pagination stable when many results share the same sort value?"
+   },
+   {
+    "question": "When would you choose reindexing into a new index instead of updating mappings in place?",
+    "answer": "You choose reindexing when the change affects fields that cannot be safely altered in place, such as analyzers, field types, or certain index settings. Reindexing gives you a clean rebuild with the new schema and lets you verify the new mapping before switching traffic with an alias. The downside is extra storage and operational complexity during the migration. In practice, schema evolution in Elasticsearch often means planning for reindexing, not trying to mutate the old index.",
+    "real_world": "This is a common production migration when search relevance changes or a text field needs to become a keyword field for aggregations. Teams often build a new index, reindex data in the background, and cut over once validation passes.",
+    "code_lang": "json",
+    "code": "POST /_reindex\n{\n  \"source\": { \"index\": \"products_v1\" },\n  \"dest\": { \"index\": \"products_v2\" }\n}",
+    "follow_up": "How would you keep writes flowing while the reindex is running?"
+   },
+   {
+    "question": "How would you debug a search that suddenly got much slower after a deployment?",
+    "answer": "I’d compare the old and new query shape, mappings, and index size first, because latency changes are often caused by a field type change, an added aggregation, or a query that can no longer use filter context efficiently. Then I’d inspect slow logs and profile the query to see whether the cost is in scoring, sorting, script execution, or fetching large documents. I’d also check shard count and segment counts, because too many small shards or lots of recent indexing can hurt search performance. The key is to isolate whether the regression is in the query, the mapping, or the cluster state.",
+    "real_world": "This comes up after a release adds a new sort or filter and search p95 jumps from tens of milliseconds to seconds. Teams often need to confirm whether the problem is code, data shape, or cluster pressure before rolling back.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you look for in the query profile output to tell where the time is going?"
+   },
+   {
+    "question": "When would you use filter context instead of query context, and what is the trade-off?",
+    "answer": "Use filter context when you care about matching only, not relevance scoring, such as status flags, date ranges, or tenant IDs. Filters are easier for Elasticsearch to cache and generally cheaper because they skip scoring. The trade-off is that you lose score-based ranking for those clauses, so they should be used for constraints rather than relevance. A common pattern is to put exact constraints in `filter` and full-text terms in `must`.",
+    "real_world": "This matters in product search where every request includes tenant, availability, and category constraints. Putting those conditions in scoring clauses can waste CPU and make latency inconsistent.",
+    "code_lang": "json",
+    "code": "{\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        { \"term\": { \"tenant_id\": \"acme\" } },\n        { \"term\": { \"in_stock\": true } }\n      ],\n      \"must\": [\n        { \"match\": { \"title\": \"wireless headphones\" } }\n      ]\n    }\n  }\n}",
+    "follow_up": "When can a filter still hurt performance even though it does not score?"
+   },
+   {
+    "question": "What is the difference between `from`/`size` pagination and `search_after`, and when would you switch?",
+    "answer": "`from`/`size` is simple, but Elasticsearch still has to find and sort all skipped hits up to the offset, so large offsets become expensive. `search_after` uses the last hit from the previous page as a cursor, which is much better for deep pagination and scrolling through stable sorted results. The trade-off is that it requires a deterministic sort, usually with a tiebreaker, and it is less convenient for jumping to arbitrary pages. For user-facing UIs, I’d use `from`/`size` only for shallow pages and `search_after` for large result sets.",
+    "real_world": "This matters when support or ops teams export tens of thousands of matching documents. A naive page 500 request can become slow or timeout even though the first few pages are fast.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What sort fields do you need to make `search_after` safe and consistent?"
+   },
+   {
+    "question": "How do you decide whether a field should be `keyword`, `text`, or both in the same document?",
+    "answer": "Use `keyword` for exact matching, aggregations, sorting, and identifiers, and `text` for analyzed full-text search. If you need both behaviors on the same value, map it as a multi-field so the stored data can support search and exact operations without duplicating the source. The trade-off is additional index storage and indexing work, so you should only add subfields you actually need. This is a schema design choice that affects query options later, so it is worth deciding up front.",
+    "real_world": "This is common for fields like usernames, product names, or error messages. Teams often discover too late that they can search text but cannot sort or aggregate on it efficiently.",
+    "code_lang": "json",
+    "code": "{\n  \"mappings\": {\n    \"properties\": {\n      \"title\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"raw\": { \"type\": \"keyword\" }\n        }\n      }\n    }\n  }\n}",
+    "follow_up": "What happens if you try to aggregate on a plain `text` field?"
+   },
+   {
+    "question": "How do you handle fields whose type can vary across documents, like a value that is sometimes numeric and sometimes a string?",
+    "answer": "I would avoid mixed types if possible and normalize the data before indexing, because type conflicts can break indexing or force awkward mappings. If the source system is inconsistent, a common approach is to index a normalized field plus a raw field for debugging, or use separate fields for separate semantics. Dynamic mapping can be convenient, but it can also lock in the wrong type based on the first documents that arrive. The key trade-off is flexibility versus long-term queryability and safety.",
+    "real_world": "This happens in event streams and log ingestion when upstream services emit inconsistent JSON. A field that starts as a number and later arrives as a string can cause mapping exceptions or lost data.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you catch that problem before it reaches production?"
+   },
+   {
+    "question": "What are the practical differences between a nested field and an object field when querying arrays of objects?",
+    "answer": "An object field flattens array elements, so values from different objects can get mixed together in queries. A nested field stores each array element as a separate hidden document, which preserves the relationship between fields inside the same object. The trade-off is better query correctness at the cost of more complex queries and more indexing overhead. If the fields in the array must be matched together, nested is usually the safer model.",
+    "real_world": "This matters for things like product variants, line items, or permissions lists. Without nested mapping, a query can accidentally match `color=red` from one array item and `size=XL` from another.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What does a `nested` query add that a normal bool query cannot express?"
+   },
+   {
+    "question": "How would you reduce heap pressure when search performance degrades on a large cluster?",
+    "answer": "I’d first look for expensive aggregations, high-cardinality fields, and large result fetching, because those are common sources of memory pressure. Then I’d check whether the cluster is using too many shards or if fielddata is being loaded on text fields by accident. Reducing shard count, limiting returned fields, and using keyword fields for aggregations can help a lot. The main trade-off is between richer query features and keeping memory use predictable.",
+    "real_world": "This shows up when dashboards suddenly become unstable under load. A single heavy aggregation can trigger GC pressure and affect unrelated searches on the same nodes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you tell whether the issue is heap usage, disk I/O, or CPU?"
+   },
+   {
+    "question": "When would you use the scroll API, and when would you avoid it?",
+    "answer": "Scroll is useful for extracting a large, consistent snapshot of documents for batch processing or reindexing. I would avoid it for user-facing pagination because it holds search context open on the cluster and is not meant for interactive browsing. For long-running exports, it is still important to keep batches reasonable and clean up the context when done. The trade-off is stable iteration versus cluster resource usage.",
+    "real_world": "Teams use this for migrations, nightly exports, or rebuilding downstream indexes. If left open too long or used at high scale, it can consume resources and make the cluster less responsive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you use instead of scroll for a modern infinite-scroll UI?"
+   },
+   {
+    "question": "How do you approach zero-downtime schema changes in Elasticsearch?",
+    "answer": "I usually create a new index with the updated mapping, reindex data into it, and then switch an alias over once validation passes. That avoids trying to mutate incompatible field definitions in place, which often is not possible or is risky. The trade-off is extra operational work and temporary double storage, but it gives you a safe rollback path. I’d also make sure both write and read aliases are planned so the application does not need a hard cutover.",
+    "real_world": "This is common when a team needs to add a nested field, change analyzers, or split a field into multi-fields. The alias switch lets them deploy search changes without downtime.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you validate the new index before moving traffic to it?"
+   },
+   {
+    "question": "What is the purpose of the `_explain` API or query profiling when a search result is unexpected?",
+    "answer": "`_explain` helps you understand why a specific document matched and how its score was calculated, while profiling shows where time is spent during query execution. Use `_explain` for relevance debugging on one document, and profiling when you need performance details across the query. The trade-off is that both tools add overhead, so they are for diagnosis, not normal traffic. They are especially useful when a query seems logically correct but ranking or latency is wrong.",
+    "real_world": "This is useful when a business stakeholder says the “best” result is not first. It also helps when a complex bool query behaves differently than expected after a mapping or analyzer change.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer `_explain` over inspecting the query DSL alone?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "What actually happens internally when Elasticsearch flushes, refreshes, and merges segments, and how do those operations affect throughput and latency?",
+    "answer": "A refresh makes newly indexed documents visible by opening a new searcher on recent Lucene segments; it helps search freshness but adds overhead if done too often. A flush persists the translog and starts a new one, which matters for recovery and durability more than search visibility. Merges rewrite many small immutable segments into fewer larger ones, improving search efficiency but consuming heavy disk I/O and CPU. In production, indexing throughput usually drops when merge debt builds up, so the trade-off is freshness and steady ingestion versus background compaction cost.",
+    "real_world": "A common incident is sustained bulk ingest creating many small segments, then search latency spikes because merges saturate disk and the cluster falls behind. Teams often tune refresh behavior during backfills and watch merge backlog and translog growth together.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you recognize merge pressure versus query pressure from node and index stats?"
+   },
+   {
+    "question": "How does Elasticsearch handle write durability and recovery with the translog, and what failure modes should you think about during a node crash?",
+    "answer": "A write is applied to the in-memory indexing buffer and recorded in the translog so it can be replayed if the node crashes before Lucene commits it into a durable segment. Recovery uses the last safe commit plus translog replay to restore acknowledged operations, depending on when the crash happened and what was replicated. This is why refresh is not the same as durability: a document can be searchable before the underlying Lucene commit state changes. The main trade-off is write latency versus durability guarantees, especially under heavy ingest and replica lag.",
+    "real_world": "After an unclean restart, teams sometimes assume all searchable data was durable, then discover only operations protected by the translog and replication are recoverable. This matters during rolling failures, storage hiccups, or overloaded nodes where replication is delayed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between a primary acknowledging a write and the cluster being able to survive another node failure?"
+   },
+   {
+    "question": "Can you explain the write path through the primary and replica shards, and what consistency or concurrency guarantees Elasticsearch gives for a single document?",
+    "answer": "A coordinating node routes the request to the primary shard, the primary assigns sequencing metadata and applies the operation, then forwards it to replicas. Elasticsearch gives ordered application of operations per shard copy using sequence numbers and primary terms, which helps replicas reject stale operations and supports correct recovery. For a single document, optimistic concurrency control is the main guard against lost updates; Elasticsearch is not giving cross-document transactional isolation. The trade-off is high write throughput and shard-level replication versus limited transactional semantics.",
+    "real_world": "This matters when two services update the same document concurrently and one silently overwrites the other unless they use version-based checks. It also matters during primary failover, where stale shard copies must not accept older writes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you use sequence numbers and primary terms to prevent lost updates from concurrent writers?"
+   },
+   {
+    "question": "What is a cluster state in Elasticsearch, why can it become a bottleneck, and what kinds of incidents does it cause at scale?",
+    "answer": "Cluster state is the shared metadata for indices, mappings, settings, shard allocation, and node membership, and it has to be published consistently across nodes. It becomes a bottleneck when it grows large or changes too frequently, because every update must be computed by the master and applied by all nodes. Mapping explosions, too many tiny indices, or churn from allocation changes can make state publication slow and destabilize the cluster. The trade-off is operational flexibility versus metadata size and update frequency.",
+    "real_world": "A classic outage is creating thousands of small indices or dynamically adding huge numbers of fields, after which state updates slow down, master elections become frequent, and even simple index creation times out. Teams usually discover this through long pending tasks and delayed cluster state application.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or APIs would you inspect first if you suspected cluster state publication was the problem?"
+   },
+   {
+    "question": "How do you think about shard sizing and shard count for a large cluster, and what are the real costs of getting it wrong?",
+    "answer": "Each shard is a Lucene index with its own metadata, caches, file handles, background merges, and recovery cost, so too many small shards waste heap and coordination overhead. Too few very large shards make recovery, rebalancing, and some queries slower, and they reduce parallelism options. Good sizing is driven by data volume, query pattern, retention, recovery targets, and hardware limits rather than a fixed universal number. The trade-off is management overhead and fan-out on one side versus long recovery times and limited flexibility on the other.",
+    "real_world": "In production, oversharding often shows up as high heap usage and search coordination overhead even when CPU is moderate. Undersharding hurts when a node fails and a very large shard takes too long to relocate or recover, stretching the incident.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your shard sizing strategy differ for time-series logs versus a product catalog?"
+   },
+   {
+    "question": "What happens during shard recovery and relocation, and how can those processes hurt a live cluster if you do not control them?",
+    "answer": "Recovery copies shard data and replays recent operations so the target shard catches up, while relocation moves an active shard between nodes under cluster control. Both consume disk, network, and CPU, and they can interfere badly with search and indexing if many happen at once or if the source and target nodes are already hot. Recovery time depends on shard size, segment layout, and how much operation replay is needed. The trade-off is resilience and rebalancing versus temporary resource contention and longer tail latencies.",
+    "real_world": "A node loss often triggers many concurrent recoveries, and if throttling is too loose, the cluster can enter a spiral where recovery traffic causes more timeouts and instability. Teams often cap recovery concurrency during business hours to protect serving traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you distinguish slow recovery caused by network bandwidth from slow recovery caused by disk or segment churn?"
+   },
+   {
+    "question": "Why do high-cardinality aggregations hurt, and what is actually happening with doc values, global ordinals, and heap usage?",
+    "answer": "Most aggregations on keyword-like fields use doc values, which are columnar on disk and generally efficient, but high-cardinality fields still create a lot of per-bucket work and memory pressure. Terms aggregations often rely on ordinals to map values efficiently; building or warming global ordinals can be expensive on refresh-heavy indices or fields with many unique values. If cardinality is extreme, bucket structures, top-N tracking, and cross-shard reduction become costly even when the field is mapped correctly. The trade-off is rich faceting and analytics versus memory use, refresh cost, and latency spikes.",
+    "real_world": "A real incident is adding a terms aggregation on something like user ID or request ID in a dashboard, which looks harmless but suddenly blows up heap and response times. Teams usually fix it by changing the question, pre-aggregating, or limiting the field and bucket strategy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you consider eager global ordinals, and what downside would you expect from enabling them?"
+   },
+   {
+    "question": "How does query execution work across shards, and why can scatter-gather become the dominant cost for some searches?",
+    "answer": "A coordinating node fans the query out to relevant shards, each shard executes locally, and the coordinator merges hits and aggregation results into a final response. Even if each shard is fast, total latency can be dominated by fan-out, per-shard setup, network hops, and the merge phase, especially for many small shards or expensive aggregations. This is why narrow routing, fewer shards per request, and cache-friendly filters can matter more than micro-optimizing a single clause. The trade-off is horizontal scale and parallelism versus coordination overhead and tail latency.",
+    "real_world": "A multi-tenant cluster often performs well for a single tenant but poorly for all-tenant queries because the request touches too many shards. Teams see low average per-shard time yet high end-to-end latency because the coordinator is doing most of the work.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of queries benefit most from custom routing, and what risks does custom routing introduce?"
+   },
+   {
+    "question": "How would you explain circuit breakers in Elasticsearch, and why are they important even though they cannot prevent every out-of-memory failure?",
+    "answer": "Circuit breakers are defensive estimates that try to stop requests likely to allocate too much memory, such as large aggregations, fielddata loads, or in-flight request structures. They are important because they fail fast under pressure instead of letting the node die, but they are based on accounting and estimation, so they do not perfectly cover all memory use. You still need to manage heap consumers like caches, aggregation patterns, shard count, and mappings. The trade-off is rejecting some expensive requests to preserve node health and cluster availability.",
+    "real_world": "Without breakers, one bad dashboard query can take down a hot data node and trigger a wider incident through shard movement and retry storms. With breakers, the same query fails visibly and the cluster usually stays up long enough to investigate.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If users start hitting breaker exceptions after a release, what would you check first in the queries and mappings?"
+   },
+   {
+    "question": "What are the risks of dynamic mapping in a busy production cluster, and how do mapping explosions usually unfold?",
+    "answer": "Dynamic mapping is convenient, but every new field changes index metadata and can trigger more cluster state updates, more heap use, and more per-field structures in Lucene and Elasticsearch. A mapping explosion happens when uncontrolled field names arrive, often from JSON blobs, user-defined attributes, or logs with arbitrary keys, and the cluster pays both metadata and query-time costs. The problem is not just disk size; it is master pressure, larger cluster state, slower field-capabilities lookups, and worse memory behavior on data nodes. The trade-off is ingest flexibility versus operational safety and predictable performance.",
+    "real_world": "A common production failure is ingesting application logs with request-specific keys, which silently creates huge numbers of fields until the cluster becomes unstable. Teams usually prevent it with strict templates, disabled dynamic mapping in risky paths, or flattening strategies.",
+    "code_lang": "json",
+    "code": "{\n  \"mappings\": {\n    \"dynamic\": \"strict\",\n    \"properties\": {\n      \"message\": {\"type\": \"text\"},\n      \"labels\": {\"type\": \"object\", \"enabled\": false}\n    }\n  }\n}",
+    "follow_up": "If the business still needs ad hoc attributes, how would you model them without allowing unbounded field creation?"
+   },
+   {
+    "question": "How do sequence numbers and primary terms work in Elasticsearch, and how would you use them to avoid lost updates?",
+    "answer": "Every write gets a per-shard sequence number, and the shard leadership epoch is tracked by the primary term. Together they let Elasticsearch detect whether you are updating the version of a document you actually read, even across failover. In practice, you read a document, keep its seq_no and primary_term, and send them back on update as an optimistic concurrency check. That prevents a stale client from overwriting a newer write after retries, reordering, or primary promotion.",
+    "real_world": "This matters in event-driven systems where two consumers may update the same user profile or inventory row. Without optimistic concurrency, a retried stale write can silently undo a newer correction.",
+    "code_lang": "bash",
+    "code": "# read doc, note _seq_no and _primary_term\nGET my-index/_doc/42\n\n# conditional update\nPUT my-index/_doc/42?if_seq_no=17&if_primary_term=3\n{\"status\":\"paid\"}",
+    "follow_up": "What failure pattern do you get if clients retry writes blindly without carrying concurrency tokens?"
+   },
+   {
+    "question": "What is the difference between a point-in-time search and a normal search, and when does PIT materially improve correctness?",
+    "answer": "A normal search sees whatever segments are visible at the time each request runs, so paginated requests can drift if writes continue. A point-in-time holds a stable reader view, so subsequent searches can paginate consistently across the same snapshot while the index keeps changing. It improves correctness for multi-request reads like exporting results or stepping through `search_after` pages. The trade-off is resource usage: you are keeping search contexts alive, so long-lived PITs should be bounded and closed promptly.",
+    "real_world": "Without PIT, page 3 of a user-facing result set can skip or duplicate documents after ongoing writes. Teams often see this during exports or back-office review tools that page through millions of hits.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is PIT usually paired with `search_after` rather than `from`/`size` for large result sets?"
+   },
+   {
+    "question": "How would you diagnose and fix shard hotspotting caused by skewed routing keys?",
+    "answer": "Hotspotting happens when a small subset of routing values sends a disproportionate share of writes or reads to a few shards, so one node saturates while the cluster looks underutilized overall. I would confirm it with per-shard indexing and search rates, queue growth, and node-level CPU or merge pressure. Fixes depend on constraints: choose a better routing key, add a partitioning component to the custom routing value, or remove custom routing if query patterns allow it. The trade-off is between query locality and even distribution.",
+    "real_world": "A common incident is tenant-based routing where one very large tenant lands on one shard and drives write rejections while other shards stay idle. The cluster appears healthy at the top level, but p99 latency and bulk failures spike for that tenant.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes if you cannot reindex immediately and need a short-term mitigation?"
+   },
+   {
+    "question": "What are index sorting and early termination, and when are they worth the indexing cost?",
+    "answer": "Index sorting stores documents in a pre-sorted order within segments, typically by fields you repeatedly sort on such as timestamp or score proxy fields. That can make sorted queries cheaper and enable early termination in some cases because Elasticsearch can stop scanning sooner once it has enough top hits. The cost is slower indexing and merges, plus less flexibility if your hot query patterns change. It is worth it when a large fraction of traffic uses the same sort and query selectivity is compatible with that layout.",
+    "real_world": "For log or event workloads sorted by descending time, index sorting can reduce query latency and IO noticeably. But if product requirements later shift to many different sort orders, the indexing penalty remains while the benefit fades.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why does index sorting help some top-N queries much more than broad aggregations?"
+   },
+   {
+    "question": "How does the request cache differ from the query cache in Elasticsearch, and what workloads benefit from each?",
+    "answer": "The query cache stores reusable filter results at the segment level, so it helps repeated filter clauses on relatively stable segments. The request cache stores entire shard-level search results for cacheable requests, which is most useful for repeated aggregation-heavy queries that do not depend on rapidly changing hits. Query cache usefulness depends on selectivity and segment churn; request cache usefulness depends on identical repeated requests and stable data visibility. On write-heavy indices both can lose effectiveness because refreshes and new segments reduce reuse.",
+    "real_world": "Dashboards with the same time-bucket aggregations often benefit from request caching, while ad hoc search traffic usually does not. Teams sometimes enable caching broadly and see little gain because refresh-heavy workloads invalidate reusable state too quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why do highly dynamic time-range filters often disappoint even when query cache is enabled?"
+   },
+   {
+    "question": "What are fielddata and doc values, and why is enabling fielddata on a text field usually a red flag?",
+    "answer": "Doc values are on-disk columnar structures built for sorting and aggregations on supported field types, which keeps that workload off the JVM heap as much as possible. Fielddata builds an in-memory view for text fields that are analyzed into many terms, so enabling it can consume large amounts of heap and create unstable latency or OOM risk. Usually the right fix is to aggregate or sort on a `keyword` subfield rather than the analyzed `text` field. Fielddata exists for exceptional cases, not as a default design choice.",
+    "real_world": "A classic production incident is someone adding a terms aggregation on a text field in a dashboard, then heap jumps and old-gen GC storms begin. The data shape did not change; the access pattern did.",
+    "code_lang": "yaml",
+    "code": "mappings:\n  properties:\n    title:\n      type: text\n      fields:\n        raw:\n          type: keyword",
+    "follow_up": "If the `keyword` field is too large because values exceed practical limits or are too unique, what alternatives would you consider?"
+   },
+   {
+    "question": "How do segment merges create production pain, and what knobs or design choices actually help without making things worse?",
+    "answer": "Merges rewrite multiple smaller segments into fewer larger ones, which is necessary for search efficiency and deleting old tombstones, but they consume disk IO, CPU, and temporary space. In production they hurt when sustained indexing creates merge debt, causing indexing latency spikes, long GC pauses from pressure elsewhere, or disk watermarks due to extra space needs during rewrites. The durable fixes are workload-aware: right-size shards, avoid tiny bulk batches that create many small segments, use fast storage, and control ingestion bursts. Aggressively forcing merges on active indices usually makes things worse.",
+    "real_world": "A hot logging cluster can look fine all morning, then fall over during a traffic spike because merge backlog pushes disks to high utilization and write queues fill. The symptom is often blamed on indexing rate alone, but the hidden bottleneck is merge debt.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why is force-merging an actively written index usually the wrong response to high segment counts?"
+   },
+   {
+    "question": "What are soft deletes in Elasticsearch, and why do they matter for replication and recovery behavior?",
+    "answer": "Soft deletes keep enough history of recent operations so shards can replay changes during replication and recovery without needing a full file copy every time. That makes following a primary and catching up after transient failures much more efficient, especially when the replica is only a bit behind. The practical implication is that retention of operation history affects whether recovery can be operation-based or falls back to heavier file-based transfer. It improves resilience, but history is not infinite, so long outages can still trigger larger recoveries.",
+    "real_world": "After a short network partition, a replica can often catch up quickly from operation history instead of copying large shard files again. After a longer outage or heavier churn, that history may no longer be sufficient and recovery becomes much more expensive.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What operational signals tell you a recovery is doing file copy instead of cheaply replaying operations?"
+   },
+   {
+    "question": "How do disk watermarks affect allocation and write availability, and what failure mode surprises teams most often?",
+    "answer": "Disk watermarks are allocation safety thresholds: as nodes fill up, Elasticsearch first avoids placing more shards there, then starts relocating shards away, and at more severe levels can block writes to protect the cluster. They exist to prevent a full disk from turning into corruption, failed merges, and unrecoverable shard problems. The surprise is that adding replicas or restoring data during low free-space conditions can trigger a feedback loop where relocations increase IO and temporary space usage, making the situation worse before it gets better. Capacity headroom matters because merges and recoveries need extra space, not just final stored bytes.",
+    "real_world": "Teams often discover this during retention mistakes: one day of unexpected extra logs fills disks, replicas start moving, and then indexing to some indices is blocked. The cluster is not down, but the application experiences partial write outages.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If several nodes cross high disk watermarks at once, why can rebalancing fail to relieve pressure quickly?"
+   },
+   {
+    "question": "How would you model and tune a time-series workload in Elasticsearch using data streams or rollover, and what mistakes create long-term operational drag?",
+    "answer": "For time-series data, I would use time-partitioned backing indices with rollover based on size, age, or both, so shard sizes stay in a healthy range and retention can delete whole indices cheaply. Data streams help standardize that pattern for append-heavy workloads and simplify aliasing to the current write target. The big mistakes are creating too many tiny daily indices, keeping too many replicas on warm data, and choosing retention boundaries that fight actual ingest volume. Good design balances write parallelism, recovery time, and search fan-out across hot and historical data.",
+    "real_world": "Clusters that start with fixed daily indices often run fine at first, then months later accumulate thousands of tiny shards and spend more time on overhead than useful work. Rollover based on actual size usually ages much better than a calendar-only scheme.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide between daily indices and size-based rollover for a workload with very bursty ingest?"
+   }
+  ]
+ }
+}

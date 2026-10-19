@@ -1,0 +1,461 @@
+{
+ "slug": "postgresql",
+ "name": "PostgreSQL",
+ "category": "Databases",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is PostgreSQL, and when would you choose it over a simple key-value store or a spreadsheet-backed app?",
+    "answer": "PostgreSQL is a relational database that stores data in tables with rows, columns, and relationships, and it supports SQL for querying and updating data. You choose it when you need data integrity, joins, transactions, indexing, and reliable concurrent access. It is a better fit than a key-value store when your data has structure and relationships, and better than a spreadsheet when multiple users or services need consistent, queryable data.",
+    "real_world": "A team starts with a spreadsheet for orders, then needs search, reporting, and safe updates from multiple services. Moving to PostgreSQL prevents duplicate records and makes reporting queries practical.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is a relational table, and what is a primary key?"
+   },
+   {
+    "question": "What is a primary key in PostgreSQL, and why is it important?",
+    "answer": "A primary key uniquely identifies each row in a table. PostgreSQL enforces that primary key values are unique and not null, which gives every row a stable identifier for updates and relationships from other tables. In practice, it makes joins and references reliable and helps prevent duplicate records.",
+    "real_world": "If two customer rows accidentally share the same email but have different IDs, the application can still refer to the correct customer by primary key. Without a primary key, updates and deletes become error-prone.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE users (\n  id BIGSERIAL PRIMARY KEY,\n  email TEXT NOT NULL\n);",
+    "follow_up": "How is a foreign key different from a primary key?"
+   },
+   {
+    "question": "What does a foreign key do in PostgreSQL?",
+    "answer": "A foreign key enforces that a value in one table matches a row in another table. It is used to keep related data consistent, such as an order pointing to an existing customer. The trade-off is that inserts, updates, and deletes may be restricted or need cascading behavior, but you get stronger data integrity.",
+    "real_world": "An orders table with a customer_id foreign key prevents orphaned orders that refer to deleted customers. That avoids broken reports and application errors later.",
+    "code_lang": "sql",
+    "code": "CREATE TABLE orders (\n  id BIGSERIAL PRIMARY KEY,\n  customer_id BIGINT REFERENCES customers(id)\n);",
+    "follow_up": "What happens if you try to insert a foreign key value that does not exist?"
+   },
+   {
+    "question": "What is the difference between `DELETE`, `TRUNCATE`, and `DROP`?",
+    "answer": "`DELETE` removes selected rows and can use a `WHERE` clause. `TRUNCATE` removes all rows from a table much faster, but it does not filter row by row. `DROP` removes the table itself, including its definition, so you use it when the table is no longer needed at all.",
+    "real_world": "A developer wants to clear test data before a demo and accidentally uses `DROP`, which removes the table structure too. The app then fails because the table no longer exists.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer `DELETE` over `TRUNCATE`?"
+   },
+   {
+    "question": "What does `SELECT DISTINCT` do?",
+    "answer": "`DISTINCT` removes duplicate result rows from a query. It is useful when you only want unique values, such as a list of countries or email domains. The trade-off is that it can add extra work to the query, so it should not be used to hide bad data or as a substitute for proper schema design.",
+    "real_world": "A product team wants a list of unique customer cities for a dashboard. `DISTINCT` is the simplest way to get that without duplicates caused by multiple orders per customer.",
+    "code_lang": "sql",
+    "code": "SELECT DISTINCT city\nFROM customers\nORDER BY city;",
+    "follow_up": "How is `DISTINCT` different from `GROUP BY`?"
+   },
+   {
+    "question": "What is a join in PostgreSQL, and why do you use one?",
+    "answer": "A join combines rows from two tables based on a related column. You use joins when the data is normalized across multiple tables, like customers and orders, and you want information from both in one result. The main idea is to avoid duplicating data while still being able to query it together.",
+    "real_world": "An API endpoint needs to show each order with the customer name. A join lets the database assemble that data efficiently instead of the application making separate queries for every order.",
+    "code_lang": "sql",
+    "code": "SELECT o.id, c.name\nFROM orders o\nJOIN customers c ON c.id = o.customer_id;",
+    "follow_up": "What is the difference between an inner join and a left join?"
+   },
+   {
+    "question": "What is a transaction in PostgreSQL?",
+    "answer": "A transaction is a group of database operations that succeed or fail together. PostgreSQL uses transactions to keep data consistent, so if one step fails, earlier steps can be rolled back. This matters for actions like transferring money or creating related records, where partial success would leave the database wrong.",
+    "real_world": "When creating an order, the app may insert the order row and decrease inventory. If the inventory update fails, the transaction rolls back so you do not end up with an order that cannot be fulfilled.",
+    "code_lang": "sql",
+    "code": "BEGIN;\nINSERT INTO accounts(id, balance) VALUES (1, 100);\nUPDATE accounts SET balance = balance - 10 WHERE id = 1;\nCOMMIT;",
+    "follow_up": "What problems do transactions prevent that separate statements can cause?"
+   },
+   {
+    "question": "What is an index, and when should you add one?",
+    "answer": "An index is an extra data structure that helps PostgreSQL find rows faster for certain queries. You add one on columns that are used often in `WHERE`, `JOIN`, `ORDER BY`, or unique lookups. The trade-off is that indexes take extra storage and slow down inserts, updates, and deletes because PostgreSQL must keep the index updated.",
+    "real_world": "A table with millions of orders becomes slow when filtering by customer_id. Adding an index on that column can reduce query time dramatically.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX idx_orders_customer_id\nON orders(customer_id);",
+    "follow_up": "Why is indexing every column usually a bad idea?"
+   },
+   {
+    "question": "What is the difference between `WHERE` and `HAVING`?",
+    "answer": "`WHERE` filters rows before grouping, while `HAVING` filters groups after aggregation. Use `WHERE` for conditions on individual rows and `HAVING` for conditions on aggregate results like `COUNT` or `SUM`. Knowing the difference matters because putting the condition in the wrong place can change the result or make the query invalid.",
+    "real_world": "To find customers with more than five orders, you filter after grouping, so `HAVING` is the right choice. Using `WHERE` there would not work because the count does not exist yet.",
+    "code_lang": "sql",
+    "code": "SELECT customer_id, COUNT(*)\nFROM orders\nGROUP BY customer_id\nHAVING COUNT(*) > 5;",
+    "follow_up": "When would you use `GROUP BY` without `HAVING`?"
+   },
+   {
+    "question": "What is `NULL` in PostgreSQL, and what is a common mistake people make with it?",
+    "answer": "`NULL` means unknown or missing data, not an empty string and not zero. A common mistake is comparing with `=` or `<>`; you must use `IS NULL` or `IS NOT NULL`. Another pitfall is assuming `NULL` behaves like a regular value in expressions, when many operations propagate it.",
+    "real_world": "A report that checks `email = NULL` will never find missing emails, so it silently returns the wrong result. That kind of bug is easy to miss in production because the query runs without an obvious error.",
+    "code_lang": "sql",
+    "code": "SELECT *\nFROM users\nWHERE email IS NULL;",
+    "follow_up": "How do `NULL` values affect `COUNT`, `DISTINCT`, and unique constraints?"
+   },
+   {
+    "question": "What is the difference between `CHAR`, `VARCHAR`, and `TEXT` in PostgreSQL?",
+    "answer": "`CHAR(n)` is fixed-length and pads values with spaces, so it is rarely the best choice for general text. `VARCHAR(n)` stores variable-length strings with a length limit, while `TEXT` stores variable-length strings without a declared limit. In PostgreSQL, `VARCHAR` and `TEXT` are usually similar in behavior and performance, so the choice is often about whether you want a length constraint in the schema. Use `TEXT` for most free-form text and `VARCHAR(n)` when you want the database to enforce a maximum length.",
+    "real_world": "Teams often pick `TEXT` for names, descriptions, and comments, then add application-level validation if needed. `CHAR` can cause surprising comparison and padding behavior in production if it is used where variable-length strings were expected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you enforce that a column never exceeds a certain length?"
+   },
+   {
+    "question": "How do `INNER JOIN` and `LEFT JOIN` differ?",
+    "answer": "An `INNER JOIN` returns only rows that match in both tables. A `LEFT JOIN` returns all rows from the left table plus matching rows from the right table, and fills missing right-side columns with `NULL`. You use `LEFT JOIN` when you want to keep the left-side records even if related data does not exist yet. The key mistake is expecting unmatched rows to appear in an `INNER JOIN` result.",
+    "real_world": "This matters when listing users and their optional profiles or orders. A missing related row should not make the main record disappear from a report or API response.",
+    "code_lang": "sql",
+    "code": "SELECT u.id, p.bio\nFROM users u\nLEFT JOIN profiles p ON p.user_id = u.id;",
+    "follow_up": "What happens if you put a condition on the right table in the `WHERE` clause after a `LEFT JOIN`?"
+   },
+   {
+    "question": "What is the difference between `ORDER BY` and `GROUP BY`?",
+    "answer": "`ORDER BY` sorts the result set, while `GROUP BY` combines rows that share the same values so you can aggregate them. `GROUP BY` is used with functions like `COUNT`, `SUM`, and `AVG` to summarize data. `ORDER BY` does not change how many rows you get back; it only changes their order. A common beginner mistake is using `ORDER BY` when they actually need aggregation, or assuming grouped rows stay individually visible.",
+    "real_world": "This comes up in dashboards and reports, where teams need counts by status or totals by day. Using the wrong clause can produce a result that looks sorted but is not summarized correctly.",
+    "code_lang": "sql",
+    "code": "SELECT status, COUNT(*)\nFROM tickets\nGROUP BY status\nORDER BY COUNT(*) DESC;",
+    "follow_up": "Why do some selected columns need to appear in the `GROUP BY` clause?"
+   },
+   {
+    "question": "What does `LIMIT` do, and why would you use `OFFSET` carefully?",
+    "answer": "`LIMIT` restricts how many rows a query returns. `OFFSET` skips a number of rows before returning results, which is useful for simple pagination but can become slow on large tables because the database still has to walk past the skipped rows. For stable pagination, you often want a deterministic `ORDER BY` and sometimes keyset pagination instead of large offsets. A common mistake is paginating without sorting, which makes page contents inconsistent.",
+    "real_world": "This matters in list pages and APIs that return search results. As data changes, offset-based pagination can duplicate or skip rows between requests if the ordering is not stable.",
+    "code_lang": "sql",
+    "code": "SELECT id, title\nFROM posts\nORDER BY created_at DESC\nLIMIT 20 OFFSET 40;",
+    "follow_up": "What is a better pagination strategy for very large tables?"
+   },
+   {
+    "question": "What does `INSERT ... ON CONFLICT` do?",
+    "answer": "It lets you handle a unique-constraint conflict during insert without writing a separate check first. You can either do nothing or update the existing row, which is useful for upserts. This avoids race conditions that happen when two requests both check for a row and then try to insert it at the same time. The conflict target must match a unique or exclusion constraint.",
+    "real_world": "Teams use this for syncing external data, idempotent API writes, and deduplicating events. It helps prevent duplicate users, duplicate inventory rows, or repeated imports from crashing a job.",
+    "code_lang": "sql",
+    "code": "INSERT INTO users (email, name)\nVALUES ('a@example.com', 'Ava')\nON CONFLICT (email)\nDO UPDATE SET name = EXCLUDED.name;",
+    "follow_up": "What problems can still happen if the update part changes columns used by other logic?"
+   },
+   {
+    "question": "What does `COALESCE` do?",
+    "answer": "`COALESCE` returns the first non-`NULL` value from a list of expressions. It is commonly used to replace missing values with a default in query results or calculations. This matters because many SQL expressions return `NULL` if any input is `NULL`, which can break totals or display logic. It is not the same as treating empty strings or zero as missing values; it only checks for `NULL`.",
+    "real_world": "This comes up in user-facing APIs where optional fields should display a fallback like `unknown` or `0`. It also prevents aggregates or concatenations from turning into unexpected `NULL` values.",
+    "code_lang": "sql",
+    "code": "SELECT COALESCE(middle_name, 'N/A') AS middle_name\nFROM users;",
+    "follow_up": "How does `COALESCE` differ from `CASE WHEN`?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How does PostgreSQL use MVCC, and what problem does that solve for concurrent reads and writes?",
+    "answer": "PostgreSQL uses MVCC, so readers usually see a snapshot of the data without blocking writers, and writers do not block readers in the common case. This reduces lock contention and makes concurrency much better than a single shared-lock model. The trade-off is that old row versions accumulate until vacuum reclaims them, so table bloat and vacuum health matter. It also means a transaction can keep seeing an older snapshot even after other commits.",
+    "real_world": "This shows up when a reporting query runs for minutes while OLTP traffic continues. If vacuum falls behind, tables and indexes bloat and performance slowly degrades.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What is the difference between READ COMMITTED and REPEATABLE READ in PostgreSQL?"
+   },
+   {
+    "question": "When would you choose a unique index versus a unique constraint, and are they actually different?",
+    "answer": "Functionally they enforce the same uniqueness rule, but a unique constraint is the declarative schema-level rule, while a unique index is the underlying structure that can also be created independently. In practice, a unique constraint creates a unique index for enforcement. The constraint is usually clearer when the rule is part of the data model, while the index form is useful when you want index-level control or a specialized index definition. I would prefer a constraint unless I have a specific indexing reason.",
+    "real_world": "Teams often use unique constraints for business keys like email or tenant-scoped slugs. This prevents duplicate records even if application code has a race condition.",
+    "code_lang": "sql",
+    "code": "ALTER TABLE users\nADD CONSTRAINT users_email_key UNIQUE (email);",
+    "follow_up": "How would you make uniqueness apply only to active rows or only within a tenant?"
+   },
+   {
+    "question": "What is a partial index, and when is it better than indexing the whole table?",
+    "answer": "A partial index only covers rows that match a predicate, so it is smaller and cheaper to maintain than a full-table index. It is a good fit when queries repeatedly filter on a common condition like `status = 'active'` or `deleted_at IS NULL`. The benefit is faster reads and less write overhead, but only queries that match the predicate can use it. If the filter is not stable or widely used, a partial index can be wasted complexity.",
+    "real_world": "This is common for soft-delete systems, where almost every query ignores archived rows. A partial index can keep the active-path queries fast without paying to index historical data.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX idx_orders_active_created_at\nON orders (created_at)\nWHERE deleted_at IS NULL;",
+    "follow_up": "How would you verify that PostgreSQL is actually using that index?"
+   },
+   {
+    "question": "What is the difference between a btree index and a GIN index, and when would you use each?",
+    "answer": "Btree is the default general-purpose index and is best for equality, range queries, sorting, and most standard lookups. GIN is better for columns that contain multiple searchable elements, like arrays, JSONB fields, or full-text search tokens. The trade-off is that GIN often gives better query performance for containment-style searches but costs more to build and maintain on writes. For a simple scalar column, btree is usually the right choice.",
+    "real_world": "A common pattern is searching tags or JSONB attributes in product catalogs or event metadata. Using a btree index there usually gives poor results, while GIN can make those queries usable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you look at to decide whether a JSONB query should use GIN or expression indexes?"
+   },
+   {
+    "question": "How do you read an `EXPLAIN (ANALYZE)` plan to debug a slow query?",
+    "answer": "I look for the node doing the most work, then compare estimated rows to actual rows to see whether the planner guessed badly. Big mismatches usually point to stale statistics, missing indexes, or a filter that is much more selective than the planner expected. I also check whether the query is doing sequential scans, sort spills, or nested loops over large inputs. `ANALYZE` is important because plain `EXPLAIN` only shows the chosen plan, not the actual runtime behavior.",
+    "real_world": "In production, a query may look fine in code review but become slow after data growth changes the planner’s choice. `EXPLAIN ANALYZE` is often the fastest way to confirm whether an index or rewrite will help.",
+    "code_lang": "sql",
+    "code": "EXPLAIN (ANALYZE, BUFFERS)\nSELECT *\nFROM orders\nWHERE customer_id = 42\nORDER BY created_at DESC\nLIMIT 20;",
+    "follow_up": "What kinds of query patterns often cause the planner to choose a bad plan?"
+   },
+   {
+    "question": "What is the N+1 query problem, and how do you usually fix it in PostgreSQL-backed applications?",
+    "answer": "N+1 happens when an application runs one query to load a parent set and then one query per parent row to fetch related data. The fix is usually to load the needed data in one query with a join or to prefetch it with a second batched query, depending on the shape of the result. The trade-off is that a single large join can duplicate rows and increase memory use, so the best fix depends on the access pattern. The important part is reducing round trips and predictable latency.",
+    "real_world": "This commonly appears in API endpoints that loop over users and fetch each user’s latest order separately. It works in development and then falls over under real traffic because the database sees hundreds of tiny queries per request.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you prefer a join over separate batched queries?"
+   },
+   {
+    "question": "What happens if two sessions try to update the same row at the same time?",
+    "answer": "PostgreSQL uses row-level locking for updates, so the second session usually waits until the first one commits or रोलs back. That prevents lost updates at the storage level, but it can create blocking and even deadlocks if transactions touch rows in different orders. If the application needs a stricter rule than “last writer wins,” it should either lock rows explicitly or use optimistic checks with a version column. The right choice depends on contention and business correctness requirements.",
+    "real_world": "This comes up in inventory, account balances, and workflow state transitions. Without careful design, users see hanging requests or inconsistent state when concurrent edits collide.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect and handle deadlocks in an application?"
+   },
+   {
+    "question": "What are savepoints useful for inside a transaction?",
+    "answer": "Savepoints let you roll back part of a transaction without aborting the entire transaction. They are useful when a workflow has multiple steps and one optional step can fail without discarding earlier work. The trade-off is added complexity, and they should not replace good transaction boundaries. In application code, they are most useful when a batch contains independent sub-operations.",
+    "real_world": "A batch import may want to keep valid rows even if one row fails a constraint check. Savepoints let you keep going without losing all the prior successful inserts.",
+    "code_lang": "sql",
+    "code": "BEGIN;\nINSERT INTO orders ...;\nSAVEPOINT before_line_items;\nINSERT INTO line_items ...;\nROLLBACK TO SAVEPOINT before_line_items;\nCOMMIT;",
+    "follow_up": "How is a savepoint different from just starting a new transaction?"
+   },
+   {
+    "question": "What are CTEs good for in PostgreSQL, and when can they hurt performance?",
+    "answer": "CTEs are good for breaking a complex query into readable steps and for reusing an intermediate result in the same query. They can hurt when an intermediate result is large and gets materialized unnecessarily, because that may prevent the planner from pushing filters down or reordering operations. In modern PostgreSQL, some CTEs can be inlined, but you should still check the plan if performance matters. I use them for clarity first, then verify the plan on hot queries.",
+    "real_world": "CTEs are common in reporting queries and data cleanup jobs where readability matters. In a latency-sensitive path, though, a CTE that looks neat can hide an expensive materialization step.",
+    "code_lang": "sql",
+    "code": "WITH recent_orders AS (\n  SELECT * FROM orders WHERE created_at >= now() - interval '7 days'\n)\nSELECT customer_id, count(*)\nFROM recent_orders\nGROUP BY customer_id;",
+    "follow_up": "When would you rewrite that as a subquery or a temporary table?"
+   },
+   {
+    "question": "How do you decide between a materialized view and a normal view?",
+    "answer": "A normal view stores only the query definition, so it always reflects current data and adds no storage cost. A materialized view stores the result set, which can make expensive reporting queries fast, but it must be refreshed when the underlying data changes. The trade-off is freshness versus performance and operational overhead. For dashboards and periodic reporting, a materialized view can be a good fit if stale data is acceptable.",
+    "real_world": "This matters for analytics pages that are too slow when they hit raw transactional tables. Teams often precompute aggregates so the app can serve reports quickly during peak usage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you refresh a materialized view without causing too much downtime?"
+   },
+   {
+    "question": "How do transaction isolation levels affect what one session can see while another session is changing data?",
+    "answer": "Isolation level controls which concurrency anomalies are allowed, like dirty reads, non-repeatable reads, and phantom reads. In PostgreSQL, the practical choice is often between the default behavior and stricter isolation when you need repeatable results for a business operation. Stronger isolation reduces surprises but can increase retries or contention. You choose based on whether correctness needs a stable snapshot or just committed data.",
+    "real_world": "This matters in billing, inventory, and reporting jobs where one request should not see half-finished work from another. Teams often discover a race only after duplicate charges or oversold stock appear.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use serializable isolation, and what kind of failures should you expect from it?"
+   },
+   {
+    "question": "What is the difference between a covering index and a regular index in PostgreSQL, and why would it matter?",
+    "answer": "A covering index includes extra columns so the query can be satisfied from the index alone more often, instead of visiting the table for every row. That can reduce I/O on read-heavy queries, especially for narrow lookups and pagination. The trade-off is a larger index and slower writes because more data must be maintained. It is useful when a query is common and its selected columns are stable.",
+    "real_world": "This comes up when a dashboard query is fast in dev but slow in production because it keeps hitting the table heap. Adding the right included columns can remove a hot path without changing application code.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX idx_orders_customer\nON orders (customer_id)\nINCLUDE (status, created_at);\n\nSELECT status, created_at\nFROM orders\nWHERE customer_id = 42;",
+    "follow_up": "How would you confirm that PostgreSQL is actually using the index-only path?"
+   },
+   {
+    "question": "How do you approach fixing a slow query when `EXPLAIN` shows a sequential scan, but the table has an index?",
+    "answer": "First check whether the filter is selective enough for the index to help; on small tables or broad predicates, a sequential scan is cheaper. Then look for functions, casts, or leading wildcards that prevent index use, and verify that statistics are current. Sometimes the query shape needs to change, such as filtering earlier or rewriting an expression to be indexable. The key is to compare estimated rows with actual rows and understand why the planner chose that path.",
+    "real_world": "A common production issue is a query that was fine with test data but degrades after the table grows. The fix is often not “add more indexes” but making the predicate usable or refreshing stats after bulk changes.",
+    "code_lang": "sql",
+    "code": "EXPLAIN ANALYZE\nSELECT *\nFROM users\nWHERE lower(email) = 'a@example.com';",
+    "follow_up": "What would you change if this query must stay case-insensitive and run often?"
+   },
+   {
+    "question": "When would you use a `SERIAL`-style auto-increment column versus an application-generated identifier like UUID?",
+    "answer": "Sequential integer IDs are small, simple, and index well, which is great for internal relational keys. UUIDs are better when identifiers must be generated outside the database, across services, or without revealing row counts. The trade-off is that UUIDs are larger and can make indexes less cache-friendly. The choice depends on distribution requirements, privacy, and write patterns.",
+    "real_world": "This matters in distributed systems where multiple services create records independently. A team may switch to UUIDs to avoid coordination, then later notice larger indexes and slower joins on very large tables.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can happen if you expose sequential IDs directly in public APIs?"
+   },
+   {
+    "question": "How do you think about table normalization versus denormalization in PostgreSQL-backed applications?",
+    "answer": "Normalization reduces duplication and update anomalies by storing one fact in one place, which is usually the right default. Denormalization can improve read performance or simplify queries, but it creates consistency work and can make writes more complex. In practice, you normalize the core model and denormalize only where you have measured pain. The trade-off is between data integrity and query simplicity or speed.",
+    "real_world": "A product team may start with a normalized schema, then add cached summary columns or reporting tables when dashboards become too expensive. Bugs often appear when the duplicated data is updated in one place but not another.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you give an example of a denormalization that is safe, and one that is risky?"
+   },
+   {
+    "question": "What happens if you update a row so that it no longer matches a partial index predicate?",
+    "answer": "PostgreSQL will remove that row from the partial index as part of the update if it stops satisfying the predicate. That is one reason partial indexes are useful for sparse subsets, like active records or open tasks. The trade-off is that queries must match the predicate closely, otherwise the planner may not use the index. Partial indexes are powerful when the indexed subset is stable and common.",
+    "real_world": "This matters when teams index only active subscriptions or unresolved tickets. If the status changes often, the index can still help, but the update cost and planner behavior need to be watched.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX idx_tasks_open\nON tasks (due_date)\nWHERE status = 'open';",
+    "follow_up": "How do you make sure your query predicates are compatible with a partial index?"
+   },
+   {
+    "question": "What is a deadlock in PostgreSQL, and how do you prevent it in application code?",
+    "answer": "A deadlock happens when two transactions each hold a lock the other needs, so neither can continue. PostgreSQL detects the cycle and cancels one transaction, but the application still has to retry it. The best prevention is consistent lock ordering, short transactions, and avoiding unnecessary user think-time inside a transaction. Deadlocks are usually a design issue, not a database bug.",
+    "real_world": "This shows up in workflows like transferring money or updating multiple related rows in different orders. In production it often looks like intermittent failures that disappear on retry unless you inspect logs carefully.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What should a retry loop look like for a transaction that fails due to a deadlock?"
+   },
+   {
+    "question": "How do you choose between `DELETE` with a `WHERE` clause and batching work into smaller deletes?",
+    "answer": "A single large delete is simple, but it can hold locks longer, generate lots of WAL, and leave dead tuples that need vacuuming. Batching smaller deletes reduces lock time and makes the work easier to pause or retry, at the cost of more application logic and more transactions. It is usually better for large cleanup jobs or soft-delete migrations. The right choice depends on table size, concurrency, and whether you need predictable impact on production traffic.",
+    "real_world": "This matters when removing millions of old audit rows from a busy system. A naive delete can bloat the table and slow unrelated queries for hours.",
+    "code_lang": "sql",
+    "code": "DELETE FROM events\nWHERE created_at < now() - interval '90 days'\nLIMIT 1000;",
+    "follow_up": "How would you implement a safe batch delete loop in your application or job runner?"
+   },
+   {
+    "question": "What are window functions useful for, and how are they different from `GROUP BY`?",
+    "answer": "Window functions let you compute values across related rows while still returning each row, such as rankings, running totals, or per-user counts. `GROUP BY` collapses rows into one output row per group, which is good for aggregation but loses row-level detail. Window functions are often the right choice when you need both detail and summary in the same result. They can be more expressive than self-joins and easier to read.",
+    "real_world": "Analytics pages often need things like “latest order per customer” or “top 10 items within each category.” Window functions usually make those queries much simpler and easier to maintain.",
+    "code_lang": "sql",
+    "code": "SELECT user_id, created_at,\n       row_number() OVER (PARTITION BY user_id ORDER BY created_at DESC) AS rn\nFROM orders;",
+    "follow_up": "How would you use this pattern to get only the latest row per user?"
+   },
+   {
+    "question": "How do you back up and restore PostgreSQL safely in a real project?",
+    "answer": "You need both logical backups and a plan for point-in-time recovery if losing recent writes matters. The key is to test restores, not just backups, because a backup is only useful if you can bring it back successfully. You also want to understand how long restore takes and whether schemas, roles, and large objects are included in your process. Good backup strategy is about recovery objectives, not just copying files.",
+    "real_world": "Teams often learn this the hard way during a failed migration or accidental delete. The important question is not whether backups exist, but whether the team can recover fast enough for the business.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you verify in a restore drill before trusting a new backup procedure?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "What makes PostgreSQL choose a nested loop, hash join, or merge join, and how do you influence that without just forcing planner settings?",
+    "answer": "The planner estimates row counts and costs, then picks the cheapest join strategy for the available inputs. Nested loops are good when the outer side is small and the inner side is indexed; hash joins work well for medium-to-large unsorted inputs that fit reasonably in memory; merge joins are attractive when both sides are already sorted or can use ordered indexes. Bad cardinality estimates are the usual root cause of a bad choice, so the first fixes are better statistics, more selective predicates, and query rewrites that expose filtering earlier. I avoid disabling join types globally because that usually fixes one query by hurting others.",
+    "real_world": "A common incident is a query that was fast yesterday suddenly doing a huge nested loop after data distribution changed. Teams usually fix that by refreshing statistics, increasing stats targets on skewed columns, or rewriting the query so the planner can see the real selectivity.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you diagnose whether the bad join choice came from stale stats, correlation, or parameter-sensitive planning?"
+   },
+   {
+    "question": "Can you explain heap-only tuple updates and why fillfactor can change write performance so much?",
+    "answer": "A HOT update happens when PostgreSQL can update a row without creating new index entries, because no indexed columns changed and there is space on the same heap page. That avoids extra index churn and reduces WAL, CPU, and vacuum work. Fillfactor matters because leaving free space on pages makes same-page updates more likely, at the cost of storing fewer rows per page initially. It's most valuable on write-heavy tables with frequent updates to non-indexed columns.",
+    "real_world": "On high-write tables like job queues or user-session tables, lowering fillfactor can materially reduce bloat and autovacuum pressure. The trade-off is larger table size and potentially more I/O for reads.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you look at to tell whether a table is getting HOT updates or just generating bloat?"
+   },
+   {
+    "question": "How does autovacuum actually decide when to vacuum or analyze a table, and what failure mode do you worry about most in production?",
+    "answer": "Autovacuum triggers based on thresholds plus a fraction of table activity, separately for vacuuming dead tuples and analyzing changed rows. Vacuum reclaims space for reuse and advances visibility information; analyze refreshes planner statistics. The big failure mode is falling behind on a large or hot table, which causes table and index bloat, worse plans, and eventually transaction ID wraparound risk. Per-table tuning is often needed because one global setting rarely fits tiny tables and multi-billion-row tables equally well.",
+    "real_world": "A classic production incident is a busy table accumulating dead tuples faster than autovacuum can clean them, leading to rising latency and disk growth. The emergency version is wraparound protection, where PostgreSQL starts forcing aggressive vacuuming and operational flexibility drops fast.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes would you make for a table that is append-heavy versus one that is update-heavy?"
+   },
+   {
+    "question": "What is WAL for, and how do synchronous_commit and checkpoint behavior affect latency and durability?",
+    "answer": "WAL is the ordered log of changes used for crash recovery and replication; PostgreSQL typically writes WAL before marking data changes durable. With synchronous_commit on, a commit usually waits for WAL durability, so latency includes fsync-related cost but crash safety is stronger. Checkpoints flush dirty data pages and bound recovery time, but aggressive checkpointing can create write spikes and extra full-page writes after each checkpoint. Tuning is a balance between commit latency, background write smoothness, recovery time, and acceptable data-loss windows.",
+    "real_world": "Teams sometimes turn synchronous_commit off for non-critical event ingestion to cut tail latency, accepting that the last few committed transactions can be lost on crash. Another common issue is checkpoint spikes causing periodic latency cliffs under sustained write load.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your answer change if the database is using synchronous replication to a standby?"
+   },
+   {
+    "question": "Why does a long-running transaction cause trouble in PostgreSQL even if it is only reading?",
+    "answer": "A long-running transaction holds an old snapshot, which prevents vacuum from removing tuples that might still be visible to it. That keeps dead rows and old row versions around, increasing bloat and delaying cleanup of indexes and heap pages. It can also hold back xmin horizons needed by replication slots or standbys, worsening WAL retention. Read-only does not mean harmless when the transaction stays open for a long time.",
+    "real_world": "This shows up when someone opens a transaction in a report tool or leaves an idle-in-transaction session hanging for hours. Disk usage climbs, autovacuum becomes ineffective on busy tables, and replicas may retain far more WAL than expected.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How do you find the session causing it, and what safeguards would you put in place?"
+   },
+   {
+    "question": "When would you partition a PostgreSQL table, and what are the real costs people underestimate?",
+    "answer": "Partitioning helps when you can prune most data by a partition key, manage retention by dropping old partitions, or isolate maintenance and bulk loads. It is not a free speedup for arbitrary queries, and too many partitions can add planner overhead, more relcache churn, and operational complexity. Unique constraints become harder unless the partition key is included, and some queries still need to touch many partitions. I use partitioning when lifecycle and access patterns clearly align with the partition key, not just because a table is large.",
+    "real_world": "Time-series and audit tables are the common success case because dropping a month of data is much cheaper than deleting billions of rows. A common mistake is over-partitioning OLTP tables and then discovering that cross-partition queries and index management got slower and harder.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose between daily, monthly, and hash partitioning for a write-heavy workload?"
+   },
+   {
+    "question": "What does PostgreSQL do with prepared statements and generic versus custom plans, and when can that hurt performance?",
+    "answer": "Prepared statements can reuse planning work, but PostgreSQL may choose either a custom plan based on current parameter values or a generic plan reused across executions. Generic plans are great when parameter values behave similarly, but they can be bad when selectivity varies a lot, because one average plan is wrong for hot and cold values. This often shows up as an indexed lookup for rare values turning into a broad scan, or the reverse. The trade-off is planning CPU versus execution quality.",
+    "real_world": "A real issue is an app server using prepared statements through a pool and seeing one tenant's query become much slower than another's because the reused generic plan fits neither well. Teams usually notice p95 latency regressions that are hard to reproduce with literal SQL in a console.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prove that parameter-sensitive planning is the problem rather than locking or cache effects?"
+   },
+   {
+    "question": "How would you design a queue in PostgreSQL, and what role does FOR UPDATE SKIP LOCKED play?",
+    "answer": "A common pattern is a jobs table with status, available_at, and retry metadata, where workers claim a small batch in a transaction using FOR UPDATE SKIP LOCKED. That lets multiple workers avoid blocking each other on the same pending rows. It works well for moderate throughput and when transactional coupling to app data matters, but it can create hotspots on the pending index and requires careful handling of retries, visibility timeouts, and stuck jobs. At high scale, the database can become more of a coordination bottleneck than a message broker would be.",
+    "real_world": "This is practical when job enqueueing must commit atomically with business data, like sending emails only if an order commit succeeds. The failure mode is workers repeatedly scanning a large pending set or contending on the same hottest rows, causing throughput collapse.",
+    "code_lang": "sql",
+    "code": "WITH cte AS (\n  SELECT id\n  FROM jobs\n  WHERE status = 'pending' AND available_at <= now()\n  ORDER BY available_at, id\n  FOR UPDATE SKIP LOCKED\n  LIMIT 10\n)\nUPDATE jobs j\nSET status = 'running'\nFROM cte\nWHERE j.id = cte.id\nRETURNING j.id;",
+    "follow_up": "What indexes and cleanup strategy would you add so this still works when the jobs table gets very large?"
+   },
+   {
+    "question": "What are replication slots in PostgreSQL, and why can they become dangerous if you forget about them?",
+    "answer": "A replication slot tells PostgreSQL to retain WAL, and for logical replication it can also retain catalog state needed for decoding, until a consumer confirms it has progressed. That prevents data loss for the consumer but creates backpressure on storage if the subscriber or decoder falls behind. The danger is silent WAL growth until the disk fills, at which point the primary can fail writes. Slots are useful, but they need monitoring and clear ownership.",
+    "real_world": "A common outage is a decommissioned CDC consumer leaving its slot behind; WAL accumulates for days and suddenly the primary runs out of disk. The fix is operational as much as technical: alert on lag and retained WAL, and clean up unused slots quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is monitoring a physical slot different from monitoring a logical slot?"
+   },
+   {
+    "question": "What is the difference between logical and physical replication in PostgreSQL, and how does that affect failover and schema changes?",
+    "answer": "Physical replication streams WAL and reproduces the whole cluster state at the block level, which is simple and efficient for standby failover but not selective about tables or databases. Logical replication sends row-level changes for selected tables, which is better for migrations, fan-out, and version-bridging scenarios, but it has more moving parts and edge cases around replica identity, DDL coordination, and conflict handling. Physical replicas are usually the default for HA; logical replication is more of a data movement tool. The choice depends on whether you need an exact standby or selective replication semantics.",
+    "real_world": "Teams often use physical replication for disaster recovery and read replicas, then logical replication for zero- or low-downtime migrations between clusters. Problems arise when people assume schema changes flow automatically with logical replication; they do not in the same way data changes do.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you were planning a major-version upgrade with minimal downtime, how would you choose between a replica-based upgrade and logical replication?"
+   },
+   {
+    "question": "How does PostgreSQL decide whether an UPDATE can be HOT, and why do I care in production?",
+    "answer": "A HOT update is only possible when no indexed column changes and there is enough free space on the same heap page for the new tuple version. Then PostgreSQL can avoid adding new index entries and just chain the new tuple from the old one, which cuts write amplification and index bloat. If the updated column is indexed, or the page has no room, it becomes a regular update and every affected index must be maintained. In write-heavy tables, schema and fillfactor choices can dramatically change whether updates stay cheap.",
+    "real_world": "A table that updates status flags or retry counts millions of times per day can suddenly bloat indexes after someone adds an index on that frequently changed column. Write latency rises, autovacuum falls behind, and disk usage jumps.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics or catalog views would you check to see whether HOT updates are actually happening?"
+   },
+   {
+    "question": "Why can an index-only scan still hit the heap a lot, and what does the visibility map have to do with it?",
+    "answer": "Index-only scans are only truly heap-free when the relevant heap pages are marked all-visible in the visibility map. If a page is not all-visible, PostgreSQL must visit the heap to confirm tuple visibility for your snapshot, which can erase most of the expected win. Frequent writes clear all-visible bits until vacuum marks them again. So index-only scans work best on relatively stable data with healthy vacuuming.",
+    "real_world": "Teams add INCLUDE columns and expect a query to become much faster, but on a hot table the plan still does many heap fetches because recent writes keep pages from being all-visible. The index gets larger, but the latency barely improves.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What kinds of workloads are good candidates for relying on index-only scans?"
+   },
+   {
+    "question": "What is freezing in PostgreSQL, and how does wraparound become an outage if you ignore it?",
+    "answer": "PostgreSQL stores transaction IDs in tuples, and those IDs are finite, so old tuples eventually need to be marked frozen so they remain safely visible after XID wraparound. Vacuum is responsible for advancing freeze progress and protecting tables from becoming too old. If a database approaches the wraparound limit, PostgreSQL starts forcing aggressive vacuuming, and if it gets too far, it can block writes to avoid corruption. This is one of the few maintenance issues that can turn into a hard production incident rather than just slow queries.",
+    "real_world": "An idle but rarely vacuumed table can still trigger emergency anti-wraparound vacuum at a terrible time. On busy systems that means sudden I/O spikes, lock contention, and possibly write outages if the problem has been neglected too long.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Why can a table with very little current traffic still have dangerous transaction age?"
+   },
+   {
+    "question": "How do work_mem and hash aggregation or sorting interact, and what is the common mistake when tuning it?",
+    "answer": "work_mem is roughly a per-operation memory budget, not a per-query or per-connection cap. Sorts, hash joins, hash aggregates, and parallel workers can each consume their own allocation, and when they exceed it they spill to temporary files, which hurts latency. The common mistake is raising work_mem globally based on one slow query and then overcommitting memory under concurrency. Good tuning is usually targeted: fix the plan, reduce row counts earlier, or set a higher work_mem only for the specific session or workload.",
+    "real_world": "A reporting query spills several gigabytes to temp files, so someone raises work_mem instance-wide. Under peak traffic, many concurrent sorts and hashes now allocate far more RAM than expected and the database starts swapping or gets OOM-killed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect that a sort or hash operation is spilling in PostgreSQL?"
+   },
+   {
+    "question": "What is the practical difference between REINDEX, VACUUM FULL, and CLUSTER when you are dealing with bloat?",
+    "answer": "REINDEX rebuilds indexes, so it fixes index bloat but does not shrink heap bloat. VACUUM FULL rewrites the table into a compact copy and reclaims heap space back to the OS, but it takes an exclusive lock for the duration. CLUSTER also rewrites the table, physically ordering it by an index, which can help locality for some range scans but has the same heavy rewrite cost and the order decays over time. Picking the wrong tool either fails to solve the real bloat or creates avoidable downtime.",
+    "real_world": "A team sees a 5x table size increase and runs REINDEX, but query performance barely changes because the heap, not the indexes, is bloated. In another case, a careless VACUUM FULL on a hot table causes an application outage due to the lock.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you reduce bloat on a large production table without taking a long blocking lock?"
+   },
+   {
+    "question": "When do you use CREATE INDEX CONCURRENTLY, and what trade-offs should you explain before running it?",
+    "answer": "You use CREATE INDEX CONCURRENTLY when you need to add an index to a busy table without blocking normal reads and writes for the whole build. The trade-off is that it takes longer, does more work, and has stricter operational caveats, including failure cases that can leave an invalid index behind that you must clean up. It also waits on transaction state in ways that surprise people if long-running transactions are around. So it is safer for availability, but not simpler or cheaper.",
+    "real_world": "On a large table, a normal CREATE INDEX can block writers and cause an incident. The concurrent version avoids that, but if a migration framework wraps it in a transaction or a stale session holds things up, the deployment can still fail in confusing ways.",
+    "code_lang": "sql",
+    "code": "CREATE INDEX CONCURRENTLY idx_orders_created_at\nON orders (created_at);\n\nSELECT indexrelid::regclass, indisvalid\nFROM pg_index\nWHERE indexrelid = 'idx_orders_created_at'::regclass;",
+    "follow_up": "Why can CREATE INDEX CONCURRENTLY not be run inside a regular transaction block?"
+   },
+   {
+    "question": "What does PostgreSQL do during crash recovery, and what kinds of transactions are durable or lost after a crash?",
+    "answer": "After a crash, PostgreSQL replays WAL from the last checkpoint to bring data files to a consistent state. A transaction is durable only if its commit record reached the required WAL persistence point before the crash; committed-in-memory work can be lost. Changes from transactions that never committed are rolled back logically by visibility rules even if their data pages were partially written. So recovery is about restoring a valid state, not preserving every low-latency acknowledgement under every durability setting.",
+    "real_world": "If an application acknowledges business events as soon as the SQL call returns, durability assumptions matter. With less strict commit settings, a power loss can lose a small window of recently acknowledged transactions even though the database recovers cleanly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would synchronous replication change that durability story?"
+   },
+   {
+    "question": "How does PostgreSQL estimate row counts, and what statistics problems lead the planner badly astray?",
+    "answer": "The planner relies on table and column statistics collected by ANALYZE, including histograms, null fractions, most-common values, and estimated distinct counts. It struggles when data is highly skewed, columns are strongly correlated, predicates involve expressions without useful stats, or the stats are stale after major data changes. When estimates are wrong by orders of magnitude, the planner can pick the wrong join order or access path even though all the right indexes exist. Fixes are usually better statistics, not just more indexes.",
+    "real_world": "A table starts receiving tenant data with one huge tenant and many tiny ones. Queries that used to be fast suddenly choose plans optimized for average distributions and become very slow for the dominant tenant.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use extended statistics, and what specific planner mistake do they help with?"
+   },
+   {
+    "question": "What are advisory locks in PostgreSQL, and when are they the right tool instead of row locks?",
+    "answer": "Advisory locks are application-defined locks keyed by integers, independent of specific rows or tables. They are useful when the thing you need to serialize is not naturally represented by a locked row, such as one job per customer or one schema migration per tenant. They do not enforce data integrity by themselves, so every code path must cooperate, and misuse can create hidden contention or deadlocks. They are coordination primitives, not substitutes for normal relational constraints.",
+    "real_world": "A billing system may need to prevent two workers from generating the same customer's invoice at once, even though the work touches multiple tables and no single row is the obvious lock target. An advisory lock gives a cheap cross-process mutex inside the database.",
+    "code_lang": "sql",
+    "code": "SELECT pg_try_advisory_xact_lock(42) AS got_lock;\n-- true means this transaction owns the lock until commit/rollback",
+    "follow_up": "Why might you prefer transaction-scoped advisory locks over session-scoped ones?"
+   },
+   {
+    "question": "How would you reason about connection count in PostgreSQL, and why does adding more app connections often make throughput worse?",
+    "answer": "Each backend is a separate server process with its own memory overhead, and many active connections compete for CPU, shared buffers, locks, and I/O. Past a certain point, extra concurrency mostly adds context switching and contention while cache locality gets worse, so throughput flattens or drops and tail latency spikes. PostgreSQL generally prefers a moderate number of busy workers plus pooling, not thousands of simultaneously active sessions. The right limit depends on workload mix and hardware, but more connections is rarely a free scaling knob.",
+    "real_world": "A traffic spike hits, the app autoscaler opens hundreds of new database sessions, and response times get worse instead of better. Adding a pooler and queueing at the app boundary often restores throughput and stabilizes the database.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes when you put PgBouncer in transaction pooling mode?"
+   }
+  ]
+ }
+}

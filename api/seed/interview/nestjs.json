@@ -1,0 +1,453 @@
+{
+ "slug": "nestjs",
+ "name": "NestJS",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is NestJS, and what problem does it solve compared with plain Express or Fastify?",
+    "answer": "NestJS is a Node.js framework for building server-side applications with a structured architecture. It gives you modules, dependency injection, decorators, and a consistent way to organize controllers, services, and providers. Compared with plain Express, it reduces ad hoc project structure and makes larger codebases easier to test and maintain. It can still use Express or Fastify underneath, so you get framework structure without giving up the underlying HTTP platform.",
+    "real_world": "A team starting with a few routes in Express often hits messy file structure and tight coupling. NestJS helps keep features isolated as the codebase and team grow.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What are modules, controllers, and providers in NestJS?"
+   },
+   {
+    "question": "What is a module in NestJS?",
+    "answer": "A module is a class decorated with @Module that groups related controllers, providers, and imports. It is the main way NestJS organizes an application into feature boundaries. You use modules to keep code separated by responsibility, such as UsersModule or AuthModule. A common beginner mistake is putting everything in AppModule instead of splitting features into smaller modules.",
+    "real_world": "If authentication, users, and billing are all mixed together, changes become risky and hard to test. Separate modules make ownership and dependency flow clearer.",
+    "code_lang": "typescript",
+    "code": "@Module({\n  imports: [UsersModule],\n  controllers: [AuthController],\n  providers: [AuthService],\n})\nexport class AuthModule {}",
+    "follow_up": "How do modules share providers with each other?"
+   },
+   {
+    "question": "What is a controller in NestJS, and when would you use one?",
+    "answer": "A controller handles incoming requests and returns responses. In NestJS, controllers define route handlers with decorators like @Get and @Post. You use them for HTTP interface logic, while business logic should usually live in services. A common mistake is putting database or complex application logic directly in the controller.",
+    "real_world": "In production, thin controllers are easier to test and change when endpoints evolve. If a route needs to be reused by another transport later, the business logic is already separated.",
+    "code_lang": "typescript",
+    "code": "@Controller('users')\nexport class UsersController {\n  @Get()\n  findAll() {\n    return ['alice', 'bob'];\n  }\n}",
+    "follow_up": "Where should business logic live if not in the controller?"
+   },
+   {
+    "question": "What does @Injectable() do?",
+    "answer": "@Injectable() marks a class as a provider that Nest can manage and inject. It tells Nest to create and resolve the class through its dependency injection container. You usually add it to services and other classes with dependencies. Forgetting it is a common reason for injection errors.",
+    "real_world": "When a service suddenly cannot resolve a dependency after a refactor, the issue is often that one class was not marked injectable or not included in a module.",
+    "code_lang": "typescript",
+    "code": "@Injectable()\nexport class AuthService {\n  constructor(private readonly usersService: UsersService) {}\n}",
+    "follow_up": "How does Nest know which provider to inject into a constructor?"
+   },
+   {
+    "question": "How do you define a route in NestJS?",
+    "answer": "You define a route with a controller method plus an HTTP method decorator like @Get, @Post, @Put, or @Delete. The controller decorator can also define a path prefix, and method decorators add the specific endpoint. Nest combines them to build the final route. This is more structured than manually wiring routes in Express.",
+    "real_world": "A team can see all endpoints for a resource in one controller instead of searching through route registration code. That makes API changes and reviews much easier.",
+    "code_lang": "typescript",
+    "code": "@Controller('posts')\nexport class PostsController {\n  @Post()\n  create() {\n    return 'created';\n  }\n}",
+    "follow_up": "How do you access route parameters and request bodies?"
+   },
+   {
+    "question": "What is the difference between a DTO and an entity in NestJS?",
+    "answer": "A DTO, or Data Transfer Object, describes the shape of data coming in or going out of an API. An entity usually represents a database model or domain object. You use DTOs to validate and control external input, and entities for persistence or domain state. Mixing them can expose internal fields or make validation harder.",
+    "real_world": "If an API accepts extra fields directly into a database entity, clients may accidentally or intentionally set values they should not control. DTOs reduce that risk.",
+    "code_lang": "typescript",
+    "code": "export class CreateUserDto {\n  email: string;\n  password: string;\n}",
+    "follow_up": "How do you validate a DTO in NestJS?"
+   },
+   {
+    "question": "How does validation work in NestJS?",
+    "answer": "NestJS commonly uses pipes, especially ValidationPipe, together with class-validator decorators on DTO classes. The pipe checks incoming request data against the DTO rules before the controller method runs. This helps reject invalid input early and keeps validation out of business logic. A common beginner mistake is forgetting to enable the validation pipe, so decorators do nothing.",
+    "real_world": "Without request validation, bad data can reach services and cause database errors or inconsistent records. Early validation gives cleaner error responses to clients.",
+    "code_lang": "typescript",
+    "code": "// main.ts\napp.useGlobalPipes(new ValidationPipe());",
+    "follow_up": "What is the difference between pipes, guards, and interceptors?"
+   },
+   {
+    "question": "What is dependency injection in NestJS, and why is it important?",
+    "answer": "Dependency injection means a class receives the objects it depends on instead of creating them itself. Nest builds and supplies those dependencies through its container. This makes code easier to test, reuse, and change because implementations are not hardcoded inside classes. A common mistake is manually instantiating services with new, which bypasses Nest features like lifecycle hooks and mocked testing.",
+    "real_world": "In tests, you can replace a real database service with a fake one without changing the class under test. That makes unit tests fast and predictable.",
+    "code_lang": "typescript",
+    "code": "constructor(\n  private readonly usersService: UsersService,\n  private readonly mailer: MailerService,\n) {}",
+    "follow_up": "How does Nest resolve circular dependencies?"
+   },
+   {
+    "question": "What is a provider in NestJS, and how is it different from a controller?",
+    "answer": "A provider is any class that Nest can create and inject, usually a service with business logic or data access. Controllers handle incoming requests and return responses; providers do the actual work behind the controller. In practice, controllers stay thin and providers hold the reusable logic. This separation makes code easier to test and organize.",
+    "real_world": "A team might move database queries out of a controller into a provider so the same logic can be reused by multiple endpoints or scheduled jobs. It also makes unit testing simpler because the controller can mock the provider.",
+    "code_lang": "typescript",
+    "code": "@Injectable()\nexport class UsersService {\n  findAll() { return ['a', 'b']; }\n}\n\n@Controller('users')\nexport class UsersController {\n  constructor(private readonly usersService: UsersService) {}\n}",
+    "follow_up": "How does Nest know which provider instance to inject into a class?"
+   },
+   {
+    "question": "What is the role of the @Module() decorator?",
+    "answer": "@Module() tells Nest how to group related controllers, providers, and imported modules. It is the unit that defines what a feature exposes to the rest of the app and what dependencies it needs. Without modules, Nest would not know how to wire most of the application together. You use modules to keep features isolated and imports explicit.",
+    "real_world": "In a larger app, a PaymentsModule may import ConfigModule and export a PaymentsService so other modules can charge customers without knowing internal details. This prevents everything from being registered globally.",
+    "code_lang": "typescript",
+    "code": "@Module({\n  controllers: [UsersController],\n  providers: [UsersService],\n  exports: [UsersService],\n})\nexport class UsersModule {}",
+    "follow_up": "What is the difference between importing a module and exporting a provider?"
+   },
+   {
+    "question": "When would you use middleware in NestJS instead of a guard or an interceptor?",
+    "answer": "Middleware runs before the route handler and is best for request-level work like logging, parsing, or attaching data to the request object. Guards decide whether a request is allowed to continue, usually for authentication or authorization. Interceptors wrap handler execution and are useful for transforming responses or measuring timing. The main trade-off is that middleware is lower-level and does not have Nest route context the way guards and interceptors do.",
+    "real_world": "A request logger or correlation ID setup often belongs in middleware, while checking whether a user can access an admin route belongs in a guard. Mixing these up often leads to hard-to-maintain code.",
+    "code_lang": "typescript",
+    "code": "@Injectable()\nexport class LoggerMiddleware implements NestMiddleware {\n  use(req: any, res: any, next: () => void) {\n    console.log(req.method, req.url);\n    next();\n  }\n}",
+    "follow_up": "What is the execution order of middleware, guards, interceptors, and pipes?"
+   },
+   {
+    "question": "What is a guard in NestJS used for?",
+    "answer": "A guard decides whether a request should proceed to the route handler. It commonly checks authentication, roles, permissions, or any precondition for access. Guards return true or false, and Nest stops the request if a guard denies it. They are the right place for access control because they run before the controller method.",
+    "real_world": "If a public endpoint accidentally uses an admin-only guard, legitimate users get blocked. If a sensitive endpoint has no guard at all, anyone can hit it and access protected data.",
+    "code_lang": "typescript",
+    "code": "@Injectable()\nexport class AuthGuard implements CanActivate {\n  canActivate(context: ExecutionContext): boolean {\n    const req = context.switchToHttp().getRequest();\n    return Boolean(req.user);\n  }\n}",
+    "follow_up": "How would you apply a guard to one route versus an entire controller?"
+   },
+   {
+    "question": "What is a pipe in NestJS, and what do you use it for?",
+    "answer": "A pipe transforms or validates incoming data before it reaches the handler. Common uses are parsing route parameters, validating DTOs, and converting strings into numbers or dates. Pipes are useful because they keep controllers clean and fail fast on bad input. They are different from validators inside your service because they run at the framework boundary.",
+    "real_world": "A route like /users/:id often receives id as a string, but the service may need a number. A pipe can convert and reject invalid values before the database call happens.",
+    "code_lang": "typescript",
+    "code": "@Get(':id')\nfindOne(@Param('id', ParseIntPipe) id: number) {\n  return this.usersService.findOne(id);\n}",
+    "follow_up": "What happens if the incoming value cannot be parsed or validated?"
+   },
+   {
+    "question": "How do you inject a service into another class in NestJS?",
+    "answer": "You add the service to the constructor of the class that needs it, and Nest resolves it from the dependency injection container. The service must be provided in a module that is visible to the consumer module, either directly or through imports and exports. This keeps object creation out of your own code and makes dependencies explicit. It also makes testing easier because you can replace the dependency with a mock.",
+    "real_world": "A UsersController can depend on UsersService without creating it with new. In tests, you can swap the real service for a fake one to avoid hitting the database.",
+    "code_lang": "typescript",
+    "code": "@Controller('users')\nexport class UsersController {\n  constructor(private readonly usersService: UsersService) {}\n}",
+    "follow_up": "What happens if Nest cannot find a provider for a constructor parameter?"
+   },
+   {
+    "question": "What is the purpose of the main.ts file in a NestJS app?",
+    "answer": "main.ts is the application entry point where Nest creates the app instance and starts listening for requests. It is also where you usually configure global features like validation pipes, CORS, and global prefixes. You keep bootstrap logic there, not in controllers or services. That keeps startup concerns separate from business logic.",
+    "real_world": "If a team wants every API route to be prefixed with /api or every request to use a global validation pipe, they usually configure that in main.ts. It centralizes app-wide setup.",
+    "code_lang": "typescript",
+    "code": "async function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n  app.setGlobalPrefix('api');\n  await app.listen(3000);\n}\nbootstrap();",
+    "follow_up": "What is the difference between global and route-level configuration?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do interceptors differ from pipes and guards in NestJS?",
+    "answer": "Guards decide whether a request is allowed to continue, pipes transform or validate incoming data, and interceptors can wrap execution before and after the handler. Interceptors are useful for cross-cutting concerns like logging, response mapping, timing, or caching because they can observe both the request and the returned value. A common mistake is using an interceptor for authorization logic, which belongs in a guard. Another is using it for simple input validation, which is better handled by pipes.",
+    "real_world": "Teams often add an interceptor to log slow requests or standardize response shapes across controllers. If that logic is placed in each handler, it becomes inconsistent and hard to maintain.",
+    "code_lang": "typescript",
+    "code": "@UseInterceptors(TimingInterceptor)\n@Get(':id')\nfindOne(@Param('id') id: string) {\n  return this.usersService.findOne(id);\n}",
+    "follow_up": "How would you write an interceptor that transforms every response into the same envelope shape?"
+   },
+   {
+    "question": "How does NestJS handle exception filters, and when would you create a custom one?",
+    "answer": "NestJS has built-in exception handling, but a custom exception filter lets you control how specific errors are translated into HTTP responses. You would use one when you need consistent error formatting, special handling for domain errors, or integration with an external error schema. Filters are also useful for logging errors before they reach the client. The trade-off is that overusing custom filters can hide useful framework defaults, so keep them focused.",
+    "real_world": "A common production issue is leaking database error messages to clients or returning inconsistent error JSON. A filter can centralize the mapping from internal errors to safe public responses.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make a filter catch both framework exceptions and your own custom errors?"
+   },
+   {
+    "question": "What is the difference between singleton, request-scoped, and transient providers in NestJS?",
+    "answer": "Singleton providers are created once and shared, request-scoped providers are created per request, and transient providers are created each time they are injected. Singleton is the default and is the most efficient, but it is not suitable for request-specific state. Request scope is useful when you need per-request context such as a correlation ID, but it adds overhead because Nest must create more instances. Transient is rarer and makes sense when each consumer needs its own instance.",
+    "real_world": "If you store request user data in a singleton service, one request can accidentally affect another. Request scope fixes that, but on a high-traffic API it can noticeably increase latency and memory use.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you avoid request-scoped providers even if they seem convenient?"
+   },
+   {
+    "question": "How do you handle circular dependencies between providers in NestJS?",
+    "answer": "Circular dependencies happen when two providers depend on each other directly or indirectly, which makes dependency resolution impossible without help. NestJS provides a forward reference mechanism, but the better fix is usually to refactor shared logic into a third service or split responsibilities more cleanly. Use the framework escape hatch only when the design cannot be simplified quickly. Circular dependencies often signal a domain boundary problem, not just a DI problem.",
+    "real_world": "In real projects, this often appears when a user service needs a file service and the file service also needs user data. Refactoring one side to depend on an interface-like abstraction or a smaller shared service usually makes the code easier to test too.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you recognize a circular dependency during startup or in tests?"
+   },
+   {
+    "question": "How do you register and use a custom provider token in NestJS?",
+    "answer": "Custom tokens let you inject values or implementations that are not classes, such as configuration objects or alternate implementations behind the same interface. You register them with a provider using a token and then inject by that token instead of the class type. This is useful for decoupling code from concrete implementations and for testing with mocks. The main trade-off is that string tokens are less discoverable than class-based injection, so keep token names consistent and centralized.",
+    "real_world": "A team might use a custom token to swap a real payment gateway client for a fake one in tests or a sandbox implementation in staging. This avoids hard-coding environment-specific behavior in business logic.",
+    "code_lang": "typescript",
+    "code": "export const PAYMENT_CLIENT = 'PAYMENT_CLIENT';\n\nproviders: [\n  { provide: PAYMENT_CLIENT, useClass: StripeClient },\n]\n\nconstructor(@Inject(PAYMENT_CLIENT) private client: PaymentClient) {}",
+    "follow_up": "What would you use if you wanted to inject a prebuilt object instead of a class?"
+   },
+   {
+    "question": "What happens if you forget to import the module that exports a provider you want to use?",
+    "answer": "The provider will not be visible in the consuming module, so Nest cannot resolve the dependency and the app usually fails at startup with a resolution error. In Nest, providers are scoped to the module that declares them unless that module exports them and the consuming module imports that module. This module boundary is important because it keeps dependencies explicit. If something resolves unexpectedly, it often means the provider is being registered more broadly than intended.",
+    "real_world": "This shows up often when a feature works in one module but fails in another after refactoring. The fix is usually to export the provider from the feature module and import that module where needed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you structure shared functionality so you do not end up with a large shared module?"
+   },
+   {
+    "question": "How do you use `forwardRef()` in NestJS, and why should it be a last resort?",
+    "answer": "`forwardRef()` lets Nest resolve a dependency even when two modules or providers refer to each other. It is a workaround for circular dependencies, not the preferred design, because it makes the dependency graph harder to understand and maintain. If you rely on it too much, you usually have modules that are doing too many things or know too much about each other. Refactoring the boundary is almost always a better long-term fix.",
+    "real_world": "This often appears in feature-rich systems where two modules grow together over time, such as billing and subscriptions. The immediate fix unblocks development, but teams usually later extract shared concerns into a separate module or service.",
+    "code_lang": "typescript",
+    "code": "@Injectable()\nexport class A {\n  constructor(@Inject(forwardRef(() => B)) private b: B) {}\n}",
+    "follow_up": "What design change would let you remove the circular dependency entirely?"
+   },
+   {
+    "question": "What are the trade-offs of using request-scoped providers for things like auth context or tenant information?",
+    "answer": "Request-scoped providers make per-request data easy to access without passing it through every method, which can simplify code. The downside is performance: Nest has to create and wire more instances for each request, which can be expensive under load. They can also make testing and caching more complicated because object lifetimes are shorter and less predictable. For many apps, passing context explicitly or using a lightweight request object is more efficient.",
+    "real_world": "Multi-tenant APIs often need tenant IDs on many downstream calls. Request scope can make that neat, but at scale it may become a bottleneck if overused across many services.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you pass request context through your app without making every service request-scoped?"
+   },
+   {
+    "question": "How do you write and use a custom decorator in NestJS, and when is it a good idea?",
+    "answer": "Custom decorators let you package repeated metadata or parameter extraction logic into a reusable form. They are a good fit when multiple handlers need the same header, user, or role information and you want to avoid repeating low-level request access. The trade-off is that too much hidden behavior can make code harder to read, so use them for common patterns, not one-off tricks. They work especially well with guards, pipes, and metadata-based frameworks.",
+    "real_world": "A team might create a decorator to read the authenticated user or tenant ID from the request so handlers stay focused on business logic. That reduces repetition across many controllers.",
+    "code_lang": "typescript",
+    "code": "export const CurrentUser = createParamDecorator((data, ctx) => {\n  const req = ctx.switchToHttp().getRequest();\n  return req.user;\n});",
+    "follow_up": "How would you combine a custom decorator with a guard that populates `req.user`?"
+   },
+   {
+    "question": "What is the practical difference between using `class-validator` with `ValidationPipe` and validating manually inside a service?",
+    "answer": "`ValidationPipe` catches bad input at the boundary, before the request reaches business logic, which keeps services simpler and more reliable. Manual validation inside a service gives you full control, but it tends to duplicate checks and mixes transport concerns with domain logic. The main benefit of the pipe approach is consistency: invalid data is rejected early and uniformly. Manual validation is still useful for complex business rules that depend on database state or multiple fields.",
+    "real_world": "If every controller validates differently, clients get inconsistent errors and services still have to defend against bad data. Centralized validation reduces that duplication and makes API behavior easier to document.",
+    "code_lang": "typescript",
+    "code": "@Post()\ncreate(@Body(new ValidationPipe()) dto: CreateUserDto) {\n  return this.usersService.create(dto);\n}",
+    "follow_up": "What kinds of rules would you keep out of DTO validation and enforce in the service instead?"
+   },
+   {
+    "question": "How do global prefixes, versioning, and route paths interact in NestJS, and what can go wrong if you mix them carelessly?",
+    "answer": "The final URL is built from the controller path, method path, any global prefix, and optionally the versioning strategy. The main risk is thinking a route exists at one path while clients are actually calling a different composed path, especially during migrations. I keep versioning explicit and avoid duplicating path segments in both controller decorators and bootstrap configuration.",
+    "real_world": "This comes up during API migrations when a team adds `/api` globally and also hardcodes it in controllers, then breaks mobile clients with 404s. It also matters when supporting v1 and v2 side by side.",
+    "code_lang": "typescript",
+    "code": "app.setGlobalPrefix('api');\napp.enableVersioning({ type: VersioningType.URI });\n\n@Controller({ path: 'users', version: '1' })\nexport class UsersController {\n  @Get()\n  findAll() {}\n}\n// GET /api/v1/users",
+    "follow_up": "When would you choose URI versioning over header-based versioning?"
+   },
+   {
+    "question": "How do you use NestJS lifecycle hooks like `OnModuleInit` or `OnApplicationBootstrap`, and what problems do they solve?",
+    "answer": "These hooks let a provider run setup code after dependencies are wired, which is useful for warmup, background registration, or connecting to external systems. `OnModuleInit` is for module-level initialization, while `OnApplicationBootstrap` runs once the app is fully initialized. They should not replace constructors for dependency wiring, and they should be used carefully because slow startup code delays readiness.",
+    "real_world": "Teams use these hooks to preload caches, verify database connectivity, or register consumers with message brokers before accepting traffic. If startup fails here, it is better to crash early than serve partial functionality.",
+    "code_lang": "typescript",
+    "code": "@Injectable()\nexport class CacheWarmupService implements OnModuleInit {\n  async onModuleInit() {\n    await this.preloadTopKeys();\n  }\n  private async preloadTopKeys() {}\n}",
+    "follow_up": "How would you make startup initialization idempotent and testable?"
+   },
+   {
+    "question": "What is the practical difference between `forRoot()` and `forRootAsync()` in a NestJS module?",
+    "answer": "`forRoot()` is for synchronous configuration that is already available at bootstrap time, while `forRootAsync()` lets you compute or fetch configuration before creating the module. The async version is useful for secrets managers, environment validation, or dependencies that need other providers. The trade-off is more complexity and startup latency, so I only use it when configuration truly depends on async work.",
+    "real_world": "This is common when configuring a database or cache with secrets from Vault or AWS parameter stores. It also helps when one module must wait for another module's config service.",
+    "code_lang": "typescript",
+    "code": "ConfigModule.forRootAsync({\n  inject: [ConfigService],\n  useFactory: async (config: ConfigService) => ({\n    url: config.getOrThrow('DATABASE_URL'),\n  }),\n});",
+    "follow_up": "What should you do if the async configuration source is temporarily unavailable at startup?"
+   },
+   {
+    "question": "How would you structure a NestJS app when you need a clean boundary between HTTP controllers, application logic, and persistence?",
+    "answer": "I usually keep controllers thin, put orchestration in application services, and isolate database access behind repository or data-access services. That makes business logic easier to test and reduces framework coupling. The key trade-off is adding layers, but in real projects that cost is usually worth the maintainability and testability benefits.",
+    "real_world": "This prevents controllers from turning into large transaction scripts that are hard to change and hard to mock in tests. It also helps when the same use case must later be triggered by a queue consumer or cron job.",
+    "code_lang": "typescript",
+    "code": "@Controller('orders')\nexport class OrdersController {\n  constructor(private readonly orders: OrdersService) {}\n\n  @Post()\n  create(@Body() dto: CreateOrderDto) {\n    return this.orders.placeOrder(dto);\n  }\n}",
+    "follow_up": "How do you keep the application service from becoming a god class?"
+   },
+   {
+    "question": "What happens if you throw an error inside an interceptor or an asynchronous provider method in NestJS?",
+    "answer": "An error thrown in an interceptor propagates to Nest's exception handling pipeline, so the request usually fails unless the interceptor catches and converts it. For async provider methods, the error happens during initialization or request handling depending on where the promise is awaited, and it can fail startup or the current request. The important part is to know whether you want to fail fast or translate the error into a controlled HTTP response.",
+    "real_world": "This matters when calling downstream services for auth, rate limits, or data enrichment. A bad retry or swallowed exception can either take the app down at startup or hide production failures.",
+    "code_lang": "typescript",
+    "code": "@Injectable()\nexport class TimingInterceptor implements NestInterceptor {\n  intercept(ctx: ExecutionContext, next: CallHandler) {\n    return next.handle().pipe(\n      catchError(err => { throw err; })\n    );\n  }\n}",
+    "follow_up": "How would you add logging here without changing the response behavior?"
+   },
+   {
+    "question": "How do you test a NestJS service that depends on multiple providers, and what do you mock versus keep real?",
+    "answer": "I usually build a TestingModule, replace external dependencies with mocks, and keep pure domain logic real. Mock the database, HTTP clients, and queues, but avoid mocking the service under test or its internal business rules. The goal is to verify behavior and wiring, not the internals of Nest's container.",
+    "real_world": "This is common when a service writes to a database and sends an email; the test should check that both actions are attempted without touching real infrastructure. It keeps tests fast and reliable in CI.",
+    "code_lang": "typescript",
+    "code": "const module = await Test.createTestingModule({\n  providers: [UserService, { provide: MailService, useValue: { send: jest.fn() } }],\n}).compile();\nconst service = module.get(UserService);",
+    "follow_up": "When would you choose an end-to-end test instead of a unit test in NestJS?"
+   },
+   {
+    "question": "What is the difference between using `@UseGuards()` at the controller level versus registering a guard globally?",
+    "answer": "Controller-level guards apply only to a specific route group, while global guards run for every request unless explicitly bypassed. Global guards are good for app-wide concerns like authentication, but they can make local behavior harder to see and test. I prefer controller-level guards for business-specific access rules and global guards for cross-cutting security checks.",
+    "real_world": "A common setup is one global auth guard plus a route-level roles guard on admin endpoints. That avoids repeating the same authentication logic everywhere while keeping authorization close to the endpoint.",
+    "code_lang": "typescript",
+    "code": "@UseGuards(AuthGuard)\n@Controller('admin')\nexport class AdminController {\n  @Get()\n  list() {}\n}",
+    "follow_up": "How would you exempt a health check endpoint from a global guard?"
+   },
+   {
+    "question": "How do you handle transactions in NestJS when a service method needs to update multiple tables consistently?",
+    "answer": "The service should start the transaction through the ORM or database client and pass the transaction context through the data-access calls. The key is to keep all related writes on the same transaction boundary and avoid mixing transactional and non-transactional operations. I would not hide transaction control deep inside unrelated repositories because it makes failures and retries hard to reason about.",
+    "real_world": "This matters for order placement, payment capture, or inventory reservation, where a partial update can corrupt state. In production, missing a transaction often shows up as duplicate rows or orphaned records after retries.",
+    "code_lang": "typescript",
+    "code": "await dataSource.transaction(async manager => {\n  await manager.save(order);\n  await manager.save(reservation);\n});",
+    "follow_up": "How would you structure this if the flow also sends a message to a queue?"
+   },
+   {
+    "question": "What are the trade-offs between using a Cron job inside NestJS and putting the same work on a queue worker?",
+    "answer": "A Cron job is simple for periodic work, but it runs on a schedule in-process, so it is easier to duplicate accidentally across multiple replicas. A queue worker is better when you need durability, retries, or horizontal scaling of the job itself. I choose Cron for lightweight scheduled maintenance and a queue for long-running or failure-prone jobs.",
+    "real_world": "Teams often start with Cron for cache refreshes or cleanup tasks, then move to a queue when they deploy multiple app instances and the job starts running several times. That causes duplicate emails or double billing unless the work is made idempotent.",
+    "code_lang": "typescript",
+    "code": "@Cron('0 * * * *')\nrefreshCache() {\n  return this.cacheService.refreshAll();\n}",
+    "follow_up": "How do you make scheduled jobs safe to run more than once?"
+   },
+   {
+    "question": "How would you debug a NestJS app where a provider is correctly registered but still undefined at runtime?",
+    "answer": "I would first check the module graph: the provider must be exported from one module and imported by the consuming module. Then I would verify the injection token matches exactly, especially if a custom token or interface-style injection is involved. If the app compiles but the value is still wrong, I would inspect scope mismatches and circular dependencies next.",
+    "real_world": "This is a common production issue after refactoring into shared modules, where the code compiles but one feature starts failing with undefined dependencies. It usually comes from an import/export mistake rather than the provider itself.",
+    "code_lang": "typescript",
+    "code": "@Module({\n  imports: [UsersModule],\n  providers: [OrdersService],\n})\nexport class OrdersModule {}",
+    "follow_up": "What signs point to a circular dependency rather than a missing export?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does NestJS actually resolve providers at startup, and where do expensive bootstrap times usually come from in a large app?",
+    "answer": "Nest builds a dependency graph by scanning module metadata, registering providers under tokens, then instantiating them in dependency order. Startup gets slow when modules do heavy work during construction or lifecycle hooks, especially network calls, schema discovery, or creating many dynamic providers. Reflection and metadata scanning exist, but they are rarely the dominant cost compared with user code. The practical rule is to keep constructors cheap, defer I/O until first use or explicit warmup, and be careful with global modules that pull in large subgraphs.",
+    "real_world": "Teams often blame Nest when cold starts jump to seconds, but the real cause is usually providers opening database connections, fetching secrets, or building SDK clients during bootstrap across many modules.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you move out of a provider constructor if you were optimizing cold start time?"
+   },
+   {
+    "question": "What are the trade-offs between Express and Fastify adapters in NestJS when you care about throughput, ecosystem compatibility, and operational risk?",
+    "answer": "Fastify usually gives better throughput and lower overhead, especially under high concurrency, but some Express middleware and assumptions do not port cleanly. Nest abstracts most request handling, yet adapter-specific behavior still matters for raw response handling, plugins, and middleware compatibility. Express is often lower risk if your team depends on mature middleware or existing instrumentation built around it. I would choose Fastify for performance-sensitive APIs only after checking plugin support, body parsing limits, and any library that touches the raw request or response.",
+    "real_world": "A migration can look fine in unit tests and then break file upload, custom auth middleware, or monitoring hooks because they relied on Express-specific request objects.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts of a Nest app are most likely to break when switching adapters?"
+   },
+   {
+    "question": "How do global pipes, guards, interceptors, and filters execute in relation to each other, and why does that order matter in production incidents?",
+    "answer": "For a request, middleware runs before Nest's route pipeline, then guards decide access, interceptors wrap handler execution, pipes transform and validate arguments before the handler, and filters handle uncaught exceptions. The order matters because the wrong layer can hide errors, do expensive work before authorization, or log incomplete context. For example, validation should not run for requests that a guard will reject anyway, and response-mapping interceptors need to preserve exceptions instead of swallowing them. Understanding the chain is critical when latency spikes or error handling becomes inconsistent.",
+    "real_world": "A common incident is placing heavy deserialization in a place that runs before auth checks, which wastes CPU during traffic spikes from unauthorized clients.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you need request timing, auth context, and consistent error logging, which cross-cutting concern would you put in each layer?"
+   },
+   {
+    "question": "When would you use AsyncLocalStorage with NestJS, and what are the failure modes compared with request-scoped providers for request context?",
+    "answer": "AsyncLocalStorage is useful when you need per-request context like correlation IDs or tenant IDs available deep in async call chains without making half the graph request-scoped. It is typically cheaper than request scope because it avoids rebuilding provider instances per request, but it depends on async context propagation being preserved by the libraries you use. Failures show up as missing or wrong context in background callbacks, custom event emitters, or code paths that leave the original async chain. Request scope is more explicit and reliable inside Nest's DI boundary, but it has higher allocation and resolution cost.",
+    "real_world": "This matters when logs from concurrent requests get mixed, or a tenant ID disappears inside an ORM hook or message callback and writes data to the wrong partition.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you propagate correlation IDs from HTTP into queued jobs or message consumers where AsyncLocalStorage does not automatically carry over?"
+   },
+   {
+    "question": "How would you design idempotency for a NestJS write endpoint that may be retried by clients or gateways?",
+    "answer": "I would treat idempotency as an application concern, not a controller trick: require a stable idempotency key, persist the key with request fingerprint and final result, and make the write plus key recording atomic. The handler should return the stored result for safe retries and reject mismatched payloads using the same key. You also need expiry rules, concurrency protection so two identical in-flight requests do not both execute, and a clear story for partial failure if downstream side effects are involved. Nest helps organize this with interceptors or services, but the correctness comes from storage semantics.",
+    "real_world": "Payment and order APIs commonly see retries from mobile clients, load balancers, or timeouts; without idempotency, one transient network failure turns into duplicate charges or duplicate shipments.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prevent two concurrent requests with the same idempotency key from both creating a record?"
+   },
+   {
+    "question": "What can go wrong when using `@nestjs/schedule` or in-process timers in a horizontally scaled NestJS deployment?",
+    "answer": "In-process schedulers run in every instance unless you add coordination, so the same job may execute multiple times after scaling out. They also stop during deploys, crashes, or restarts, so they are poor for work that must run exactly once or survive instance churn. For critical jobs, use an external scheduler, a queue with deduplication or locking, or leader election with clear failure handling. In-process scheduling is fine for lightweight best-effort tasks like cache refreshes where occasional duplication is acceptable.",
+    "real_world": "A classic incident is three replicas all sending the same billing reminder or all running the same cleanup, causing duplicate emails or lock contention against the database.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you had to keep the scheduler inside Nest, how would you implement distributed locking and what failure cases would you still worry about?"
+   },
+   {
+    "question": "How do you avoid memory and latency problems when returning large datasets from a NestJS endpoint?",
+    "answer": "The first step is to avoid loading everything into memory; paginate by default and push filtering to the database. If clients truly need large exports, stream the response and process rows incrementally instead of materializing arrays and serializing giant objects at once. You also need to watch interceptors or serializers that buffer or transform the full payload, because they can cancel the benefit of streaming. Compression helps bandwidth but can increase CPU, so it is a trade-off under load.",
+    "real_world": "Teams often discover this when a seemingly harmless export route causes high heap usage, long GC pauses, and occasional container restarts during peak traffic.",
+    "code_lang": "typescript",
+    "code": "@Get('export')\nasync export(@Res() res: Response) {\n  res.setHeader('Content-Type', 'application/x-ndjson');\n  for await (const row of this.reportService.streamRows()) {\n    if (!res.write(JSON.stringify(row) + '\\n')) {\n      await once(res, 'drain');\n    }\n  }\n  res.end();\n}",
+    "follow_up": "What Nest features stop applying once you take over the raw response object with `@Res()`?"
+   },
+   {
+    "question": "How would you handle database connection pool pressure in a NestJS service under bursty traffic?",
+    "answer": "Nest itself will not save you from pool exhaustion; the main controls are query efficiency, concurrency limits, and backpressure. I would size the pool based on database capacity, avoid opening multiple parallel queries per request unless there is a clear win, and cap concurrency for expensive operations with queues or semaphores. Timeouts and cancellation matter too, otherwise slow requests hold connections and amplify tail latency. If request scope creates one ORM context per request, I would review whether that is needed because it can increase churn and hidden work.",
+    "real_world": "Under bursts, a service can look healthy at the HTTP layer while requests pile up waiting for database connections, eventually timing out and causing a retry storm.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you add first to tell whether the bottleneck is pool saturation, slow queries, or too much app-level parallelism?"
+   },
+   {
+    "question": "What are the gotchas when using hybrid NestJS apps or multiple transports, like HTTP plus microservices, in the same process?",
+    "answer": "The main gotcha is assuming cross-cutting concerns are shared automatically when they are often transport-specific. Guards, pipes, interceptors, and exception handling can behave differently between HTTP, RPC, and message-based contexts, and request objects or status codes do not map cleanly. Lifecycle and shutdown also get trickier because one process now owns multiple servers and client connections with different failure modes. It can be efficient for simple deployments, but it increases coupling and makes resource isolation harder.",
+    "real_world": "A team may centralize HTTP and queue consumers in one Nest process, then discover a slow consumer starves CPU or memory and degrades API latency even though the transports are logically separate.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you split transports into separate deployables instead of keeping them in one Nest application?"
+   },
+   {
+    "question": "What happens if an RxJS-based interceptor or handler never completes, and how do you debug that in NestJS?",
+    "answer": "Nest can handle Observables, but the response only finishes when the stream completes or errors. If an interceptor returns a stream that never completes, or uses an operator that waits forever, the client sees a hanging request and resources stay occupied until timeout or disconnect. I would inspect the observable chain, confirm whether the route is supposed to be streaming, and add timeout, finalize, and logging around subscription boundaries. This is a common edge case when mixing Promise-based code with RxJS operators incorrectly.",
+    "real_world": "In production this shows up as a small percentage of requests that never return, steadily consuming sockets and causing mysterious latency under load.",
+    "code_lang": "typescript",
+    "code": "return next.handle().pipe(\n  timeout(2000),\n  finalize(() => this.logger.debug('request done')),\n  catchError(err => throwError(() => err)),\n);",
+    "follow_up": "How would you distinguish a legitimately long-lived stream, like SSE, from a bug where a normal HTTP request never completes?"
+   },
+   {
+    "question": "How does the NestJS execution context differ across HTTP, GraphQL, WebSockets, and microservices, and what mistakes happen when code assumes HTTP everywhere?",
+    "answer": "Nest wraps each transport in an `ExecutionContext`, but the underlying objects differ: HTTP has request/response, GraphQL usually needs `GqlExecutionContext`, WebSockets expose client and payload, and RPC transports expose data and context metadata. Code that directly calls `switchToHttp()` inside a guard, interceptor, or decorator becomes transport-specific and silently breaks when reused elsewhere. A strong pattern is to keep transport extraction at the edge and pass normalized application data inward. That preserves reuse and makes tests less coupled to Nest internals.",
+    "real_world": "Teams often write an auth guard against Express `req.user`, then later add GraphQL or NATS and discover authorization always fails because the user was never read from the right context.",
+    "code_lang": "typescript",
+    "code": "const ctx = host.getType();\nif (ctx === 'http') {\n  return host.switchToHttp().getRequest().user;\n}\nif (ctx === 'graphql') {\n  return GqlExecutionContext.create(host).getContext().req.user;\n}\nthrow new UnauthorizedException();",
+    "follow_up": "How would you design a shared authentication layer that works across both REST and GraphQL without duplicating guard logic?"
+   },
+   {
+    "question": "What are dynamic modules in NestJS really doing under the hood, and when do they become a maintenance problem?",
+    "answer": "A dynamic module is just a module factory that returns metadata: providers, exports, imports, and optionally a global flag, usually parameterized by config. Under the hood Nest still builds the same dependency graph, but dynamic modules let you generate different provider bindings per import site. They become a problem when they hide too much behavior, register duplicate expensive clients, or create hard-to-trace global state. Senior teams keep them thin: configuration in, explicit providers out, minimal side effects.",
+    "real_world": "A common incident is importing the same dynamic database or Kafka module in several feature modules and accidentally creating multiple connection pools or consumers in one process.",
+    "code_lang": "typescript",
+    "code": "@Module({})\nexport class CacheModule {\n  static register(ttl: number): DynamicModule {\n    return {\n      module: CacheModule,\n      providers: [{ provide: 'TTL', useValue: ttl }],\n      exports: ['TTL'],\n    };\n  }\n}",
+    "follow_up": "How would you prevent a dynamic module from being instantiated multiple times with conflicting configuration?"
+   },
+   {
+    "question": "How do you share state safely in a NestJS application, and when is a singleton provider the wrong place for mutable data?",
+    "answer": "Nest providers are singleton by default, so any mutable field on them is shared across all requests handled by that process. That is fine for immutable config, caches with proper concurrency semantics, or pooled clients, but it is wrong for per-request state like current user, tenant, or in-flight workflow data. In Node, requests interleave on the event loop, so mutable singleton state can leak between users even without threads. Prefer explicit method parameters, AsyncLocalStorage when justified, or external stores for cross-instance coordination.",
+    "real_world": "A classic bug is storing `currentTenant` on a service during one request and reading it later in another request under load, causing cross-tenant reads or writes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you did need an in-memory cache in a singleton provider, what safeguards would you add around staleness and multi-instance consistency?"
+   },
+   {
+    "question": "What is the difference between `useClass`, `useExisting`, `useValue`, and `useFactory` providers in NestJS, and how do those choices affect behavior in production?",
+    "answer": "`useClass` creates a new instance for the token using that class, while `useExisting` aliases one token to another existing instance. `useValue` injects a fixed object or primitive, and `useFactory` computes the value, optionally from dependencies and async setup. The production impact is around lifecycle and duplication: `useClass` can unintentionally create multiple copies of something expensive, while `useExisting` avoids that by reusing one instance. `useFactory` is the most flexible but can hide startup cost and failure paths if it performs I/O.",
+    "real_world": "This matters when wrapping clients like Redis, metrics, or feature flag SDKs: the wrong binding can create two clients, two connection pools, and double the traffic to the dependency.",
+    "code_lang": "typescript",
+    "code": "providers: [\n  ServiceA,\n  { provide: 'A_ALIAS', useExisting: ServiceA },\n  { provide: 'CFG', useValue: { enabled: true } },\n  { provide: 'ID', useFactory: () => crypto.randomUUID() },\n]",
+    "follow_up": "When would `useExisting` be safer than `useClass` for an interface-style token?"
+   },
+   {
+    "question": "How do you implement multi-tenancy in NestJS without letting tenant resolution infect every provider in the system?",
+    "answer": "Resolve tenant identity at the boundary, then pass it through a narrow application context instead of making most providers request-scoped. The main design choices are shared database with tenant keys, schema-per-tenant, or database-per-tenant; each changes connection management, migration complexity, and isolation guarantees. In Nest, a good pattern is a tenant resolver plus repository or unit-of-work abstractions that accept tenant context explicitly. Avoid dynamically creating providers or connections per request unless tenant cardinality is low and pool limits are tightly controlled.",
+    "real_world": "Systems that open a separate ORM connection per request or per tenant often look clean in code but fall over in production from pool exhaustion and high memory usage.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would your design change if some tenants require hard isolation at the database level while others can share infrastructure?"
+   },
+   {
+    "question": "How would you run background work from a NestJS app without losing jobs during deploys or process crashes?",
+    "answer": "Do not treat in-process async work kicked off from a request handler as durable. If the process restarts, the pod is killed, or the event loop stalls, that work can be lost or run twice with no visibility. Use a durable queue or workflow system, make handlers idempotent, and acknowledge only after the job is persisted. Nest can host the producer and consumer code, but reliability comes from the external queue semantics, not from the framework.",
+    "real_world": "A frequent incident is sending emails or charging cards in a fire-and-forget promise after returning 200; deploys or OOM kills drop the work while clients think the action succeeded.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What idempotency strategy would you use for a job that might be delivered more than once?"
+   },
+   {
+    "question": "How do you deal with graceful shutdown in NestJS, and what resources usually get missed?",
+    "answer": "Graceful shutdown means stopping new traffic, letting in-flight work finish within a timeout, and closing external resources cleanly. In Nest you typically enable shutdown hooks and implement lifecycle cleanup for HTTP servers, database pools, message consumers, schedulers, and long-lived sockets. The common mistake is closing only the app while leaving queue consumers or intervals running, which causes duplicate processing or hanging termination. You also need readiness probes to fail before termination so traffic drains before the process exits.",
+    "real_world": "In Kubernetes, missing shutdown handling often shows up as 5xx spikes during rolling deploys or duplicate job execution because the old pod keeps consuming while the new pod starts too.",
+    "code_lang": "typescript",
+    "code": "async function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n  app.enableShutdownHooks();\n  await app.listen(3000);\n}",
+    "follow_up": "How would you coordinate shutdown if the same Nest process serves HTTP traffic and also consumes from a queue?"
+   },
+   {
+    "question": "How do serialization and transformation work in NestJS responses, and what are the performance and data-leak trade-offs?",
+    "answer": "Nest can transform returned objects through interceptors like `ClassSerializerInterceptor`, often using class-transformer metadata to expose or exclude fields. That is convenient for shaping responses, but it adds CPU overhead and can allocate heavily on large lists. It also creates a security risk if you assume ORM entities are safe to return and forget to exclude internal fields. For hot paths, many teams skip automatic transformation and map explicitly to lean response objects.",
+    "real_world": "An API that returns thousands of rows can see noticeable latency from per-object serialization, and teams have accidentally exposed password hashes or internal flags by returning entities directly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you keep `ClassSerializerInterceptor`, and when would you replace it with explicit mapping?"
+   },
+   {
+    "question": "What are the trade-offs between `NestFactory.createApplicationContext()` and a full HTTP application, and where does application context help in production tooling?",
+    "answer": "`createApplicationContext()` boots the DI container without starting an HTTP server, which is useful for CLI commands, migrations, one-off jobs, or consumers that only need providers. It starts faster and avoids web adapter overhead, but the same module side effects still run, so expensive imports can still hurt startup time. The main trade-off is reuse versus coupling: you can share business providers with the main app, but you should avoid pulling in web-only modules for simple operational tasks. That keeps maintenance tasks safer and easier to run in automation.",
+    "real_world": "Teams use application context for backfills or admin scripts so they can reuse repositories and domain services without exposing dangerous endpoints in the API.",
+    "code_lang": "typescript",
+    "code": "async function run() {\n  const app = await NestFactory.createApplicationContext(AppModule);\n  const svc = app.get(BackfillService);\n  await svc.run();\n  await app.close();\n}",
+    "follow_up": "How would you structure modules so a CLI command can reuse domain services without booting the whole web stack?"
+   },
+   {
+    "question": "How would you diagnose a memory leak in a NestJS service, and what framework-specific causes have you seen?",
+    "answer": "First confirm growth is real: watch heap over time, GC behavior, and whether RSS versus heap is increasing. In Nest-specific code, common causes are request-scoped objects retained by closures, event listeners or RxJS subscriptions never cleaned up, in-memory caches without bounds, and per-request logging or tracing context accidentally held after completion. Take heap snapshots, compare dominators, and look for retained trees rooted in providers, interceptors, or listeners. Fixes are usually about lifecycle discipline, bounded caches, and making streams complete or unsubscribe.",
+    "real_world": "One production pattern is a custom interceptor that stores request data in a global array for debugging and is never disabled, causing steady heap growth until the pod is OOM-killed.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If heap snapshots point to retained RxJS subscriptions inside an interceptor, what code changes would you make first?"
+   }
+  ]
+ }
+}

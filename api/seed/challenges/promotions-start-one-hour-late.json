@@ -1,0 +1,297 @@
+{
+  "slug": "promotions-start-one-hour-late",
+  "title": "Scheduled promotions start one hour late in one country",
+  "difficulty": "medium",
+  "est_minutes": 10,
+  "tags": [
+    "scheduling",
+    "timezones",
+    "daylight-saving-time",
+    "recurrence",
+    "incident-debugging"
+  ],
+  "scenario": "A retailer schedules promotions for 09:00 local time in Europe/London. On the daylight-saving transition weekend, the promotions start at 10:00 local time for 1.8 million users. The scheduler stores only a UTC timestamp computed when the promotion is created, and later clones schedules by adding 24 hours. The UI displays local time, so operators believe the schedule is correct.",
+  "goal": "Find the root cause and choose a production-safe fix so recurring promotions start at the intended local time across daylight-saving changes.",
+  "concepts": [
+    {
+      "key": "utc",
+      "name": "UTC",
+      "summary": "UTC is a global time standard that does not change for daylight saving. It is useful for storing exact instants in time.",
+      "used_here": "The scheduler stores promotion start times as UTC instants and clones them by adding 24 hours."
+    },
+    {
+      "key": "local-wall-clock-time",
+      "name": "Local wall-clock time",
+      "summary": "Local wall-clock time is what people see on clocks in a place, such as 09:00 in London. Its relationship to UTC can change when daylight saving starts or ends.",
+      "used_here": "Operators intend promotions to start at 09:00 Europe/London, regardless of the UTC offset on that date."
+    },
+    {
+      "key": "daylight-saving-time",
+      "name": "Daylight-saving time",
+      "summary": "Daylight-saving time shifts local clocks during part of the year. Some days have a missing hour, and some days have a repeated hour.",
+      "used_here": "London moves from GMT to BST, so 09:00 local changes from 09:00 UTC to 08:00 UTC."
+    },
+    {
+      "key": "timezone-id",
+      "name": "Timezone ID",
+      "summary": "A timezone ID, such as Europe/London, names a region's historical and future offset rules. It is not the same as a fixed offset like +00:00 or +01:00.",
+      "used_here": "The schedule needs Europe/London so the system can compute the correct UTC instant for each local occurrence."
+    },
+    {
+      "key": "timezone-database",
+      "name": "Timezone database",
+      "summary": "A timezone database contains the rules for converting local times to UTC for different regions and dates. The IANA timezone database is the common source used by many platforms.",
+      "used_here": "The scheduler must use timezone rules to convert each 09:00 Europe/London occurrence into the correct UTC instant."
+    },
+    {
+      "key": "recurrence-rule",
+      "name": "Recurrence rule",
+      "summary": "A recurrence rule describes a repeated event, such as every day at 09:00. For business schedules, the rule often needs to be expressed in local time, not as a fixed number of UTC seconds.",
+      "used_here": "The promotion should recur daily at 09:00 London local time, not every 24 hours from the previous UTC timestamp."
+    },
+    {
+      "key": "ambiguous-local-time",
+      "name": "Ambiguous or nonexistent local time",
+      "summary": "A local time can be nonexistent when clocks jump forward, or ambiguous when clocks repeat an hour. Systems must define what to do in those cases.",
+      "used_here": "The promotion scheduler needs explicit behavior for schedules that fall inside a daylight-saving gap or repeated hour."
+    },
+    {
+      "key": "data-migration",
+      "name": "Data migration",
+      "summary": "A data migration changes existing stored records to a new shape or meaning. It must preserve user intent and avoid silently changing production behavior.",
+      "used_here": "Existing promotion schedules need timezone and local-time information added before the new scheduler logic can safely run."
+    },
+    {
+      "key": "observability",
+      "name": "Observability",
+      "summary": "Observability means collecting logs, metrics, and checks that show what the system is doing. It helps confirm a fix worked and catch regressions early.",
+      "used_here": "The team needs to compare intended local times, computed UTC instants, and actual promotion start times around timezone transitions."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Start with the time conversion boundary",
+      "question": "You are on call and need the fastest useful first check. Which data should you compare first for an affected London promotion?",
+      "concept_keys": [
+        "utc",
+        "local-wall-clock-time",
+        "daylight-saving-time"
+      ],
+      "options": [
+        {
+          "text": "Compare database replica lag, cache hit rate, and promotion publish time to see whether stale reads hid the update.",
+          "correct": false,
+          "hint": "Stale reads usually create variable delays depending on replication and cache timing. An exact one-hour shift points toward time conversion rather than propagation.",
+          "id": "a"
+        },
+        {
+          "text": "Compare browser locale, account country, and CDN edge location to see whether the UI displayed the wrong country settings.",
+          "correct": false,
+          "hint": "The UI can be misleading, but the incident is about when users actually saw the promotion start. Start by reconciling intended local time with the stored instant.",
+          "id": "b"
+        },
+        {
+          "text": "Compare the operator-entered 09:00 Europe/London time, the stored UTC start timestamp, and the actual local start time on the transition date.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "Compare API latency, queue depth, and worker CPU around 09:00 UTC to see whether the scheduler was delayed by load.",
+          "correct": false,
+          "hint": "A real delay can cause late starts, but here every affected promotion is exactly one hour late on a daylight-saving weekend. First check whether the scheduled instant itself was wrong.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The first useful check is the chain from intended local wall-clock time to stored UTC instant to actual start time. Around the London spring transition, 09:00 local changes from 09:00 UTC to 08:00 UTC, so a promotion stored for 09:00 UTC would start at 10:00 local. Load or cache issues are tempting, but they would not usually produce a clean one-hour shift tied to a daylight-saving date."
+    },
+    {
+      "title": "Interpret the stored timestamps",
+      "question": "You find that Saturday's occurrence was stored as 09:00 UTC and started at 09:00 local. Sunday's cloned occurrence was also stored as 09:00 UTC and started at 10:00 local. What does this tell you?",
+      "concept_keys": [
+        "utc",
+        "local-wall-clock-time",
+        "daylight-saving-time",
+        "recurrence-rule"
+      ],
+      "options": [
+        {
+          "text": "The worker probably missed the 08:00 UTC execution because no job was enqueued until the next hourly polling cycle.",
+          "correct": false,
+          "hint": "The stored Sunday timestamp was 09:00 UTC, so the worker was doing what it was told. Look at how that timestamp was produced.",
+          "id": "a"
+        },
+        {
+          "text": "The UI is applying the wrong display timezone, because the same UTC time should always display as the same local time for a country.",
+          "correct": false,
+          "hint": "A country or region can change its UTC offset by date. The same UTC hour can map to different local clock times before and after a daylight-saving transition.",
+          "id": "b"
+        },
+        {
+          "text": "The schedule was created in GMT instead of BST, so changing the stored offset to +01:00 will correct future London promotions.",
+          "correct": false,
+          "hint": "A fixed offset may fit one part of the year but not the whole calendar. The offset for London depends on the date.",
+          "id": "c"
+        },
+        {
+          "text": "The scheduler treated the recurrence as a fixed UTC interval, while the business intent was a fixed local wall-clock time.",
+          "correct": true,
+          "hint": "",
+          "id": "d"
+        }
+      ],
+      "explanation": "The data shows the scheduler kept the UTC hour constant across a date where London's offset changed. Adding 24 hours to Saturday 09:00 UTC gives Sunday 09:00 UTC, but the intended Sunday 09:00 London time is 08:00 UTC after the DST change. The tempting fixed-offset idea only moves the bug to the other half of the year."
+    },
+    {
+      "title": "Name the root cause",
+      "question": "Based on the evidence, what is the root cause of the incident?",
+      "concept_keys": [
+        "utc",
+        "timezone-id",
+        "recurrence-rule",
+        "daylight-saving-time"
+      ],
+      "options": [
+        {
+          "text": "The worker cloned the record too close to the start time, so the daily job did not have enough time to adapt to the DST transition.",
+          "correct": false,
+          "hint": "More lead time would still produce the same wrong UTC timestamp if the recurrence is generated by adding 24 hours.",
+          "id": "a"
+        },
+        {
+          "text": "The promotion service stored timestamps in UTC, and UTC should not be used for user-facing schedules.",
+          "correct": false,
+          "hint": "UTC is still the right representation for an exact instant. The missing part is the business rule that generates those instants.",
+          "id": "b"
+        },
+        {
+          "text": "The scheduler stored exact instants but did not store the intended timezone and local recurrence rule needed to compute future occurrences.",
+          "correct": true,
+          "hint": "",
+          "id": "c"
+        },
+        {
+          "text": "The UI converted UTC to Europe/London too late, so operators saw a corrected time that the backend could not execute.",
+          "correct": false,
+          "hint": "Displaying local time is not enough to define future recurrences. The backend must know what local rule it is supposed to preserve.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The root cause is losing the original scheduling intent. A UTC timestamp is enough to run one occurrence, but it is not enough to know that future occurrences should be daily at 09:00 Europe/London. Storing only UTC and adding 24 hours preserves elapsed time, not local wall-clock time."
+    },
+    {
+      "title": "Choose the durable fix",
+      "question": "Which change best fixes the scheduler for future recurring promotions?",
+      "concept_keys": [
+        "timezone-id",
+        "timezone-database",
+        "recurrence-rule",
+        "local-wall-clock-time",
+        "utc"
+      ],
+      "options": [
+        {
+          "text": "Store the intended timezone ID and local recurrence rule, then compute each occurrence's UTC instant using a timezone database.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Keep the backend unchanged and update the UI to warn operators that local times may move by one hour after daylight-saving changes.",
+          "correct": false,
+          "hint": "A warning does not make the promotion start at the business-intended time. The scheduler needs enough data to compute the correct instant.",
+          "id": "b"
+        },
+        {
+          "text": "Store the first UTC timestamp and an integer UTC offset, then add the offset when displaying and subtract it when scheduling.",
+          "correct": false,
+          "hint": "Offsets are not stable rules. Europe/London is sometimes +00:00 and sometimes +01:00, and rules can differ by region and date.",
+          "id": "c"
+        },
+        {
+          "text": "Keep storing UTC only, but clone schedules by adding 23 hours on spring-transition weekends and 25 hours on autumn-transition weekends.",
+          "correct": false,
+          "hint": "That encodes one symptom for one class of schedules. It does not generalize across regions, rule changes, or schedules that are not daily.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The durable fix is to store the business rule: for example, daily at 09:00 in Europe/London. The scheduler then uses timezone database rules to compute each occurrence, so Sunday 09:00 London becomes 08:00 UTC after the spring transition. A fixed offset or special 23-hour adjustment is tempting but brittle and wrong for other dates and regions."
+    },
+    {
+      "title": "Define DST edge-case semantics",
+      "question": "The team generalizes the scheduler to support any local start time. What policy must be defined before rollout?",
+      "concept_keys": [
+        "ambiguous-local-time",
+        "daylight-saving-time",
+        "local-wall-clock-time",
+        "timezone-database"
+      ],
+      "options": [
+        {
+          "text": "Define what happens when a requested local time is nonexistent or repeated, such as shifting a missing time to the next valid local time and firing only once for a repeated time.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Define that schedules cannot be created during the two days around a daylight-saving transition in any affected country.",
+          "correct": false,
+          "hint": "Blocking scheduling avoids some cases but does not define how existing recurring schedules behave when they cross a transition.",
+          "id": "b"
+        },
+        {
+          "text": "Define that all promotions are internally rounded to the nearest UTC hour, because daylight-saving transitions happen on hour boundaries.",
+          "correct": false,
+          "hint": "Rounding changes user intent and can still be wrong in zones with non-hour offsets or schedules at minute-level precision.",
+          "id": "c"
+        },
+        {
+          "text": "Define that operators must manually review the converted UTC timestamp whenever the UI detects a timezone offset change.",
+          "correct": false,
+          "hint": "Manual review does not scale and can still miss existing recurrences. The system needs deterministic behavior for edge cases.",
+          "id": "d"
+        }
+      ],
+      "explanation": "Some local times do not exist when clocks jump forward, and some occur twice when clocks fall back. A production scheduler needs an explicit, documented rule for these cases so different services do not make different choices. Manual review is tempting, but the system must behave predictably for every recurrence, including old ones."
+    },
+    {
+      "title": "Roll out safely and verify",
+      "question": "Which rollout plan is safest for the 1.8 million affected users and future promotions?",
+      "concept_keys": [
+        "data-migration",
+        "observability",
+        "timezone-id",
+        "recurrence-rule"
+      ],
+      "options": [
+        {
+          "text": "Backfill schedules with timezone ID and local recurrence intent, dry-run old and new calculations across DST dates, migrate future occurrences, then monitor intended local time versus actual start time.",
+          "correct": true,
+          "hint": "",
+          "id": "a"
+        },
+        {
+          "text": "Deploy the new timezone calculation only for newly created promotions, and let existing recurring schedules continue using their stored UTC timestamps.",
+          "correct": false,
+          "hint": "That prevents new mistakes but leaves existing recurring promotions with the same failure mode at the next offset change.",
+          "id": "b"
+        },
+        {
+          "text": "Change the clone logic today to subtract one hour for Europe/London, then remove the patch after the daylight-saving weekend.",
+          "correct": false,
+          "hint": "A one-off patch may stop this weekend's symptom but leaves the same data-model problem for future transitions and other regions.",
+          "id": "c"
+        },
+        {
+          "text": "Ask operators to recreate all London promotions after the transition so the stored UTC timestamps match the new offset.",
+          "correct": false,
+          "hint": "Recreation refreshes timestamps for one offset period, but the next transition will break the same way unless the recurrence intent is stored.",
+          "id": "d"
+        }
+      ],
+      "explanation": "The safe rollout preserves and verifies business intent before changing execution. Backfilling timezone and local recurrence data lets the team recompute future UTC instants and dry-run differences around DST boundaries before users are affected. Patching London by one hour or recreating schedules only fixes one offset period, not the underlying recurrence model."
+    }
+  ],
+  "takeaway": "Recurring business events should store local scheduling intent, such as 09:00 in Europe/London, not only the UTC instant of the first occurrence. Compute each occurrence with a timezone database and define behavior for nonexistent and repeated local times. UTC is still useful for executing a specific occurrence, but it is not a complete recurrence rule.",
+  "review_issues": []
+}

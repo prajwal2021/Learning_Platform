@@ -1,0 +1,493 @@
+{
+ "slug": "fastapi",
+ "name": "FastAPI",
+ "category": "Backend",
+ "levels": {
+  "basic": [
+   {
+    "question": "What is FastAPI, and when would you choose it over a simpler web framework?",
+    "answer": "FastAPI is a Python web framework for building APIs, especially REST-style services, with automatic request validation and OpenAPI documentation. You’d choose it when you want strong type hints, fast development, and built-in docs with relatively little boilerplate. It is a good fit for JSON APIs and services where input validation matters. For very small scripts or server-rendered pages, a simpler framework may be enough.",
+    "real_world": "A team building a public API often uses FastAPI because client teams can read the generated docs and trust the validation errors. It reduces the back-and-forth that usually happens when payloads are shaped incorrectly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How does FastAPI use Python type hints to validate requests?"
+   },
+   {
+    "question": "What is a path operation in FastAPI?",
+    "answer": "A path operation is an endpoint definition that maps an HTTP method and URL path to a Python function. In FastAPI, you define it with decorators like `@app.get()` or `@app.post()`. The function body runs when a matching request arrives, and its return value becomes the response. This is the basic unit of routing in a FastAPI app.",
+    "real_world": "When a backend grows, teams usually organize path operations by feature so the API stays readable. Without that structure, routes become hard to find and easy to duplicate.",
+    "code_lang": "python",
+    "code": "from fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get('/health')\ndef health():\n    return {'status': 'ok'}",
+    "follow_up": "What is the difference between `GET`, `POST`, `PUT`, and `DELETE` in FastAPI?"
+   },
+   {
+    "question": "How do query parameters and path parameters differ in FastAPI?",
+    "answer": "Path parameters are part of the URL path and usually identify a specific resource, like `/users/123`. Query parameters come after `?` and are typically used for filtering, sorting, or optional inputs, like `/users?active=true`. In FastAPI, both can be declared as function arguments, but path parameters are required because they are part of the route. Query parameters usually have defaults and are optional unless you make them required.",
+    "real_world": "This matters when designing list endpoints, because filters should usually be query parameters rather than extra path segments. Using the wrong one makes the API awkward for clients and harder to extend later.",
+    "code_lang": "python",
+    "code": "from fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get('/users/{user_id}')\ndef get_user(user_id: int, active: bool = False):\n    return {'user_id': user_id, 'active': active}",
+    "follow_up": "How does FastAPI decide whether a parameter is a path parameter or a query parameter?"
+   },
+   {
+    "question": "What is a Pydantic model in FastAPI, and why is it useful?",
+    "answer": "A Pydantic model is a Python class used to define and validate structured data. In FastAPI, it is commonly used for request bodies and responses so you can enforce types, required fields, and data shape. This reduces manual parsing and makes invalid input fail early with clear errors. It also gives you a consistent schema for documentation.",
+    "real_world": "When multiple clients send JSON to the same endpoint, Pydantic models catch bad payloads before they reach business logic. That prevents subtle bugs from missing fields or wrong types.",
+    "code_lang": "python",
+    "code": "from pydantic import BaseModel\n\nclass Item(BaseModel):\n    name: str\n    price: float",
+    "follow_up": "How would you use that model in a POST endpoint?"
+   },
+   {
+    "question": "How do you receive and validate a JSON request body in FastAPI?",
+    "answer": "You declare a Pydantic model as a function parameter, and FastAPI reads the JSON body into that model. If the body does not match the model, FastAPI returns a validation error automatically. This is cleaner than manually calling `request.json()` and checking each field yourself. It also keeps your endpoint signature readable.",
+    "real_world": "This is common in create and update endpoints where payloads must be validated before saving to a database. It helps avoid corrupt records caused by missing or malformed input.",
+    "code_lang": "python",
+    "code": "from fastapi import FastAPI\nfrom pydantic import BaseModel\n\nclass Item(BaseModel):\n    name: str\n    price: float\n\napp = FastAPI()\n\n@app.post('/items')\ndef create_item(item: Item):\n    return item",
+    "follow_up": "What happens if the client sends a string for `price`?"
+   },
+   {
+    "question": "What does dependency injection mean in FastAPI?",
+    "answer": "Dependency injection in FastAPI means you declare reusable pieces of logic as dependencies and FastAPI provides them to your endpoint. This is commonly used for things like authentication, database sessions, and shared configuration. It keeps endpoints smaller and makes shared behavior consistent. It also improves testability because dependencies can be overridden in tests.",
+    "real_world": "A common use is creating one database session per request and passing it into every handler that needs it. Without this, people often create connection-handling code repeatedly and leak resources.",
+    "code_lang": "python",
+    "code": "from fastapi import Depends, FastAPI\n\napp = FastAPI()\n\ndef get_token():\n    return 'abc'\n\n@app.get('/me')\ndef me(token: str = Depends(get_token)):\n    return {'token': token}",
+    "follow_up": "What is a practical example of a dependency that you would reuse across many routes?"
+   },
+   {
+    "question": "What is the difference between `response_model` and the return value of a FastAPI endpoint?",
+    "answer": "The return value is the actual Python object your function produces, while `response_model` tells FastAPI how to validate and serialize what gets sent back. Using `response_model` helps filter out fields you do not want to expose and makes the API contract explicit. It is especially useful when the internal database object is different from the public API shape. Without it, you can accidentally return too much data.",
+    "real_world": "Teams use this to avoid leaking passwords, internal IDs, or other sensitive fields from ORM objects. It also keeps response schemas stable even if internal models change.",
+    "code_lang": "python",
+    "code": "from fastapi import FastAPI\nfrom pydantic import BaseModel\n\nclass UserOut(BaseModel):\n    id: int\n    name: str\n\napp = FastAPI()\n\n@app.get('/user', response_model=UserOut)\ndef get_user():\n    return {'id': 1, 'name': 'Ava', 'password': 'secret'}",
+    "follow_up": "What happens to fields in the return value that are not in `response_model`?"
+   },
+   {
+    "question": "How do you return an HTTP error in FastAPI?",
+    "answer": "You raise `HTTPException` with a status code and detail message. FastAPI catches it and turns it into the right HTTP response. This is the standard way to signal client errors like not found, unauthorized, or bad input. It is better than returning error dictionaries because it uses HTTP semantics correctly.",
+    "real_world": "This is common in lookup endpoints, such as returning 404 when a record is missing. It also makes authorization failures clear to frontend developers and API consumers.",
+    "code_lang": "python",
+    "code": "from fastapi import FastAPI, HTTPException\n\napp = FastAPI()\n\n@app.get('/items/{item_id}')\ndef read_item(item_id: int):\n    if item_id == 0:\n        raise HTTPException(status_code=404, detail='Item not found')\n    return {'item_id': item_id}",
+    "follow_up": "When would you use 400 versus 404 versus 422?"
+   },
+   {
+    "question": "What are FastAPI startup and shutdown events used for?",
+    "answer": "Startup and shutdown events are used for setup and cleanup work tied to the app lifecycle. Common examples include opening connections, warming caches, or releasing resources when the app stops. They are useful for code that should not run inside each request. For newer FastAPI patterns, lifespan handling is often preferred, but the idea is the same.",
+    "real_world": "A service might initialize a connection pool at startup so the first request is not slow. On shutdown, it can close sockets cleanly instead of relying on the process being killed.",
+    "code_lang": "python",
+    "code": "from fastapi import FastAPI\n\napp = FastAPI()\n\n@app.on_event('startup')\ndef startup():\n    print('starting')\n\n@app.on_event('shutdown')\ndef shutdown():\n    print('stopping')",
+    "follow_up": "What is a resource you would initialize once for the whole app instead of per request?"
+   },
+   {
+    "question": "What is one common beginner mistake when writing FastAPI endpoints?",
+    "answer": "A common mistake is using mutable global state for request-specific data, or doing blocking work in code that should stay responsive. Another is forgetting that query parameters, path parameters, and request bodies are handled differently. Beginners also sometimes return raw objects that are not JSON serializable. The fix is to use typed parameters, Pydantic models, and framework-supported responses.",
+    "real_world": "These mistakes show up quickly under load, where shared globals cause cross-request bugs or a blocking call slows down every user. They also make validation and debugging much harder.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you avoid blocking the event loop in an async FastAPI app?"
+   },
+   {
+    "question": "How do you define a GET endpoint in FastAPI?",
+    "answer": "You decorate a function with `@app.get(...)` and the function name becomes the handler for that route. FastAPI uses the function signature to read parameters and type hints to validate inputs. This is the basic way to expose read-only API operations like fetching a user or listing items.",
+    "real_world": "Teams use this for simple read endpoints such as health checks, product lookups, or loading a dashboard page from an API.",
+    "code_lang": "python",
+    "code": "from fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get(\"/users/{user_id}\")\ndef get_user(user_id: int):\n    return {\"user_id\": user_id}",
+    "follow_up": "How would you make the same endpoint accept optional query parameters?"
+   },
+   {
+    "question": "What is the purpose of type hints in FastAPI route functions?",
+    "answer": "Type hints tell FastAPI how to parse and validate incoming values. If you annotate a parameter as `int`, FastAPI will convert a matching string from the request and return a validation error if conversion fails. They also make your API easier to read and help tools generate docs and editor support.",
+    "real_world": "A team may discover that `item_id` is being sent as a string from the client; with type hints, FastAPI rejects bad values instead of letting them cause bugs deeper in the code.",
+    "code_lang": "python",
+    "code": "@app.get(\"/items/{item_id}\")\ndef read_item(item_id: int):\n    return {\"item_id\": item_id}",
+    "follow_up": "What happens if the client sends `item_id=abc` here?"
+   },
+   {
+    "question": "How do you set a default value for a query parameter in FastAPI?",
+    "answer": "Give the function argument a default value. FastAPI treats it as an optional query parameter and uses the default when the client does not send one. This is useful for filters, paging, and feature flags.",
+    "real_world": "A listing endpoint often uses defaults for page size or sort order so clients can call it without specifying every filter.",
+    "code_lang": "python",
+    "code": "@app.get(\"/items/\")\ndef list_items(limit: int = 10):\n    return {\"limit\": limit}",
+    "follow_up": "How would you make that parameter required instead?"
+   },
+   {
+    "question": "What is the difference between a path parameter and a query parameter in the URL?",
+    "answer": "A path parameter is part of the route itself, like `/users/123`, and usually identifies a specific resource. A query parameter comes after `?`, like `/users?active=true`, and is typically used for filtering, sorting, or optional settings. In FastAPI, both are easy to declare, but they serve different API design purposes.",
+    "real_world": "An orders API might use `/orders/{order_id}` to fetch one order and `/orders?status=open` to filter a collection.",
+    "code_lang": "python",
+    "code": "@app.get(\"/users/{user_id}\")\ndef get_user(user_id: int, active: bool = False):\n    return {\"user_id\": user_id, \"active\": active}",
+    "follow_up": "When should a value be modeled as a path parameter instead of a query parameter?"
+   },
+   {
+    "question": "How do you return a dictionary versus a `JSONResponse` in FastAPI?",
+    "answer": "Returning a plain dictionary is the simplest option; FastAPI will serialize it to JSON for you. Use `JSONResponse` when you need more control, such as setting status codes or headers directly. For most endpoints, returning a dict is enough and keeps the code cleaner.",
+    "real_world": "A team may switch to `JSONResponse` when an endpoint needs to return a custom status code or add a cache header for clients.",
+    "code_lang": "python",
+    "code": "from fastapi.responses import JSONResponse\n\n@app.get(\"/ok\")\ndef ok():\n    return {\"status\": \"ok\"}\n\n@app.get(\"/custom\")\ndef custom():\n    return JSONResponse({\"status\": \"ok\"}, status_code=201)",
+    "follow_up": "When would you return a plain dict instead of a response object?"
+   },
+   {
+    "question": "What are FastAPI response status codes used for?",
+    "answer": "Status codes tell the client whether the request succeeded and what kind of result it got. FastAPI defaults to `200 OK` for successful GET requests, but you can set different codes for creation, deletion, or no-content responses. Choosing the right code matters because clients often use it for control flow and error handling.",
+    "real_world": "A frontend may treat `201 Created` differently from `200 OK`, or retry only when it sees a transient 5xx response.",
+    "code_lang": "python",
+    "code": "from fastapi import status\n\n@app.post(\"/items/\", status_code=status.HTTP_201_CREATED)\ndef create_item():\n    return {\"created\": True}",
+    "follow_up": "What status code would you use for a successful delete, and why?"
+   },
+   {
+    "question": "What is automatic API documentation in FastAPI?",
+    "answer": "FastAPI generates interactive docs from your routes, types, and schemas. The docs help you test endpoints and understand expected inputs and outputs without writing separate documentation by hand. This is useful because the docs stay close to the code and update as the API changes.",
+    "real_world": "Backend and frontend teams often use the built-in docs to agree on request bodies and response shapes early in development.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What parts of your endpoint definition show up in the generated docs?"
+   },
+   {
+    "question": "How do you define a reusable request body schema with Pydantic?",
+    "answer": "You create a Pydantic model and use it as the type of a body parameter. FastAPI will parse incoming JSON into that model and validate the fields before your endpoint runs. This keeps validation logic out of the route handler and makes the API contract explicit.",
+    "real_world": "A user registration endpoint commonly uses a model so required fields like email and password are checked before any database work happens.",
+    "code_lang": "python",
+    "code": "from pydantic import BaseModel\n\nclass UserCreate(BaseModel):\n    name: str\n    age: int\n\n@app.post(\"/users/\")\ndef create_user(user: UserCreate):\n    return user",
+    "follow_up": "How would you make one of the fields optional?"
+   },
+   {
+    "question": "What is the difference between synchronous and asynchronous endpoint functions in FastAPI?",
+    "answer": "A normal `def` route runs synchronously, while `async def` lets FastAPI await asynchronous I/O such as async database or HTTP calls. If you use blocking code inside `async def`, you can still hurt performance because the event loop is blocked. For CPU-heavy work or blocking libraries, a sync function is often safer.",
+    "real_world": "Teams use `async def` for endpoints that spend most of their time waiting on network or database I/O, but keep file-heavy or blocking integrations synchronous.",
+    "code_lang": "python",
+    "code": "@app.get(\"/sync\")\ndef sync_route():\n    return {\"mode\": \"sync\"}\n\n@app.get(\"/async\")\nasync def async_route():\n    return {\"mode\": \"async\"}",
+    "follow_up": "When is it a bad idea to mark a route `async def`?"
+   },
+   {
+    "question": "How do you organize a FastAPI app using an `APIRouter`?",
+    "answer": "`APIRouter` lets you group related endpoints into separate modules and then include them in the main app. This keeps large projects easier to maintain because routes for users, products, and auth can live separately. It also lets you apply shared prefixes, tags, or dependencies to a group of routes.",
+    "real_world": "A growing codebase usually splits routes by domain so multiple developers can work without editing one huge file.",
+    "code_lang": "python",
+    "code": "from fastapi import APIRouter, FastAPI\n\nrouter = APIRouter(prefix=\"/users\")\n\n@router.get(\"/\")\ndef list_users():\n    return []\n\napp = FastAPI()\napp.include_router(router)",
+    "follow_up": "What is the benefit of putting a prefix on an `APIRouter`?"
+   }
+  ],
+  "intermediate": [
+   {
+    "question": "How do you use FastAPI dependencies for things like database sessions or authentication without passing those objects through every function yourself?",
+    "answer": "You define a dependency as a callable that returns or yields the shared object, then declare it with `Depends` in the endpoint or in other dependencies. FastAPI resolves the dependency graph per request, so you can centralize session creation, auth checks, and cleanup. For database sessions, `yield` is useful because it lets you close the session after the response is sent. The trade-off is that heavy or poorly structured dependencies can make request flow harder to trace.",
+    "real_world": "This is common when a team wants every request to get a fresh SQLAlchemy session and automatically close it. It also keeps auth logic out of each route, so bugs are less likely when new endpoints are added.",
+    "code_lang": "python",
+    "code": "from fastapi import Depends, FastAPI\n\napp = FastAPI()\n\ndef get_session():\n    session = Session()\n    try:\n        yield session\n    finally:\n        session.close()\n\n@app.get(\"/items\")\ndef list_items(session=Depends(get_session)):\n    return session.query(Item).all()",
+    "follow_up": "How would you override that dependency in tests?"
+   },
+   {
+    "question": "When would you make a FastAPI endpoint `async def`, and when is a regular `def` better?",
+    "answer": "Use `async def` when the handler spends time waiting on async I/O such as an async database driver or HTTP client. Use regular `def` for CPU-bound work or when you call blocking libraries, because FastAPI can run sync endpoints in a threadpool. The important point is that `async def` does not make blocking code non-blocking. Choosing the wrong one usually shows up as poor concurrency under load.",
+    "real_world": "A service may look fine in local testing but stall under traffic because an `async def` endpoint calls a blocking ORM or filesystem API. That can reduce throughput across the whole app.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What symptoms would tell you that a supposedly async endpoint is blocking the event loop?"
+   },
+   {
+    "question": "How do you handle request validation errors in FastAPI, and when would you customize that behavior?",
+    "answer": "FastAPI automatically returns a 422 response when request data does not match the declared types or Pydantic model. You customize it when you need a different error shape, to log validation failures, or to map certain errors to a domain-specific response. A custom exception handler is the usual approach. The trade-off is that you should preserve useful validation detail while keeping the response consistent for clients.",
+    "real_world": "Teams often customize validation errors so frontend clients get a stable `errors` structure instead of FastAPI’s default format. This helps when several services share the same API contract.",
+    "code_lang": "python",
+    "code": "from fastapi import FastAPI, Request\nfrom fastapi.exceptions import RequestValidationError\nfrom fastapi.responses import JSONResponse\n\napp = FastAPI()\n\n@app.exception_handler(RequestValidationError)\nasync def validation_handler(request: Request, exc: RequestValidationError):\n    return JSONResponse(status_code=400, content={\"errors\": exc.errors()})",
+    "follow_up": "What other exceptions would you handle globally in a real application?"
+   },
+   {
+    "question": "How do you model nested request or response data in FastAPI, and what are the common pitfalls?",
+    "answer": "You compose Pydantic models by using one model inside another, which is the cleanest way to represent structured JSON. This gives you validation at every level and makes the schema show up clearly in OpenAPI. Common pitfalls are mixing input and output shapes too aggressively or using mutable defaults incorrectly. For complex APIs, separate models for create, update, and response are usually clearer than one model for everything.",
+    "real_world": "Nested models matter when an endpoint returns an order with line items, addresses, and totals. If the schema is wrong, clients break even though the endpoint itself still returns JSON.",
+    "code_lang": "python",
+    "code": "from pydantic import BaseModel\n\nclass Item(BaseModel):\n    sku: str\n    qty: int\n\nclass Order(BaseModel):\n    id: int\n    items: list[Item]",
+    "follow_up": "When would you use different models for create, update, and read operations?"
+   },
+   {
+    "question": "What happens if two requests try to update the same resource in FastAPI at the same time, and how do you deal with that?",
+    "answer": "FastAPI itself does not solve concurrency conflicts; that depends on your database and transaction strategy. If two updates race, you can get lost updates unless you use locking, version checks, or optimistic concurrency control. The best approach depends on whether stale writes are acceptable and how much contention you expect. In many apps, adding a version column and rejecting stale updates is simpler than heavy locking.",
+    "real_world": "This shows up when multiple users edit the same record in a dashboard or when background jobs and API calls touch the same row. Without a strategy, the last write silently wins.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement optimistic concurrency control in an API?"
+   },
+   {
+    "question": "How do you use FastAPI's `BackgroundTasks`, and what should you not use it for?",
+    "answer": "`BackgroundTasks` lets you schedule small work to run after the response is returned, such as sending a simple email or writing a log record. It is not a job queue, and it will still run in the same process, so it is not durable across restarts. For reliable or long-running work, use a separate worker system. The trade-off is convenience versus reliability.",
+    "real_world": "It is useful for non-critical cleanup or notifications where a short delay is acceptable. It becomes a problem if teams use it for invoices, video processing, or anything that must survive deploys and crashes.",
+    "code_lang": "python",
+    "code": "from fastapi import BackgroundTasks, FastAPI\n\napp = FastAPI()\n\ndef send_email(addr: str):\n    ...\n\n@app.post(\"/invite\")\ndef invite(bg: BackgroundTasks, email: str):\n    bg.add_task(send_email, email)\n    return {\"queued\": True}",
+    "follow_up": "What would you use instead for durable background jobs?"
+   },
+   {
+    "question": "How do you test FastAPI endpoints without starting a real server?",
+    "answer": "Use the test client to call the app directly in-process, which makes tests fast and deterministic. You can override dependencies to replace real databases, auth, or external services with fakes. This is especially useful for unit-like endpoint tests and contract checks. The trade-off is that these tests do not fully replace end-to-end testing against the deployed stack.",
+    "real_world": "A team often uses this to test route behavior in CI without provisioning a database for every test run. It catches regressions in request parsing, status codes, and JSON shapes early.",
+    "code_lang": "python",
+    "code": "from fastapi.testclient import TestClient\n\nclient = TestClient(app)\n\ndef test_read_item():\n    r = client.get(\"/items/1\")\n    assert r.status_code == 200\n    assert r.json()[\"id\"] == 1",
+    "follow_up": "How would you override a database dependency in that test?"
+   },
+   {
+    "question": "What is the difference between `response_model` filtering and manually building the response dictionary?",
+    "answer": "`response_model` validates and filters the returned data against the declared schema, so extra fields are removed and output stays consistent. Manually building the response gives you full control, but it is easier to forget fields or accidentally leak internal data. `response_model` is usually better when your output is a normal JSON object and you want schema enforcement. Manual responses make more sense for custom headers, streaming, or non-JSON bodies.",
+    "real_world": "This matters when an internal model contains secrets like `hashed_password` or internal flags. If the endpoint returns the model directly without filtering, those fields can leak into the API.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you intentionally skip `response_model`?"
+   },
+   {
+    "question": "How do you handle authentication in FastAPI for a typical bearer-token API?",
+    "answer": "A common pattern is to use a dependency that reads the `Authorization` header, validates the token, and returns the current user or raises an error. That keeps auth logic reusable across endpoints and makes protected routes explicit. You can attach the dependency at the router level if many routes share the same requirement. The main trade-off is between simple centralized auth and more advanced cases like permission scopes or multiple auth schemes.",
+    "real_world": "This is the normal setup for internal APIs and single-page apps using access tokens. It prevents each endpoint from reimplementing token parsing and user lookup.",
+    "code_lang": "python",
+    "code": "from fastapi import Depends, FastAPI, Header, HTTPException\n\napp = FastAPI()\n\ndef current_user(authorization: str = Header(...)):\n    if not authorization.startswith(\"Bearer \"):\n        raise HTTPException(401)\n    return {\"user_id\": 1}\n\n@app.get(\"/me\")\ndef me(user=Depends(current_user)):\n    return user",
+    "follow_up": "How would you represent roles or permissions on top of this?"
+   },
+   {
+    "question": "How do you structure a FastAPI app so it stays maintainable as it grows?",
+    "answer": "Split routes into routers by feature, keep schemas and business logic separate from transport code, and put shared dependencies in one place. The endpoint layer should stay thin: parse input, call a service, return a response. That makes testing and refactoring easier because business rules are not tied to FastAPI internals. The trade-off is a bit more boilerplate, but it pays off quickly in medium-sized services.",
+    "real_world": "In larger services, a single `main.py` becomes hard to navigate and easy to break during changes. A modular layout helps teams work on different features without stepping on each other.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you draw the line between route code and service-layer code?"
+   },
+   {
+    "question": "How do you manage database sessions in FastAPI so each request gets its own session and cleanup is reliable?",
+    "answer": "Use a dependency that creates the session, yields it, and closes it in a `finally` block. That gives each request an isolated unit of work and makes cleanup happen even when the endpoint raises an error. It also keeps session handling out of your route code, which makes testing and reuse easier. The main trade-off is that you need to be careful not to keep the session around beyond the request.",
+    "real_world": "This matters when a leaked session starts exhausting the connection pool under load, or when one request accidentally reuses another request’s transaction state. Teams often centralize this pattern so every CRUD route behaves consistently.",
+    "code_lang": "python",
+    "code": "def get_db():\n    db = SessionLocal()\n    try:\n        yield db\n    finally:\n        db.close()",
+    "follow_up": "How would you handle committing or rolling back transactions with that pattern?"
+   },
+   {
+    "question": "What happens if you call blocking code from an `async def` FastAPI endpoint?",
+    "answer": "You block the event loop, so other requests handled by that worker wait longer even if they are unrelated. That can be fine for small occasional work, but it hurts concurrency if the blocking call is frequent or slow. For I/O libraries that are not async, a regular `def` endpoint or moving the work to a threadpool is often a better fit. The key is to match the endpoint style to the library behavior.",
+    "real_world": "This shows up when someone adds a synchronous ORM query or a `requests` call inside an async route and latency spikes under load. The app may look fine in local testing but degrade badly with concurrent traffic.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you decide whether to keep a route sync or convert the whole stack to async?"
+   },
+   {
+    "question": "How do you return different response shapes for different cases without breaking FastAPI’s validation?",
+    "answer": "You can use separate response models, or one response model with optional fields when the shape is mostly shared. If the success and error payloads are truly different, document them explicitly instead of forcing everything through one schema. FastAPI will validate the returned data against the declared response model, so returning an incompatible shape can raise errors or hide bugs during development. The trade-off is between strictness and flexibility.",
+    "real_world": "This matters in endpoints like search or export, where one branch returns a list and another returns metadata or an empty result. Teams often split these cases so clients can rely on stable contracts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you use `Union` in a response model, and what are the downsides?"
+   },
+   {
+    "question": "How does FastAPI handle path operation dependencies with caching, and why does that matter?",
+    "answer": "Within a single request, FastAPI caches dependency results by default, so if the same dependency is used multiple times it is evaluated once. That matters for things like database sessions, authenticated user lookup, or parsing headers, because you avoid repeated work and keep behavior consistent. If you need fresh evaluation each time, you can disable caching for that dependency. The trade-off is performance versus intentional recomputation.",
+    "real_world": "A common case is a user dependency used by multiple nested dependencies; without caching you may hit the database several times per request. With caching, the request is faster and easier to reason about.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What problems can appear if a dependency has side effects and is cached?"
+   },
+   {
+    "question": "What is the difference between using `Depends()` and middleware for request cross-cutting concerns?",
+    "answer": "Dependencies are best when the logic is needed only by some routes or should produce a value like a user, a DB session, or settings. Middleware runs for every request and is better for truly global behavior such as request timing, correlation IDs, or uniform header handling. Middleware is lower-level and harder to parameterize per route, while dependencies are more explicit in the route signature. The trade-off is scope and control versus global reach.",
+    "real_world": "Teams often start with middleware for logging, then move auth or tenant resolution into dependencies so only protected routes pay the cost. That keeps public endpoints simpler and avoids coupling unrelated requests to the same behavior.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "Can you name a case where middleware is the wrong place for logic that looks convenient?"
+   },
+   {
+    "question": "How do you validate and parse headers, cookies, or form data in FastAPI?",
+    "answer": "FastAPI lets you declare these inputs in the function signature using the appropriate helpers so they are parsed and validated like query or body data. That keeps request handling declarative and gives you automatic 422 errors for invalid or missing values. For forms and uploads, you usually need the relevant request content type and the right parameter types. The key trade-off is that the endpoint stays simple, but the client must send the data in the expected format.",
+    "real_world": "This comes up with browser logins using form posts, file uploads, or APIs that rely on custom tracing headers. If the parsing is wrong, the route may appear to ignore inputs even though the client is sending them.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you handle an endpoint that accepts both JSON metadata and file uploads?"
+   },
+   {
+    "question": "When should you use `response_model_exclude_unset` or similar response filtering options?",
+    "answer": "Use them when you want to omit fields that were not explicitly set, often for PATCH-like responses or partial resources. They help avoid sending noisy defaults or exposing fields that the client does not need. But they can also make responses harder to reason about if different requests produce different field presence, so they should be used intentionally. The main trade-off is payload cleanliness versus response consistency.",
+    "real_world": "This matters when updating a record where the API should return only the fields the client changed, or when migrating an older response model without breaking clients. It can also reduce payload size in large nested models.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How is excluding unset fields different from excluding `None` values?"
+   },
+   {
+    "question": "How do you safely share application state, like a cache client or feature flag client, across requests in FastAPI?",
+    "answer": "Create long-lived, thread-safe clients during application startup and store them on app state or in a dependency that returns the shared instance. Avoid constructing expensive clients per request unless they are cheap and stateless. You need to know whether the underlying library is safe to reuse across concurrent requests, especially in async code or when threads are involved. The trade-off is lower overhead versus careful lifecycle management.",
+    "real_world": "This is common with Redis, metrics clients, or external SDKs that are expensive to initialize. If you create them per request, latency and resource usage can become a problem quickly.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you test code that reads a shared client from app state?"
+   },
+   {
+    "question": "What is a good way to add pagination to a FastAPI list endpoint, and what trade-offs should you consider?",
+    "answer": "A simple approach is limit/offset or page/per-page query parameters, validated with bounds in the endpoint. It is easy to implement and works well for small to medium datasets, but offset pagination can get slower and less stable as the table grows or changes frequently. Cursor-based pagination is usually better for large, mutable datasets because it avoids skipping and duplicate issues. The trade-off is implementation complexity versus scalability and consistency.",
+    "real_world": "This matters for admin lists, activity feeds, and search results where users keep scrolling. A team often starts with offset pagination and later switches when the query cost or data churn becomes noticeable.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would cursor pagination be a bad fit?"
+   },
+   {
+    "question": "How do you structure FastAPI tests so they cover dependencies and external calls without hitting real services?",
+    "answer": "Override dependencies in tests and replace external clients with fakes or mocks. That lets you test route behavior deterministically while keeping the app code unchanged. Use integration tests for the request/response path and unit tests for pure business logic, because they catch different classes of bugs. The trade-off is realism versus speed and isolation.",
+    "real_world": "This matters when auth depends on an identity provider or when the app calls payment or email services. Good test isolation prevents flaky CI runs and accidental production calls during development.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you choose between mocking at the dependency layer and mocking the HTTP client itself?"
+   }
+  ],
+  "advanced": [
+   {
+    "question": "How does FastAPI actually execute a sync route versus an async route under the hood, and what does that mean for throughput?",
+    "answer": "FastAPI sits on Starlette and the ASGI stack. An `async def` handler runs on the event loop, while a regular `def` handler is dispatched to a threadpool so blocking work does not freeze the loop. That means sync handlers add thread scheduling overhead and are bounded by threadpool capacity, while async handlers scale better for high-concurrency I/O if every dependency in the chain is also non-blocking. If an async route accidentally calls blocking code, it can stall many unrelated requests on that worker.",
+    "real_world": "A common incident is latency spiking because one async endpoint started using a blocking SDK call; CPU stays low, but requests pile up because the event loop is pinned.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you detect event-loop blocking in production and confirm which code path is responsible?"
+   },
+   {
+    "question": "What are the performance costs of FastAPI's request and response validation, and when do teams bypass parts of it?",
+    "answer": "Validation and serialization are useful but not free: every request body, dependency value, and `response_model` can trigger parsing and object conversion. On hot paths returning large payloads, response validation can become a measurable CPU cost, especially if you are rebuilding many nested models per request. Teams usually keep validation on at service boundaries but may skip `response_model` on internal endpoints, pre-serialize trusted data, or stream results instead of materializing big objects. The trade-off is speed versus schema enforcement and safer contracts.",
+    "real_world": "Teams often find a list endpoint is CPU-bound not on database time but on turning tens of thousands of rows into nested response models before sending them.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "If you wanted to prove response-model serialization is the bottleneck, what would you profile first?"
+   },
+   {
+    "question": "How do lifespan context managers differ from the older startup and shutdown events, and why does that matter in production?",
+    "answer": "The lifespan API wraps application startup and teardown in one async context, which makes resource ownership clearer and composes better than scattered event handlers. It is easier to initialize pools, clients, or model artifacts once and guarantee cleanup even when startup partially fails. In production this matters because worker boot, reloads, and test setup become more predictable. It also reduces hidden ordering issues when multiple startup hooks depend on each other.",
+    "real_world": "A service that opens database and Kafka clients in separate startup handlers can fail half-initialized; lifespan makes it easier to fail fast and clean up what already started.",
+    "code_lang": "python",
+    "code": "from contextlib import asynccontextmanager\nfrom fastapi import FastAPI\n\n@asynccontextmanager\nasync def lifespan(app: FastAPI):\n    app.state.client = make_client()\n    try:\n        yield\n    finally:\n        await app.state.client.aclose()\n\napp = FastAPI(lifespan=lifespan)",
+    "follow_up": "What problems can happen if you preload expensive resources before process forking versus after worker start?"
+   },
+   {
+    "question": "If you need to stream a large response from FastAPI, what changes compared with returning a normal JSON object?",
+    "answer": "A normal JSON response is usually fully built in memory before it is sent, so large payloads amplify memory use and serialization cost. With streaming, you yield chunks incrementally using a streaming response, which lowers memory pressure and can reduce time-to-first-byte. The trade-off is you lose automatic response-model validation for the whole payload and need to handle client disconnects and partial writes carefully. Streaming is a better fit for large exports, proxying upstream data, or server-sent events than for typical CRUD JSON.",
+    "real_world": "A CSV export endpoint that builds the whole file first can OOM a worker under concurrent use; streaming avoids that failure mode.",
+    "code_lang": "python",
+    "code": "from fastapi import FastAPI\nfrom fastapi.responses import StreamingResponse\n\napp = FastAPI()\n\ndef gen():\n    yield \"id,name\\n\"\n    for i in range(3):\n        yield f\"{i},user{i}\\n\"\n\n@app.get(\"/export\")\ndef export():\n    return StreamingResponse(gen(), media_type=\"text/csv\")",
+    "follow_up": "How would you make a streaming endpoint stop work promptly when the client disconnects?"
+   },
+   {
+    "question": "How do Uvicorn worker count and process model affect FastAPI scaling, and why is adding more workers not always a win?",
+    "answer": "Each worker is a separate process with its own event loop, memory, and connection pools. More workers can increase parallelism across CPU cores and isolate failures, but they also multiply memory usage and can create too many database connections or cache clients. For I/O-heavy services, one worker can handle many concurrent requests if code is truly async, so the bottleneck may be downstream services rather than the app server. Worker count is a capacity-planning decision tied to CPU, memory, connection limits, and request mix.",
+    "real_world": "A service with 8 workers and a pool of 20 DB connections per worker can suddenly demand 160 database connections and exhaust the database before CPU is even busy.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you size workers and database pools for a read-heavy API with bursty traffic?"
+   },
+   {
+    "question": "What can go wrong with `request.state`, `app.state`, globals, and `contextvars` in FastAPI, and how do you choose between them?",
+    "answer": "`app.state` is process-wide and good for shared clients or immutable config, while `request.state` is per-request and useful for data attached by middleware. Plain globals are risky for mutable request-scoped data because concurrent requests can interfere, and each worker process gets its own copy anyway. `contextvars` can carry request context through async call chains, but they become tricky when threads or background execution are involved. The main rule is to keep shared objects thread-safe and keep request data request-scoped.",
+    "real_world": "A classic bug is storing the current user in a module global for logging; under concurrency, logs and authorization checks can reference the wrong request.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would this change if part of the request path runs in a threadpool or schedules background work?"
+   },
+   {
+    "question": "How do you implement reliable cancellation and timeouts in FastAPI when calling slow upstream services?",
+    "answer": "FastAPI itself does not magically make downstream calls cancel-safe; your HTTP client or database client must support timeouts and cooperative cancellation. In an async route, if the client disconnects or the server cancels the task, awaited operations can be interrupted, but only if the library surfaces cancellation correctly. You should set explicit connect and read timeouts, propagate cancellation where safe, and make side effects idempotent because work may have started before cancellation. Without that, slow upstreams can tie up workers and produce retry storms.",
+    "real_world": "An upstream API hanging for minutes can consume all available concurrency; adding bounded timeouts and circuit-breaking often restores service before scaling out does.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you do differently for a non-idempotent call like charging a credit card?"
+   },
+   {
+    "question": "What are the trade-offs between middleware and dependencies for observability concerns like request IDs, tracing, and metrics?",
+    "answer": "Middleware sees every request and response, including routing failures, so it is the right place for timing, correlation IDs, and generic tracing hooks. Dependencies are better when you need validated route context, auth context, or per-endpoint opt-in behavior, but they only run after routing and can miss some failure paths. Middleware is also earlier in the stack, which matters for logging raw headers or handling exceptions consistently. Many teams use middleware for request lifecycle signals and dependencies for domain-specific context.",
+    "real_world": "If you rely only on dependencies for metrics, 404s and some parsing failures may be undercounted because the dependency never ran.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you record route templates like `/users/{id}` instead of raw paths to avoid high-cardinality metrics?"
+   },
+   {
+    "question": "How would you handle CPU-bound work in a FastAPI service, and why is `async` not the answer there?",
+    "answer": "`async` helps when work is waiting on I/O; it does not make CPU-heavy tasks faster. CPU-bound work in-process can block the event loop if done in async code, or saturate threads if pushed to a threadpool, so it still hurts latency for unrelated requests. For small bursts you might offload to a worker thread or process, but for sustained heavy work teams usually move it to a separate job system or service. The trade-off is lower request latency and better isolation versus more system complexity.",
+    "real_world": "Image processing, PDF generation, or ML inference often looks fine in staging but causes tail latency explosions in production when done inside API workers.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose a process pool over an external queue worker for CPU-heavy tasks?"
+   },
+   {
+    "question": "How do mounted sub-applications and root paths affect FastAPI behind a reverse proxy, and what breaks if you get them wrong?",
+    "answer": "Mounted apps and proxy prefixes change the effective URL space the app sees, which affects routing, redirects, docs URLs, and generated OpenAPI links. If the upstream proxy strips or adds a path prefix but FastAPI is not configured consistently, endpoints may work while docs, OAuth redirects, or `url_for` links point to the wrong place. This is especially noticeable with sub-apps because each mount has its own routing scope. You need a clear contract between proxy behavior and app configuration for path prefixes and forwarded headers.",
+    "real_world": "A common production issue is `/api/docs` loading, but the schema or authorize redirect goes to `/docs` or the wrong host because proxy prefix handling is inconsistent.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What headers or deployment settings would you verify first when generated URLs are wrong behind a proxy?"
+   },
+   {
+    "question": "How do exceptions raised inside dependencies, middleware, and background tasks differ in FastAPI, and how does that affect error handling?",
+    "answer": "Exceptions from route handlers and dependencies usually flow through FastAPI and Starlette exception handling, so custom handlers can turn them into structured responses. Middleware can intercept exceptions earlier or wrap response generation, which affects logging and whether the response has already started. Background task failures happen after the response is sent, so they cannot change the HTTP status and must be captured with explicit logging, retries, or an external job system. The key trade-off is convenience versus reliability: in-process background work is easy but weak for failure handling.",
+    "real_world": "Teams often assume a background email send will return a 500 if it fails, then discover users got 200 responses while the task crashed silently unless logs or metrics caught it.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you design error handling so correlation IDs and structured logs still work across those layers?"
+   },
+   {
+    "question": "If your FastAPI service starts returning intermittent 502s under load behind Nginx or a load balancer, how would you debug whether the problem is in FastAPI, Uvicorn, the event loop, or the proxy?",
+    "answer": "I’d first separate upstream timeout versus app crash versus connection saturation by checking proxy logs, app logs, and process-level metrics together. Then I’d look at request latency percentiles, open connections, worker restarts, and whether the event loop is being blocked by synchronous code or exhausted by too many concurrent upstream calls. Reproducing with controlled load helps confirm whether failures correlate with CPU, memory, file descriptors, or dependency timeouts. The important part is tracing the full request path, because a 502 often means the proxy gave up, not that FastAPI itself produced that status.",
+    "real_world": "A common incident is a healthy app returning no logs for failed requests because Nginx timed out waiting for headers while the app was stuck on blocking database or HTTP calls.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What metrics would you add before the next incident so you can distinguish proxy timeout, app timeout, and upstream dependency timeout quickly?"
+   },
+   {
+    "question": "How do you serve large file uploads safely in FastAPI without blowing up memory or tying up workers?",
+    "answer": "You want streaming or spooled file handling rather than reading the entire body into memory, and you should validate size and content type as early as possible. The endpoint should write chunks to durable storage or pass them to a streaming backend, with server and proxy limits aligned so oversized uploads fail predictably. Long uploads also need backpressure awareness and timeout tuning, because one slow client can occupy a connection for a long time. The trade-off is simplicity versus resource control: buffering is easy but dangerous at scale.",
+    "real_world": "Production outages happen when multiple users upload large files at once and the service buffers too much in memory, triggering OOM kills or causing other requests to starve.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What changes if the file needs virus scanning or image processing before it becomes available?"
+   },
+   {
+    "question": "What are the risks of generating OpenAPI schemas dynamically or heavily customizing them in FastAPI?",
+    "answer": "OpenAPI generation is usually done once and cached, but heavy customization can add startup cost, break tooling expectations, or drift from actual runtime behavior if your schema logic and endpoint logic diverge. Dynamic per-request or per-tenant schemas are especially risky because docs, client generation, and caches become inconsistent. If you customize, keep it deterministic and test the generated schema as an artifact. The trade-off is flexibility versus compatibility with the broader API ecosystem.",
+    "real_world": "Teams sometimes add conditional fields to docs for different deployments, then generated clients fail because the published schema no longer matches what the server actually accepts.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you expose internal-only endpoints without polluting public OpenAPI output?"
+   },
+   {
+    "question": "How does FastAPI behave with WebSockets compared with normal HTTP endpoints, and what production concerns change?",
+    "answer": "WebSockets bypass a lot of the normal request-response assumptions: the connection stays open, backpressure matters more, and you need explicit lifecycle management for connect, receive, send, and disconnect. Dependency patterns still work, but auth, rate limits, and cleanup need to be designed for long-lived connections rather than per-request stateless handling. Horizontal scaling also changes because broadcasts and presence often require shared state through Redis or another broker. The main trade-off is low-latency bidirectional communication versus more operational complexity.",
+    "real_world": "A service can work fine in one process, then break after scaling out because each worker only knows about its own connected clients and broadcasts stop reaching everyone.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you implement authentication refresh or revocation for long-lived WebSocket sessions?"
+   },
+   {
+    "question": "How do you version a FastAPI API without creating a maintenance nightmare?",
+    "answer": "I prefer versioning at the routing boundary and keeping shared business logic below the API layer, so v1 and v2 can differ in contracts without duplicating the whole stack. FastAPI makes it easy to mount routers per version, but the real challenge is managing schema drift, deprecation windows, and test coverage across versions. Avoid mixing version-specific behavior deep inside handlers unless the differences are truly small. The trade-off is explicit duplicated surface area versus hidden branching complexity.",
+    "real_world": "Teams that try to keep one endpoint with many conditional fields for old and new clients often end up with unclear contracts and accidental breaking changes.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "When would you choose header-based or media-type versioning instead of URL versioning?"
+   },
+   {
+    "question": "What are the practical trade-offs of using FastAPI with Pydantic-heavy models at very high request rates, and how do teams reduce overhead without giving up safety entirely?",
+    "answer": "Validation and serialization are valuable, but at high RPS they become measurable CPU cost, especially on large nested models or hot internal endpoints. Teams often keep full validation at the external boundary, then convert to lighter internal structures, skip response modeling on some paths, or return pre-serialized content when they control the shape tightly. The danger is losing contract enforcement and accidentally serving inconsistent data. It’s a throughput-versus-safety decision, and the right point depends on payload size and latency budget.",
+    "real_world": "On latency-sensitive internal APIs, teams sometimes find JSON encoding and model serialization dominate handler time once database calls are already optimized.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you prove validation is the bottleneck rather than database access or network latency?"
+   },
+   {
+    "question": "How would you implement graceful shutdown for a FastAPI service so in-flight requests and long-lived connections are handled correctly during deployments?",
+    "answer": "Graceful shutdown means stopping new traffic first, then giving in-flight requests time to finish while closing resources in the right order. For HTTP, that usually means relying on the process manager and server to drain connections, and ensuring handlers respect cancellation or deadline signals. For WebSockets or streaming responses, you also need explicit disconnect handling and often a maximum drain period. The hard part is coordinating app lifecycle, proxy behavior, and orchestration timeouts so shutdown is predictable.",
+    "real_world": "Without proper draining, rolling deploys can cut off uploads or stream responses midway, leading to partial data writes and hard-to-reproduce client errors.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "What would you change if some requests can legitimately run for minutes?"
+   },
+   {
+    "question": "When would you put rate limiting in FastAPI itself versus at the gateway or reverse proxy?",
+    "answer": "Gateway or proxy rate limiting is better for broad protection because it rejects abusive traffic before it consumes app CPU, memory, or database connections. App-level limiting is useful when limits depend on authenticated identity, business rules, or endpoint-specific semantics the edge does not know. In practice, many systems use both: coarse protection at the edge and fine-grained policies in the app. The trade-off is operational simplicity and efficiency versus richer context-aware control.",
+    "real_world": "If all limiting lives inside FastAPI, a traffic spike can still overwhelm workers before the app has a chance to reject requests.",
+    "code_lang": "",
+    "code": "",
+    "follow_up": "How would you make per-user rate limits work correctly across multiple FastAPI instances?"
+   },
+   {
+    "question": "What can go wrong when using `StreamingResponse` with generators or async generators, and how do you avoid partial responses or leaked resources?",
+    "answer": "Once streaming starts, headers are already sent, so later exceptions cannot be turned into a normal JSON error and clients may receive truncated data. You also need to ensure the generator closes files, network connections, or database cursors even if the client disconnects or cancellation happens mid-stream. Async generators help for non-blocking sources, but blocking reads still need to be offloaded or replaced. The main trade-off is memory efficiency versus more complicated failure handling and cleanup.",
+    "real_world": "A common bug is opening a file or upstream stream inside the generator and never closing it when the client disconnects, slowly exhausting file handles or connection pools.",
+    "code_lang": "python",
+    "code": "from fastapi.responses import StreamingResponse\n\ndef iterfile(path: str):\n    with open(path, \"rb\") as f:\n        while chunk := f.read(8192):\n            yield chunk\n\n@app.get(\"/download\")\ndef download():\n    return StreamingResponse(iterfile(\"data.bin\"))\n",
+    "follow_up": "How would you surface stream failures to monitoring if the client just sees a broken connection?"
+   }
+  ]
+ }
+}
